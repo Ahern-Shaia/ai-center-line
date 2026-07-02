@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>aiproot 客戶案場總覽 — v7</title>
+<style>
+  :root {
+    --paper: #F6F3EC;
+    --card: #FCFBF6;
+    --well: #F1EEE5;
+    --ink: #1F2A2E;
+    --ink-2: #55605F;
+    --ink-3: #8A938F;
+    --line: rgba(31,42,46,.11);
+    --line-2: rgba(31,42,46,.06);
+    --pine: #1E5C4F;
+    --pine-2: #2E7D5B;
+    --pine-tint: #E4EDE8;
+    --terra: #C2603A;
+    --terra-tint: #F3E5DC;
+    --ok: #2E7D5B; --ok-bg: #E4EDE8;
+    --warn: #A9781A; --warn-bg: #F5EDD8;
+    --danger: #B23A2E; --danger-bg: #F5E3DF;
+    --serif: "Georgia", "Songti TC", "Noto Serif TC", serif;
+    --sans: "Avenir Next", -apple-system, "PingFang TC", "Noto Sans TC", sans-serif;
+    --mono: "SF Mono", ui-monospace, Menlo, monospace;
+    --shadow: 0 1px 2px rgba(31,42,46,.04), 0 10px 30px -22px rgba(31,42,46,.28);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1600px; }
+  body { font-family: var(--sans); background: var(--paper); color: var(--ink); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .serif { font-family: var(--serif); }
+  .eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: .16em; color: var(--pine); text-transform: uppercase; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+
+  /* Masthead（同 v7 tenant 視角，角色不同） */
+  .mast { background: var(--pine); color: #F3EFE6; display: flex; align-items: center; padding: 0 34px; height: 60px; gap: 20px; }
+  .mast .crest { width: 32px; height: 32px; border-radius: 8px; background: #F3EFE6; color: var(--pine); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; font-family: var(--serif); flex: none; }
+  .mast .wm { line-height: 1.15; }
+  .mast .wm b { font-size: 15px; font-weight: 600; }
+  .mast .wm span { display: block; font-size: 10.5px; color: rgba(243,239,230,.62); }
+  .mast nav { display: flex; gap: 3px; margin-left: 18px; height: 100%; }
+  .mast nav a { display: flex; align-items: center; padding: 0 14px; font-size: 13px; color: rgba(243,239,230,.66); text-decoration: none; position: relative; }
+  .mast nav a.on { color: #fff; font-weight: 600; }
+  .mast nav a.on::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 2.5px; background: var(--terra); border-radius: 2px 2px 0 0; }
+  .mast .right { margin-left: auto; display: flex; align-items: center; gap: 20px; }
+  .mast .role { text-align: right; line-height: 1.2; }
+  .mast .role b { font-size: 12.5px; font-weight: 600; }
+  .mast .role span { display: block; font-size: 10.5px; color: rgba(243,239,230,.6); }
+  .mast .clock { font-family: var(--mono); font-size: 12.5px; color: rgba(243,239,230,.85); border-left: 1px solid rgba(243,239,230,.2); padding-left: 20px; }
+
+  .wrap { padding: 22px 34px 30px; display: flex; flex-direction: column; gap: 18px; }
+  .titlebar { display: flex; align-items: flex-end; gap: 16px; }
+  .titlebar h1 { font-family: var(--serif); font-size: 25px; font-weight: 600; }
+  .titlebar .sub { font-size: 12.5px; color: var(--ink-2); margin-bottom: 3px; }
+
+  /* 租戶隔離 strip */
+  .isolation { display: flex; align-items: center; gap: 12px; background: var(--pine-tint); border: 1px solid rgba(30,92,79,.22); border-radius: 10px; padding: 11px 18px; }
+  .isolation .lock { width: 30px; height: 30px; border-radius: 8px; background: var(--pine); color: #F3EFE6; display: flex; align-items: center; justify-content: center; font-size: 15px; flex: none; }
+  .isolation .t { font-size: 12.5px; color: var(--ink); font-weight: 600; }
+  .isolation .t span { display: block; font-weight: 400; color: var(--ink-2); font-size: 11.5px; margin-top: 1px; }
+  .isolation .tag { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--pine); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+  .c-hd { display: flex; align-items: center; gap: 10px; padding: 14px 20px 0; }
+  .c-hd h2 { font-size: 13.5px; font-weight: 700; }
+  .c-hd .note { margin-left: auto; font-size: 11.5px; color: var(--ink-3); }
+  .rule { height: 1px; background: var(--line); margin-top: 11px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; font-size: 11px; font-weight: 600; padding: 2px 8px; white-space: nowrap; }
+  .pill .dot { width: 6px; height: 6px; }
+  .pill.ok { color: var(--ok); background: var(--ok-bg); }
+  .pill.warn { color: var(--warn); background: var(--warn-bg); }
+  .pill.terra { color: var(--terra); background: var(--terra-tint); }
+  .pill.ghost { color: var(--ink-2); background: var(--well); }
+
+  /* 上半：指標卡 + 補助漏斗 */
+  .top { display: grid; grid-template-columns: 1fr 2.3fr; gap: 18px; }
+  .kpis { display: grid; grid-template-rows: repeat(2, 1fr); gap: 18px; }
+  .kcol { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .kpi { padding: 15px 18px; }
+  .kpi .kl { font-size: 12px; color: var(--ink-2); }
+  .kpi .kv { font-family: var(--serif); font-size: 30px; font-weight: 600; letter-spacing: -.01em; margin-top: 4px; }
+  .kpi .kv small { font-size: 13px; color: var(--ink-3); font-family: var(--sans); font-weight: 500; margin-left: 3px; }
+  .kpi .ks { font-size: 11px; color: var(--ink-3); margin-top: 3px; font-family: var(--mono); }
+
+  .funnel { padding: 14px 20px 18px; }
+  .stages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 12px; }
+  .stage { border: 1px solid var(--line); border-radius: 10px; padding: 12px 13px 13px; background: var(--paper); }
+  .stage .sh { font-size: 12px; font-weight: 650; }
+  .stage .sh small { display: block; font-weight: 400; color: var(--ink-3); font-size: 10.5px; margin-top: 1px; }
+  .stage .bar { display: flex; height: 7px; border-radius: 4px; overflow: hidden; margin: 11px 0 10px; background: var(--well); }
+  .stage .bar i { height: 100%; }
+  .stat { display: flex; align-items: center; font-size: 11.5px; color: var(--ink-2); padding: 2.5px 0; }
+  .stat .sd { width: 7px; height: 7px; border-radius: 2px; margin-right: 7px; }
+  .stat .sn { margin-left: auto; font-family: var(--mono); font-weight: 600; color: var(--ink); }
+
+  /* 客戶清單 */
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; font-size: 10.5px; font-weight: 600; color: var(--ink-3); letter-spacing: .05em; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+  td { padding: 13px 14px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  th:first-child, td:first-child { padding-left: 20px; }
+  th:last-child, td:last-child { padding-right: 20px; }
+  td.co b { font-weight: 650; }
+  td.co .ind { color: var(--ink-3); font-size: 11px; margin-top: 1px; }
+  .health { display: inline-flex; gap: 4px; align-items: center; }
+  .health .h { width: 9px; height: 9px; border-radius: 50%; }
+  .health .locknote { margin-left: 8px; font-size: 10px; color: var(--ink-3); font-family: var(--mono); }
+  .seat { font-family: var(--mono); font-size: 12px; }
+  .seatbar { width: 54px; height: 5px; border-radius: 3px; background: var(--well); margin-top: 4px; overflow: hidden; }
+  .seatbar i { display: block; height: 100%; background: var(--pine-2); }
+  td.act .go { color: var(--pine); font-weight: 600; font-size: 12px; }
+  td.act .na { color: var(--ink-3); font-size: 11.5px; }
+  .t-more { padding: 11px 20px; font-size: 11.5px; color: var(--ink-3); background: var(--well); border-top: 1px solid var(--line); border-radius: 0 0 12px 12px; }
+
+  footer { display: flex; align-items: center; padding: 4px 4px 0; font-size: 11px; color: var(--ink-3); }
+  footer .mono { font-size: 10.5px; }
+</style>
+</head>
+<body>
+
+<div class="mast">
+  <div class="crest">ai</div>
+  <div class="wm"><b>aiproot</b><span>智慧工廠戰情室・系統商控制台</span></div>
+  <nav>
+    <a class="on" href="#">客戶案場</a>
+    <a href="#">補助申請</a>
+    <a href="#">License 授權</a>
+    <a href="#">系統健康</a>
+  </nav>
+  <div class="right">
+    <div class="clock">2026-07-03　08:12</div>
+    <div class="role"><b>Patrick</b><span>aiproot_admin・跨租戶</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="titlebar">
+    <div>
+      <div class="eyebrow">Multi-Tenant · 系統商視角</div>
+      <h1>客戶案場總覽</h1>
+    </div>
+    <div class="sub">20 家排隊導入 · 分階段上線</div>
+  </div>
+
+  <div class="isolation">
+    <div class="lock">🔒</div>
+    <div class="t">租戶隔離：系統商僅檢視聚合統計與健康度燈號<span>不顯示任何客戶的對話內容、簽核明細或營運資料——API 層即不回傳 summary 欄位，非前端隱藏</span></div>
+    <div class="tag">role = aiproot_admin · 僅 COUNT / GROUP BY</div>
+  </div>
+
+  <div class="top">
+    <div class="kpis">
+      <div class="kcol">
+        <div class="card kpi">
+          <div class="kl">正式上線案場</div>
+          <div class="kv serif">2<small>家</small></div>
+          <div class="ks">tenants.onboard_status='正式上線'</div>
+        </div>
+        <div class="card kpi">
+          <div class="kl">測試中</div>
+          <div class="kv serif">3<small>家</small></div>
+          <div class="ks">onboard_status='測試中'</div>
+        </div>
+      </div>
+      <div class="kcol">
+        <div class="card kpi">
+          <div class="kl">洽談中客戶</div>
+          <div class="kv serif">15<small>家</small></div>
+          <div class="ks">onboard_status='洽談中'</div>
+        </div>
+        <div class="card kpi">
+          <div class="kl">補助申請中</div>
+          <div class="kv serif" style="color:var(--terra)">9<small>案</small></div>
+          <div class="ks">未核准/未撥款 distinct tenant</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card funnel">
+      <div class="c-hd" style="padding:0"><h2>補助申請漏斗</h2><span class="note">產業競爭力輔導團 · 依 subsidy_applications.measure + status 分組計數</span></div>
+      <div class="stages">
+        <div class="stage">
+          <div class="sh">措施1・階段一<small>AI 成熟度診斷輔導 · 19 萬</small></div>
+          <div class="bar"><i style="background:var(--ink-3);width:18%"></i><i style="background:var(--warn);width:18%"></i><i style="background:#7FA9C9;width:27%"></i><i style="background:var(--ok);width:37%"></i></div>
+          <div class="stat"><span class="sd" style="background:var(--ink-3)"></span>準備中<span class="sn">2</span></div>
+          <div class="stat"><span class="sd" style="background:var(--warn)"></span>已送件<span class="sn">2</span></div>
+          <div class="stat"><span class="sd" style="background:#7FA9C9"></span>審查中<span class="sn">3</span></div>
+          <div class="stat"><span class="sd" style="background:var(--ok)"></span>已核准<span class="sn">4</span></div>
+        </div>
+        <div class="stage">
+          <div class="sh">措施1・階段二<small>AI 工具導入（本系統）· 10 萬</small></div>
+          <div class="bar"><i style="background:var(--ink-3);width:50%"></i><i style="background:var(--warn);width:25%"></i><i style="background:#7FA9C9;width:12%"></i><i style="background:var(--pine);width:13%"></i></div>
+          <div class="stat"><span class="sd" style="background:var(--ink-3)"></span>準備中<span class="sn">4</span></div>
+          <div class="stat"><span class="sd" style="background:var(--warn)"></span>已送件<span class="sn">2</span></div>
+          <div class="stat"><span class="sd" style="background:#7FA9C9"></span>審查中<span class="sn">1</span></div>
+          <div class="stat"><span class="sd" style="background:var(--pine)"></span>已撥款<span class="sn">1</span></div>
+        </div>
+        <div class="stage">
+          <div class="sh">措施1・階段三<small>擴散應用 · 規劃中</small></div>
+          <div class="bar"><i style="background:var(--ink-3);width:75%"></i><i style="background:#7FA9C9;width:25%"></i></div>
+          <div class="stat"><span class="sd" style="background:var(--ink-3)"></span>準備中<span class="sn">3</span></div>
+          <div class="stat"><span class="sd" style="background:#7FA9C9"></span>審查中<span class="sn">1</span></div>
+          <div class="stat" style="color:var(--ink-3)"><span class="sd" style="background:var(--well)"></span>—<span class="sn" style="color:var(--ink-3)">—</span></div>
+          <div class="stat" style="color:var(--ink-3)"><span class="sd" style="background:var(--well)"></span>—<span class="sn" style="color:var(--ink-3)">—</span></div>
+        </div>
+        <div class="stage">
+          <div class="sh">措施2<small>AI 人才培育 Coupon · 12 萬</small></div>
+          <div class="bar"><i style="background:var(--ink-3);width:75%"></i><i style="background:#7FA9C9;width:25%"></i></div>
+          <div class="stat"><span class="sd" style="background:var(--ink-3)"></span>準備中<span class="sn">6</span></div>
+          <div class="stat"><span class="sd" style="background:#7FA9C9"></span>審查中<span class="sn">2</span></div>
+          <div class="stat" style="color:var(--ink-3)"><span class="sd" style="background:var(--well)"></span>—<span class="sn" style="color:var(--ink-3)">—</span></div>
+          <div class="stat" style="color:var(--ink-3)"><span class="sd" style="background:var(--well)"></span>—<span class="sn" style="color:var(--ink-3)">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="c-hd"><h2>客戶案場清單</h2><span class="pill ghost" style="margin-left:10px"><span class="dot" style="background:var(--ink-3)"></span>燈號彙總，不含內容</span><span class="note">tenants ＋ licenses ＋ tickets 聚合統計</span></div>
+    <div class="rule"></div>
+    <table>
+      <thead><tr><th>客戶案場</th><th>導入狀態</th><th>補助階段</th><th>六群組健康度（燈號彙總）</th><th>License 用量</th><th>最近活動</th><th style="text-align:right">操作</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="co"><b>台灣福祉科技</b><div class="ind">特種車輛改裝</div></td>
+          <td><span class="pill ok"><span class="dot"></span>正式上線</span></td>
+          <td><span class="pill pine" style="color:var(--pine);background:var(--pine-tint)">措施1-二・已撥款</span></td>
+          <td><span class="health"><span class="h" style="background:var(--ok)"></span><span class="h" style="background:var(--warn)"></span><span class="h" style="background:var(--ok)"></span><span class="h" style="background:var(--ok)"></span><span class="h" style="background:var(--danger)"></span><span class="h" style="background:var(--ok)"></span><span class="locknote">4綠1黃1紅</span></span></td>
+          <td><span class="seat">6 / 8 席</span><div class="seatbar"><i style="width:75%"></i></div></td>
+          <td class="mono" style="font-size:11.5px;color:var(--ink-2)">08:12</td>
+          <td class="act" style="text-align:right"><span class="go">進入 →</span></td>
+        </tr>
+        <tr>
+          <td class="co"><b>大同車體工業</b><div class="ind">車輛製造</div></td>
+          <td><span class="pill ok"><span class="dot"></span>正式上線</span></td>
+          <td><span class="pill warn"><span class="dot"></span>措施1-三・審查中</span></td>
+          <td><span class="health"><span class="h" style="background:var(--ok)"></span><span class="h" style="background:var(--ok)"></span><span class="h" style="background:var(--ok)"></span><span class="h" style="background:var(--warn)"></span><span class="h" style="background:var(--ok)"></span><span class="h" style="background:var(--ok)"></span><span class="locknote">5綠1黃</span></span></td>
+          <td><span class="seat">8 / 10 席</span><div class="seatbar"><i style="width:80%"></i></div></td>
+          <td class="mono" style="font-size:11.5px;color:var(--ink-2)">07:50</td>
+          <td class="act" style="text-align:right"><span class="go">進入 →</span></td>
+        </tr>
+        <tr>
+          <td class="co"><b>群豐機械</b><div class="ind">金屬加工</div></td>
+          <td><span class="pill terra"><span class="dot"></span>測試中</span></td>
+          <td><span class="pill pine" style="color:var(--pine);background:var(--pine-tint)">措施1-一・已核准</span></td>
+          <td><span class="health"><span class="h" style="background:var(--ok)"></span><span class="h" style="background:var(--ok)"></span><span class="h" style="background:var(--warn)"></span><span class="h" style="background:var(--warn)"></span><span class="h" style="background:var(--ink-3)"></span><span class="h" style="background:var(--ink-3)"></span><span class="locknote">2綠2黃2未啟</span></span></td>
+          <td><span class="seat">3 / 5 席</span><div class="seatbar"><i style="width:60%"></i></div></td>
+          <td class="mono" style="font-size:11.5px;color:var(--ink-2)">昨 19:20</td>
+          <td class="act" style="text-align:right"><span class="go">進入 →</span></td>
+        </tr>
+        <tr>
+          <td class="co"><b>宏達精密模具</b><div class="ind">塑膠射出</div></td>
+          <td><span class="pill terra"><span class="dot"></span>測試中</span></td>
+          <td><span class="pill warn"><span class="dot"></span>措施1-一・審查中</span></td>
+          <td><span class="health"><span class="h" style="background:var(--ok)"></span><span class="h" style="background:var(--ok)"></span><span class="h" style="background:var(--ok)"></span><span class="h" style="background:var(--ink-3)"></span><span class="h" style="background:var(--ink-3)"></span><span class="h" style="background:var(--ink-3)"></span><span class="locknote">3綠3未啟</span></span></td>
+          <td><span class="seat">2 / 5 席</span><div class="seatbar"><i style="width:40%"></i></div></td>
+          <td class="mono" style="font-size:11.5px;color:var(--ink-2)">昨 14:05</td>
+          <td class="act" style="text-align:right"><span class="go">進入 →</span></td>
+        </tr>
+        <tr>
+          <td class="co"><b>明揚長照設備</b><div class="ind">醫療器材</div></td>
+          <td><span class="pill ghost"><span class="dot" style="background:var(--ink-3)"></span>洽談中</span></td>
+          <td><span class="pill ghost"><span class="dot" style="background:var(--ink-3)"></span>措施1-一・準備中</span></td>
+          <td><span class="locknote" style="margin:0;color:var(--ink-3)">尚未導入</span></td>
+          <td class="mono" style="color:var(--ink-3)">—</td>
+          <td class="mono" style="font-size:11.5px;color:var(--ink-3)">3 天前</td>
+          <td class="act" style="text-align:right"><span class="na">洽談中</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="t-more">顯示 5 / 20 家 · 另 15 家洽談中未上線　·　點「進入」以 aiproot_admin 權限檢視：僅健康度與統計，對話內容與簽核明細區塊不渲染</div>
+  </div>
+
+  <footer>
+    <span>aiproot 系統商控制台　·　全地端部署　·　客戶營運內容不外流</span>
+    <span class="mono" style="margin-left:auto">資料源：tenants / licenses / subsidy_applications / tickets（聚合）　·　登入角色 aiproot_admin</span>
+  </footer>
+
+</div>
+
+</body>
+</html>
