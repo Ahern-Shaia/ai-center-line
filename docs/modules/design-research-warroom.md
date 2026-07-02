@@ -49,3 +49,21 @@
 
 **向上設計**：吸收 gov.uk 的內容優先＋NHS 的雙編碼狀態＋年報的來源標註可信感，補上三者共同缺的——**活的治理迴圈**（每日簽核 human-in-the-loop）與**溫度**（福祉/照護客戶性格）。落地：暖紙白×深松綠×赤土；serif 數字（環形儀表/指標）給行政份量、mono 只留代碼；每個數字掛來源表名（CRM_service_tickets/pending_review…），呼應委員鐵律「每個數字可回溯」。
 - 檔案：`mockup/warroom-taiwanhomecare-v7.html`（台灣福祉 tenant_admin 視角，六大群組真實資料）
+
+---
+
+## v8 向上設計（以 v7 civic-trust 為基礎精煉，2026-07-03）
+
+**問題**：v7 仍有 AI 感，最重的是**三並排環形儀表**（donut）＝頭號 dashboard 陳腔。
+
+**參考（craft 層，≥3）**：
+1. **年報／財報編輯設計**（H&FJ、CreativePro 字體指南）— 做對的：大 serif 數字＋tabular figures、數字右對齊、腳註/來源引用、大留白、「大字帶出資料故事」；弱點：靜態、無即時性。
+2. **資料新聞（The Economist / FT data team）** — 做對的：先問「我想說什麼」再選圖、bullet/small-multiples 勝過單值儀表、克制用色帶註解；弱點：偏敘事、非操作介面。
+3. **dashboard 反面教材彙整**（Martynas Jočys、Plecto）— 明證：donut 是「beautiful dashboard」搜尋 8 中 5 的通用陳腔；單值儀表「看似厲害實則浪費空間」，改用 bullet chart/sparkline/small multiples。
+
+**向上設計（v8＝Governance Broadsheet）**：整個總覽變成「一份治理報告頭版」而非卡片 dashboard——
+- **殺掉三環**：改「治理摘要」編輯段落，三個關鍵數字寫進句子（大 serif inline figure）＋上標腳註 ¹²³ 指向公式/來源表；右欄三條 bullet meter（水平規線填充，非 donut）＝small multiples。委員鐵律「每個數字可回溯」直接變成腳註引用。
+- **單一報告頁**：一張框、內部用規線分節（§I 治理摘要 / §II 群組名冊 / §III 每日簽核 / 附錄），取代多張浮動卡片。
+- **六群組名冊（register）**：規線列表＋兩位數索引＋右對齊表名/時間，取代六等分方塊。
+- **線性 SVG 圖示**取代 emoji；小圓角（報告感）取代大圓角；serif 標題＋mono 資料。
+- 檔案：renderTenantAdminV8（render.ts）→ output/warroom-tenant_admin-v8.html。

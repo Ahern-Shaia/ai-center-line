@@ -164,12 +164,205 @@ const STYLES = `
   .t-more{padding:11px 20px;font-size:11.5px;color:var(--ink-3);background:var(--well);border-top:1px solid var(--line);border-radius:0 0 12px 12px}
 `;
 
-function doc(title: string, body: string): string {
+function doc(title: string, body: string, extraCss = ""): string {
   return `<!DOCTYPE html>
-<html lang="zh-Hant"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${STYLES}</style></head>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${STYLES}${extraCss}</style></head>
 <body>
 ${body}
 </body></html>`;
+}
+
+// 線性 SVG 圖示（取代 emoji，去 AI 感）
+const IC: Record<string, string> = {
+  image: '<rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="5.6" cy="6.6" r="1.2"/><path d="M2.6 11.5l3.4-3 2.4 2 2.8-2.8 2.4 2.3"/>',
+  video: '<rect x="2" y="3.5" width="12" height="9" rx="1.5"/><path d="M6.6 6.2l3.4 1.8-3.4 1.8z" fill="currentColor" stroke="none"/>',
+  pdf: '<path d="M4 2.2h5.2l3 3v8.6H4z"/><path d="M9.2 2.2v3.2h3"/>',
+  csv: '<rect x="2.4" y="2.4" width="11.2" height="11.2" rx="1"/><path d="M2.4 6.1h11.2M2.4 9.9h11.2M6.2 2.4v11.2"/>',
+  chat: '<path d="M2.5 3.4h11v7h-6l-3 2.4v-2.4h-2z"/>',
+  search: '<circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2 14 14"/>',
+  arrow: '<path d="M4 8h6.6M8 5l3 3-3 3"/>',
+};
+const icon = (name: string, size = 15): string =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round">${IC[name]}</svg>`;
+
+// v8 broadsheet styles（報告頭版：規線分節、serif 大數字、bullet meter、線性圖示）
+const V8_CSS = `
+  .sheet{background:var(--card);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);overflow:hidden}
+  .bs-name{display:flex;align-items:flex-end;gap:16px;padding:20px 26px 13px;border-bottom:3px solid var(--pine);position:relative}
+  .bs-name::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:1px;background:var(--pine)}
+  .bs-name .kicker{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--pine);text-transform:uppercase;margin-bottom:8px}
+  .bs-name h1{font-family:var(--serif);font-size:33px;font-weight:600;letter-spacing:.01em;line-height:1}
+  .bs-name .dateline{margin-left:auto;text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink-2);line-height:1.7;letter-spacing:.04em}
+  .lead{display:grid;grid-template-columns:1.72fr 1fr;border-bottom:1px solid var(--line)}
+  .lead .prose{padding:20px 28px 17px;border-right:1px solid var(--line)}
+  .lead .prose .eyebrow{margin-bottom:11px}
+  .lead .prose p{font-size:16px;line-height:1.95;color:var(--ink)}
+  .lead .prose p b{font-weight:600}
+  .lead .prose .fig{font-family:var(--serif);font-size:23px;font-weight:600;color:var(--pine);letter-spacing:-.01em}
+  .lead .prose .fig.t{color:var(--terra)}
+  .lead .prose sup{font-family:var(--mono);font-size:9px;color:var(--terra);vertical-align:super;margin-left:1px}
+  .lead .prose .notes{margin-top:15px;padding-top:12px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;color:var(--ink-3);line-height:2}
+  .lead .prose .notes b{color:var(--ink-2)}
+  .meters{padding:15px 26px 12px;display:flex;flex-direction:column;justify-content:center}
+  .meter{padding:10px 0;border-bottom:1px solid var(--line)}.meter:last-child{border-bottom:none}
+  .meter .mt{display:flex;align-items:baseline}.meter .ml2{font-size:12px;color:var(--ink-2)}
+  .meter .mv2{margin-left:auto;font-family:var(--serif);font-size:27px;font-weight:600;line-height:1}
+  .meter .track{height:5px;background:var(--well);border-radius:0;margin:9px 0 5px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line-2)}
+  .meter .track i{display:block;height:100%}
+  .meter .cap{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);letter-spacing:.02em}
+  .opsrow{display:flex;border-bottom:1px solid var(--line);background:var(--well)}
+  .opsrow .op{padding:11px 26px;display:flex;align-items:baseline;gap:8px}.opsrow .op+.op{border-left:1px solid var(--line)}
+  .opsrow .op .ov{font-family:var(--serif);font-size:19px;font-weight:600}.opsrow .op .ol{font-size:11.5px;color:var(--ink-2)}
+  .opsrow .op .os{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);margin-left:auto;padding-left:14px}
+  .opsrow .op:last-child{margin-left:auto;background:transparent}
+  .bs-sec{display:flex;align-items:baseline;gap:11px;padding:15px 26px 3px}
+  .bs-sec .no{font-family:var(--mono);font-size:11px;color:var(--terra);font-weight:700;letter-spacing:.05em}
+  .bs-sec h2{font-family:var(--serif);font-size:16px;font-weight:600}
+  .bs-sec .note{margin-left:auto;font-size:11px;color:var(--ink-3)}
+  .bs-hr{height:1px;background:var(--line);margin:9px 26px 0}
+  .reg{padding:4px 0 8px}
+  .regrow{display:flex;align-items:center;gap:14px;padding:11px 26px;border-bottom:1px solid var(--line-2)}
+  .regrow:last-child{border-bottom:none}
+  .regrow .idx{font-family:var(--mono);font-size:11px;color:var(--ink-3);width:18px}
+  .regrow .rdot{width:8px;height:8px;border-radius:50%;flex:none}
+  .regrow .rname{font-weight:650;font-size:14px;width:92px}
+  .regrow .rtbl{font-family:var(--mono);font-size:11px;color:var(--pine);background:var(--pine-tint);padding:2px 7px;border-radius:3px}
+  .regrow .rst{margin-left:auto;font-size:12px;color:var(--ink-2)}
+  .regrow .rtm{font-family:var(--mono);font-size:11px;color:var(--ink-3);width:64px;text-align:right}
+  .regrow.alert{background:var(--danger-bg)}.regrow.alert .rst{color:var(--danger);font-weight:600}
+  .so2{width:100%;border-collapse:collapse;font-size:12.5px}
+  .so2 th{text-align:left;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink-3);letter-spacing:.08em;text-transform:uppercase;padding:8px 14px;border-bottom:1px solid var(--ink-2)}
+  .so2 td{padding:12px 14px;border-bottom:1px solid var(--line-2);vertical-align:top}
+  .so2 tr:last-child td{border-bottom:none}
+  .so2 th:first-child,.so2 td:first-child{padding-left:26px}.so2 th:last-child,.so2 td:last-child{padding-right:26px;text-align:right}
+  .so2 td.g2{font-weight:650;white-space:nowrap}.so2 td .d2{color:var(--ink-2);line-height:1.55}.so2 td .d2 b{color:var(--ink);font-weight:600}
+  .so2 td .isub{color:var(--terra);font-size:11px;margin-top:3px;font-weight:600}
+  .so2 td .rsub{color:var(--ink-3);font-size:11px;margin-top:3px}
+  .apx{display:grid;grid-template-columns:1.25fr 1fr 1fr;border-top:1px solid var(--line)}
+  .apx .col{padding:15px 22px 18px}.apx .col+.col{border-left:1px solid var(--line)}
+  .apx .ch{display:flex;align-items:center;gap:8px;font-family:var(--serif);font-size:13.5px;font-weight:600;margin-bottom:11px}
+  .apx .ch svg{color:var(--pine)}
+  .q2,.a2{font-size:12px;line-height:1.6;margin-bottom:8px;max-width:92%}
+  .q2{margin-left:auto;color:var(--ink-2);text-align:right;font-style:italic}
+  .a2{color:var(--ink)}
+  .a2 .ci{display:inline-block;margin-top:3px;font-family:var(--mono);font-size:10px;color:var(--pine);border-bottom:1px dotted var(--pine)}
+  .a2 .ci.itri{color:var(--terra);border-color:var(--terra)}
+  .amrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line-2)}
+  .amrow:last-child{border-bottom:none}.amrow .ai2{color:var(--pine);flex:none}
+  .amrow .an{font-size:12px;font-weight:600}.amrow .as{font-size:10.5px;color:var(--ink-3);font-family:var(--mono)}
+  .amrow .ag{margin-left:auto;font-size:10.5px;color:var(--pine);font-family:var(--mono)}
+  .m2c{position:relative;height:150px;background:var(--well);border:1px solid var(--line);border-radius:2px;overflow:hidden;margin-top:2px}
+  .m2c svg.map{position:absolute;inset:0;width:100%;height:100%}
+  .m2c .pin2{position:absolute;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:var(--terra);box-shadow:0 0 0 3px rgba(194,96,58,.16)}
+  .m2c .pin2.big{width:11px;height:11px;box-shadow:0 0 0 5px rgba(194,96,58,.2)}
+  .apx .mleg{margin-top:9px;font-family:var(--mono);font-size:10.5px;color:var(--ink-2)}.apx .mleg b{font-family:var(--serif);color:var(--ink)}
+  .bs-foot{display:flex;padding:12px 26px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;color:var(--ink-3);letter-spacing:.03em}
+`;
+
+export function renderTenantAdminV8(data: WarRoomData, agg: Aggregate): string {
+  const yellow = agg.groups.filter((x) => x.health === "yellow").length;
+  const red = agg.groups.filter((x) => x.health === "red").length;
+
+  const meter = (label: string, ratio: number, num: string, color: string): string =>
+    `<div class="meter"><div class="mt"><span class="ml2">${label}</span><span class="mv2 serif">${pct(ratio)}<span style="font-size:14px">%</span></span></div>
+      <div class="track"><i style="width:${pct(ratio)}%;background:${color}"></i></div><div class="cap">${num}</div></div>`;
+
+  const regRows = agg.groups.map((gs, i) => {
+    const d = gs.department;
+    const isRag = d.ragic_table.includes("工研院");
+    const st = gs.health === "red" ? "逾時警示 · 連續無新活動"
+      : gs.signed_off ? `已簽核${isRag ? " · 已同步工研院 RAG" : ""}`
+      : gs.has_low_pending ? "低信心待補，需人工補資訊"
+      : `正常處理中 · 今日 ${gs.today_total} 則`;
+    return `<div class="regrow${gs.health === "red" ? " alert" : ""}">
+      <span class="idx">${String(i + 1).padStart(2, "0")}</span>
+      <span class="rdot" style="background:${HEALTH_COLOR[gs.health]}"></span>
+      <span class="rname">${esc(d.name)}</span>
+      <span class="rtbl">${isRag ? "→ 工研院多模態RAG" : esc(d.ragic_table)}</span>
+      <span class="rst">${esc(st)}</span>
+      <span class="rtm">${esc(fmtActivity(d.last_activity, agg.as_of))}</span>
+    </div>`;
+  }).join("");
+
+  const soRows = agg.groups.map((gs) => {
+    const d = gs.department;
+    const ts = data.tickets.filter((t) => t.department_id === d.department_id);
+    const low = ts.find((t) => t.needs_review);
+    let draft: string, status: string, action: string;
+    if (gs.health === "red" || ts.length === 0) {
+      draft = `<div class="d2" style="color:var(--ink-3)">連續 3 天無新訊息，無待簽核草稿——系統自動轉逾時警示，列入待複核清單</div>`;
+      status = `<span class="pill danger"><span class="dot"></span>逾時警示</span>`;
+      action = `前往處理`;
+    } else {
+      const extra = ts.length > 1 ? `<span class="rsub">另 ${ts.length - 1} 筆同群組草稿</span>` : "";
+      const isub = low ? `<div class="isub">⚠ 另 1 筆「門壞了」車號部位無法對應，已即時攔截，須人工補資訊</div>` : "";
+      draft = `<div class="d2"><b>${esc(ts[0].summary)}</b>${isub}${extra}</div>`;
+      if (gs.signed_off) { status = `<span class="pill ok"><span class="dot"></span>已簽核</span>`; action = `✓ ${esc(ts[0].confirmed_by ?? "")} ${esc(fmtActivity(ts[0].confirmed_at ?? agg.as_of, agg.as_of))}`; }
+      else if (low) { status = `<span class="pill danger"><span class="dot"></span>1 筆低信心</span>`; action = `展開複核`; }
+      else { status = `<span class="pill warn"><span class="dot"></span>待簽核</span>`; action = `確認今日進度`; }
+    }
+    return `<tr><td class="g2">${esc(d.name)}</td><td>${draft}</td><td>${confBars(worstConf(ts))}</td><td>${status}</td><td>${action}</td></tr>`;
+  }).join("");
+
+  const ill = data.illustrative;
+  const chat = (ill?.chat ?? []).map((c) => c.role === "you"
+    ? `<div class="q2">${esc(c.text)}</div>`
+    : `<div class="a2">${esc(c.text)}${c.cite ? `<br><span class="ci${c.itri ? " itri" : ""}">${esc(c.cite)}</span>` : ""}</div>`).join("");
+  const KIND: Record<string, string> = { img: "image", vid: "video", pdf: "pdf", csv: "csv" };
+  const KL: Record<string, string> = { img: "圖片", vid: "影片", pdf: "文件", csv: "表格" };
+  const assets = (ill?.assets ?? []).map((a) =>
+    `<div class="amrow"><span class="ai2">${icon(KIND[a.kind], 16)}</span><div><div class="an">${esc(a.name)}</div><div class="as">${KL[a.kind]}</div></div><span class="ag">${esc(a.group)}</span></div>`).join("");
+  const pins = (ill?.geo ?? []).map((p) => `<div class="pin2${p.big ? " big" : ""}" style="left:${p.x}%;top:${p.y}%"></div>`).join("");
+  const gstat = ill?.geo_stats;
+
+  const body = `${FUKU_MAST(agg.as_of, "總經理室", "tenant_admin・全群組總覽", "戰情室")}
+<div class="wrap">
+  <div class="sheet">
+    <div class="bs-name">
+      <div><div class="kicker">台灣福祉科技 · 智慧工廠治理日報</div><h1>現場治理總覽</h1></div>
+      <div class="dateline">${esc(agg.as_of.slice(0, 10))}　${esc(agg.as_of.slice(11, 16))}<br>特種車輛改裝廠 · 復康巴士／福祉車／到宅沐浴車<br>檢視身份：總經理室 · tenant_admin</div>
+    </div>
+
+    <div class="lead">
+      <div class="prose">
+        <div class="eyebrow" style="color:var(--terra)">§ I　治理摘要</div>
+        <p>今日六大群組，<b>${agg.signed_groups}</b> 組已完成人工簽核（<span class="fig">${pct(agg.signoff_rate)}%</span><sup>1</sup>）、<b>${agg.green_groups}</b> 組亮綠燈（<span class="fig">${pct(agg.health_rate)}%</span><sup>2</sup>）；AI 對今日 <b>${agg.high_conf_den}</b> 筆判讀標記 <b>${agg.high_conf_num}</b> 筆高信心（<span class="fig t">${pct(agg.high_conf_ratio)}%</span><sup>3</sup>）——其餘刻意標低、交人工複核，<b>不讓 AI 用猜的硬寫進正式系統</b>。</p>
+        <div class="notes"><b>¹</b> 已簽核群組 ÷ 6（tickets.confirm_status 依 department 聚合）　　<b>²</b> 綠燈群組 ÷ 6（近 24h 有活動且未逾時）<br><b>³</b> high 筆數 ÷ 當日已標信心度總數（tickets.confidence）——刻意不美化，誠實反映把握程度</div>
+      </div>
+      <div class="meters">
+        ${meter("本日簽核完成率", agg.signoff_rate, `${agg.signed_groups} / 6 群組`, "var(--pine)")}
+        ${meter("六群組整體健康度", agg.health_rate, `${agg.green_groups} 綠 · ${yellow} 黃 · ${red} 紅`, "var(--pine-2)")}
+        ${meter("今日 AI 高信心比例", agg.high_conf_ratio, `${agg.high_conf_num} / ${agg.high_conf_den} 筆`, "var(--terra)")}
+      </div>
+    </div>
+
+    <div class="opsrow">
+      <div class="op"><span class="ov serif">${agg.metrics.monthly_service_tickets}</span><span class="ol">本月維修工單</span><span class="os">CRM_service_tickets</span></div>
+      <div class="op"><span class="ov serif">${agg.metrics.km_documents}</span><span class="ol">知識庫累積文件</span><span class="os">RAG 索引</span></div>
+      <div class="op"><span class="ov serif" style="color:var(--terra)">${agg.metrics.pending_review}</span><span class="ol">待人工確認</span><span class="os">pending_review</span></div>
+    </div>
+
+    <div class="bs-sec"><span class="no">§ II</span><h2>六大 LINE 群組名冊</h2><span class="note">系統輸入端 · 各群組對應一張 Ragic 資料表</span></div>
+    <div class="bs-hr"></div>
+    <div class="reg">${regRows}</div>
+
+    <div class="bs-sec"><span class="no">§ III</span><h2>每日簽核</h2><span class="note">Human-in-the-loop · 簽核後才寫入 Ragic · 逾 24h 自動轉逾時警示</span></div>
+    <table class="so2"><thead><tr><th>群組</th><th>AI 今日草稿摘要</th><th>信心</th><th>狀態</th><th>簽核</th></tr></thead><tbody>${soRows}</tbody></table>
+
+    <div class="bs-sec"><span class="no">附錄</span><h2>多模態證據與檢索</h2><span class="note">文字 · 照片 · 影片 · 文件 · 皆標來源群組</span></div>
+    <div class="apx">
+      <div class="col"><div class="ch">${icon("search")}智慧檢索 · 對話</div>${chat}</div>
+      <div class="col"><div class="ch">${icon("csv")}多模態素材看板</div>${assets}</div>
+      <div class="col"><div class="ch">${icon("image")}全台服務涵蓋</div>
+        <div class="m2c"><svg class="map" viewBox="0 0 120 150" preserveAspectRatio="xMidYMid meet"><path d="M62 8 C74 16 82 30 84 48 C86 66 82 88 74 112 C68 130 60 144 52 150 C46 144 40 130 38 112 C34 90 34 66 40 48 C46 28 52 14 62 8 Z" fill="#DDE4D6" stroke="#C6D0BC" stroke-width="1.2"/></svg>${pins}</div>
+        <div class="mleg"><b>${gstat?.points ?? 0}</b> 服務據點 · <b>${gstat?.cities ?? 0}</b> 縣市 · <span style="color:var(--terra)">● ${esc(gstat?.hq ?? "")}</span></div>
+      </div>
+    </div>
+
+    <div class="bs-foot"><span>台灣福祉科技 × Ragic × 工研院多模態 RAG · 全地端部署 · 示範資料・姓名已假名化</span><span style="margin-left:auto">資料源 tickets / CRM_service_tickets / pending_review · 角色 tenant_admin</span></div>
+  </div>
+</div>`;
+  return doc("台灣福祉 AI 智慧戰情室 — 治理日報 v8", body, V8_CSS);
 }
 
 const FUKU_MAST = (asOf: string, roleB: string, roleS: string, onTab: string): string => `
