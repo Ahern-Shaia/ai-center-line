@@ -157,3 +157,19 @@ brief 沒講清楚產品是什麼，**自己先釘**：點名一個具體主題�
 
 > 新原則：**普世的** append §A；**風格的** append 對應 profile。對應記憶 `memory/feedback_frontend_design_principles.md`。
 > 截圖工具種子：`scripts/shot.mjs`（A10）—— 移植到專案後接上 dev server / 登入即可用。
+
+---
+
+## B0-MC. ✅ 本專案採用 profile：`mission-control-dark`（2026-07-02 用戶裁定，取代 modern-SaaS-craft）
+
+適用：AI 戰情室產品介面（工廠監控 dashboard）。隱喻 = 控制室/SCADA/終端機。參考 mockup/warroom-*-v4.html。
+
+- **密度**：高、儀表化；資訊即畫面。
+- **色彩**：canvas `#0F1116`、panel `#161A21`、panel-2 `#1B2029`；文字 `#E8ECF4`/`#9AA3B2`/`#5F6877`；hairline 白 7%。訊號色：綠 `#3DD68C`（正常/品牌）、琥珀 `#E8A33D`（注意）、紅 `#E5655E`（異常）、藍 `#58A6FF`（資訊）、灰 `#6B7484`（待機）。**全頁一致深色，禁止深淺混搭區塊**。
+- **深度**：hairline ring＋inset 頂光；**發光（glow）只用於狀態燈與單一關鍵 accent**，不可到處 glow。
+- **填充**：實色非漸層；primary 按鈕 = 訊號綠底＋深色字（`#0B1210`）。
+- **形狀**：中性圓角 10px；**狀態語彙 = 燈號（lamp）＋等寬字 tag**，不用 pill 底色徽章。
+- **字體**：所有資料（數字/代碼/時間戳/工單號）用等寬字（SF Mono 系）；CJK 用 PingFang TC；label 小字大字距（.1em+）。
+- **材質**：44px 網格底紋（白 2.2%，fixed、pointer-events:none）。
+- **動效**：micro 100–150ms / enter 150–200ms；custom cubic-bezier，不用 linear/ease-in-out。
+- **avoid-list**：淺色頁面插深色區塊（或反向）、purple/blue AI glow、pill 徽章、slogan 式判定句（一律用白話摘要，如「AI 晨間簡報」三行文）、等寬卡片陣列、左側欄預設。
