@@ -1,0 +1,36 @@
+{
+  "tenant_name": "台灣福祉科技",
+  "metrics": {
+    "monthly_service_tickets": 47,
+    "km_documents": 312,
+    "pending_review": 6,
+    "as_of_date": "2026-07-03"
+  },
+  "departments": [
+    { "department_id": "D1", "name": "技術工程", "ragic_table": "HR_daily_reports", "line_group_id": "Gxxxx1", "last_activity": "2026-07-03T07:58:00" },
+    { "department_id": "D2", "name": "售後服務", "ragic_table": "CRM_service_tickets", "line_group_id": "Gxxxx2", "last_activity": "2026-07-03T08:05:00" },
+    { "department_id": "D3", "name": "報工生產", "ragic_table": "MES_production_progress", "line_group_id": "Gxxxx3", "last_activity": "2026-07-03T07:41:00" },
+    { "department_id": "D4", "name": "業務一部", "ragic_table": "ERP_order_management", "line_group_id": "Gxxxx4", "last_activity": "2026-07-02T18:30:00" },
+    { "department_id": "D5", "name": "人資總務", "ragic_table": "HR_admin_tickets", "line_group_id": "Gxxxx5", "last_activity": "2026-06-30T16:20:00" },
+    { "department_id": "D6", "name": "技術研發", "ragic_table": "工研院多模態RAG", "line_group_id": "Gxxxx6", "last_activity": "2026-07-02T17:12:00" }
+  ],
+  "tickets": [
+    { "ticket_id": "T-001", "department_id": "D1", "category": "報工日報", "summary": "王○○：輪椅升降機水平調校 2.5h、斜坡板焊接 1.5h", "confidence": "high", "confirm_status": "待簽核", "confirmed_by": null, "confirmed_at": null, "needs_review": false, "message_count": 3, "linked_ref": null, "created_at": "2026-07-03T07:58:00" },
+    { "ticket_id": "T-002", "department_id": "D1", "category": "報工日報", "summary": "林○○：到宅沐浴車水電整合 3h", "confidence": "high", "confirm_status": "待簽核", "confirmed_by": null, "confirmed_at": null, "needs_review": false, "message_count": 2, "linked_ref": null, "created_at": "2026-07-03T07:50:00" },
+    { "ticket_id": "T-003", "department_id": "D1", "category": "報工日報", "summary": "陳○○：福祉車扶手安裝，工時未明確填寫，推估 2h", "confidence": "medium", "confirm_status": "待簽核", "confirmed_by": null, "confirmed_at": null, "needs_review": false, "message_count": 2, "linked_ref": null, "created_at": "2026-07-03T07:45:00" },
+    { "ticket_id": "T-004", "department_id": "D1", "category": "報工日報", "summary": "張○○：協助試車，項目描述含口語，需人工確認歸類", "confidence": "medium", "confirm_status": "待簽核", "confirmed_by": null, "confirmed_at": null, "needs_review": false, "message_count": 1, "linked_ref": null, "created_at": "2026-07-03T07:40:00" },
+
+    { "ticket_id": "T-010", "department_id": "D2", "category": "維修工單", "summary": "示範車號 A：輪椅升降機鋼索斷裂 → 建議通知採購備標準鋼索並指派技師", "confidence": "high", "confirm_status": "待簽核", "confirmed_by": null, "confirmed_at": null, "needs_review": false, "message_count": 5, "linked_ref": "示範車號 A", "created_at": "2026-07-03T08:05:00" },
+    { "ticket_id": "T-011", "department_id": "D2", "category": "維修工單", "summary": "「門壞了」— 車號與部位無法對應，已即時攔截，需人工補資訊", "confidence": "low", "confirm_status": "待簽核", "confirmed_by": null, "confirmed_at": null, "needs_review": true, "message_count": 2, "linked_ref": null, "created_at": "2026-07-03T07:32:00" },
+
+    { "ticket_id": "T-020", "department_id": "D3", "category": "改裝進度", "summary": "復康巴士 B 批殼件焊接完成，進入塗裝", "confidence": "high", "confirm_status": "待簽核", "confirmed_by": null, "confirmed_at": null, "needs_review": false, "message_count": 4, "linked_ref": null, "created_at": "2026-07-03T07:41:00" },
+    { "ticket_id": "T-021", "department_id": "D3", "category": "改裝進度", "summary": "到宅沐浴車 熱水模組安裝，影像辨識產出進度備註", "confidence": "high", "confirm_status": "待簽核", "confirmed_by": null, "confirmed_at": null, "needs_review": false, "message_count": 3, "linked_ref": null, "created_at": "2026-07-03T07:20:00" },
+    { "ticket_id": "T-022", "department_id": "D3", "category": "改裝進度", "summary": "語音回報產能，數字聽辨不確定，標中信心待複核", "confidence": "medium", "confirm_status": "待簽核", "confirmed_by": null, "confirmed_at": null, "needs_review": false, "message_count": 1, "linked_ref": null, "created_at": "2026-07-03T07:05:00" },
+
+    { "ticket_id": "T-030", "department_id": "D4", "category": "採購/訂單", "summary": "某長照客戶 復康巴士 2 台採購意向，OCR 拆解報價單 → 採購子表格", "confidence": "high", "confirm_status": "已簽核", "confirmed_by": "陳○○", "confirmed_at": "2026-07-03T08:04:00", "needs_review": false, "message_count": 4, "linked_ref": null, "created_at": "2026-07-02T18:30:00" },
+    { "ticket_id": "T-031", "department_id": "D4", "category": "採購/訂單", "summary": "福祉車配件補貨單，品項與數量完整", "confidence": "high", "confirm_status": "已簽核", "confirmed_by": "陳○○", "confirmed_at": "2026-07-03T08:04:00", "needs_review": false, "message_count": 2, "linked_ref": null, "created_at": "2026-07-02T18:10:00" },
+
+    { "ticket_id": "T-060", "department_id": "D6", "category": "研發技術KM", "summary": "因應消防安全法規第 11 條，高壓閥位置向上調整 15 公分（已同步工研院 RAG）", "confidence": "high", "confirm_status": "已簽核", "confirmed_by": "林○○", "confirmed_at": "2026-07-02T17:15:00", "needs_review": false, "message_count": 6, "linked_ref": null, "created_at": "2026-07-02T17:12:00" },
+    { "ticket_id": "T-061", "department_id": "D6", "category": "研發技術KM", "summary": "升降機馬達選型比較，含跨群組長對話摘要", "confidence": "medium", "confirm_status": "已簽核", "confirmed_by": "林○○", "confirmed_at": "2026-07-02T17:15:00", "needs_review": false, "message_count": 5, "linked_ref": null, "created_at": "2026-07-02T16:40:00" }
+  ]
+}

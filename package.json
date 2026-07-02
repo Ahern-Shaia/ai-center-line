@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "analyze": "tsx src/index.ts"
+    "analyze": "tsx src/index.ts",
+    "warroom": "tsx src/warroom/build.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.109.1",

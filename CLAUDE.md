@@ -130,7 +130,9 @@ ai-center-line/
 │   ├── schemas.ts          ← zod 抽取 schema（分類/日報/記錄）
 │   ├── masterData.ts       ← 模擬 Ragic 主檔 + 工廠詞庫（Phase 1 改接 Ragic API）
 │   ├── report.ts           ← HTML 視覺化報告
-│   └── types.ts            ← 共用型別
+│   ├── types.ts            ← 共用型別
+│   └── warroom/            ← 戰情室資料綁定：tickets 資料 → aggregate（按委員鐵律算三環形儀表）→ render 角色視圖（npm run warroom）
+├── data/                   ← 戰情室資料層（taiwanhomecare-warroom.json，對應 spec tickets schema，已假名化）
 ├── samples/                ← 模擬 LINE 匯出檔（回歸驗證基準，勿隨意改動）
 ├── output/                 ← 分析輸出（gitignore）
 ├── docs/
