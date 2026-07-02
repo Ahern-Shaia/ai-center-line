@@ -17,7 +17,7 @@
 - **語言**：TypeScript（Node.js，ESM）
 - **運行**：目前為本機 CLI prototype；Phase 1 起為 webhook 服務，目標多租戶 SaaS
 - **授權**：proprietary
-- **Git remote**：TBD（尚未 git init）
+- **Git remote**：TBD（local repo，main 分支，尚無 remote）
 
 ---
 
