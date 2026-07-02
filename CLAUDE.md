@@ -55,7 +55,7 @@
 | **R13** | **LINE 媒體即收即存**：webhook 服務實作後，照片/影片/檔案必須在收到事件時立即下載保存（LINE content URL 有時效） |
 | **R14** | **新代碼一律 TypeScript ESM**（`type: "module"`）；套件管理固定 **npm**，不可混用 pnpm / yarn |
 | **R15** | **Pre-PR Checklist**：對外發布 / 上線前必須走過 `docs/pre-pr-checklist.md`（solo dev 不走 PR ceremony，但上線前檢查不可省） |
-| **R16** | **前端設計鐵則**（戰情室後台開發時生效）：所有前端產出必過 `docs/frontend-design-principles.md` —— §A 普世核心一律適用、§C 設計流程迴圈動手前先跑；**§B 美學 profile 本專案鎖定 `mission-control-dark`**（2026-07-02 由用戶裁定，自訂定義見該檔 §B0-MC；戰情室產品介面適用，demo 報告頁不受限）。要換必須由人改本鐵則 + §B 並說明理由 |
+| **R16** | **前端設計鐵則**（戰情室後台開發時生效）：所有前端產出必過 `docs/frontend-design-principles.md` —— §A 普世核心一律適用（**含 §A5 先研究≥3競品再設計，不可略**）、§C 設計流程迴圈動手前先跑；**§B 美學 profile：客戶／委員面（台灣福祉）鎖定 `civic-trust`**（2026-07-03 用戶裁定，定義見該檔 §B0-CT；暖紙白×深松綠×赤土、serif 數字、每數字掛來源）。`mission-control-dark` 已由 civic-trust 取代。要換必須由人改本鐵則 + §B 並說明理由 |
 
 ### 1.4 執行模式（autonomy level）
 

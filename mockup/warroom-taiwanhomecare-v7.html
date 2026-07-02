@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>台灣福祉 AI 智慧戰情室 — v7</title>
+<style>
+  :root {
+    --paper: #F6F3EC;
+    --card: #FCFBF6;
+    --well: #F1EEE5;
+    --ink: #1F2A2E;
+    --ink-2: #55605F;
+    --ink-3: #8A938F;
+    --line: rgba(31,42,46,.11);
+    --line-2: rgba(31,42,46,.06);
+    --pine: #1E5C4F;
+    --pine-2: #2E7D5B;
+    --pine-tint: #E4EDE8;
+    --terra: #C2603A;
+    --terra-tint: #F3E5DC;
+    --ok: #2E7D5B; --ok-bg: #E4EDE8;
+    --warn: #A9781A; --warn-bg: #F5EDD8;
+    --danger: #B23A2E; --danger-bg: #F5E3DF;
+    --serif: "Georgia", "Songti TC", "Noto Serif TC", serif;
+    --sans: "Avenir Next", -apple-system, "PingFang TC", "Noto Sans TC", sans-serif;
+    --mono: "SF Mono", ui-monospace, Menlo, monospace;
+    --shadow: 0 1px 2px rgba(31,42,46,.04), 0 10px 30px -22px rgba(31,42,46,.28);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1600px; }
+  body {
+    font-family: var(--sans); background: var(--paper); color: var(--ink);
+    font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .serif { font-family: var(--serif); }
+  .eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: .16em; color: var(--pine); text-transform: uppercase; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+
+  /* ---------- Masthead ---------- */
+  .mast { background: var(--pine); color: #F3EFE6; display: flex; align-items: center; padding: 0 34px; height: 60px; gap: 20px; }
+  .mast .crest { width: 32px; height: 32px; border-radius: 8px; background: #F3EFE6; color: var(--pine); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; font-family: var(--serif); flex: none; }
+  .mast .wm { line-height: 1.15; }
+  .mast .wm b { font-size: 15px; font-weight: 600; letter-spacing: .01em; }
+  .mast .wm span { display: block; font-size: 10.5px; color: rgba(243,239,230,.62); letter-spacing: .04em; }
+  .mast nav { display: flex; gap: 3px; margin-left: 18px; height: 100%; }
+  .mast nav a { display: flex; align-items: center; padding: 0 14px; font-size: 13px; color: rgba(243,239,230,.66); text-decoration: none; position: relative; }
+  .mast nav a.on { color: #fff; font-weight: 600; }
+  .mast nav a.on::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 2.5px; background: var(--terra); border-radius: 2px 2px 0 0; }
+  .mast .right { margin-left: auto; display: flex; align-items: center; gap: 20px; }
+  .mast .role { text-align: right; line-height: 1.2; }
+  .mast .role b { font-size: 12.5px; font-weight: 600; }
+  .mast .role span { display: block; font-size: 10.5px; color: rgba(243,239,230,.6); }
+  .mast .eng { font-size: 11.5px; color: rgba(243,239,230,.72); display: flex; align-items: center; gap: 7px; font-family: var(--mono); }
+  .mast .clock { font-family: var(--mono); font-size: 12.5px; color: rgba(243,239,230,.85); border-left: 1px solid rgba(243,239,230,.2); padding-left: 20px; }
+
+  /* ---------- Page frame ---------- */
+  .wrap { padding: 22px 34px 30px; display: flex; flex-direction: column; gap: 18px; }
+  .titlebar { display: flex; align-items: flex-end; gap: 16px; }
+  .titlebar h1 { font-family: var(--serif); font-size: 25px; font-weight: 600; letter-spacing: .01em; }
+  .titlebar .sub { font-size: 12.5px; color: var(--ink-2); margin-bottom: 3px; }
+  .titlebar .flag { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink-2); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+  .c-hd { display: flex; align-items: center; gap: 10px; padding: 14px 20px 0; }
+  .c-hd h2 { font-size: 13.5px; font-weight: 700; letter-spacing: .01em; }
+  .c-hd .note { margin-left: auto; font-size: 11.5px; color: var(--ink-3); }
+  .rule { height: 1px; background: var(--line); margin: 11px 0 0; }
+
+  .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; font-size: 11px; font-weight: 600; padding: 2px 8px; white-space: nowrap; }
+  .pill .dot { width: 6px; height: 6px; }
+  .pill.ok { color: var(--ok); background: var(--ok-bg); }
+  .pill.warn { color: var(--warn); background: var(--warn-bg); }
+  .pill.danger { color: var(--danger); background: var(--danger-bg); }
+  .pill.pine { color: var(--pine); background: var(--pine-tint); }
+  .pill.terra { color: var(--terra); background: var(--terra-tint); }
+
+  /* ---------- Governance hero ---------- */
+  .gov { display: grid; grid-template-columns: 1.55fr 1fr; gap: 18px; }
+  .gauges { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .gauge { padding: 16px 18px 18px; text-align: center; position: relative; }
+  .gauge + .gauge { border-left: 1px solid var(--line); }
+  .gauge .ring { position: relative; width: 118px; height: 118px; margin: 4px auto 0; }
+  .gauge .ring svg { transform: rotate(-90deg); }
+  .gauge .ring .ctr { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .gauge .ring .val { font-family: var(--serif); font-size: 34px; font-weight: 600; line-height: 1; letter-spacing: -.01em; }
+  .gauge .ring .val small { font-size: 15px; }
+  .gauge .ring .frac { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 3px; }
+  .gauge .lbl { font-size: 13px; font-weight: 600; margin-top: 13px; }
+  .gauge .calc { font-size: 11px; color: var(--ink-3); margin-top: 4px; font-family: var(--mono); }
+  .gov-side { padding: 15px 20px 12px; display: flex; flex-direction: column; }
+  .gov-side p { font-size: 12.5px; line-height: 1.75; color: var(--ink-2); margin-top: 8px; }
+  .gov-side p b { color: var(--ink); font-weight: 600; }
+  .gov-side .metrics { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); display: flex; }
+  .gov-side .m { flex: 1; }
+  .gov-side .m + .m { border-left: 1px solid var(--line); padding-left: 14px; }
+  .gov-side .m .mv { font-family: var(--serif); font-size: 23px; font-weight: 600; letter-spacing: -.01em; }
+  .gov-side .m .mv small { font-size: 12px; color: var(--ink-3); font-family: var(--sans); font-weight: 500; margin-left: 2px; }
+  .gov-side .m .ml { font-size: 11px; color: var(--ink-2); margin-top: 1px; }
+  .gov-side .m .ml .src { color: var(--ink-3); font-family: var(--mono); font-size: 10px; display: block; margin-top: 1px; }
+
+  /* ---------- Six groups band ---------- */
+  .groups { display: grid; grid-template-columns: repeat(6, 1fr); }
+  .grp { padding: 13px 16px 14px; }
+  .grp + .grp { border-left: 1px solid var(--line); }
+  .grp .top { display: flex; align-items: center; gap: 8px; }
+  .grp .top .nm { font-weight: 650; font-size: 13px; }
+  .grp .tbl { font-family: var(--mono); font-size: 10.5px; color: var(--pine); margin-top: 8px; background: var(--pine-tint); border-radius: 5px; padding: 2px 6px; display: inline-block; }
+  .grp .st { font-size: 11px; color: var(--ink-2); margin-top: 7px; }
+  .grp .tm { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; font-family: var(--mono); }
+  .grp.alert { background: var(--danger-bg); }
+  .grp.alert .st { color: var(--danger); font-weight: 600; }
+
+  /* ---------- Sign-off panel ---------- */
+  .signoff table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .signoff th { text-align: left; font-size: 10.5px; font-weight: 600; color: var(--ink-3); letter-spacing: .05em; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+  .signoff td { padding: 12px 14px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+  .signoff tr:last-child td { border-bottom: none; }
+  .signoff th:first-child, .signoff td:first-child { padding-left: 20px; }
+  .signoff th:last-child, .signoff td:last-child { padding-right: 20px; }
+  .signoff td.grp2 { font-weight: 650; white-space: nowrap; }
+  .signoff td .draft { color: var(--ink-2); }
+  .signoff td .draft b { color: var(--ink); font-weight: 600; }
+  .signoff td .sub { color: var(--ink-3); font-size: 11px; margin-top: 2px; }
+  .conf { display: inline-flex; gap: 3px; align-items: center; font-family: var(--mono); font-size: 11px; }
+  .conf i { width: 5px; height: 12px; border-radius: 1px; background: var(--line); display: inline-block; }
+  .conf.h i:nth-child(-n+3) { background: var(--pine-2); }
+  .conf.m i:nth-child(-n+2) { background: var(--warn); }
+  .conf.l i:nth-child(-n+1) { background: var(--terra); }
+  .btn-sign { background: var(--pine); color: #F3EFE6; font-weight: 600; font-size: 12px; padding: 6px 14px; border-radius: 7px; white-space: nowrap; box-shadow: inset 0 1px 0 rgba(255,255,255,.14); }
+  .btn-done { color: var(--ok); font-weight: 600; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
+
+  /* ---------- Bottom trio ---------- */
+  .trio { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 18px; }
+  .chat-body { padding: 14px 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .bubble { max-width: 88%; font-size: 12.5px; line-height: 1.6; padding: 9px 13px; border-radius: 12px; }
+  .bubble.q { align-self: flex-end; background: var(--pine); color: #F3EFE6; border-bottom-right-radius: 4px; }
+  .bubble.a { align-self: flex-start; background: var(--well); color: var(--ink); border-bottom-left-radius: 4px; }
+  .bubble.a .cite { display: inline-block; margin-top: 6px; font-family: var(--mono); font-size: 10.5px; color: var(--pine); background: var(--pine-tint); border-radius: 4px; padding: 1px 6px; }
+  .bubble.a .cite.itri { color: var(--terra); background: var(--terra-tint); }
+  .chat-in { margin: 2px 18px 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--well); padding: 8px 12px; font-size: 12px; color: var(--ink-3); display: flex; align-items: center; }
+  .chat-in .send { margin-left: auto; width: 24px; height: 24px; border-radius: 6px; background: var(--pine); color: #F3EFE6; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+
+  .assets { padding: 12px 18px 14px; display: flex; flex-direction: column; gap: 9px; }
+  .asset { display: flex; gap: 11px; align-items: center; }
+  .asset .th { width: 42px; height: 42px; border-radius: 8px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .asset .th.img { background: #E7EDDF; } .asset .th.vid { background: var(--terra-tint); } .asset .th.pdf { background: var(--pine-tint); } .asset .th.csv { background: var(--well); }
+  .asset .m3 .t { font-size: 12px; font-weight: 600; }
+  .asset .m3 .s { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
+  .asset .m3 .s .g { color: var(--pine); font-family: var(--mono); }
+
+  .map { padding: 12px 18px 14px; }
+  .map-canvas { position: relative; height: 176px; background: linear-gradient(160deg, #EEF0E7, #E7ECE2); border-radius: 9px; overflow: hidden; border: 1px solid var(--line); }
+  .map-canvas svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .pin { position: absolute; transform: translate(-50%,-50%); }
+  .pin .d3 { width: 9px; height: 9px; border-radius: 50%; background: var(--terra); box-shadow: 0 0 0 4px rgba(194,96,58,.16); }
+  .pin.big .d3 { width: 13px; height: 13px; box-shadow: 0 0 0 6px rgba(194,96,58,.2); }
+  .map .legend2 { display: flex; gap: 14px; margin-top: 9px; font-size: 11px; color: var(--ink-2); }
+  .map .legend2 b { color: var(--ink); font-family: var(--serif); font-weight: 600; }
+
+  footer { display: flex; align-items: center; padding: 4px 4px 0; font-size: 11px; color: var(--ink-3); }
+  footer .mono { font-size: 10.5px; }
+</style>
+</head>
+<body>
+
+<div class="mast">
+  <div class="crest">福</div>
+  <div class="wm"><b>台灣福祉科技</b><span>AI 智慧管理戰情室</span></div>
+  <nav>
+    <a class="on" href="#">戰情室</a>
+    <a href="#">每日簽核</a>
+    <a href="#">知識檢索</a>
+    <a href="#">Ragic 總台</a>
+  </nav>
+  <div class="right">
+    <div class="eng"><span class="dot" style="background:#9FD6B4"></span>AI 引擎・07:30 批次完成</div>
+    <div class="clock">2026-07-03　08:12</div>
+    <div class="role"><b>總經理室</b><span>tenant_admin・全群組總覽</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="titlebar">
+    <div>
+      <div class="eyebrow">Command Center · 特種車輛改裝廠</div>
+      <h1>現場治理總覽</h1>
+    </div>
+    <div class="sub">復康巴士 · 福祉車 · 到宅沐浴車</div>
+    <div class="flag"><span class="dot" style="background:var(--terra)"></span>畫面每一個數字皆可回溯至來源資料表</div>
+  </div>
+
+  <!-- Governance hero -->
+  <div class="gov">
+    <div class="card gauges">
+      <div class="gauge">
+        <div class="ring">
+          <svg width="118" height="118" viewBox="0 0 118 118">
+            <circle cx="59" cy="59" r="52" fill="none" stroke="#E4E0D5" stroke-width="11"/>
+            <circle cx="59" cy="59" r="52" fill="none" stroke="var(--pine)" stroke-width="11" stroke-linecap="round" stroke-dasharray="107.8 326.7"/>
+          </svg>
+          <div class="ctr"><div class="val serif">33<small>%</small></div><div class="frac">2 / 6 群組</div></div>
+        </div>
+        <div class="lbl">本日簽核完成率</div>
+        <div class="calc">已簽核群組 ÷ 6</div>
+      </div>
+      <div class="gauge">
+        <div class="ring">
+          <svg width="118" height="118" viewBox="0 0 118 118">
+            <circle cx="59" cy="59" r="52" fill="none" stroke="#E4E0D5" stroke-width="11"/>
+            <circle cx="59" cy="59" r="52" fill="none" stroke="var(--pine-2)" stroke-width="11" stroke-linecap="round" stroke-dasharray="218.9 326.7"/>
+          </svg>
+          <div class="ctr"><div class="val serif">67<small>%</small></div><div class="frac">4 綠 · 1 黃 · 1 紅</div></div>
+        </div>
+        <div class="lbl">六群組整體健康度</div>
+        <div class="calc">綠燈群組 ÷ 6</div>
+      </div>
+      <div class="gauge">
+        <div class="ring">
+          <svg width="118" height="118" viewBox="0 0 118 118">
+            <circle cx="59" cy="59" r="52" fill="none" stroke="#E4E0D5" stroke-width="11"/>
+            <circle cx="59" cy="59" r="52" fill="none" stroke="var(--terra)" stroke-width="11" stroke-linecap="round" stroke-dasharray="202.6 326.7"/>
+          </svg>
+          <div class="ctr"><div class="val serif">62<small>%</small></div><div class="frac">8 / 13 筆</div></div>
+        </div>
+        <div class="lbl">今日 AI 高信心比例</div>
+        <div class="calc">high 筆數 ÷ 當日已分類</div>
+      </div>
+    </div>
+    <div class="card gov-side">
+      <div class="eyebrow" style="color:var(--terra)">治理原則</div>
+      <p><b>AI 不自己說了算。</b>所有分析結果在部門負責人簽核前僅為草稿，不寫入 Ragic 正式報表。<b>62% 是刻意不做高的誠實值</b>——看不太懂的內容一律標低信心、攔下來人工複核，不讓 AI 用猜的硬寫。</p>
+      <div class="metrics">
+        <div class="m"><div class="mv serif">47<small>件</small></div><div class="ml">本月維修工單<span class="src">CRM_service_tickets</span></div></div>
+        <div class="m"><div class="mv serif">312<small>份</small></div><div class="ml">知識庫累積文件<span class="src">多模態 RAG 索引</span></div></div>
+        <div class="m"><div class="mv serif" style="color:var(--terra)">6<small>筆</small></div><div class="ml">待人工確認<span class="src">pending_review</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Six groups -->
+  <div class="card">
+    <div class="c-hd"><h2>六大 LINE 群組即時狀態</h2><span class="note">系統輸入端 · 各群組對應一張 Ragic 資料表</span></div>
+    <div class="rule"></div>
+    <div class="groups">
+      <div class="grp">
+        <div class="top"><span class="dot" style="background:var(--ok)"></span><span class="nm">技術工程</span></div>
+        <span class="tbl">HR_daily_reports</span>
+        <div class="st">正常處理中 · 今日 12 則</div>
+        <div class="tm">更新 07:58</div>
+      </div>
+      <div class="grp">
+        <div class="top"><span class="dot" style="background:var(--warn)"></span><span class="nm">售後服務</span></div>
+        <span class="tbl">CRM_service_tickets</span>
+        <div class="st">1 筆低信心待補</div>
+        <div class="tm">更新 08:05</div>
+      </div>
+      <div class="grp">
+        <div class="top"><span class="dot" style="background:var(--ok)"></span><span class="nm">報工生產</span></div>
+        <span class="tbl">MES_production_progress</span>
+        <div class="st">正常處理中 · 今日 9 則</div>
+        <div class="tm">更新 07:41</div>
+      </div>
+      <div class="grp">
+        <div class="top"><span class="dot" style="background:var(--ok)"></span><span class="nm">業務一部</span></div>
+        <span class="tbl">ERP_order_management</span>
+        <div class="st">已簽核 · 3 張採購單</div>
+        <div class="tm">更新 昨 18:30</div>
+      </div>
+      <div class="grp alert">
+        <div class="top"><span class="dot" style="background:var(--danger)"></span><span class="nm">人資總務</span></div>
+        <span class="tbl">HR_admin_tickets</span>
+        <div class="st">逾時警示 · 3 天無活動</div>
+        <div class="tm">更新 06-30</div>
+      </div>
+      <div class="grp">
+        <div class="top"><span class="dot" style="background:var(--ok)"></span><span class="nm">技術研發</span></div>
+        <span class="tbl" style="color:var(--terra);background:var(--terra-tint)">→ 工研院多模態RAG</span>
+        <div class="st">已簽核 · 已同步 RAG</div>
+        <div class="tm">更新 昨 17:12</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sign-off panel -->
+  <div class="card signoff">
+    <div class="c-hd"><h2>每日簽核面板</h2><span class="pill pine" style="margin-left:12px"><span class="dot"></span>簽核後才寫入 Ragic</span><span class="note">Human-in-the-loop · 逾 24 小時未簽核自動轉紅燈</span></div>
+    <table>
+      <thead><tr><th>群組</th><th>AI 今日草稿摘要</th><th>信心分佈</th><th>狀態</th><th style="text-align:right">簽核</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="grp2">技術工程</td>
+          <td><div class="draft"><b>黃柏源</b>：輪椅升降機水平調校 2.5h、斜坡板焊接 1.5h — 已結構化為報工單</div></td>
+          <td><span class="conf h"><i></i><i></i><i></i> high</span></td>
+          <td><span class="pill warn"><span class="dot"></span>待簽核</span></td>
+          <td style="text-align:right"><span class="btn-sign">確認今日進度</span></td>
+        </tr>
+        <tr>
+          <td class="grp2">售後服務</td>
+          <td><div class="draft">車號 <b class="mono">ABC-1234</b> 輪椅升降機鋼索斷裂 → 建議通知採購備標準鋼索並指派技師<div class="sub">另 1 筆「門壞了」因車號與部位無法對應，<b style="color:var(--terra)">已即時攔截</b>，需人工補資訊</div></div></td>
+          <td><span class="conf l"><i></i><i></i><i></i> low</span></td>
+          <td><span class="pill danger"><span class="dot"></span>1 筆低信心</span></td>
+          <td style="text-align:right"><span class="btn-sign">展開複核</span></td>
+        </tr>
+        <tr>
+          <td class="grp2">業務一部</td>
+          <td><div class="draft">明揚長照 復康巴士 2 台採購意向，OCR 拆解報價單 → 寫入採購子表格</div></td>
+          <td><span class="conf h"><i></i><i></i><i></i> high</span></td>
+          <td><span class="pill ok"><span class="dot"></span>已簽核</span></td>
+          <td style="text-align:right"><span class="btn-done">✓ 蔡淑芬 08:04</span></td>
+        </tr>
+        <tr>
+          <td class="grp2">技術研發</td>
+          <td><div class="draft">因應消防安全法規第 11 條，高壓閥位置向上調整 15 公分 — 技術核心已擷取<div class="sub">已同步工研院多模態 RAG 知識庫</div></div></td>
+          <td><span class="conf h"><i></i><i></i><i></i> high</span></td>
+          <td><span class="pill ok"><span class="dot"></span>已簽核</span></td>
+          <td style="text-align:right"><span class="btn-done">✓ 劉建宏 昨 17:15</span></td>
+        </tr>
+        <tr>
+          <td class="grp2" style="color:var(--danger)">人資總務</td>
+          <td><div class="draft" style="color:var(--ink-3)">連續 3 天無新訊息，無待簽核草稿 — 系統自動轉逾時警示，列入待複核清單</div></td>
+          <td><span style="color:var(--ink-3);font-size:11px">—</span></td>
+          <td><span class="pill danger"><span class="dot"></span>逾時警示</span></td>
+          <td style="text-align:right"><span class="btn-sign" style="background:var(--terra)">前往處理</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Bottom trio -->
+  <div class="trio">
+    <div class="card">
+      <div class="c-hd"><h2>智慧檢索 · 對話</h2><span class="note">多模態 RAG · 回答標記來源</span></div>
+      <div class="rule"></div>
+      <div class="chat-body">
+        <div class="bubble q">上個月 ABC-1234 的升降機鋼索是換哪一種規格？</div>
+        <div class="bubble a">該車 6/12 維修更換為標準升降機鋼索（4mm 不鏽鋼），由技師李國棟施作，同批另備料 2 條。
+          <span class="cite">來源：維修工單 WO-2506-041</span></div>
+        <div class="bubble q">消防法規對高壓閥位置有新要求嗎？</div>
+        <div class="bubble a">依消防安全法規第 11 條，高壓閥位置須向上調整 15 公分，本廠已納入改裝標準。
+          <span class="cite itri">已同步工研院 RAG · 法規文件 p.11</span></div>
+      </div>
+      <div class="chat-in">向 AI 大腦提問…<span class="send">↑</span></div>
+    </div>
+
+    <div class="card">
+      <div class="c-hd"><h2>多模態素材看板</h2></div>
+      <div class="rule"></div>
+      <div class="assets">
+        <div class="asset"><div class="th img">🖼️</div><div class="m3"><div class="t">改裝圖紙_升降機平台.png</div><div class="s">圖片 · 來源群組 <span class="g">技術工程</span></div></div></div>
+        <div class="asset"><div class="th vid">🎬</div><div class="m3"><div class="t">異音檢測_後門馬達.mp4</div><div class="s">影片 · 來源群組 <span class="g">售後服務</span></div></div></div>
+        <div class="asset"><div class="th pdf">📄</div><div class="m3"><div class="t">長照標案合約_明揚.pdf</div><div class="s">文件 · 來源群組 <span class="g">業務一部</span></div></div></div>
+        <div class="asset"><div class="th csv">📊</div><div class="m3"><div class="t">報工數據_0702.csv</div><div class="s">表格 · 來源群組 <span class="g">報工生產</span></div></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="c-hd"><h2>全台服務涵蓋</h2><span class="note">終端客戶分布</span></div>
+      <div class="rule"></div>
+      <div class="map">
+        <div class="map-canvas">
+          <svg viewBox="0 0 120 176" preserveAspectRatio="xMidYMid meet">
+            <path d="M62 12 C74 20 82 34 84 52 C86 72 82 96 74 122 C68 142 60 160 52 166 C46 160 40 146 38 128 C34 104 34 78 40 54 C46 32 52 18 62 12 Z" fill="#DDE4D6" stroke="#C6D0BC" stroke-width="1.2"/>
+          </svg>
+          <div class="pin big" style="left:44%;top:80%"><div class="d3"></div></div>
+          <div class="pin" style="left:52%;top:66%"><div class="d3"></div></div>
+          <div class="pin" style="left:58%;top:30%"><div class="d3"></div></div>
+          <div class="pin" style="left:50%;top:44%"><div class="d3"></div></div>
+          <div class="pin" style="left:46%;top:90%"><div class="d3"></div></div>
+          <div class="pin" style="left:60%;top:22%"><div class="d3"></div></div>
+        </div>
+        <div class="legend2"><span><b>38</b> 服務據點</span><span><b>6</b> 縣市</span><span style="color:var(--terra)">● 高雄總廠</span></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>台灣福祉科技 × Ragic × 工研院多模態 RAG　·　全地端部署　·　機敏資料不外流</span>
+    <span class="mono" style="margin-left:auto">資料源：raw_messages / tickets / CRM_service_tickets / subsidy_applications　·　登入角色 tenant_admin</span>
+  </footer>
+
+</div>
+
+</body>
+</html>

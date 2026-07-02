@@ -173,3 +173,18 @@ brief 沒講清楚產品是什麼，**自己先釘**：點名一個具體主題�
 - **材質**：44px 網格底紋（白 2.2%，fixed、pointer-events:none）。
 - **動效**：micro 100–150ms / enter 150–200ms；custom cubic-bezier，不用 linear/ease-in-out。
 - **avoid-list**：淺色頁面插深色區塊（或反向）、purple/blue AI glow、pill 徽章、slogan 式判定句（一律用白話摘要，如「AI 晨間簡報」三行文）、等寬卡片陣列、左側欄預設。
+
+---
+
+## B0-CT. ✅ 客戶／委員面採用 profile：`civic-trust`（2026-07-03 用戶裁定，取代 mission-control-dark）
+
+適用：台灣福祉戰情室（客戶面）＋產發署委員簡報。隱喻＝民政/照護公共服務系統。參考 mockup/warroom-taiwanhomecare-v7.html。研究依據見 docs/modules/design-research-warroom.md「v7 civic-trust」。
+
+- **密度**：中高、可讀優先；行政報告的規矩感。
+- **色彩**：暖紙白 canvas `#F6F3EC`、card `#FCFBF6`、well `#F1EEE5`；墨 `#1F2A2E`/`#55605F`/`#8A938F`；hairline 暖線 11%。主色深松綠 `#1E5C4F`（信任/行政），accent 赤土 `#C2603A`（僅重點與告警）。狀態：綠 `#2E7D5B`、黃 `#A9781A`、紅 `#B23A2E`，皆色＋文字雙編碼。**全頁一致暖淺色，禁深色區塊。**
+- **深度**：hairline border＋極淡單一陰影；行政感靠規矩線與留白，不靠 glow/重陰影。
+- **填充**：實色非漸層；primary＝松綠底＋淺字。
+- **形狀**：中性圓角 8–12px；狀態用 pill（淡底同色深字）或燈點。
+- **字體**：**serif（Georgia/Songti/Noto Serif）給大數字與 wordmark 行政份量**；humanist sans（Avenir Next/PingFang）內文；mono 只留代碼/表名/工單號。
+- **可信鐵律（本案核心）**：畫面每個數字必掛來源表名（如 `CRM_service_tickets`/`pending_review`），環形儀表須可當場反推；刻意不美化信心度（誠實低值是加分）。
+- **avoid-list**：深藍墨+橘的通用 AI dashboard（合夥人舊原型即此）、深色區塊、純裝飾示意數字、glow、等寬卡片陣列、slogan 判定句。
