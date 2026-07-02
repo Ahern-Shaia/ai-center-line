@@ -5,126 +5,117 @@
 <title>AI 戰情室 — 報工日報</title>
 <style>
   :root {
-    --bg: #F5F6F8;
+    --canvas: #F2F3F6;
     --surface: #FFFFFF;
-    --surface-2: #FAFBFC;
-    --ink: #1C2027;
-    --ink-2: #5B6472;
-    --ink-3: #8B93A1;
-    --line: #E7E9EF;
+    --well: #F7F8FA;
+    --ink: #1B1E26;
+    --ink-2: #565E6C;
+    --ink-3: #8A92A0;
+    --line: #E6E8EE;
     --brand: #0E7A4E;
-    --brand-tint: #E8F4EE;
-    --ok: #14803C; --ok-bg: #E9F6EE;
-    --warn: #A16207; --warn-bg: #FBF3E0;
-    --danger: #B42222; --danger-bg: #FCEBEB;
-    --info: #175CD3; --info-bg: #EAF1FC;
-    --r: 10px;
-    --shadow-sm: 0 0 0 1px rgba(24,27,36,.06), 0 1px 2px rgba(24,27,36,.04);
+    --brand-tint: #E7F3EC;
+    --ok: #148044; --ok-bg: #E7F4EC;
+    --warn: #9A6A10; --warn-bg: #FAF1DC;
+    --danger: #B03A32; --danger-bg: #FBEBEA;
+    --mono: "SF Mono", ui-monospace, Menlo, monospace;
+    --shadow: 0 0 0 1px rgba(25,29,38,.05), 0 1px 2px rgba(25,29,38,.04), 0 12px 32px -20px rgba(25,29,38,.18);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 1600px; height: 1000px; overflow: hidden; }
   body {
     font-family: -apple-system, "SF Pro TC", "PingFang TC", "Noto Sans TC", sans-serif;
-    background: var(--bg); color: var(--ink);
-    display: flex; font-size: 14px; line-height: 1.5;
+    background: var(--canvas); color: var(--ink); font-size: 14px; line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column;
   }
-  .num { font-variant-numeric: tabular-nums; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 
-  /* ---------- Sidebar（同總覽 shell） ---------- */
-  .sidebar {
-    width: 224px; flex: none; background: var(--surface);
-    border-right: 1px solid var(--line);
-    display: flex; flex-direction: column; padding: 20px 12px 16px;
-  }
-  .brand { display: flex; align-items: center; gap: 10px; padding: 0 10px 18px; }
-  .brand-mark { width: 30px; height: 30px; border-radius: 8px; background: var(--brand); color: #fff; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
-  .brand-name { font-weight: 700; font-size: 14px; }
-  .brand-sub { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
-  .nav { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
-  .nav-label { font-size: 11px; color: var(--ink-3); letter-spacing: .8px; padding: 14px 10px 6px; }
-  .nav a { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--ink-2); text-decoration: none; font-weight: 500; }
-  .nav a svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.6; fill: none; }
-  .nav a.active { background: var(--brand-tint); color: var(--brand); font-weight: 600; }
-  .nav a .cnt { margin-left: auto; font-size: 11.5px; color: var(--ink-3); }
-  .nav a.active .cnt { color: var(--brand); }
-  .engine { margin-top: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2); padding: 10px 12px; font-size: 11.5px; color: var(--ink-2); }
-  .engine .row { display: flex; justify-content: space-between; padding: 2px 0; }
-  .engine b { color: var(--ink); font-weight: 600; }
-  .engine .hd { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
-  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+  /* ---------- Top nav（同總覽 shell） ---------- */
+  .topnav { height: 54px; flex: none; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 28px; gap: 26px; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-right: 6px; }
+  .brand-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--brand); color: #fff; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  .brand b { font-size: 13.5px; font-weight: 700; }
+  .brand span { font-size: 11px; color: var(--ink-3); margin-left: 6px; padding-left: 8px; border-left: 1px solid var(--line); }
+  .tabs { display: flex; gap: 4px; height: 100%; }
+  .tabs a { display: flex; align-items: center; padding: 0 13px; font-size: 13px; font-weight: 500; color: var(--ink-3); text-decoration: none; position: relative; }
+  .tabs a.on { color: var(--ink); font-weight: 650; }
+  .tabs a.on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; background: var(--brand); border-radius: 2px 2px 0 0; }
+  .tabs a .n { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-left: 6px; background: var(--well); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; }
+  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+  .search { width: 260px; height: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--well); color: var(--ink-3); display: flex; align-items: center; gap: 8px; padding: 0 11px; font-size: 12px; }
+  .kbd { margin-left: auto; border: 1px solid var(--line); background: #fff; border-radius: 4px; padding: 0 5px; font-size: 10.5px; font-family: var(--mono); }
+  .avatar { width: 30px; height: 30px; border-radius: 9px; background: #2A303C; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
 
-  /* ---------- Main ---------- */
-  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-  .topbar { height: 60px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--line); }
-  .topbar h1 { font-size: 16px; font-weight: 700; }
-  .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; font-size: 12.5px; }
-  .seg span { padding: 6px 14px; color: var(--ink-2); background: var(--surface); }
-  .seg span.on { background: #F0F2F5; color: var(--ink); font-weight: 600; }
+  /* ---------- Toolbar ---------- */
+  .toolbar { flex: none; display: flex; align-items: center; gap: 12px; padding: 18px 28px 0; }
+  .toolbar h1 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; margin-right: 6px; }
+  .toolbar .sum { font-size: 12px; color: var(--ink-3); margin-right: auto; }
+  .toolbar .sum b { color: var(--ink-2); font-weight: 600; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; font-size: 12.5px; background: var(--surface); }
+  .seg span { padding: 6px 13px; color: var(--ink-2); }
+  .seg span.on { background: var(--ink); color: #fff; font-weight: 600; }
   .filter { font-size: 12.5px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; background: var(--surface); }
-  .btn-primary {
-    margin-left: auto; background: var(--brand); color: #fff; font-weight: 600; font-size: 13px;
-    padding: 8px 16px; border-radius: 8px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 1px 2px rgba(14,122,78,.3);
-  }
+  .btn-primary { background: var(--brand); color: #fff; font-weight: 600; font-size: 13px; padding: 8px 16px; border-radius: 8px; box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 1px 2px rgba(14,122,78,.35); }
   .btn-ghost { border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; font-size: 13px; color: var(--ink-2); background: var(--surface); font-weight: 500; }
 
-  .content { flex: 1; padding: 20px 24px; display: flex; gap: 16px; min-height: 0; }
+  .content { flex: 1; padding: 16px 28px 24px; display: flex; gap: 18px; min-height: 0; }
 
-  /* ---------- Pills ---------- */
   .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-size: 11.5px; font-weight: 600; padding: 2px 9px; white-space: nowrap; }
   .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .pill.ok { color: var(--ok); background: var(--ok-bg); }
   .pill.warn { color: var(--warn); background: var(--warn-bg); }
-  .pill.info { color: var(--info); background: var(--info-bg); }
   .pill.brand { color: var(--brand); background: var(--brand-tint); }
 
   /* ---------- Table panel ---------- */
-  .panel { background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; min-height: 0; }
+  .panel { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
   .panel.table-panel { flex: 1; min-width: 0; }
-  .panel-hd { display: flex; align-items: baseline; gap: 10px; padding: 16px 18px 10px; }
-  .panel-hd h2 { font-size: 13.5px; font-weight: 700; }
-  .panel-hd .meta { margin-left: auto; font-size: 12px; color: var(--ink-3); }
+  .p-hd { display: flex; align-items: center; gap: 10px; padding: 14px 18px 10px; }
+  .p-hd h2 { font-size: 13px; font-weight: 700; }
+  .p-hd .meta { margin-left: auto; font-size: 11.5px; color: var(--ink-3); }
 
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  th { text-align: left; font-size: 11px; font-weight: 600; color: var(--ink-3); letter-spacing: .3px; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { text-align: left; font-size: 10.5px; font-weight: 600; color: var(--ink-3); letter-spacing: .06em; padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
   td { padding: 10px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
   th:first-child, td:first-child { padding-left: 18px; }
   th:last-child, td:last-child { padding-right: 18px; }
   td.r, th.r { text-align: right; }
+  td.num2 { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12.5px; }
   td .sub { color: var(--ink-3); font-size: 11.5px; margin-top: 1px; }
   td.dim { color: var(--ink-3); }
   tr.selected td { background: var(--brand-tint); }
-  tr.selected td:first-child { box-shadow: inset 2.5px 0 0 var(--brand); }
-  .dayrow td { background: var(--surface-2); color: var(--ink-3); font-size: 11px; font-weight: 600; padding: 5px 18px; letter-spacing: .4px; }
+  tr.selected td:first-child { box-shadow: inset 3px 0 0 var(--brand); }
+  .dayrow td { background: var(--well); color: var(--ink-3); font-size: 10.5px; font-weight: 600; padding: 5px 18px; letter-spacing: .06em; font-family: var(--mono); }
+  .totalrow td { background: var(--well); font-size: 12px; color: var(--ink-2); font-weight: 600; border-top: 1px solid var(--line); }
+  .totalrow td b { color: var(--ink); }
+  .p-ft { margin-top: auto; border-top: 1px solid var(--line); padding: 10px 18px; display: flex; font-size: 11.5px; color: var(--ink-3); }
 
   /* ---------- Trace drawer ---------- */
-  .drawer { width: 396px; flex: none; display: flex; flex-direction: column; gap: 0; background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow-sm); min-height: 0; overflow: hidden; }
-  .drawer-hd { padding: 14px 18px 12px; border-bottom: 1px solid var(--line); }
+  .drawer { width: 400px; flex: none; display: flex; flex-direction: column; background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); min-height: 0; overflow: hidden; }
+  .drawer-hd { padding: 14px 18px 12px; border-bottom: 1px solid var(--line); background: var(--well); }
   .drawer-hd .t { font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 8px; }
-  .drawer-hd .s { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
-  .drawer-body { padding: 14px 18px; overflow: hidden; display: flex; flex-direction: column; gap: 16px; }
-  .d-label { font-size: 11px; font-weight: 600; color: var(--ink-3); letter-spacing: .5px; margin-bottom: 8px; }
+  .drawer-hd .s { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; font-family: var(--mono); }
+  .drawer-body { padding: 14px 18px; overflow: hidden; display: flex; flex-direction: column; gap: 15px; }
+  .d-label { font-size: 10.5px; font-weight: 600; color: var(--ink-3); letter-spacing: .07em; margin-bottom: 8px; }
 
-  .msg { display: flex; gap: 9px; margin-bottom: 10px; }
-  .msg .av { width: 28px; height: 28px; border-radius: 50%; background: #E3E7ED; color: var(--ink-2); font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex: none; }
-  .msg .bub { background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px 12px 12px 12px; padding: 8px 11px; font-size: 12px; line-height: 1.55; }
+  .msg { display: flex; gap: 9px; margin-bottom: 9px; }
+  .msg .av { width: 28px; height: 28px; border-radius: 9px; background: #E9EBF0; color: var(--ink-2); font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex: none; }
+  .msg .bub { background: var(--well); border: 1px solid var(--line); border-radius: 4px 12px 12px 12px; padding: 8px 11px; font-size: 12px; line-height: 1.55; }
   .msg .who { font-size: 11px; color: var(--ink-3); margin-bottom: 3px; }
   .msg .who b { color: var(--ink-2); font-weight: 600; }
-  .msg.linked .bub { border-style: dashed; color: var(--ink-2); }
+  .msg.linked .bub { border-style: dashed; color: var(--ink-2); background: var(--surface); }
 
-  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 14px; font-size: 12px; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; font-size: 12px; }
   .field { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 5px; }
   .field .fk { color: var(--ink-3); }
   .field .fv { font-weight: 600; text-align: right; }
+  .field .fv.mono { font-weight: 500; }
   .field.wide { grid-column: 1 / -1; }
 
   .trace { list-style: none; font-size: 12px; }
   .trace li { display: flex; gap: 10px; padding: 4px 0; align-items: baseline; }
-  .trace .tt { color: var(--ink-3); width: 40px; flex: none; }
-  .trace .td2 { position: relative; padding-left: 14px; }
-  .trace .td2::before { content: ""; position: absolute; left: 0; top: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
-  .trace li.done .td2::before { background: var(--ok); }
+  .trace .tt { color: var(--ink-3); width: 42px; flex: none; font-family: var(--mono); font-size: 11.5px; }
+  .trace .td2 { position: relative; padding-left: 15px; }
+  .trace .td2::before { content: ""; position: absolute; left: 0; top: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
   .trace b { font-weight: 600; }
 
   .drawer-ft { margin-top: auto; border-top: 1px solid var(--line); padding: 12px 18px; display: flex; gap: 10px; }
@@ -132,198 +123,184 @@
 </head>
 <body>
 
-<aside class="sidebar">
-  <div class="brand">
-    <div class="brand-mark">佑</div>
-    <div>
-      <div class="brand-name">佑成精密</div>
-      <div class="brand-sub">AI 戰情室</div>
-    </div>
-  </div>
-  <nav class="nav">
-    <a href="#">
-      <svg viewBox="0 0 16 16"><rect x="1.5" y="1.5" width="5.4" height="5.4" rx="1.2"/><rect x="9.1" y="1.5" width="5.4" height="5.4" rx="1.2"/><rect x="1.5" y="9.1" width="5.4" height="5.4" rx="1.2"/><rect x="9.1" y="9.1" width="5.4" height="5.4" rx="1.2"/></svg>
-      戰情室總覽
-    </a>
-    <a class="active" href="#">
-      <svg viewBox="0 0 16 16"><rect x="2.5" y="1.5" width="11" height="13" rx="1.5"/><path d="M5 5h6M5 8h6M5 11h3.5"/></svg>
-      報工日報 <span class="cnt num">8</span>
-    </a>
-    <a href="#">
-      <svg viewBox="0 0 16 16"><path d="M8 1.8l5.5 3.2v6L8 14.2 2.5 11V5z"/><path d="M8 7.6v6.4M2.7 5.1L8 8.2l5.3-3.1"/></svg>
-      維保知識庫 <span class="cnt num">27</span>
-    </a>
-    <a href="#">
-      <svg viewBox="0 0 16 16"><path d="M2 3.5h12v7.5H8.5L5 13.8v-2.8H2z"/></svg>
-      群組管理 <span class="cnt num">3</span>
-    </a>
-    <div class="nav-label">系統</div>
-    <a href="#">
-      <svg viewBox="0 0 16 16"><path d="M2 4.5h12M2 8h12M2 11.5h12"/><circle cx="6" cy="4.5" r="1.6" fill="#fff"/><circle cx="11" cy="8" r="1.6" fill="#fff"/><circle cx="4.5" cy="11.5" r="1.6" fill="#fff"/></svg>
-      Ragic 匯流設定
-    </a>
+<header class="topnav">
+  <div class="brand"><div class="brand-mark">佑</div><b>佑成精密</b><span>AI 戰情室</span></div>
+  <nav class="tabs">
+    <a href="#">戰情室</a>
+    <a class="on" href="#">報工日報 <span class="n">8</span></a>
+    <a href="#">維保知識庫 <span class="n">27</span></a>
+    <a href="#">群組 <span class="n">3</span></a>
+    <a href="#">Ragic 匯流</a>
   </nav>
-  <div class="engine">
-    <div class="hd"><span class="pulse"></span>AI 分析引擎</div>
-    <div class="row"><span>今日已分析</span><b class="num">77 則</b></div>
-    <div class="row"><span>待人工確認</span><b class="num">3 筆</b></div>
-    <div class="row"><span>快取命中率</span><b class="num">100%</b></div>
+  <div class="nav-right">
+    <div class="search">搜尋機台、工單、異常…<span class="kbd">⌘K</span></div>
+    <div class="avatar">廠</div>
   </div>
-</aside>
+</header>
 
-<main class="main">
-  <div class="topbar">
-    <h1>報工日報</h1>
-    <div class="seg"><span>今日</span><span class="on">06-29 ～ 06-30</span><span>本月</span></div>
-    <span class="filter">全部線別 ▾</span>
-    <span class="filter">全部群組 ▾</span>
-    <span class="btn-primary">同步至 Ragic（8 筆已確認）</span>
-    <span class="btn-ghost">匯出</span>
-  </div>
+<div class="toolbar">
+  <h1>報工日報</h1>
+  <span class="sum">共 <b>8 筆</b>・已確認 7・待確認 1・全數可溯源</span>
+  <div class="seg"><span>今日</span><span class="on">06-29 ～ 06-30</span><span>本月</span></div>
+  <span class="filter">全部線別 ▾</span>
+  <span class="btn-primary">同步至 Ragic（7 筆）</span>
+  <span class="btn-ghost">匯出</span>
+</div>
 
-  <div class="content">
+<main class="content">
 
-    <div class="panel table-panel">
-      <div class="panel-hd">
-        <h2>結構化日報</h2><span class="pill brand"><span class="dot"></span>8 筆・全數可溯源</span>
-        <span class="meta">來源：報工群（LINE）・AI 自動抽取＋一鍵確認</span>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>回報人</th><th>線別／機台</th><th>工單</th>
-            <th class="r">產出</th><th class="r">不良</th><th class="r">加班</th>
-            <th>異常備註</th><th>狀態</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="dayrow"><td colspan="8">2026-06-30（二）</td></tr>
-          <tr>
-            <td>陳志明<div class="sub">P-002</div></td>
-            <td>A線・M-001<div class="sub">1號機</div></td>
-            <td class="num">WO-2506-018</td>
-            <td class="r num">1,310</td><td class="r num">9</td><td class="r num dim">—</td>
-            <td class="dim">—</td>
-            <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
-          </tr>
-          <tr>
-            <td>王俊華<div class="sub">P-003</div></td>
-            <td>A線・M-002<div class="sub">2號機</div></td>
-            <td class="num">WO-2506-018</td>
-            <td class="r num">950</td><td class="r num">35</td><td class="r num dim">—</td>
-            <td>毛邊全檢中，降速影響產量</td>
-            <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
-          </tr>
-          <tr>
-            <td>張家吉<div class="sub">P-004</div></td>
-            <td>B線・M-004<div class="sub">4號機</div></td>
-            <td class="num">WO-2506-022</td>
-            <td class="r num">1,520</td><td class="r num">18</td><td class="r num">1.5h</td>
-            <td>量產第一天</td>
-            <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
-          </tr>
-          <tr>
-            <td>李政宏<div class="sub">P-005</div></td>
-            <td>—・M-005<div class="sub">5號機支援</div></td>
-            <td class="num">WO-2506-022</td>
-            <td class="r num dim">—</td><td class="r num dim">—</td><td class="r num dim">—</td>
-            <td>保養協助＋包裝 4h</td>
-            <td><span class="pill warn"><span class="dot"></span>待確認</span></td>
-          </tr>
-          <tr class="dayrow"><td colspan="8">2026-06-29（一）</td></tr>
-          <tr class="selected">
-            <td>陳志明<div class="sub">P-002</div></td>
-            <td>A線・M-001<div class="sub">1號機</div></td>
-            <td class="num">WO-2506-018</td>
-            <td class="r num">1,250</td><td class="r num">12</td><td class="r num">1.0h</td>
-            <td>3號機早上卡料停約 20 分</td>
-            <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
-          </tr>
-          <tr>
-            <td>王俊華<div class="sub">P-003</div></td>
-            <td>A線・M-002<div class="sub">2號機</div></td>
-            <td class="num">WO-2506-018</td>
-            <td class="r num">1,180</td><td class="r num">8</td><td class="r num dim">—</td>
-            <td class="dim">—</td>
-            <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
-          </tr>
-          <tr>
-            <td>張家吉<div class="sub">P-004</div></td>
-            <td>B線・M-004<div class="sub">4號機</div></td>
-            <td class="num">WO-2506-022</td>
-            <td class="r num">300</td><td class="r num">40</td><td class="r num dim">—</td>
-            <td>換模＋試模，模溫偏高再調</td>
-            <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
-          </tr>
-          <tr>
-            <td>黃美玲<div class="sub">P-006・品檢</div></td>
-            <td>—<div class="sub">抽驗</div></td>
-            <td class="num">WO-2506-018</td>
-            <td class="r num dim">—</td><td class="r num dim">—</td><td class="r num dim">—</td>
-            <td>抽驗 3 批合格，022 首件待複驗</td>
-            <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
-          </tr>
-        </tbody>
-      </table>
+  <div class="panel table-panel">
+    <div class="p-hd">
+      <h2>結構化日報</h2><span class="pill brand"><span class="dot"></span>AI 抽取＋一鍵確認</span>
+      <span class="meta">來源：報工群（LINE）</span>
     </div>
+    <table>
+      <thead>
+        <tr>
+          <th>回報人</th><th>線別／機台</th><th>工單</th>
+          <th class="r">產出</th><th class="r">不良</th><th class="r">加班</th>
+          <th>異常備註</th><th>狀態</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="dayrow"><td colspan="8">2026-06-30 TUE</td></tr>
+        <tr>
+          <td>陳志明<div class="sub">P-002</div></td>
+          <td>A線・<span class="mono">M-001</span><div class="sub">1號機</div></td>
+          <td class="num2">WO-2506-018</td>
+          <td class="r num2">1,310</td><td class="r num2">9</td><td class="r num2 dim">—</td>
+          <td class="dim">—</td>
+          <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
+        </tr>
+        <tr>
+          <td>王俊華<div class="sub">P-003</div></td>
+          <td>A線・<span class="mono">M-002</span><div class="sub">2號機</div></td>
+          <td class="num2">WO-2506-018</td>
+          <td class="r num2">950</td><td class="r num2">35</td><td class="r num2 dim">—</td>
+          <td>毛邊全檢中，降速影響產量</td>
+          <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
+        </tr>
+        <tr>
+          <td>張家吉<div class="sub">P-004</div></td>
+          <td>B線・<span class="mono">M-004</span><div class="sub">4號機</div></td>
+          <td class="num2">WO-2506-022</td>
+          <td class="r num2">1,520</td><td class="r num2">18</td><td class="r num2">1.5h</td>
+          <td>量產第一天</td>
+          <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
+        </tr>
+        <tr>
+          <td>李政宏<div class="sub">P-005</div></td>
+          <td>—・<span class="mono">M-005</span><div class="sub">5號機支援</div></td>
+          <td class="num2">WO-2506-022</td>
+          <td class="r num2 dim">—</td><td class="r num2 dim">—</td><td class="r num2 dim">—</td>
+          <td>保養協助＋包裝 4h</td>
+          <td><span class="pill warn"><span class="dot"></span>待確認</span></td>
+        </tr>
+        <tr class="dayrow"><td colspan="8">2026-06-29 MON</td></tr>
+        <tr class="selected">
+          <td>陳志明<div class="sub">P-002</div></td>
+          <td>A線・<span class="mono">M-001</span><div class="sub">1號機</div></td>
+          <td class="num2">WO-2506-018</td>
+          <td class="r num2">1,250</td><td class="r num2">12</td><td class="r num2">1.0h</td>
+          <td>3號機早上卡料停約 20 分</td>
+          <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
+        </tr>
+        <tr>
+          <td>王俊華<div class="sub">P-003</div></td>
+          <td>A線・<span class="mono">M-002</span><div class="sub">2號機</div></td>
+          <td class="num2">WO-2506-018</td>
+          <td class="r num2">1,180</td><td class="r num2">8</td><td class="r num2 dim">—</td>
+          <td class="dim">—</td>
+          <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
+        </tr>
+        <tr>
+          <td>張家吉<div class="sub">P-004</div></td>
+          <td>B線・<span class="mono">M-004</span><div class="sub">4號機</div></td>
+          <td class="num2">WO-2506-022</td>
+          <td class="r num2">300</td><td class="r num2">40</td><td class="r num2 dim">—</td>
+          <td>換模＋試模，模溫偏高再調</td>
+          <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
+        </tr>
+        <tr>
+          <td>黃美玲<div class="sub">P-006・品檢</div></td>
+          <td>—<div class="sub">抽驗</div></td>
+          <td class="num2">WO-2506-018</td>
+          <td class="r num2 dim">—</td><td class="r num2 dim">—</td><td class="r num2 dim">—</td>
+          <td>抽驗 3 批合格，022 首件待複驗</td>
+          <td><span class="pill ok"><span class="dot"></span>已入庫</span></td>
+        </tr>
+        <tr class="totalrow">
+          <td colspan="3">合計（06-29 ～ 06-30）</td>
+          <td class="r num2"><b>6,510</b></td>
+          <td class="r num2"><b>122</b></td>
+          <td class="r num2">2.5h</td>
+          <td class="dim">不良率 1.9%</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="p-ft">
+      <span>最後同步 Ragic：<span class="mono">07-01 08:12</span>・下次自動同步 <span class="mono">20:00</span></span>
+      <span class="mono" style="margin-left:auto">1 / 1</span>
+    </div>
+  </div>
 
-    <div class="drawer">
-      <div class="drawer-hd">
-        <div class="t">溯源｜陳志明 06-29 日報 <span class="pill ok" style="margin-left:auto"><span class="dot"></span>信心 high</span></div>
-        <div class="s">報工群 訊息 #7・多行訊息・關聯 1 則</div>
+  <aside class="drawer">
+    <div class="drawer-hd">
+      <div class="t">溯源｜陳志明 06-29 日報 <span class="pill ok" style="margin-left:auto"><span class="dot"></span>信心 high</span></div>
+      <div class="s">報工群 #7・多行訊息・AI 關聯 1 則</div>
+    </div>
+    <div class="drawer-body">
+      <div>
+        <div class="d-label">原始 LINE 訊息</div>
+        <div class="msg">
+          <div class="av">明</div>
+          <div>
+            <div class="who"><b>阿明</b>（陳志明）・下午 06:20</div>
+            <div class="bub">6/29日報 阿明 A線 1號機 WO-2506-018 產出1250 不良12 加班1h<br>備註:3號機早上卡料停約20分</div>
+          </div>
+        </div>
+        <div class="msg linked">
+          <div class="av">明</div>
+          <div>
+            <div class="who"><b>阿明</b>・上午 09:40・AI 關聯（同日 3號機事件）</div>
+            <div class="bub">3號機報一下 早上卡料兩次 清完了 目前正常</div>
+          </div>
+        </div>
       </div>
-      <div class="drawer-body">
-        <div>
-          <div class="d-label">原始 LINE 訊息</div>
-          <div class="msg">
-            <div class="av">明</div>
-            <div>
-              <div class="who"><b>阿明</b>（陳志明）・下午 06:20</div>
-              <div class="bub">6/29日報 阿明 A線 1號機 WO-2506-018 產出1250 不良12 加班1h<br>備註:3號機早上卡料停約20分</div>
-            </div>
-          </div>
-          <div class="msg linked">
-            <div class="av">明</div>
-            <div>
-              <div class="who"><b>阿明</b>・上午 09:40・AI 關聯（同日 3號機事件）</div>
-              <div class="bub">3號機報一下 早上卡料兩次 清完了 目前正常</div>
-            </div>
-          </div>
-        </div>
 
-        <div>
-          <div class="d-label">AI 抽取欄位（主檔對應）</div>
-          <div class="fields">
-            <div class="field"><span class="fk">日期</span><span class="fv num">2026-06-29</span></div>
-            <div class="field"><span class="fk">人員</span><span class="fv">陳志明 P-002</span></div>
-            <div class="field"><span class="fk">線別</span><span class="fv">A線</span></div>
-            <div class="field"><span class="fk">機台</span><span class="fv">M-001（1號機）</span></div>
-            <div class="field"><span class="fk">工單</span><span class="fv num">WO-2506-018</span></div>
-            <div class="field"><span class="fk">產出／不良</span><span class="fv num">1,250 ／ 12</span></div>
-            <div class="field"><span class="fk">加班</span><span class="fv num">1.0h</span></div>
-            <div class="field"><span class="fk">信心</span><span class="fv">high</span></div>
-            <div class="field wide"><span class="fk">異常備註</span><span class="fv">3號機早上卡料停約 20 分 → 已建維保記錄</span></div>
-          </div>
-        </div>
-
-        <div>
-          <div class="d-label">處理軌跡</div>
-          <ul class="trace">
-            <li class="done"><span class="tt num">18:20</span><span class="td2">收到群組訊息（Webhook）</span></li>
-            <li class="done"><span class="tt num">18:20</span><span class="td2">AI 抽取完成，信心 <b>high</b></span></li>
-            <li class="done"><span class="tt num">18:21</span><span class="td2">確認卡片回貼群組（Flex Message）</span></li>
-            <li class="done"><span class="tt num">19:10</span><span class="td2"><b>組長-志豪</b> 一鍵確認</span></li>
-            <li class="done"><span class="tt num">19:10</span><span class="td2">寫入 Ragic 報工表單 <b class="num">#RPT-0629-012</b></span></li>
-          </ul>
+      <div>
+        <div class="d-label">AI 抽取欄位（主檔對應）</div>
+        <div class="fields">
+          <div class="field"><span class="fk">日期</span><span class="fv mono">2026-06-29</span></div>
+          <div class="field"><span class="fk">人員</span><span class="fv">陳志明 <span class="mono">P-002</span></span></div>
+          <div class="field"><span class="fk">線別</span><span class="fv">A線</span></div>
+          <div class="field"><span class="fk">機台</span><span class="fv"><span class="mono">M-001</span> 1號機</span></div>
+          <div class="field"><span class="fk">工單</span><span class="fv mono">WO-2506-018</span></div>
+          <div class="field"><span class="fk">產出／不良</span><span class="fv mono">1,250 ／ 12</span></div>
+          <div class="field"><span class="fk">加班</span><span class="fv mono">1.0h</span></div>
+          <div class="field"><span class="fk">信心</span><span class="fv">high</span></div>
+          <div class="field wide"><span class="fk">異常備註</span><span class="fv">3號機早上卡料停約 20 分 → 已建維保記錄</span></div>
         </div>
       </div>
-      <div class="drawer-ft">
-        <span class="btn-ghost" style="flex:1;text-align:center">查看 Ragic 記錄</span>
-        <span class="btn-ghost" style="flex:1;text-align:center">重新抽取</span>
+
+      <div>
+        <div class="d-label">處理軌跡</div>
+        <ul class="trace">
+          <li><span class="tt">18:20</span><span class="td2">收到群組訊息（Webhook）</span></li>
+          <li><span class="tt">18:20</span><span class="td2">AI 抽取完成，信心 <b>high</b></span></li>
+          <li><span class="tt">18:21</span><span class="td2">確認卡片回貼群組（Flex Message）</span></li>
+          <li><span class="tt">19:10</span><span class="td2"><b>組長-志豪</b> 一鍵確認</span></li>
+          <li><span class="tt">19:10</span><span class="td2">寫入 Ragic 報工表單 <b class="mono">#RPT-0629-012</b></span></li>
+        </ul>
       </div>
     </div>
+    <div class="drawer-ft">
+      <span class="btn-ghost" style="flex:1;text-align:center">查看 Ragic 記錄</span>
+      <span class="btn-ghost" style="flex:1;text-align:center">重新抽取</span>
+    </div>
+  </aside>
 
-  </div>
 </main>
 
 </body>

@@ -5,302 +5,299 @@
 <title>AI 戰情室 — 總覽</title>
 <style>
   :root {
-    --bg: #F5F6F8;
+    --canvas: #F2F3F6;
     --surface: #FFFFFF;
-    --surface-2: #FAFBFC;
-    --ink: #1C2027;
-    --ink-2: #5B6472;
-    --ink-3: #8B93A1;
-    --line: #E7E9EF;
+    --well: #F7F8FA;
+    --ink: #1B1E26;
+    --ink-2: #565E6C;
+    --ink-3: #8A92A0;
+    --line: #E6E8EE;
     --brand: #0E7A4E;
-    --brand-tint: #E8F4EE;
-    --ok: #14803C; --ok-bg: #E9F6EE;
-    --warn: #A16207; --warn-bg: #FBF3E0;
-    --danger: #B42222; --danger-bg: #FCEBEB;
-    --info: #175CD3; --info-bg: #EAF1FC;
-    --r: 10px;
-    --shadow: 0 0 0 1px rgba(24,27,36,.06), 0 1px 2px rgba(24,27,36,.04), 0 10px 28px -16px rgba(24,27,36,.14);
-    --shadow-sm: 0 0 0 1px rgba(24,27,36,.06), 0 1px 2px rgba(24,27,36,.04);
+    --brand-tint: #E7F3EC;
+    --ok: #148044; --ok-bg: #E7F4EC;
+    --warn: #9A6A10; --warn-bg: #FAF1DC;
+    --danger: #B03A32; --danger-bg: #FBEBEA;
+    --dark: #191D26;
+    --dark-2: #20242F;
+    --dark-line: rgba(255,255,255,.09);
+    --dark-mut: rgba(226,232,244,.56);
+    --dark-ok: #3FC981; --dark-warn: #E3A93F; --dark-danger: #E4685F;
+    --mono: "SF Mono", ui-monospace, Menlo, monospace;
+    --shadow: 0 0 0 1px rgba(25,29,38,.05), 0 1px 2px rgba(25,29,38,.04), 0 12px 32px -20px rgba(25,29,38,.18);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 1600px; height: 1000px; overflow: hidden; }
   body {
     font-family: -apple-system, "SF Pro TC", "PingFang TC", "Noto Sans TC", sans-serif;
-    background: var(--bg); color: var(--ink);
-    display: flex; font-size: 14px; line-height: 1.5;
+    background: var(--canvas); color: var(--ink); font-size: 14px; line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column;
   }
-  .num { font-variant-numeric: tabular-nums; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .lbl { font-size: 11px; font-weight: 600; letter-spacing: .07em; color: var(--ink-3); }
 
-  /* ---------- Sidebar ---------- */
-  .sidebar {
-    width: 224px; flex: none; background: var(--surface);
-    border-right: 1px solid var(--line);
-    display: flex; flex-direction: column; padding: 20px 12px 16px;
+  /* ---------- Top nav ---------- */
+  .topnav {
+    height: 54px; flex: none; background: var(--surface); border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; padding: 0 28px; gap: 26px;
   }
-  .brand { display: flex; align-items: center; gap: 10px; padding: 0 10px 18px; }
-  .brand-mark {
-    width: 30px; height: 30px; border-radius: 8px; background: var(--brand);
-    color: #fff; font-weight: 700; font-size: 13px;
-    display: flex; align-items: center; justify-content: center; letter-spacing: .5px;
-  }
-  .brand-name { font-weight: 700; font-size: 14px; letter-spacing: .2px; }
-  .brand-sub { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
-  .nav { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
-  .nav-label { font-size: 11px; color: var(--ink-3); letter-spacing: .8px; padding: 14px 10px 6px; }
-  .nav a {
-    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
-    border-radius: 8px; color: var(--ink-2); text-decoration: none; font-weight: 500;
-  }
-  .nav a svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.6; fill: none; }
-  .nav a.active { background: var(--brand-tint); color: var(--brand); font-weight: 600; }
-  .nav a .cnt { margin-left: auto; font-size: 11.5px; color: var(--ink-3); }
-  .nav a.active .cnt { color: var(--brand); }
-  .engine {
-    margin-top: auto; border: 1px solid var(--line); border-radius: var(--r);
-    background: var(--surface-2); padding: 10px 12px; font-size: 11.5px; color: var(--ink-2);
-  }
-  .engine .row { display: flex; justify-content: space-between; padding: 2px 0; }
-  .engine b { color: var(--ink); font-weight: 600; }
-  .engine .hd { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
-  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+  .brand { display: flex; align-items: center; gap: 10px; margin-right: 6px; }
+  .brand-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--brand); color: #fff; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  .brand b { font-size: 13.5px; font-weight: 700; }
+  .brand span { font-size: 11px; color: var(--ink-3); margin-left: 6px; padding-left: 8px; border-left: 1px solid var(--line); }
+  .tabs { display: flex; gap: 4px; height: 100%; }
+  .tabs a { display: flex; align-items: center; padding: 0 13px; font-size: 13px; font-weight: 500; color: var(--ink-3); text-decoration: none; position: relative; }
+  .tabs a.on { color: var(--ink); font-weight: 650; }
+  .tabs a.on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; background: var(--brand); border-radius: 2px 2px 0 0; }
+  .tabs a .n { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-left: 6px; background: var(--well); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; }
+  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+  .search { width: 260px; height: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--well); color: var(--ink-3); display: flex; align-items: center; gap: 8px; padding: 0 11px; font-size: 12px; }
+  .kbd { margin-left: auto; border: 1px solid var(--line); background: #fff; border-radius: 4px; padding: 0 5px; font-size: 10.5px; font-family: var(--mono); }
+  .avatar { width: 30px; height: 30px; border-radius: 9px; background: #2A303C; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
 
-  /* ---------- Main ---------- */
-  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-  .topbar {
-    height: 60px; flex: none; display: flex; align-items: center; gap: 16px;
-    padding: 0 28px; background: var(--surface); border-bottom: 1px solid var(--line);
+  /* ---------- Andon band ---------- */
+  .andon {
+    flex: none; background: var(--dark); color: #F4F6FA; position: relative; overflow: hidden;
+    padding: 26px 32px 22px; display: flex; align-items: stretch; gap: 40px;
   }
-  .topbar h1 { font-size: 16px; font-weight: 700; }
-  .date { color: var(--ink-3); font-size: 12.5px; }
-  .search {
-    margin-left: auto; width: 300px; height: 34px; border: 1px solid var(--line);
-    border-radius: 8px; background: var(--surface-2); color: var(--ink-3);
-    display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: 12.5px;
+  .andon::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.03 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-  .kbd { margin-left: auto; border: 1px solid var(--line); background: #fff; border-radius: 5px; padding: 0 5px; font-size: 11px; color: var(--ink-3); }
-  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #2E3644; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+  .andon > * { position: relative; }
+  .verdict { flex: 1.15; display: flex; flex-direction: column; }
+  .verdict .day { font-size: 11.5px; letter-spacing: .1em; color: var(--dark-mut); font-weight: 600; }
+  .verdict .day .mono { letter-spacing: .02em; }
+  .verdict h1 { font-size: 27px; font-weight: 700; letter-spacing: -.01em; margin-top: 10px; display: flex; align-items: center; gap: 12px; }
+  .beacon { width: 11px; height: 11px; border-radius: 50%; background: var(--dark-ok); box-shadow: 0 0 0 5px rgba(63,201,129,.16); flex: none; }
+  .verdict .note { font-size: 12.5px; color: var(--dark-mut); margin-top: 9px; }
+  .verdict .note b { color: #E9EDF5; font-weight: 600; }
+  .verdict .ai { margin-top: auto; padding-top: 14px; font-size: 11px; color: rgba(226,232,244,.4); font-family: var(--mono); }
+  .a-metrics { flex: 2; display: grid; grid-template-columns: repeat(4, 1fr); }
+  .am { padding: 2px 0 0 26px; border-left: 1px solid var(--dark-line); display: flex; flex-direction: column; }
+  .am .t { font-size: 11.5px; color: var(--dark-mut); font-weight: 600; letter-spacing: .05em; }
+  .am .v { font-family: var(--mono); font-size: 38px; font-weight: 600; letter-spacing: -.03em; margin-top: 8px; line-height: 1; }
+  .am .v small { font-size: 15px; color: var(--dark-mut); font-weight: 500; margin-left: 3px; }
+  .am .s { font-size: 11.5px; margin-top: 9px; color: var(--dark-mut); display: flex; align-items: center; gap: 6px; }
+  .am .s .d { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+  .am .s.w { color: var(--dark-warn); } .am .s.w .d { background: var(--dark-warn); }
+  .am .s.g { color: var(--dark-ok); } .am .s.g .d { background: var(--dark-ok); }
+  .am .s.r { color: var(--dark-danger); } .am .s.r .d { background: var(--dark-danger); }
 
-  .content { flex: 1; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; min-height: 0; }
-
-  /* ---------- Pills & dots ---------- */
-  .pill {
-    display: inline-flex; align-items: center; gap: 6px; border-radius: 999px;
-    font-size: 11.5px; font-weight: 600; padding: 2px 9px; white-space: nowrap;
-  }
+  /* ---------- Content ---------- */
+  .content { flex: 1; min-height: 0; padding: 20px 28px 24px; display: flex; flex-direction: column; gap: 18px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-size: 11.5px; font-weight: 600; padding: 2px 9px; white-space: nowrap; }
   .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .pill.ok { color: var(--ok); background: var(--ok-bg); }
   .pill.warn { color: var(--warn); background: var(--warn-bg); }
   .pill.danger { color: var(--danger); background: var(--danger-bg); }
-  .pill.info { color: var(--info); background: var(--info-bg); }
-  .pill.neutral { color: var(--ink-2); background: #EFF1F5; }
 
-  /* ---------- KPI strip ---------- */
-  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-  .kpi { background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow-sm); padding: 16px 18px 14px; }
-  .kpi .k-label { font-size: 12px; color: var(--ink-2); font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
-  .kpi .k-value { font-size: 30px; font-weight: 700; letter-spacing: -.5px; margin-top: 6px; }
-  .kpi .k-value small { font-size: 14px; font-weight: 500; color: var(--ink-3); margin-left: 4px; letter-spacing: 0; }
-  .kpi .k-sub { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+  /* ---------- Machine rail ---------- */
+  .rail { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  .rail-hd { display: flex; align-items: center; padding: 12px 18px 0; }
+  .rail-hd h2 { font-size: 13px; font-weight: 700; }
+  .rail-hd .legend { margin-left: auto; font-size: 11.5px; color: var(--ink-3); display: flex; gap: 14px; }
+  .legend i { font-style: normal; display: inline-flex; align-items: center; gap: 5px; }
+  .legend .d { width: 6px; height: 6px; border-radius: 50%; }
+  .machines { display: grid; grid-template-columns: repeat(5, 1fr); margin-top: 10px; }
+  .m { padding: 12px 18px 14px; border-top: 1px solid var(--line); position: relative; }
+  .m + .m { border-left: 1px solid var(--line); }
+  .m .code { font-family: var(--mono); font-size: 12px; color: var(--ink-3); display: flex; align-items: center; gap: 7px; }
+  .m .code .d { width: 7px; height: 7px; border-radius: 50%; }
+  .m .code .ln { margin-left: auto; font-size: 10.5px; color: var(--ink-3); letter-spacing: .05em; }
+  .m .name { font-weight: 650; font-size: 13.5px; margin-top: 5px; }
+  .m .st { font-size: 11.5px; color: var(--ink-2); margin-top: 2px; }
+  .m .out { font-family: var(--mono); font-size: 12px; color: var(--ink-2); margin-top: 8px; }
+  .m .out b { font-weight: 600; color: var(--ink); font-size: 14px; }
+  .m.warn-m { background: linear-gradient(0deg, var(--warn-bg), var(--warn-bg)); }
+  .m.warn-m .st { color: var(--warn); font-weight: 600; }
 
-  /* ---------- Cards & sections ---------- */
-  .sec-hd { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
-  .sec-hd h2 { font-size: 13.5px; font-weight: 700; }
-  .sec-hd .more { margin-left: auto; font-size: 12px; color: var(--ink-3); }
-  .groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .gcard { background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow-sm); padding: 14px 16px; }
-  .gcard .g-top { display: flex; align-items: center; gap: 8px; }
-  .gcard .g-name { font-weight: 650; font-size: 13.5px; }
-  .gcard .g-top .pill { margin-left: auto; }
-  .gstats { display: flex; margin-top: 12px; }
-  .gstat { flex: 1; }
-  .gstat + .gstat { border-left: 1px solid var(--line); padding-left: 14px; }
-  .gstat .v { font-size: 19px; font-weight: 700; }
-  .gstat .l { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
-
-  /* ---------- Bottom split ---------- */
-  .split { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
-  .panel { background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow-sm); padding: 16px 0 6px; display: flex; flex-direction: column; }
-  .panel .sec-hd { padding: 0 18px; }
+  /* ---------- Bottom grid ---------- */
+  .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; align-items: start; flex: 1; min-height: 0; }
+  .panel { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  .p-hd { display: flex; align-items: baseline; gap: 10px; padding: 14px 18px 10px; }
+  .p-hd h2 { font-size: 13px; font-weight: 700; }
+  .p-hd .meta { margin-left: auto; font-size: 11.5px; color: var(--ink-3); }
 
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  th { text-align: left; font-size: 11px; font-weight: 600; color: var(--ink-3); letter-spacing: .3px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
-  td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { text-align: left; font-size: 10.5px; font-weight: 600; color: var(--ink-3); letter-spacing: .06em; padding: 7px 12px; border-bottom: 1px solid var(--line); }
+  td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
   th:first-child, td:first-child { padding-left: 18px; }
   th:last-child, td:last-child { padding-right: 18px; }
-  td.machine { font-weight: 650; white-space: nowrap; }
-  td .sub { color: var(--ink-3); font-size: 11.5px; margin-top: 1px; }
-  td.time { color: var(--ink-3); white-space: nowrap; }
-  tr.hover td { background: var(--surface-2); }
+  td.mc { font-family: var(--mono); font-weight: 600; white-space: nowrap; font-size: 12px; }
+  td .sub { color: var(--ink-3); font-size: 11.5px; margin-top: 2px; font-weight: 400; }
+  td.time { color: var(--ink-3); white-space: nowrap; font-family: var(--mono); font-size: 11.5px; }
+  tr.hl td { background: var(--well); }
 
-  .kcards { display: flex; flex-direction: column; gap: 0; padding: 0 18px; overflow: hidden; }
-  .kcard { padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .side { display: flex; flex-direction: column; gap: 18px; }
+  .glist { padding: 2px 18px 6px; }
+  .g { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .g:last-child { border-bottom: none; }
+  .g .d { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .g .nm { font-weight: 600; font-size: 12.5px; }
+  .g .st2 { font-size: 11.5px; color: var(--ink-3); }
+  .g .n2 { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+  .g .n2 b { color: var(--ink); font-size: 13px; }
+  .kcards { padding: 0 18px 8px; }
+  .kcard { padding: 10px 0; border-bottom: 1px solid var(--line); }
   .kcard:last-child { border-bottom: none; }
-  .kcard .k-t { font-weight: 600; font-size: 12.5px; line-height: 1.45; margin-top: 5px; }
-  .kcard .k-m { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; }
+  .kcard .t { font-weight: 600; font-size: 12.5px; line-height: 1.5; }
+  .kcard .m2 { font-size: 11px; color: var(--ink-3); margin-top: 3px; font-family: var(--mono); }
+  .kcard .tag { font-size: 10.5px; font-weight: 600; letter-spacing: .05em; }
+  .kcard .tag.mnt { color: var(--danger); }
+  .kcard .tag.rnd { color: #175CD3; }
 </style>
 </head>
 <body>
 
-<aside class="sidebar">
-  <div class="brand">
-    <div class="brand-mark">佑</div>
-    <div>
-      <div class="brand-name">佑成精密</div>
-      <div class="brand-sub">AI 戰情室</div>
-    </div>
-  </div>
-  <nav class="nav">
-    <a class="active" href="#">
-      <svg viewBox="0 0 16 16"><rect x="1.5" y="1.5" width="5.4" height="5.4" rx="1.2"/><rect x="9.1" y="1.5" width="5.4" height="5.4" rx="1.2"/><rect x="1.5" y="9.1" width="5.4" height="5.4" rx="1.2"/><rect x="9.1" y="9.1" width="5.4" height="5.4" rx="1.2"/></svg>
-      戰情室總覽
-    </a>
-    <a href="#">
-      <svg viewBox="0 0 16 16"><rect x="2.5" y="1.5" width="11" height="13" rx="1.5"/><path d="M5 5h6M5 8h6M5 11h3.5"/></svg>
-      報工日報 <span class="cnt num">8</span>
-    </a>
-    <a href="#">
-      <svg viewBox="0 0 16 16"><path d="M8 1.8l5.5 3.2v6L8 14.2 2.5 11V5z"/><path d="M8 7.6v6.4M2.7 5.1L8 8.2l5.3-3.1"/></svg>
-      維保知識庫 <span class="cnt num">27</span>
-    </a>
-    <a href="#">
-      <svg viewBox="0 0 16 16"><path d="M2 3.5h12v7.5H8.5L5 13.8v-2.8H2z"/></svg>
-      群組管理 <span class="cnt num">3</span>
-    </a>
-    <div class="nav-label">系統</div>
-    <a href="#">
-      <svg viewBox="0 0 16 16"><path d="M2 4.5h12M2 8h12M2 11.5h12"/><circle cx="6" cy="4.5" r="1.6" fill="#fff"/><circle cx="11" cy="8" r="1.6" fill="#fff"/><circle cx="4.5" cy="11.5" r="1.6" fill="#fff"/></svg>
-      Ragic 匯流設定
-    </a>
+<header class="topnav">
+  <div class="brand"><div class="brand-mark">佑</div><b>佑成精密</b><span>AI 戰情室</span></div>
+  <nav class="tabs">
+    <a class="on" href="#">戰情室</a>
+    <a href="#">報工日報 <span class="n">8</span></a>
+    <a href="#">維保知識庫 <span class="n">27</span></a>
+    <a href="#">群組 <span class="n">3</span></a>
+    <a href="#">Ragic 匯流</a>
   </nav>
-  <div class="engine">
-    <div class="hd"><span class="pulse"></span>AI 分析引擎</div>
-    <div class="row"><span>今日已分析</span><b class="num">77 則</b></div>
-    <div class="row"><span>待人工確認</span><b class="num">3 筆</b></div>
-    <div class="row"><span>快取命中率</span><b class="num">100%</b></div>
-  </div>
-</aside>
-
-<main class="main">
-  <div class="topbar">
-    <h1>戰情室總覽</h1>
-    <span class="date">2026-07-02（週四）・資料更新於 08:12</span>
-    <div class="search">跨群搜尋：機台、工單、異常關鍵字…<span class="kbd">⌘K</span></div>
+  <div class="nav-right">
+    <div class="search">搜尋機台、工單、異常…<span class="kbd">⌘K</span></div>
     <div class="avatar">廠</div>
   </div>
+</header>
 
-  <div class="content">
-
-    <div class="kpis">
-      <div class="kpi">
-        <div class="k-label">昨日日報繳交率 <span class="pill warn"><span class="dot"></span>1 人未交</span></div>
-        <div class="k-value num">8<small>/ 9 人</small></div>
-        <div class="k-sub">阿宏（下午班）未交 — 已推播提醒</div>
-      </div>
-      <div class="kpi">
-        <div class="k-label">未結異常 <span class="pill danger"><span class="dot"></span>處理中 1</span></div>
-        <div class="k-value num">2<small>件</small></div>
-        <div class="k-sub">觀察中 1 件・本週已解決 2 件</div>
-      </div>
-      <div class="kpi">
-        <div class="k-label">昨日產出（已結構化） <span class="pill ok"><span class="dot"></span>+8.2%</span></div>
-        <div class="k-value num">3,780<small>pcs</small></div>
-        <div class="k-sub">2 條線・4 筆日報・不良率 1.6%</div>
-      </div>
-      <div class="kpi">
-        <div class="k-label">知識庫累積 <span class="pill ok"><span class="dot"></span>本週 +3</span></div>
-        <div class="k-value num">27<small>筆</small></div>
-        <div class="k-sub">維保 18・研發 6・採購 3</div>
-      </div>
-    </div>
-
-    <div>
-      <div class="sec-hd"><h2>群組健康度</h2><span class="more">最近 24 小時</span></div>
-      <div class="groups">
-        <div class="gcard">
-          <div class="g-top"><span class="g-name">報工群</span><span class="pill ok"><span class="dot"></span>正常</span></div>
-          <div class="gstats">
-            <div class="gstat"><div class="v num">28</div><div class="l">今日訊息</div></div>
-            <div class="gstat"><div class="v num">12</div><div class="l">已結構化</div></div>
-            <div class="gstat"><div class="v num">1</div><div class="l">待確認</div></div>
-          </div>
-        </div>
-        <div class="gcard">
-          <div class="g-top"><span class="g-name">維保群</span><span class="pill warn"><span class="dot"></span>2 件未結</span></div>
-          <div class="gstats">
-            <div class="gstat"><div class="v num">25</div><div class="l">今日訊息</div></div>
-            <div class="gstat"><div class="v num">8</div><div class="l">知識卡片</div></div>
-            <div class="gstat"><div class="v num">2</div><div class="l">未結異常</div></div>
-          </div>
-        </div>
-        <div class="gcard">
-          <div class="g-top"><span class="g-name">研發採購群</span><span class="pill ok"><span class="dot"></span>正常</span></div>
-          <div class="gstats">
-            <div class="gstat"><div class="v num">24</div><div class="l">今日訊息</div></div>
-            <div class="gstat"><div class="v num">12</div><div class="l">記錄留存</div></div>
-            <div class="gstat"><div class="v num">2</div><div class="l">待確認</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="split">
-      <div class="panel">
-        <div class="sec-hd"><h2>異常追蹤</h2><span class="more">來源：維保群・全部可溯源</span></div>
-        <table>
-          <thead>
-            <tr><th>狀態</th><th>機台</th><th>異常摘要</th><th>最新處置</th><th>更新</th></tr>
-          </thead>
-          <tbody>
-            <tr class="hover">
-              <td><span class="pill danger"><span class="dot"></span>處理中</span></td>
-              <td class="machine">M-002<div class="sub">2號機・A線</div></td>
-              <td>模仁磨損出毛邊，該批全檢<div class="sub">品檢 黃美玲 提報</div></td>
-              <td>降速生產，模具課明早換模仁</td>
-              <td class="time num">06-30 13:15</td>
-            </tr>
-            <tr>
-              <td><span class="pill warn"><span class="dot"></span>觀察中</span></td>
-              <td class="machine">M-004<div class="sub">4號機・B線</div></td>
-              <td>加熱圈第三區溫度飄動 ±10°C<div class="sub">技術 張家吉 提報</div></td>
-              <td>熱電偶接線鎖緊，觀察一天</td>
-              <td class="time num">07-01 13:30</td>
-            </tr>
-            <tr>
-              <td><span class="pill ok"><span class="dot"></span>已解決</span></td>
-              <td class="machine">M-003<div class="sub">3號機・A線</div></td>
-              <td>皮帶處異音、早上卡料兩次<div class="sub">技術 陳志明 提報</div></td>
-              <td>更換 6204 軸承＋皮帶（B-1250）</td>
-              <td class="time num">06-29 15:50</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="panel">
-        <div class="sec-hd"><h2>最新知識卡片</h2><span class="more">27 筆</span></div>
-        <div class="kcards">
-          <div class="kcard">
-            <span class="pill neutral"><span class="dot" style="background:var(--danger)"></span>維保經驗</span>
-            <div class="k-t">3號機軸承壽命偏短——下次保養須以雷射對心儀重新校正</div>
-            <div class="k-m">周金水・06-29・維保群 #10</div>
-          </div>
-          <div class="kcard">
-            <span class="pill neutral"><span class="dot" style="background:var(--info)"></span>研發提醒</span>
-            <div class="k-t">GF 玻纖料收縮率遠小於純 PP，開模公差須重新抓</div>
-            <div class="k-m">劉建宏・07-01・研發採購群 #17</div>
-          </div>
-          <div class="kcard">
-            <span class="pill neutral"><span class="dot" style="background:var(--danger)"></span>維保經驗</span>
-            <div class="k-t">5號機油封明年須更換（年度保養廠商建議）</div>
-            <div class="k-m">周金水・06-30・維保群 #14</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
+<section class="andon">
+  <div class="verdict">
+    <div class="day"><span class="mono">2026-07-02</span>（週四）・今日廠況</div>
+    <h1><span class="beacon"></span>整體正常，2 件異常追蹤中</h1>
+    <div class="note">昨日日報 <b>8/9</b> 已交（阿宏未交，已推播提醒）・022 量產第二天・2號機今晨換模仁後恢復全速</div>
+    <div class="ai">AI 引擎｜今日已分析 77 則・待確認 3 筆・快取命中 100%</div>
   </div>
+  <div class="a-metrics">
+    <div class="am">
+      <div class="t">日報繳交（昨日）</div>
+      <div class="v">8<small>/9</small></div>
+      <div class="s w"><span class="d"></span>1 人未交</div>
+    </div>
+    <div class="am">
+      <div class="t">未結異常</div>
+      <div class="v">2<small>件</small></div>
+      <div class="s r"><span class="d"></span>處理中 1・觀察 1</div>
+    </div>
+    <div class="am">
+      <div class="t">昨日產出</div>
+      <div class="v">3,780<small>pcs</small></div>
+      <div class="s g"><span class="d"></span>+8.2%・不良率 1.6%</div>
+    </div>
+    <div class="am">
+      <div class="t">知識庫累積</div>
+      <div class="v">27<small>筆</small></div>
+      <div class="s g"><span class="d"></span>本週 +3</div>
+    </div>
+  </div>
+</section>
+
+<main class="content">
+
+  <div class="rail">
+    <div class="rail-hd">
+      <h2>機台狀態</h2>
+      <div class="legend">
+        <i><span class="d" style="background:var(--ok)"></span>運轉</i>
+        <i><span class="d" style="background:var(--warn)"></span>注意</i>
+        <i><span class="d" style="background:var(--ink-3)"></span>待機</i>
+      </div>
+    </div>
+    <div class="machines">
+      <div class="m">
+        <div class="code"><span class="d" style="background:var(--ok)"></span>M-001<span class="ln">A線</span></div>
+        <div class="name">1號機 <span style="font-weight:400;color:var(--ink-3);font-size:11.5px">200T</span></div>
+        <div class="st">運轉中・WO-2506-018</div>
+        <div class="out">昨日 <b>1,310</b> pcs・不良 9</div>
+      </div>
+      <div class="m warn-m">
+        <div class="code"><span class="d" style="background:var(--warn)"></span>M-002<span class="ln">A線</span></div>
+        <div class="name">2號機 <span style="font-weight:400;color:var(--ink-3);font-size:11.5px">200T</span></div>
+        <div class="st">今晨換模仁，恢復全速</div>
+        <div class="out">昨日 <b>950</b> pcs・全檢中</div>
+      </div>
+      <div class="m">
+        <div class="code"><span class="d" style="background:var(--ok)"></span>M-003<span class="ln">A線</span></div>
+        <div class="name">3號機 <span style="font-weight:400;color:var(--ink-3);font-size:11.5px">150T</span></div>
+        <div class="st">運轉中・6/29 換軸承後正常</div>
+        <div class="out">支援 018 分流</div>
+      </div>
+      <div class="m">
+        <div class="code"><span class="d" style="background:var(--ok)"></span>M-004<span class="ln">B線</span></div>
+        <div class="name">4號機 <span style="font-weight:400;color:var(--ink-3);font-size:11.5px">350T</span></div>
+        <div class="st">運轉中・WO-2506-022</div>
+        <div class="out">昨日 <b>1,520</b> pcs・溫控觀察</div>
+      </div>
+      <div class="m">
+        <div class="code"><span class="d" style="background:var(--ink-3)"></span>M-005<span class="ln">獨立區</span></div>
+        <div class="name">5號機 <span style="font-weight:400;color:var(--ink-3);font-size:11.5px">450T</span></div>
+        <div class="st">待機・6/30 年度保養完成</div>
+        <div class="out">油封 2027 更換（已記錄）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="p-hd"><h2>異常追蹤</h2><span class="meta">來源：維保群・逐筆可溯源</span></div>
+      <table>
+        <thead><tr><th>狀態</th><th>機台</th><th>異常摘要</th><th>最新處置</th><th>更新</th></tr></thead>
+        <tbody>
+          <tr class="hl">
+            <td><span class="pill danger"><span class="dot"></span>處理中</span></td>
+            <td class="mc">M-002<div class="sub">2號機</div></td>
+            <td>模仁磨損出毛邊，該批全檢<div class="sub">品檢 黃美玲 提報</div></td>
+            <td>模具課已換模仁，試打 20 模 OK</td>
+            <td class="time">07-01 08:15</td>
+          </tr>
+          <tr>
+            <td><span class="pill warn"><span class="dot"></span>觀察中</span></td>
+            <td class="mc">M-004<div class="sub">4號機</div></td>
+            <td>加熱圈第三區溫度飄動 ±10°C<div class="sub">技術 張家吉 提報</div></td>
+            <td>熱電偶接線鎖緊，觀察一天</td>
+            <td class="time">07-01 13:30</td>
+          </tr>
+          <tr>
+            <td><span class="pill ok"><span class="dot"></span>已解決</span></td>
+            <td class="mc">M-003<div class="sub">3號機</div></td>
+            <td>皮帶處異音、早上卡料兩次<div class="sub">技術 陳志明 提報</div></td>
+            <td>更換 6204 軸承＋皮帶（B-1250）</td>
+            <td class="time">06-29 15:50</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="side">
+      <div class="panel">
+        <div class="p-hd"><h2>群組動態</h2><span class="meta">24h</span></div>
+        <div class="glist">
+          <div class="g"><span class="d" style="background:var(--ok)"></span><div><div class="nm">報工群</div><div class="st2">日報齊、1 筆待確認</div></div><div class="n2"><b>28</b> 則</div></div>
+          <div class="g"><span class="d" style="background:var(--warn)"></span><div><div class="nm">維保群</div><div class="st2">2 件異常未結</div></div><div class="n2"><b>25</b> 則</div></div>
+          <div class="g"><span class="d" style="background:var(--ok)"></span><div><div class="nm">研發採購群</div><div class="st2">昌隆案打樣討論中</div></div><div class="n2"><b>24</b> 則</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="p-hd"><h2>最新知識卡片</h2><span class="meta">27 筆</span></div>
+        <div class="kcards">
+          <div class="kcard"><span class="tag mnt">維保經驗</span>
+            <div class="t">3號機軸承壽命偏短——下次保養須以雷射對心儀校正</div>
+            <div class="m2">周金水・06-29・維保群 #10</div>
+          </div>
+          <div class="kcard"><span class="tag rnd">研發提醒</span>
+            <div class="t">GF 玻纖料收縮率遠小於純 PP，開模公差須重抓</div>
+            <div class="m2">劉建宏・07-01・研發採購群 #17</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 </body>
