@@ -61,7 +61,7 @@ pandoc "docs/計畫書-系統架構文件.md" -o "docs/計畫書-系統架構文
 
 ### Frontend / UI design（戰情室後台開發時生效）
 
-- 任何前端產出動手前先過 [`docs/frontend-design-principles.md`](docs/frontend-design-principles.md)：§A 普世核心一律適用、§C 設計流程迴圈動手前先跑；§B 美學 profile 本專案鎖 `modern-SaaS-craft`
+- 任何前端產出動手前先過 [`docs/frontend-design-principles.md`](docs/frontend-design-principles.md)：§A 普世核心一律適用（含 §A5 先研究≥3競品）、§C 設計流程迴圈動手前先跑；§B 美學 profile 本專案鎖 `civic-trust`（客戶／委員面，§B0-CT）；**只用淺色，不用深色**
 - 元件走語意 design token、禁硬編 hex；spacing 用 `gap-*`
 - 現有 `src/report.ts` 的 HTML 報告是 demo 用產物，不受 §B profile 約束
 
@@ -82,3 +82,16 @@ Solo dev 直接 commit（見 memory `feedback_no_pr_workflow.md`），commit 格
 - **LINE 匯出格式**：時間為「上午/下午 h:mm」12 小時制（上午12=00 時、下午12=12 時）；多行訊息的續行沒有時間前綴，須併回前一則；`儲存日期` 標頭行要跳過
 - **LINE content URL 有時效**（webhook 服務階段）：媒體必須即收即存，不能只存 URL
 - **`samples/` 是回歸基準**：改樣本檔會讓歷史驗證結果失去比對意義，動它前先問（CLAUDE.md §5.3）
+
+## 戰情室資料綁定（src/warroom/）
+
+v7 戰情室三個角色視圖由 renderer 統一產生，非手寫 HTML mock：
+
+```bash
+npm run warroom   # data/*.json → aggregate → 渲染 output/warroom-{tenant_admin,aiproot_admin,group_owner-D2}.html
+```
+
+- 資料源：`data/taiwanhomecare-warroom.json`（tickets，對應 spec §4.5 schema）＋ `data/aiproot-overview.json`（跨租戶聚合，刻意不含 tickets 內容＝租戶隔離）。
+- `aggregate.ts` 按委員鐵律公式計算三環形儀表（簽核率=已簽核÷6、健康度=綠燈÷6、高信心=high÷已標）；改資料後 `npm run warroom` 應算出 33%/67%/62%。
+- `render.ts` 共用一份 civic-trust styles，三視角吃同一份 aggregate；改視覺改這裡，不改 output/（output/ 為 build 產物、gitignore）。
+- 委員簡報用截圖在 `docs/mockup/戰情室-*-v7.png`（改版後重截）。

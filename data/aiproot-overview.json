@@ -1,0 +1,22 @@
+{
+  "as_of": "2026-07-03T08:12:00",
+  "total_pipeline": 20,
+  "counts": { "online": 2, "testing": 3, "talking": 15, "subsidy_active": 9 },
+  "funnel": [
+    { "measure": "措施1・階段一", "desc": "AI 成熟度診斷輔導 · 19 萬", "stages": [
+      { "status": "準備中", "n": 2 }, { "status": "已送件", "n": 2 }, { "status": "審查中", "n": 3 }, { "status": "已核准", "n": 4 } ] },
+    { "measure": "措施1・階段二", "desc": "AI 工具導入（本系統）· 10 萬", "stages": [
+      { "status": "準備中", "n": 4 }, { "status": "已送件", "n": 2 }, { "status": "審查中", "n": 1 }, { "status": "已撥款", "n": 1 } ] },
+    { "measure": "措施1・階段三", "desc": "擴散應用 · 規劃中", "stages": [
+      { "status": "準備中", "n": 3 }, { "status": "審查中", "n": 1 }, { "status": "—", "n": null }, { "status": "—", "n": null } ] },
+    { "measure": "措施2", "desc": "AI 人才培育 Coupon · 12 萬", "stages": [
+      { "status": "準備中", "n": 6 }, { "status": "審查中", "n": 2 }, { "status": "—", "n": null }, { "status": "—", "n": null } ] }
+  ],
+  "tenants": [
+    { "name": "台灣福祉科技", "industry": "特種車輛改裝", "onboard_status": "正式上線", "subsidy": "措施1-二・已撥款", "subsidy_tone": "pine", "is_home_care": true, "health": [], "health_label": "", "seats_used": 6, "seats_total": 8, "last_activity": "08:12" },
+    { "name": "示範案場 B", "industry": "車輛製造", "onboard_status": "正式上線", "subsidy": "措施1-三・審查中", "subsidy_tone": "warn", "health": ["green","green","green","yellow","green","green"], "health_label": "5綠1黃", "seats_used": 8, "seats_total": 10, "last_activity": "07:50" },
+    { "name": "示範案場 C", "industry": "金屬加工", "onboard_status": "測試中", "subsidy": "措施1-一・已核准", "subsidy_tone": "pine", "health": ["green","green","yellow","yellow","idle","idle"], "health_label": "2綠2黃2未啟", "seats_used": 3, "seats_total": 5, "last_activity": "昨 19:20" },
+    { "name": "示範案場 D", "industry": "塑膠射出", "onboard_status": "測試中", "subsidy": "措施1-一・審查中", "subsidy_tone": "warn", "health": ["green","green","green","idle","idle","idle"], "health_label": "3綠3未啟", "seats_used": 2, "seats_total": 5, "last_activity": "昨 14:05" },
+    { "name": "示範案場 E", "industry": "醫療器材", "onboard_status": "洽談中", "subsidy": "措施1-一・準備中", "subsidy_tone": "ghost", "health": [], "health_label": "", "seats_used": null, "seats_total": null, "last_activity": "3 天前" }
+  ]
+}

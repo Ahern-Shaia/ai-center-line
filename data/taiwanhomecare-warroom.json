@@ -32,5 +32,24 @@
 
     { "ticket_id": "T-060", "department_id": "D6", "category": "研發技術KM", "summary": "因應消防安全法規第 11 條，高壓閥位置向上調整 15 公分（已同步工研院 RAG）", "confidence": "high", "confirm_status": "已簽核", "confirmed_by": "林○○", "confirmed_at": "2026-07-02T17:15:00", "needs_review": false, "message_count": 6, "linked_ref": null, "created_at": "2026-07-02T17:12:00" },
     { "ticket_id": "T-061", "department_id": "D6", "category": "研發技術KM", "summary": "升降機馬達選型比較，含跨群組長對話摘要", "confidence": "medium", "confirm_status": "已簽核", "confirmed_by": "林○○", "confirmed_at": "2026-07-02T17:15:00", "needs_review": false, "message_count": 5, "linked_ref": null, "created_at": "2026-07-02T16:40:00" }
-  ]
+  ],
+  "illustrative": {
+    "chat": [
+      { "role": "you", "text": "上個月 示範車號 A 的升降機鋼索是換哪一種規格？" },
+      { "role": "ai", "text": "該車 6/12 維修更換為標準升降機鋼索（4mm 不鏽鋼），由技師張○○施作，同批另備料 2 條。", "cite": "來源：維修工單 WO-2506-041" },
+      { "role": "you", "text": "消防法規對高壓閥位置有新要求嗎？" },
+      { "role": "ai", "text": "依消防安全法規第 11 條，高壓閥位置須向上調整 15 公分，本廠已納入改裝標準。", "cite": "已同步工研院 RAG · 法規文件 p.11", "itri": true }
+    ],
+    "assets": [
+      { "kind": "img", "name": "改裝圖紙_升降機平台.png", "group": "技術工程" },
+      { "kind": "vid", "name": "異音檢測_後門馬達.mp4", "group": "售後服務" },
+      { "kind": "pdf", "name": "長照標案合約_示範.pdf", "group": "業務一部" },
+      { "kind": "csv", "name": "報工數據_0702.csv", "group": "報工生產" }
+    ],
+    "geo": [
+      { "x": 44, "y": 80, "big": true }, { "x": 52, "y": 66 }, { "x": 58, "y": 30 },
+      { "x": 50, "y": 44 }, { "x": 46, "y": 90 }, { "x": 60, "y": 22 }
+    ],
+    "geo_stats": { "points": 38, "cities": 6, "hq": "高雄總廠" }
+  }
 }
