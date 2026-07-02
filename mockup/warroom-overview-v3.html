@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>AI 戰情室 — 總覽 v3</title>
+<style>
+  :root {
+    --canvas: #F4F5F7;
+    --surface: #FFFFFF;
+    --well: #F8F9FB;
+    --ink: #1B1E26;
+    --ink-2: #59616F;
+    --ink-3: #8C94A2;
+    --line: rgba(27,30,38,.07);
+    --brand: #0E7A4E;
+    --brand-tint: #E7F3EC;
+    --ok: #148044; --ok-bg: #E7F4EC;
+    --warn: #9A6A10; --warn-bg: #FAF1DC;
+    --danger: #B03A32; --danger-bg: #FBEBEA;
+    --info: #175CD3;
+    --mono: "SF Mono", ui-monospace, Menlo, monospace;
+    --ease: cubic-bezier(.32,.72,0,1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1600px; height: 1000px; overflow: hidden; }
+  body {
+    font-family: -apple-system, "SF Pro TC", "PingFang TC", "Noto Sans TC", sans-serif;
+    background: var(--canvas); color: var(--ink); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; display: flex; flex-direction: column;
+  }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: .12em; color: var(--ink-3); }
+
+  /* ---------- Top nav（v2 保留） ---------- */
+  .topnav { height: 54px; flex: none; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 32px; gap: 26px; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-right: 6px; }
+  .brand-mark { width: 26px; height: 26px; border-radius: 8px; background: var(--brand); color: #fff; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  .brand b { font-size: 13.5px; font-weight: 700; }
+  .brand span { font-size: 11px; color: var(--ink-3); margin-left: 6px; padding-left: 8px; border-left: 1px solid var(--line); }
+  .tabs { display: flex; gap: 4px; height: 100%; }
+  .tabs a { display: flex; align-items: center; padding: 0 13px; font-size: 13px; font-weight: 500; color: var(--ink-3); text-decoration: none; position: relative; transition: color .4s var(--ease); }
+  .tabs a.on { color: var(--ink); font-weight: 650; }
+  .tabs a.on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; background: var(--brand); border-radius: 2px 2px 0 0; }
+  .tabs a .n { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-left: 6px; background: var(--well); box-shadow: 0 0 0 1px var(--line); border-radius: 5px; padding: 0 5px; }
+  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+  .search { width: 250px; height: 32px; box-shadow: 0 0 0 1px var(--line); border-radius: 8px; background: var(--well); color: var(--ink-3); display: flex; align-items: center; gap: 8px; padding: 0 11px; font-size: 12px; }
+  .kbd { margin-left: auto; box-shadow: 0 0 0 1px var(--line); background: #fff; border-radius: 4px; padding: 0 5px; font-size: 10.5px; font-family: var(--mono); }
+  .avatar { width: 30px; height: 30px; border-radius: 9px; background: #2A303C; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+
+  /* ---------- Page header（純排版層級，無色塊） ---------- */
+  .phead { flex: none; display: flex; align-items: flex-end; padding: 22px 36px 0; gap: 20px; }
+  .phead .left .eyebrow { margin-bottom: 6px; }
+  .phead h1 { font-size: 25px; font-weight: 700; letter-spacing: -.015em; line-height: 1.2; }
+  .phead h1 .st { font-size: 13.5px; font-weight: 500; color: var(--ink-2); margin-left: 14px; letter-spacing: 0; }
+  .phead h1 .st .d { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); margin-right: 7px; box-shadow: 0 0 0 4px var(--ok-bg); vertical-align: 1px; }
+  .phead .right { margin-left: auto; display: flex; align-items: center; gap: 12px; padding-bottom: 2px; }
+  .phead .upd { font-size: 11.5px; color: var(--ink-3); font-family: var(--mono); }
+  .btn-ghost { box-shadow: 0 0 0 1px var(--line); border-radius: 999px; padding: 7px 16px; font-size: 12.5px; color: var(--ink-2); background: var(--surface); font-weight: 550; transition: transform .4s var(--ease); }
+
+  /* ---------- Double-Bezel：外殼托盤 + 內芯 ---------- */
+  .content { flex: 1; min-height: 0; padding: 16px 32px 26px; display: flex; flex-direction: column; gap: 14px; }
+  .shell { background: rgba(27,30,38,.033); border-radius: 18px; padding: 5px; box-shadow: 0 0 0 1px rgba(27,30,38,.045); }
+  .core {
+    background: var(--surface); border-radius: 13px;
+    box-shadow: 0 0 0 1px rgba(27,30,38,.05), inset 0 1px 0 rgba(255,255,255,.7), 0 14px 36px -24px rgba(27,30,38,.22);
+  }
+
+  .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-size: 11.5px; font-weight: 600; padding: 2px 9px; white-space: nowrap; }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill.ok { color: var(--ok); background: var(--ok-bg); }
+  .pill.warn { color: var(--warn); background: var(--warn-bg); }
+  .pill.danger { color: var(--danger); background: var(--danger-bg); }
+
+  /* ---------- Row 1：AI 晨間摘要（主角）＋ 今日指標（配角） ---------- */
+  .row1 { display: grid; grid-template-columns: 2fr 1fr; gap: 5px; }
+  .brief { padding: 18px 24px 16px; }
+  .brief .hd { display: flex; align-items: center; gap: 10px; }
+  .brief .hd .tm { margin-left: auto; font-size: 11px; color: var(--ink-3); font-family: var(--mono); }
+  .brief ul { list-style: none; margin-top: 11px; }
+  .brief li { display: flex; gap: 11px; font-size: 13.5px; line-height: 1.75; color: var(--ink-2); padding: 2.5px 0; }
+  .brief li .mk { width: 7px; height: 7px; border-radius: 50%; flex: none; margin-top: 8px; }
+  .brief b { color: var(--ink); font-weight: 600; }
+  .brief .mono { font-size: 12.5px; }
+  .brief .ft { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--ink-3); display: flex; gap: 6px; align-items: center; }
+  .brief .ft .lk { color: var(--brand); font-weight: 600; }
+
+  .stats { padding: 14px 20px 10px; display: flex; flex-direction: column; }
+  .stats .hd { display: flex; align-items: center; }
+  .stats .hd .rng { margin-left: auto; font-size: 11px; color: var(--ink-3); }
+  .srow { display: flex; align-items: baseline; gap: 10px; padding: 8.5px 0; border-bottom: 1px solid var(--line); }
+  .srow:last-child { border-bottom: none; }
+  .srow .sl { font-size: 12.5px; color: var(--ink-2); }
+  .srow .sv { margin-left: auto; font-family: var(--mono); font-size: 17px; font-weight: 600; letter-spacing: -.02em; }
+  .srow .sv small { font-size: 11.5px; color: var(--ink-3); font-weight: 500; margin-left: 2px; }
+  .srow .sd { font-size: 11px; font-weight: 600; width: 84px; text-align: right; }
+  .srow .sd.g { color: var(--ok); } .srow .sd.w { color: var(--warn); } .srow .sd.r { color: var(--danger); }
+
+  /* ---------- Row 2：機台軸線（v2 保留，改內芯格） ---------- */
+  .machines { display: grid; grid-template-columns: repeat(5, 1fr); }
+  .m { padding: 13px 20px 14px; position: relative; }
+  .m + .m { border-left: 1px solid var(--line); }
+  .m .code { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); display: flex; align-items: center; gap: 7px; }
+  .m .code .d { width: 7px; height: 7px; border-radius: 50%; }
+  .m .code .ln { margin-left: auto; font-size: 10.5px; letter-spacing: .05em; }
+  .m .name { font-weight: 650; font-size: 13.5px; margin-top: 5px; }
+  .m .name span { font-weight: 400; color: var(--ink-3); font-size: 11.5px; }
+  .m .st { font-size: 11.5px; color: var(--ink-2); margin-top: 2px; }
+  .m .out { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); margin-top: 7px; }
+  .m .out b { font-weight: 600; color: var(--ink); font-size: 13.5px; }
+  .m.warn-m { background: var(--warn-bg); }
+  .m.warn-m:first-child { border-radius: 13px 0 0 13px; }
+  .m.warn-m .st { color: var(--warn); font-weight: 600; }
+
+  /* ---------- Row 3：異常追蹤 ＋ 群組/知識 ---------- */
+  .row3 { display: grid; grid-template-columns: 2fr 1fr; gap: 5px; flex: 1; min-height: 0; }
+  .row3 .colr { display: flex; flex-direction: column; gap: 5px; min-height: 0; }
+  .row3 .colr .core:last-child { flex: 1; }
+  .p-hd { display: flex; align-items: center; gap: 10px; padding: 14px 20px 8px; }
+  .p-hd h2 { font-size: 13px; font-weight: 700; }
+  .p-hd .meta { margin-left: auto; font-size: 11.5px; color: var(--ink-3); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; font-size: 10.5px; font-weight: 600; color: var(--ink-3); letter-spacing: .06em; padding: 7px 12px; border-bottom: 1px solid var(--line); }
+  td { padding: 11.5px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  th:first-child, td:first-child { padding-left: 20px; }
+  th:last-child, td:last-child { padding-right: 20px; }
+  td.mc { font-family: var(--mono); font-weight: 600; white-space: nowrap; font-size: 12px; }
+  td .sub { color: var(--ink-3); font-size: 11.5px; margin-top: 2px; font-weight: 400; }
+  td.time { color: var(--ink-3); white-space: nowrap; font-family: var(--mono); font-size: 11.5px; }
+
+  .glist { padding: 0 20px 8px; }
+  .g { display: flex; align-items: center; gap: 10px; padding: 8.5px 0; border-bottom: 1px solid var(--line); }
+  .g:last-child { border-bottom: none; }
+  .g .d { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .g .nm { font-weight: 600; font-size: 12.5px; }
+  .g .st2 { font-size: 11.5px; color: var(--ink-3); }
+  .g .n2 { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+  .g .n2 b { color: var(--ink); font-size: 13px; }
+  .kcards { padding: 0 20px 10px; }
+  .kcard { padding: 9.5px 0; border-bottom: 1px solid var(--line); }
+  .kcard:last-child { border-bottom: none; }
+  .kcard .t { font-weight: 600; font-size: 12.5px; line-height: 1.5; }
+  .kcard .m2 { font-size: 11px; color: var(--ink-3); margin-top: 3px; font-family: var(--mono); }
+  .kcard .tag { font-size: 10.5px; font-weight: 600; letter-spacing: .05em; }
+  .kcard .tag.mnt { color: var(--danger); }
+  .kcard .tag.rnd { color: var(--info); }
+</style>
+</head>
+<body>
+
+<header class="topnav">
+  <div class="brand"><div class="brand-mark">佑</div><b>佑成精密</b><span>AI 戰情室</span></div>
+  <nav class="tabs">
+    <a class="on" href="#">戰情室</a>
+    <a href="#">報工日報 <span class="n">8</span></a>
+    <a href="#">維保知識庫 <span class="n">27</span></a>
+    <a href="#">群組 <span class="n">3</span></a>
+    <a href="#">Ragic 匯流</a>
+  </nav>
+  <div class="nav-right">
+    <div class="search">搜尋機台、工單、異常…<span class="kbd">⌘K</span></div>
+    <div class="avatar">廠</div>
+  </div>
+</header>
+
+<div class="phead">
+  <div class="left">
+    <div class="eyebrow">戰情室・現場總覽</div>
+    <h1>7月2日 週四<span class="st"><span class="d"></span>現場整體正常・2 件異常追蹤中</span></h1>
+  </div>
+  <div class="right">
+    <span class="upd">更新 08:12</span>
+    <span class="btn-ghost">訂閱 LINE 晨報</span>
+  </div>
+</div>
+
+<main class="content">
+
+  <div class="shell">
+    <div class="row1">
+      <div class="core brief">
+        <div class="hd">
+          <span class="eyebrow">AI 晨間摘要</span>
+          <span class="pill ok" style="font-size:10.5px;padding:1px 8px"><span class="dot"></span>今晨 07:30 自動產生</span>
+          <span class="tm">已同步推播 廠長・組長 LINE</span>
+        </div>
+        <ul>
+          <li><span class="mk" style="background:var(--ok)"></span><span>昨日 <b>8/9 人</b>繳交日報（<b>阿宏</b>未交，已推播提醒）；A、B 線合計產出 <b class="mono">3,780</b> pcs，不良率 <b class="mono">1.6%</b>，較前日 <b class="mono">+8.2%</b>。</span></li>
+          <li><span class="mk" style="background:var(--warn)"></span><span><b>2號機</b>今晨換模仁完成、試打 20 模無毛邊，已恢復全速；<b>4號機</b>加熱圈第三區溫控仍在觀察（昨 13:30 鎖緊熱電偶）。</span></li>
+          <li><span class="mk" style="background:var(--info)"></span><span><b class="mono">WO-2506-022</b> 量產第二天順利；周師傅提醒 <b>3號機</b>軸承壽命偏短、保養須雷射對心——已存入知識庫。</span></li>
+        </ul>
+        <div class="ft">依 3 個群組・77 則訊息生成，逐句可溯源 →<span class="lk">查看依據</span></div>
+      </div>
+      <div class="core stats">
+        <div class="hd p-hd" style="padding:0 0 4px"><h2 style="font-size:12px">今日指標</h2><span class="rng">vs 前一工作日</span></div>
+        <div class="srow"><span class="sl">日報繳交（昨日）</span><span class="sv">8<small>/9</small></span><span class="sd w">1 人未交</span></div>
+        <div class="srow"><span class="sl">未結異常</span><span class="sv">2<small>件</small></span><span class="sd r">處理中 1</span></div>
+        <div class="srow"><span class="sl">昨日產出</span><span class="sv">3,780<small>pcs</small></span><span class="sd g">＋8.2%</span></div>
+        <div class="srow"><span class="sl">知識庫累積</span><span class="sv">27<small>筆</small></span><span class="sd g">本週 ＋3</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell">
+    <div class="core machines">
+      <div class="m">
+        <div class="code"><span class="d" style="background:var(--ok)"></span>M-001<span class="ln">A線</span></div>
+        <div class="name">1號機 <span>200T</span></div>
+        <div class="st">運轉中・WO-2506-018</div>
+        <div class="out">昨日 <b>1,310</b> pcs・不良 9</div>
+      </div>
+      <div class="m warn-m">
+        <div class="code"><span class="d" style="background:var(--warn)"></span>M-002<span class="ln">A線</span></div>
+        <div class="name">2號機 <span>200T</span></div>
+        <div class="st">換模仁完成，恢復全速</div>
+        <div class="out">昨日 <b>950</b> pcs・全檢中</div>
+      </div>
+      <div class="m">
+        <div class="code"><span class="d" style="background:var(--ok)"></span>M-003<span class="ln">A線</span></div>
+        <div class="name">3號機 <span>150T</span></div>
+        <div class="st">運轉中・6/29 換軸承後正常</div>
+        <div class="out">支援 018 分流</div>
+      </div>
+      <div class="m">
+        <div class="code"><span class="d" style="background:var(--ok)"></span>M-004<span class="ln">B線</span></div>
+        <div class="name">4號機 <span>350T</span></div>
+        <div class="st">運轉中・WO-2506-022</div>
+        <div class="out">昨日 <b>1,520</b> pcs・溫控觀察</div>
+      </div>
+      <div class="m">
+        <div class="code"><span class="d" style="background:var(--ink-3)"></span>M-005<span class="ln">獨立區</span></div>
+        <div class="name">5號機 <span>450T</span></div>
+        <div class="st">待機・6/30 年度保養完成</div>
+        <div class="out">油封 2027 更換（已記錄）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell" style="flex:1;min-height:0">
+    <div class="row3" style="height:100%">
+      <div class="core">
+        <div class="p-hd"><h2>異常追蹤</h2><span class="meta">來源：維保群・逐筆可溯源</span></div>
+        <table>
+          <thead><tr><th>狀態</th><th>機台</th><th>異常摘要</th><th>最新處置</th><th>更新</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="pill danger"><span class="dot"></span>處理中</span></td>
+              <td class="mc">M-002<div class="sub">2號機</div></td>
+              <td>模仁磨損出毛邊，該批全檢<div class="sub">品檢 黃美玲 提報</div></td>
+              <td>模具課已換模仁，試打 20 模 OK</td>
+              <td class="time">07-01 08:15</td>
+            </tr>
+            <tr>
+              <td><span class="pill warn"><span class="dot"></span>觀察中</span></td>
+              <td class="mc">M-004<div class="sub">4號機</div></td>
+              <td>加熱圈第三區溫度飄動 ±10°C<div class="sub">技術 張家吉 提報</div></td>
+              <td>熱電偶接線鎖緊，觀察一天</td>
+              <td class="time">07-01 13:30</td>
+            </tr>
+            <tr>
+              <td><span class="pill ok"><span class="dot"></span>已解決</span></td>
+              <td class="mc">M-003<div class="sub">3號機</div></td>
+              <td>皮帶處異音、早上卡料兩次<div class="sub">技術 陳志明 提報</div></td>
+              <td>更換 6204 軸承＋皮帶（B-1250）</td>
+              <td class="time">06-29 15:50</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="colr">
+        <div class="core">
+          <div class="p-hd"><h2>群組動態</h2><span class="meta">24h</span></div>
+          <div class="glist">
+            <div class="g"><span class="d" style="background:var(--ok)"></span><div><div class="nm">報工群</div><div class="st2">日報齊、1 筆待確認</div></div><div class="n2"><b>28</b> 則</div></div>
+            <div class="g"><span class="d" style="background:var(--warn)"></span><div><div class="nm">維保群</div><div class="st2">2 件異常未結</div></div><div class="n2"><b>25</b> 則</div></div>
+            <div class="g"><span class="d" style="background:var(--ok)"></span><div><div class="nm">研發採購群</div><div class="st2">昌隆案打樣討論中</div></div><div class="n2"><b>24</b> 則</div></div>
+          </div>
+        </div>
+        <div class="core">
+          <div class="p-hd"><h2>最新知識卡片</h2><span class="meta">27 筆</span></div>
+          <div class="kcards">
+            <div class="kcard"><span class="tag mnt">維保經驗</span>
+              <div class="t">3號機軸承壽命偏短——下次保養須以雷射對心儀校正</div>
+              <div class="m2">周金水・06-29・維保群 #10</div>
+            </div>
+            <div class="kcard"><span class="tag rnd">研發提醒</span>
+              <div class="t">GF 玻纖料收縮率遠小於純 PP，開模公差須重抓</div>
+              <div class="m2">劉建宏・07-01・研發採購群 #17</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+</body>
+</html>
