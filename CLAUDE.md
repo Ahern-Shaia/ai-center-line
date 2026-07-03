@@ -55,7 +55,7 @@
 | **R13** | **LINE 媒體即收即存**：webhook 服務實作後，照片/影片/檔案必須在收到事件時立即下載保存（LINE content URL 有時效） |
 | **R14** | **新代碼一律 TypeScript ESM**（`type: "module"`）；套件管理固定 **npm**，不可混用 pnpm / yarn |
 | **R15** | **Pre-PR Checklist**：對外發布 / 上線前必須走過 `docs/pre-pr-checklist.md`（solo dev 不走 PR ceremony，但上線前檢查不可省） |
-| **R16** | **前端設計鐵則**（戰情室後台開發時生效）：所有前端產出必過 `docs/frontend-design-principles.md` —— §A 普世核心一律適用（**含 §A5 先研究≥3競品再設計，不可略**）、§C 設計流程迴圈動手前先跑；**§B 美學 profile：戰情室 app 鎖定 `blueprint`**（2026-07-03 用戶裁定，定義見該檔 §B0-BP；冷石板白×藍圖藍×訊號琥珀、mono 數據、外露量測格線、每數字掛來源）。**先前 civic-trust 經檢視即 §A1「AI 預設群集 #1」（奶油＋襯線＋赤土），已由 blueprint 取代**；`mission-control-dark`/`civic-trust` 皆為歷史。要換必須由人改本鐵則 + §B 並說明理由 |
+| **R16** | **前端設計鐵則**（戰情室後台開發時生效）：所有前端產出必過 `docs/frontend-design-principles.md` —— §A 普世核心一律適用（**含 §A1 動手前先鎖一個真實對標、§A5 先研究≥3競品再設計，不可略**；§A1 配色黑名單已刪＝不禁任何配色、改判執行）、§C 設計流程迴圈動手前先跑；**§B 美學 profile：戰情室 app 鎖定 `blueprint`**（2026-07-03 用戶裁定，定義見該檔 §B0-BP；冷石板白×藍圖藍×訊號琥珀、mono 數據、外露量測格線、每數字掛來源）。**先前 civic-trust 經檢視即 §A1「AI 預設群集 #1」（奶油＋襯線＋赤土），已由 blueprint 取代**；`mission-control-dark`/`civic-trust` 皆為歷史。要換必須由人改本鐵則 + §B 並說明理由 |
 
 ### 1.4 執行模式（autonomy level）
 
