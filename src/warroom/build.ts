@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { computeAggregate, pct } from "./aggregate.js";
 import {
-  renderAiproot, renderGroupOwner, renderTenantAdmin, renderTenantAdminV8, renderTenantAdminV9, renderTenantAdminV10, renderLoginBP, renderAiprootBP, renderGroupOwnerBP,
+  renderAiproot, renderGroupOwner, renderTenantAdmin, renderTenantAdminV8, renderTenantAdminV9, renderTenantAdminV10, renderLoginBP, renderAiprootBP, renderGroupOwnerBP, renderBrandGuideBP,
 } from "./render.js";
 import type { AiprootData, WarRoomData } from "./types.js";
 
@@ -36,6 +36,7 @@ function main(): void {
     ["warroom-bp-login.html", renderLoginBP()],
     ["warroom-bp-aiproot.html", renderAiprootBP(aiproot, agg)],
     ["warroom-bp-group_owner.html", renderGroupOwnerBP(data, agg, "D2")],
+    ["warroom-bp-brand-guide.html", renderBrandGuideBP()],
   ];
   for (const [name, html] of outputs) {
     const p = path.join(OUT_DIR, name);

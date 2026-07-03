@@ -1219,3 +1219,120 @@ export function renderGroupOwnerBP(data: WarRoomData, agg: Aggregate, department
   </article></main>`;
   return bpDoc(`${dept.name}・每日簽核 — Blueprint`, body, css);
 }
+
+// ═════════════════ Brand Guide（品牌視覺規範，blueprint 活樣式指南）═════════════════
+export function renderBrandGuideBP(): string {
+  const swatch = (name: string, v: string, hex: string, use: string, dark = false): string =>
+    `<div class="sw"><div class="chip" style="background:${v};${dark ? "" : "box-shadow:inset 0 0 0 1px var(--line)"}"></div><div class="swm"><b>${name}</b><span class="mono">${hex}</span><em>${use}</em></div></div>`;
+  const light = (col: string, label: string): string =>
+    `<div class="lt"><span class="ld" style="background:${col};box-shadow:0 0 0 3px ${col}22"></span>${label}</div>`;
+  const css = `
+  main.wrap{max-width:1180px;margin:0 auto}
+  .gd{padding:18px 26px 24px}
+  .lede{font-size:15px;line-height:1.9;color:var(--ink-2);max-width:70ch;text-wrap:pretty}.lede b{color:var(--ink);font-weight:600}
+  .princ{display:grid;grid-template-columns:repeat(2,1fr);gap:0;margin-top:16px;border:1px solid var(--line)}
+  .princ .p{padding:14px 18px;border-right:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}.princ .p:nth-child(2n){border-right:0}.princ .p:nth-last-child(-n+2){border-bottom:0}
+  .princ .pn{font-family:var(--mono);font-size:10px;color:var(--blue);letter-spacing:.1em}.princ .pt{font-weight:600;font-size:13.5px;margin:5px 0 3px}.princ .pd{font-size:12px;color:var(--ink-2);line-height:1.6}
+  .swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .sw{display:flex;gap:11px;align-items:center}.sw .chip{width:46px;height:46px;flex:none;border-radius:2px}
+  .swm b{font-size:12.5px;font-weight:600;display:block}.swm span{font-size:11px;color:var(--ink-3);display:block;margin:1px 0}.swm em{font-size:10.5px;color:var(--ink-2);font-style:normal}
+  .specs{display:flex;flex-direction:column;gap:0;border:1px solid var(--line)}
+  .spec{display:flex;align-items:baseline;gap:20px;padding:13px 18px;border-bottom:1px solid var(--line-2)}.spec:last-child{border-bottom:0}
+  .spec .sm2{width:150px;flex:none;font-family:var(--mono);font-size:10px;color:var(--ink-3);letter-spacing:.06em}
+  .lights{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+  .lt{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink-2)}.lt .ld{width:9px;height:9px;border-radius:50%}
+  .pills2{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+  .compg{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line)}
+  .cc{padding:16px 18px;border-right:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}.cc:nth-child(2n){border-right:0}
+  .cc .cl{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:11px}
+  .demobar{position:relative;height:10px;background:var(--paper);box-shadow:inset 0 0 0 1px var(--line);background-image:repeating-linear-gradient(90deg,transparent 0 calc(25% - 1px),var(--line) calc(25% - 1px) 25%)}
+  .demobar i{position:absolute;top:0;left:0;height:100%;background:var(--blue);width:0;animation:fill .8s var(--ease) .2s forwards}
+  @keyframes fill{to{width:var(--w)}}
+  @media(prefers-reduced-motion:reduce){.demobar i{animation:none;width:var(--w)}}
+  .tokt{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px}
+  .tokt td{padding:7px 12px;border-bottom:1px solid var(--line-2)}.tokt td:first-child{color:var(--blue);width:200px}.tokt td:nth-child(2){color:var(--ink);width:200px}.tokt td:last-child{color:var(--ink-3);font-family:var(--gr);font-size:11px}
+  .moti{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .moc{border:1px solid var(--line);padding:14px 16px}.moc .mt{font-weight:600;font-size:12.5px;margin-bottom:4px}.moc .md{font-size:11.5px;color:var(--ink-2);line-height:1.6}.moc .mc{font-family:var(--mono);font-size:10px;color:var(--blue);margin-top:7px;display:block}
+  .iconrow{display:flex;gap:16px;color:var(--blue);align-items:center}`;
+  const body = `<header class="mh"><div class="mk">福</div><div><b>台灣福祉科技</b> <span class="sub">AI 戰情室 · 品牌視覺規範</span></div>
+    <nav><a href="#">識別</a><a href="#">色彩</a><a href="#">字體</a><a href="#">元件</a><a href="#">動效</a></nav>
+    <div class="rt"><b>Brand Guide</b>　blueprint<br>REV v10</div></header>
+  <main class="wrap"><article class="sheet">${bpCorners}
+    <div class="tb"><div class="ttl"><div class="lab">Design System · 工程藍圖</div><h1>品牌視覺規範</h1><div class="dwg">PROFILE blueprint · TOKENS in src/warroom BP_CSS · REV v10 · 動效順暢舒適</div></div>
+      <div class="meta"><div class="k">系統</div><div class="v">AI 戰情室</div><div class="k">隱喻</div><div class="v">工程製圖</div><div class="k">主色</div><div class="v" style="color:var(--blue)">藍圖藍</div><div class="k">狀態</div><div class="v" style="color:var(--ok)">● 現行</div></div></div>
+
+    <section><div class="sh"><span class="no">§01</span><h2>識別 & 原則</h2><span class="nt">工程藍圖・領域根植</span></div><div class="hr"></div>
+    <div class="gd"><p class="lede">戰情室的視覺隱喻是<b>工程製圖／改裝圖紙</b>——直接取自客戶（福祉車改裝廠）自己的世界。冷石板調、外露量測格線、角落 registration 刻度、mono 數據，讓介面像一張<b>活的技術圖面</b>，而非通用後台。</p>
+      <div class="princ">
+        <div class="p"><div class="pn">P1</div><div class="pt">可溯源鐵律</div><div class="pd">畫面每個數字都掛來源表名、可當場反推；不放純裝飾示意數字。</div></div>
+        <div class="p"><div class="pn">P2</div><div class="pt">誠實 ＞ 好看</div><div class="pd">刻意不美化信心度（低值是加分）；人未簽核前一律標草稿。</div></div>
+        <div class="p"><div class="pn">P3</div><div class="pt">狀態雙編碼</div><div class="pd">狀態＝色＋文字/mono tag，不只靠顏色（a11y WCAG 1.4.1）。</div></div>
+        <div class="p"><div class="pn">P4</div><div class="pt">冷工程調性</div><div class="pd">一致冷淺色、零/極小圓角、規線與留白定深度，不靠 glow/重陰影。</div></div>
+      </div></div></section>
+
+    <section><div class="sh"><span class="no">§02</span><h2>色彩</h2><span class="nt">單主色（藍圖藍）＋單 accent（琥珀，僅告警）</span></div><div class="hr"></div>
+    <div class="gd"><div class="swatches">
+      ${swatch("canvas", "var(--paper)", "#EDF0F3", "頁底（格線）")}
+      ${swatch("sheet", "var(--sheet)", "#F8FAFB", "主面板")}
+      ${swatch("well", "var(--well)", "#E8ECF0", "次區/hover")}
+      ${swatch("line", "var(--line)", "#CFD7DF", "邊框/hairline")}
+      ${swatch("ink", "var(--ink)", "#18242F", "主文字", true)}
+      ${swatch("ink-2", "var(--ink-2)", "#4E5C67", "次文字", true)}
+      ${swatch("ink-3", "var(--ink-3)", "#85929D", "輔助/mono", true)}
+      ${swatch("blue 主色", "var(--blue)", "#2C588A", "品牌/連結/儀表", true)}
+      ${swatch("blue-tint", "var(--blue-tint)", "#E3EBF4", "淡底/選中")}
+      ${swatch("amber accent", "var(--amber)", "#B0741A", "告警/重點", true)}
+      ${swatch("ok", "var(--ok)", "#2C7A6B", "正常/綠燈", true)}
+      ${swatch("danger", "var(--danger)", "#BE4630", "異常/紅燈", true)}
+    </div></div></section>
+
+    <section><div class="sh"><span class="no">§03</span><h2>字體</h2><span class="nt">IBM Plex Sans（文字）＋ IBM Plex Mono（數據）＋ PingFang（中文）</span></div><div class="hr"></div>
+    <div class="gd"><div class="specs">
+      <div class="spec"><span class="sm2">H1 / 31 / 600</span><span style="font-size:31px;font-weight:600;letter-spacing:-.015em">現場治理總覽</span></div>
+      <div class="spec"><span class="sm2">H2 / 15 / 600</span><span style="font-size:15px;font-weight:600">六大 LINE 群組名冊</span></div>
+      <div class="spec"><span class="sm2">BODY / 15 / 400</span><span style="font-size:15px">今日六大群組，2 組已完成人工簽核。</span></div>
+      <div class="spec"><span class="sm2">DATA / mono / 600</span><span class="mono" style="font-size:23px;font-weight:600;color:var(--blue)">62%</span> <span class="mono" style="color:var(--ink-3)">WO-2506-041</span></div>
+      <div class="spec"><span class="sm2">LABEL / mono / .2em</span><span class="lab">CRM_SERVICE_TICKETS</span></div>
+    </div></div></section>
+
+    <section><div class="sh"><span class="no">§04</span><h2>燈號 & 狀態</h2><span class="nt">色＋文字雙編碼</span></div><div class="hr"></div>
+    <div class="gd"><div class="lights">
+      ${light("var(--ok)", "綠燈 · 正常處理中")}${light("var(--warn)", "黃燈 · 待確認未逾時")}${light("var(--danger)", "紅燈 · 逾時/異常")}${light("var(--ink-3)", "灰 · 待機/未啟")}
+    </div>
+    <div class="pills2"><span class="pl ok">已簽核</span><span class="pl warn">待簽核</span><span class="pl danger">逾時警示</span><span class="pl blue">已同步 RAG</span><span class="pl ghost">洽談中</span>
+      　<span class="ct" style="color:var(--ok)">▍HIGH</span><span class="ct" style="color:var(--warn)">▍MED</span><span class="ct" style="color:var(--danger)">▍LOW</span></div></div></section>
+
+    <section><div class="sh"><span class="no">§05</span><h2>元件</h2><span class="nt">outlined＋規線，非填底卡片</span></div><div class="hr"></div>
+    <div class="gd"><div class="compg">
+      <div class="cc"><div class="cl">量測刻度儀表 · signature</div><div style="display:flex;align-items:baseline"><span style="font-size:12px;color:var(--ink-2)">本日簽核完成率</span><span class="mono" style="margin-left:auto;font-size:22px;font-weight:600">33<span style="font-size:12px;color:var(--ink-3)">%</span></span></div><div class="demobar" style="margin-top:7px;--w:33%"><i></i></div></div>
+      <div class="cc"><div class="cl">按鈕 · ghost / primary（hover 有態）</div><button class="ab">展開複核</button>　<button class="ab pri">確認今日進度</button></div>
+      <div class="cc"><div class="cl">名冊列 · register</div><div class="rr" style="border:1px solid var(--line);padding:10px 14px"><span class="ri">02</span><span class="rdot" style="background:var(--warn)"></span><span class="rn">售後服務</span><span class="rt">CRM_service_tickets</span><span class="rs">低信心待補</span><span class="rtm">08:05</span></div></div>
+      <div class="cc"><div class="cl">線性圖示 · consistent stroke</div><div class="iconrow">${icon("search", 18)}${icon("csv", 18)}${icon("image", 18)}${icon("video", 18)}${icon("pdf", 18)}${icon("chat", 18)}${icon("arrow", 18)}</div></div>
+    </div></div></section>
+
+    <section><div class="sh"><span class="no">§06</span><h2>Token</h2><span class="nt">CSS 變數・唯一真實來源（src/warroom BP_CSS）</span></div><div class="hr"></div>
+    <div class="gd"><table class="tokt">
+      <tr><td>--paper / --sheet / --well</td><td>#EDF0F3 / #F8FAFB / #E8ECF0</td><td>底 / 面板 / 次區</td></tr>
+      <tr><td>--ink / --ink-2 / --ink-3</td><td>#18242F / #4E5C67 / #85929D</td><td>文字三階</td></tr>
+      <tr><td>--blue / --amber</td><td>#2C588A / #B0741A</td><td>主色 / accent</td></tr>
+      <tr><td>--ok / --warn / --danger</td><td>#2C7A6B / #B0741A / #BE4630</td><td>狀態燈</td></tr>
+      <tr><td>radius</td><td>0–2px</td><td>製圖感，零/極小圓角</td></tr>
+      <tr><td>grid</td><td>28px 細 / 84px 粗</td><td>雙尺度工程紙格線＋grain .028</td></tr>
+      <tr><td>shadow</td><td>tinted ink + 外白 6px</td><td>紙浮起，非黑陰影</td></tr>
+      <tr><td>--ease</td><td>cubic-bezier(.32,.72,0,1)</td><td>統一過場曲線</td></tr>
+    </table></div></section>
+
+    <section><div class="sh"><span class="no">§07</span><h2>微動效 · 順暢舒適</h2><span class="nt">短、custom easing、respect reduced-motion</span></div><div class="hr"></div>
+    <div class="gd"><div class="moti">
+      <div class="moc"><div class="mt">hover · 列/表列</div><div class="md">背景淡移入 var(--well)/blue-tint，只動 background。</div><span class="mc">150ms · ease</span></div>
+      <div class="moc"><div class="mt">press · 按鈕</div><div class="md">translateY(1px) 模擬實體按壓，放開回彈。</div><span class="mc">180ms · cubic-bezier</span></div>
+      <div class="moc"><div class="mt">focus · 鍵盤</div><div class="md">:focus-visible 藍圖藍 2px ring＋offset，可達性必備。</div><span class="mc">outline 2px</span></div>
+      <div class="moc"><div class="mt">meter 填充</div><div class="md">儀表 width 0→值，只動 transform/width 類、不抖版。</div><span class="mc">600–800ms · ease</span></div>
+      <div class="moc"><div class="mt">enter · 進場</div><div class="md">opacity＋translateY 淡上，錯開 stagger，不一次全彈出。</div><span class="mc">150–250ms</span></div>
+      <div class="moc"><div class="mt">reduced-motion</div><div class="md">prefers-reduced-motion 時只 fade、不位移，全域尊重。</div><span class="mc">media query</span></div>
+    </div></div></section>
+
+    <footer class="ft"><span>台灣福祉 AI 戰情室 · 品牌視覺規範 blueprint · 動效只動 opacity/transform、custom easing、短而順暢</span><span style="margin-left:auto">Token 真實來源：src/warroom/render.ts BP_CSS · profile §B0-BP</span></footer>
+  </article></main>`;
+  return bpDoc("台灣福祉 AI 戰情室 — 品牌視覺規範", body, css);
+}
