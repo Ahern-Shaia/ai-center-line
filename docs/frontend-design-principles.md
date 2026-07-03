@@ -197,6 +197,6 @@ brief 沒講清楚產品是什麼，**自己先釘**：點名一個具體主題�
 - **深度**：hairline border＋極淡單一陰影；**外露藍調格線底紋（28px）＋角落 registration 刻度框**，深度靠製圖線與留白，不靠 glow。
 - **填充**：實色非漸層；主色藍圖藍。狀態 pill 用**框線（outlined）非填底**。
 - **形狀**：**零/極小圓角（製圖感）**；量測刻度、尺規、引線為語彙。
-- **字體**：**grotesk（Helvetica/system）給標題與大數字用 mono（技術圖數據感）**；mono 大量用於資料/代碼/標註/table 表頭；CJK PingFang。**不用 serif**（避 AI 群集 #1）。
+- **字體（v10 定案）**：**IBM Plex Sans（標題/內文）＋ IBM Plex Mono（大數字/資料/代碼/標註/table 表頭）**——工程 DNA、辨識度高；CJK 用 PingFang 承接。不用 serif（serif 屬編輯/年報語彙，非工程圖）。
 - **signature**：量測刻度儀表（bullet＋四分格＋共用尺規）＋工程圖 title block。
 - **avoid-list（blueprint 專屬，非普世禁令）**：漂回奶油/米底＋襯線＋赤土（前 civic-trust）、松綠×紙白（我重複用過的）、深色區塊、donut 儀表、purple/blue glow——這些會破壞 blueprint 的冷工程調性。（§A1 的普世配色黑名單已刪，這裡只是本 profile 的執行提醒。）

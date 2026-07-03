@@ -85,3 +85,16 @@
 - signature：**量測刻度儀表**（bullet bar＋四分格線＋共用 0–25–50–75–100 尺規），取代 donut/serif 數字；大數字改 mono（技術圖），與 v8 的 serif 徹底區隔。
 - 狀態：outlined pill（框線非填底）＋ ▍HIGH/MED/LOW mono tag，色＋文字雙編碼（A3）。
 - 檔案：renderTenantAdminV9（render.ts，自成一體 tokens）→ output/warroom-tenant_admin-v9.html。
+
+---
+
+## v10 向上精修（redesign-existing-projects skill 稽核 v9 → 升級，2026-07-03）
+
+用 redesign skill 稽核 v9 blueprint，抓出仍偏通用/可升級處，逐項升級（留在 blueprint profile、不換配色、不破壞資料綁定）：
+- **字體（skill #1 優先）**：Helvetica/system grotesk → **IBM Plex Sans + IBM Plex Mono**（Google Fonts；工程 DNA、辨識度高；大數字/資料/標註全用 Plex Mono，CJK PingFang）。
+- **材質**：單層淡格線 → **雙尺度工程紙格線**（細 28px＋粗 84px）＋極淡 grain 疊層（fixed/pointer-events-none，紙張紋理）。
+- **儀表**：共用尺規加**刻度線（tick）**＋數字對位；title block 加**製圖 meta**（SCALE 1:1 · SHEET 01/01 · REV v10 · 來源可回溯）。
+- **互動狀態（§A6/§A3）**：nav/register 列/table 列 hover、primary 按鈕填色＋:active translateY、`:focus-visible` 藍圖藍 ring、transition 用 custom cubic-bezier、`prefers-reduced-motion`。
+- **語意 HTML**：header/nav/main/article/section/aside/footer（原 div soup）。
+- **細節**：h1 收 tracking＋text-wrap balance、內文 max-width 56ch＋text-wrap pretty、陰影加外白邊模擬紙浮起、outlined pill/mono tag 維持雙編碼。
+- 檔案：renderTenantAdminV10（render.ts）→ output/warroom-tenant_admin-v10.html。v9 保留供 before/after。

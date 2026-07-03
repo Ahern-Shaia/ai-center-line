@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { computeAggregate, pct } from "./aggregate.js";
 import {
-  renderAiproot, renderGroupOwner, renderTenantAdmin, renderTenantAdminV8, renderTenantAdminV9,
+  renderAiproot, renderGroupOwner, renderTenantAdmin, renderTenantAdminV8, renderTenantAdminV9, renderTenantAdminV10,
 } from "./render.js";
 import type { AiprootData, WarRoomData } from "./types.js";
 
@@ -30,6 +30,7 @@ function main(): void {
     ["warroom-tenant_admin.html", renderTenantAdmin(data, agg)],
     ["warroom-tenant_admin-v8.html", renderTenantAdminV8(data, agg)],
     ["warroom-tenant_admin-v9.html", renderTenantAdminV9(data, agg)],
+    ["warroom-tenant_admin-v10.html", renderTenantAdminV10(data, agg)],
     ["warroom-aiproot_admin.html", renderAiproot(aiproot, agg)],
     ["warroom-group_owner-D2.html", renderGroupOwner(data, agg, "D2")],
   ];
