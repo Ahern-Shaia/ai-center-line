@@ -1046,3 +1046,176 @@ export function renderTenantAdminV10(data: WarRoomData, agg: Aggregate): string 
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>${css}</style></head><body>${body}</body></html>`;
 }
+
+// ═════════════════ Blueprint 完整 UI mockup：共用底 + 其他角色視角 + 登入 ═════════════════
+const BP_FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">`;
+const BP_CSS = `
+  :root{--paper:#EDF0F3;--sheet:#F8FAFB;--well:#E8ECF0;--ink:#18242F;--ink-2:#4E5C67;--ink-3:#85929D;
+    --line:#CFD7DF;--line-2:#E2E8ED;--gmaj:rgba(45,91,142,.10);--gmin:rgba(45,91,142,.05);
+    --blue:#2C588A;--blue-2:#3D71AC;--blue-tint:#E3EBF4;--amber:#B0741A;--amber-tint:#F4EAD6;
+    --ok:#2C7A6B;--warn:#B0741A;--danger:#BE4630;
+    --gr:"IBM Plex Sans","Helvetica Neue",-apple-system,"PingFang TC","Noto Sans TC",sans-serif;
+    --mono:"IBM Plex Mono","SF Mono",ui-monospace,Menlo,monospace;--ease:cubic-bezier(.32,.72,0,1);}
+  *{margin:0;padding:0;box-sizing:border-box}html,body{width:1600px}
+  body{font-family:var(--gr);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;background:var(--paper);
+    background-image:linear-gradient(var(--gmaj) 1px,transparent 1px),linear-gradient(90deg,var(--gmaj) 1px,transparent 1px),
+      linear-gradient(var(--gmin) 1px,transparent 1px),linear-gradient(90deg,var(--gmin) 1px,transparent 1px);
+    background-size:84px 84px,84px 84px,28px 28px,28px 28px;background-position:-1px -1px}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9;opacity:.028;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .lab{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--blue);text-transform:uppercase;font-weight:500}
+  a{transition:color .2s var(--ease);text-decoration:none}:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  header.mh{display:flex;align-items:center;gap:16px;padding:0 32px;height:52px;background:var(--sheet);border-bottom:2px solid var(--blue);position:relative;z-index:10}
+  .mh .mk{width:24px;height:24px;border:2px solid var(--blue);color:var(--blue);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+  .mh b{font-size:14px;font-weight:600}.mh .sub{font-size:10px;color:var(--ink-3);font-family:var(--mono);letter-spacing:.06em}
+  .mh nav{display:flex;gap:2px;margin-left:14px;height:100%}.mh nav a{display:flex;align-items:center;padding:0 13px;font-size:12.5px;color:var(--ink-3);position:relative}
+  .mh nav a:hover{color:var(--ink-2)}.mh nav a.on{color:var(--blue);font-weight:600}.mh nav a.on::after{content:"";position:absolute;left:13px;right:13px;bottom:0;height:2px;background:var(--blue)}
+  .mh .rt{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-2);text-align:right;line-height:1.5}.mh .rt b{color:var(--ink);font-weight:600}
+  main.wrap{padding:22px 32px 30px;position:relative;z-index:1}
+  .sheet{position:relative;background:var(--sheet);border:1px solid var(--line);box-shadow:0 1px 2px rgba(24,36,47,.05),0 18px 40px -30px rgba(24,36,47,.35),0 0 0 6px rgba(255,255,255,.4)}
+  .rc{position:absolute;width:12px;height:12px;border:1.5px solid var(--blue);opacity:.6;z-index:2}
+  .rc.tl{top:-1px;left:-1px;border-right:0;border-bottom:0}.rc.tr{top:-1px;right:-1px;border-left:0;border-bottom:0}.rc.bl{bottom:-1px;left:-1px;border-right:0;border-top:0}.rc.br{bottom:-1px;right:-1px;border-left:0;border-top:0}
+  .tb{display:flex;align-items:stretch;border-bottom:1px solid var(--blue)}.tb .ttl{padding:19px 26px 16px;flex:1}.tb .lab{margin-bottom:9px}
+  .tb h1{font-size:31px;font-weight:600;letter-spacing:-.015em;line-height:.98;text-wrap:balance}.tb .dwg{margin-top:11px;font-family:var(--mono);font-size:10px;color:var(--ink-3);letter-spacing:.06em}
+  .tb .meta{border-left:1px solid var(--line);display:grid;grid-template-columns:auto auto;font-family:var(--mono);font-size:10.5px}
+  .tb .meta div{padding:8px 15px;border-bottom:1px solid var(--line-2)}.tb .meta .k{color:var(--ink-3);border-right:1px solid var(--line-2)}.tb .meta .v{color:var(--ink);text-align:right;font-weight:500}
+  .tb .meta div:nth-last-child(-n+2){border-bottom:0}
+  section{display:block}.sh{display:flex;align-items:baseline;gap:11px;padding:15px 26px 3px}.sh .no{font-family:var(--mono);font-size:11px;color:var(--blue);font-weight:600}
+  .sh h2{font-size:15px;font-weight:600}.sh .nt{margin-left:auto;font-size:11px;color:var(--ink-3);font-family:var(--mono)}.hr{height:1px;background:var(--line);margin:8px 26px 0}
+  .ops{display:flex;border-bottom:1px solid var(--line);background:var(--well)}.ops .op{padding:12px 26px;display:flex;align-items:baseline;gap:8px}.ops .op+.op{border-left:1px solid var(--line)}
+  .ops .ov{font-family:var(--mono);font-size:19px;font-weight:600;letter-spacing:-.02em}.ops .ol{font-size:11.5px;color:var(--ink-2)}.ops .os{font-family:var(--mono);font-size:9px;color:var(--ink-3);margin-left:auto;padding-left:14px}
+  table.so{width:100%;border-collapse:collapse;font-size:12.5px}.so th{text-align:left;font-family:var(--mono);font-size:10px;font-weight:500;color:var(--ink-3);letter-spacing:.1em;padding:9px 14px;border-bottom:1.5px solid var(--ink-2)}
+  .so td{padding:12px 14px;border-bottom:1px solid var(--line-2);vertical-align:top}.so tr:last-child td{border-bottom:0}.so tr{transition:background .15s}.so tbody tr:hover{background:var(--well)}
+  .so th:first-child,.so td:first-child{padding-left:26px}.so th:last-child,.so td:last-child{padding-right:26px}
+  .so td.g2{font-weight:600;white-space:nowrap}.so td.dc{color:var(--ink-2)}.so td.dc b{color:var(--ink);font-weight:600}
+  .ct{font-family:var(--mono);font-size:11px;font-weight:600}
+  .pl{font-family:var(--mono);font-size:10px;font-weight:600;padding:1px 7px;border:1px solid currentColor;letter-spacing:.02em;display:inline-block;white-space:nowrap}
+  .pl.ok{color:var(--ok)}.pl.warn{color:var(--warn)}.pl.danger{color:var(--danger)}.pl.blue{color:var(--blue)}.pl.ghost{color:var(--ink-3)}
+  .ab{font-family:var(--gr);font-size:12px;color:var(--blue);font-weight:600;background:none;border:1px solid var(--line);padding:5px 12px;cursor:pointer;transition:all .18s var(--ease);white-space:nowrap}
+  .ab:hover{border-color:var(--blue);background:var(--blue-tint)}.ab:active{transform:translateY(1px)}.ab.pri{background:var(--blue);color:#fff;border-color:var(--blue)}.ab.pri:hover{background:var(--blue-2)}
+  footer.ft{display:flex;padding:12px 26px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;color:var(--ink-3)}`;
+
+function bpDoc(title: string, body: string, extra = ""): string {
+  return `<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title>${BP_FONTS}<style>${BP_CSS}${extra}</style></head><body>${body}</body></html>`;
+}
+const bpCorners = `<span class="rc tl"></span><span class="rc tr"></span><span class="rc bl"></span><span class="rc br"></span>`;
+const BP_HEALTH: Record<string, string> = { green: "var(--ok)", yellow: "var(--warn)", red: "var(--danger)", idle: "var(--ink-3)" };
+
+// ── 登入 ──
+export function renderLoginBP(): string {
+  const css = `
+  body{display:flex;align-items:center;justify-content:center;height:1000px}
+  .login{position:relative;width:420px;background:var(--sheet);border:1px solid var(--line);box-shadow:0 1px 2px rgba(24,36,47,.05),0 24px 50px -34px rgba(24,36,47,.4),0 0 0 6px rgba(255,255,255,.4)}
+  .login .top{border-bottom:1px solid var(--blue);padding:26px 30px 20px}
+  .login .mk{width:34px;height:34px;border:2px solid var(--blue);color:var(--blue);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+  .login .lab{margin-bottom:7px}.login h1{font-size:23px;font-weight:600;letter-spacing:-.01em}.login .s{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:6px}
+  .login .body{padding:22px 30px 26px}.fld{margin-bottom:15px}.fld label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-2);text-transform:uppercase;margin-bottom:6px}
+  .fld .inp{height:38px;border:1px solid var(--line);background:var(--paper);display:flex;align-items:center;padding:0 12px;font-family:var(--mono);font-size:12.5px;color:var(--ink-3)}
+  .fld .inp.f{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-tint);color:var(--ink)}
+  .rrow{display:flex;gap:0;border:1px solid var(--line);margin-bottom:18px}.rrow span{flex:1;text-align:center;font-family:var(--mono);font-size:10.5px;padding:7px 0;color:var(--ink-3);border-right:1px solid var(--line-2)}.rrow span:last-child{border-right:0}.rrow span.on{background:var(--blue);color:#fff}
+  .go{width:100%;background:var(--blue);color:#fff;border:0;font-family:var(--gr);font-size:14px;font-weight:600;padding:11px 0;cursor:pointer;transition:background .18s}.go:hover{background:var(--blue-2)}
+  .foot{padding:12px 30px;border-top:1px solid var(--line);font-family:var(--mono);font-size:9.5px;color:var(--ink-3);text-align:center}`;
+  const body = `<div class="login">${bpCorners}
+    <div class="top"><div class="mk">福</div><div class="lab">台灣福祉科技 · AI 戰情室</div><h1>登入戰情室</h1><div class="s">SECURE · 全地端服務 · 角色權限分層</div></div>
+    <div class="body">
+      <div class="fld"><label>角色</label><div class="rrow"><span>系統商</span><span>顧問</span><span class="on">總經理室</span><span>組長</span></div></div>
+      <div class="fld"><label>帳號</label><div class="inp f">manager@twhomecare.example</div></div>
+      <div class="fld"><label>密碼</label><div class="inp">••••••••••••</div></div>
+      <button class="go">登入</button>
+    </div>
+    <div class="foot">忘記密碼請洽系統管理員 · 登入行為將寫入 audit_log</div></div>`;
+  return bpDoc("台灣福祉 AI 戰情室 — 登入", body, css);
+}
+
+// ── aiproot_admin 客戶案場總覽（blueprint）──
+const BP_STATUS: Record<string, string> = { "準備中": "var(--ink-3)", "已送件": "var(--warn)", "審查中": "var(--blue-2)", "已核准": "var(--ok)", "已撥款": "var(--blue)" };
+export function renderAiprootBP(a: AiprootData, hc: Aggregate): string {
+  const funnel = a.funnel.map((m: SubsidyMeasure) => {
+    const total = m.stages.reduce((s, x) => s + (x.n ?? 0), 0) || 1;
+    const bar = m.stages.filter((s) => s.n).map((s) => `<span style="width:${((s.n ?? 0) / total) * 100}%;background:${BP_STATUS[s.status] ?? "var(--line)"}"></span>`).join("");
+    const rows = m.stages.map((s) => `<div class="fst"><span class="fsd" style="background:${s.n === null ? "var(--line)" : BP_STATUS[s.status] ?? "var(--line)"}"></span><span${s.n === null ? ' style="color:var(--ink-3)"' : ""}>${s.n === null ? "—" : esc(s.status)}</span><span class="fsn">${s.n ?? "—"}</span></div>`).join("");
+    return `<div class="fnl"><div class="fh">${esc(m.measure)}<small>${esc(m.desc)}</small></div><div class="fbar">${bar}</div>${rows}</div>`;
+  }).join("");
+  const rows = a.tenants.map((t) => {
+    const health = t.is_home_care ? hc.groups.map((g) => g.health) : t.health;
+    const label = t.is_home_care ? `${hc.green_groups}綠${hc.groups.filter((g) => g.health === "yellow").length}黃${hc.groups.filter((g) => g.health === "red").length}紅` : t.health_label;
+    const online = t.onboard_status !== "洽談中";
+    const sp = t.onboard_status === "正式上線" ? `<span class="pl ok">正式上線</span>` : t.onboard_status === "測試中" ? `<span class="pl warn">測試中</span>` : `<span class="pl ghost">洽談中</span>`;
+    const hcell = online ? `<span class="hl">${health.map((h) => `<span class="h" style="background:${BP_HEALTH[h]}"></span>`).join("")}<span class="hn">${esc(label)}</span></span>` : `<span class="hn" style="color:var(--ink-3)">尚未導入</span>`;
+    const seat = t.seats_used !== null ? `<span>${t.seats_used}/${t.seats_total} 席</span><div class="sb"><i style="width:${(t.seats_used / (t.seats_total ?? 1)) * 100}%"></i></div>` : `<span style="color:var(--ink-3)">—</span>`;
+    return `<tr><td class="co"><b>${esc(t.name)}</b><div class="ind">${esc(t.industry)}</div></td><td>${sp}</td><td><span class="pl blue">${esc(t.subsidy)}</span></td><td>${hcell}</td><td class="mono">${seat}</td><td class="mono" style="font-size:11.5px;color:${online ? "var(--ink-2)" : "var(--ink-3)"}">${esc(t.last_activity)}</td><td class="ac">${online ? '<button class="ab">進入 →</button>' : '<span style="color:var(--ink-3);font-size:11.5px">洽談中</span>'}</td></tr>`;
+  }).join("");
+  const css = `
+  .iso{display:flex;align-items:center;gap:12px;background:var(--blue-tint);border-bottom:1px solid var(--blue);padding:12px 26px}
+  .iso .lk{width:28px;height:28px;border:1.5px solid var(--blue);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:13px;flex:none}
+  .iso .t{font-size:12.5px;color:var(--ink);font-weight:600}.iso .t span{display:block;font-weight:400;color:var(--ink-2);font-size:11px;margin-top:1px}.iso .tg{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--blue)}
+  .kg{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}.kg .k{padding:14px 22px;border-right:1px solid var(--line)}.kg .k:last-child{border-right:0}
+  .kg .kl{font-size:11.5px;color:var(--ink-2)}.kg .kv{font-family:var(--mono);font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:4px}.kg .kv i{font-size:12px;color:var(--ink-3);font-style:normal;margin-left:2px}.kg .ks{font-family:var(--mono);font-size:9px;color:var(--ink-3);margin-top:3px}
+  .fg{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}.fnl{padding:14px 20px;border-right:1px solid var(--line)}.fnl:last-child{border-right:0}
+  .fh{font-size:12px;font-weight:600}.fh small{display:block;font-weight:400;color:var(--ink-3);font-family:var(--mono);font-size:9.5px;margin-top:2px}
+  .fbar{display:flex;height:7px;margin:11px 0 9px;background:var(--paper);box-shadow:inset 0 0 0 1px var(--line)}.fbar span{height:100%}
+  .fst{display:flex;align-items:center;font-size:11px;color:var(--ink-2);padding:2px 0}.fsd{width:7px;height:7px;margin-right:7px}.fsn{margin-left:auto;font-family:var(--mono);font-weight:600;color:var(--ink)}
+  table.so td.co b{font-weight:600}.co .ind{color:var(--ink-3);font-size:11px;margin-top:1px}
+  .hl{display:inline-flex;gap:4px;align-items:center}.hl .h{width:8px;height:8px}.hl .hn{margin-left:8px;font-family:var(--mono);font-size:9.5px;color:var(--ink-3)}
+  .sb{width:52px;height:5px;background:var(--paper);box-shadow:inset 0 0 0 1px var(--line);margin-top:4px}.sb i{display:block;height:100%;background:var(--blue)}
+  .so td.ac{text-align:right}.tm{padding:11px 26px;border-top:1px solid var(--line);background:var(--well);font-family:var(--mono);font-size:10px;color:var(--ink-3)}`;
+  const D = a.as_of.slice(0, 10), T = a.as_of.slice(11, 16);
+  const body = `<header class="mh"><div class="mk" style="border-color:var(--blue);color:var(--blue)">ai</div><div><b>aiproot</b> <span class="sub">系統商控制台</span></div>
+    <nav><a class="on" href="#">客戶案場</a><a href="#">補助申請</a><a href="#">License</a><a href="#">系統健康</a></nav>
+    <div class="rt"><b>系統管理員</b>　aiproot_admin<br>${esc(D)} ${esc(T)}</div></header>
+  <main class="wrap"><article class="sheet">${bpCorners}
+    <div class="tb"><div class="ttl"><div class="lab">Multi-Tenant · 系統商視角</div><h1>客戶案場總覽</h1><div class="dwg">${a.total_pipeline} 家排隊 · 分階段上線 · REV v10</div></div>
+      <div class="meta"><div class="k">日期</div><div class="v">${esc(D)} ${esc(T)}</div><div class="k">正式上線</div><div class="v">${a.counts.online} 家</div><div class="k">檢視</div><div class="v">aiproot_admin</div><div class="k">存取</div><div class="v" style="color:var(--blue)">僅聚合</div></div></div>
+    <div class="iso"><div class="lk">🔒</div><div class="t">租戶隔離：系統商僅檢視聚合統計與健康度燈號<span>不顯示任何客戶對話內容/簽核明細——API 層即不回傳 summary，非前端隱藏</span></div><div class="tg">role=aiproot_admin · COUNT/GROUP BY</div></div>
+    <div class="kg"><div class="k"><div class="kl">正式上線案場</div><div class="kv">${a.counts.online}<i>家</i></div><div class="ks">onboard='正式上線'</div></div>
+      <div class="k"><div class="kl">測試中</div><div class="kv">${a.counts.testing}<i>家</i></div><div class="ks">onboard='測試中'</div></div>
+      <div class="k"><div class="kl">洽談中客戶</div><div class="kv">${a.counts.talking}<i>家</i></div><div class="ks">onboard='洽談中'</div></div>
+      <div class="k"><div class="kl">補助申請中</div><div class="kv" style="color:var(--amber)">${a.counts.subsidy_active}<i>案</i></div><div class="ks">未核准/撥款 distinct</div></div></div>
+    <section><div class="sh"><span class="no">§01</span><h2>補助申請漏斗</h2><span class="nt">subsidy_applications.measure + status 分組</span></div><div class="hr"></div><div class="fg">${funnel}</div></section>
+    <section><div class="sh"><span class="no">§02</span><h2>客戶案場清單</h2><span class="pl ghost" style="margin-left:6px">燈號彙總·不含內容</span><span class="nt">tenants ＋ licenses ＋ tickets 聚合</span></div>
+      <table class="so"><thead><tr><th>客戶案場</th><th>導入狀態</th><th>補助階段</th><th>六群組健康度</th><th>License</th><th>最近活動</th><th style="text-align:right">操作</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="tm">顯示 ${a.tenants.length} / ${a.total_pipeline} 家 · 另 ${a.total_pipeline - a.tenants.length} 家洽談中未上線 · 點「進入」仍依 aiproot_admin 權限渲染：僅健康度與統計</div></section>
+    <footer class="ft"><span>aiproot 系統商控制台 · 全地端服務 · 客戶營運內容不外流</span><span style="margin-left:auto">資料源 tenants / licenses / subsidy_applications / tickets（聚合） · 角色 aiproot_admin</span></footer>
+  </article></main>`;
+  return bpDoc("aiproot 客戶案場總覽 — Blueprint", body, css);
+}
+
+// ── group_owner 每日簽核（blueprint）──
+export function renderGroupOwnerBP(data: WarRoomData, agg: Aggregate, departmentId: string): string {
+  const g = agg.groups.find((x) => x.department.department_id === departmentId);
+  if (!g) throw new Error(`department ${departmentId} not found`);
+  const dept = g.department;
+  const ts = data.tickets.filter((t) => t.department_id === departmentId);
+  const lowCount = ts.filter((t) => t.needs_review).length;
+  const D = agg.as_of.slice(0, 10), T = agg.as_of.slice(11, 16);
+  const confTag = (c: Ticket["confidence"]): string => {
+    const m: Record<string, [string, string]> = { high: ["HIGH", "var(--ok)"], medium: ["MED", "var(--warn)"], low: ["LOW", "var(--danger)"] };
+    if (!c) return `<span class="ct" style="color:var(--ink-3)">—</span>`; const [t, col] = m[c]; return `<span class="ct" style="color:${col}">▍${t}</span>`;
+  };
+  const rows = ts.map((t) => `<tr class="${t.needs_review ? "flag" : ""}"><td class="tid mono">${esc(t.ticket_id)}</td><td class="cat">${esc(t.category)}</td>
+    <td class="dc"><b>${esc(t.summary)}</b>${t.needs_review ? '<div class="isub">⚠ 低信心・已即時攔截，需人工補資訊後才可簽核</div>' : ""}${t.linked_ref ? `<span class="ref mono">${esc(t.linked_ref)}</span>` : ""}</td>
+    <td>${confTag(t.confidence)}</td><td class="mono" style="color:var(--ink-3);font-size:11px">${t.message_count} 則</td></tr>`).join("");
+  const statusPill = g.signed_off ? `<span class="pl ok">已簽核</span>` : lowCount > 0 ? `<span class="pl danger">${lowCount} 筆低信心待補</span>` : `<span class="pl warn">待簽核</span>`;
+  const css = `
+  .ops .ov{color:var(--ink)}.ops .op.act{margin-left:auto;background:var(--blue-tint);display:block;padding:11px 22px}.ops .op.act .note{font-size:11px;color:var(--ink-2);margin-bottom:7px}.ops .op.act .note b{color:var(--blue)}
+  .btn-lg{background:var(--blue);color:#fff;border:0;font-family:var(--gr);font-size:13px;font-weight:600;padding:9px 18px;cursor:pointer;transition:background .18s}.btn-lg:hover{background:var(--blue-2)}
+  table.so td.tid{color:var(--ink-3);font-size:11px;white-space:nowrap}.so td.cat{white-space:nowrap;font-size:11.5px;color:var(--blue);font-weight:600}
+  .so td.dc .ref{display:inline-block;margin-top:4px;font-size:10.5px;color:var(--ink-3)}.so td.dc .isub{color:var(--danger);font-size:11px;margin-top:5px;font-weight:600}
+  .so tr.flag td{background:var(--amber-tint)}.so tr.flag:hover td{background:#F0E4CE}.so tr.flag td:first-child{box-shadow:inset 3px 0 0 var(--danger)}`;
+  const body = `<header class="mh"><div class="mk">福</div><div><b>台灣福祉科技</b> <span class="sub">AI 戰情室</span></div>
+    <nav><a href="#">戰情室</a><a class="on" href="#">每日簽核</a><a href="#">知識檢索</a><a href="#">Ragic 總台</a></nav>
+    <div class="rt"><b>${esc(dept.name)}組長</b>　group_owner<br>${esc(D)} ${esc(T)}</div></header>
+  <main class="wrap"><article class="sheet">${bpCorners}
+    <div class="tb"><div class="ttl"><div class="lab">每日簽核 · 部門負責人</div><h1>${esc(dept.name)}・今日待簽核</h1><div class="dwg">Human-in-the-loop · 逾 24h 未簽核自動轉逾時警示 · REV v10</div></div>
+      <div class="meta"><div class="k">日期</div><div class="v">${esc(D)} ${esc(T)}</div><div class="k">目標表</div><div class="v">${esc(dept.ragic_table)}</div><div class="k">檢視</div><div class="v">group_owner</div><div class="k">權限</div><div class="v" style="color:var(--blue)">可簽核</div></div></div>
+    <div class="ops"><div class="op"><span class="ov">${ts.length}</span><span class="ol">今日草稿</span><span class="os">${esc(dept.ragic_table)}</span></div>
+      <div class="op"><span class="ov">${g.high_count}</span><span class="ol">高信心可直接簽</span></div>
+      <div class="op"><span class="ov" style="color:var(--amber)">${lowCount}</span><span class="ol">低信心攔截</span><span class="os">needs_review</span></div>
+      <div class="op act"><div class="note">${statusPill}　簽核後才寫入 Ragic，<b>低信心須先補資訊</b></div><button class="btn-lg">確認今日進度（${ts.length - lowCount} 筆）</button></div></div>
+    <section><div class="sh"><span class="no">§01</span><h2>AI 今日草稿明細</h2><span class="pl blue" style="margin-left:6px">只有本群組負責人可簽核</span><span class="nt">每筆標示 AI 判讀信心度</span></div>
+      <table class="so"><thead><tr><th>編號</th><th>類別</th><th>AI 草稿摘要</th><th>信心</th><th>訊息數</th></tr></thead><tbody>${rows}</tbody></table></section>
+    <footer class="ft"><span>示範資料・姓名與車號已假名化 · 簽核後 sync_to_ragic=true</span><span style="margin-left:auto">資料源 tickets WHERE department_id='${esc(departmentId)}' · 角色 group_owner · 全群組簽核 ${agg.signed_groups}/6（${pct(agg.signoff_rate)}%）</span></footer>
+  </article></main>`;
+  return bpDoc(`${dept.name}・每日簽核 — Blueprint`, body, css);
+}
