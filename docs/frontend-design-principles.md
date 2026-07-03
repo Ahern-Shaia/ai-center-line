@@ -188,3 +188,18 @@ brief 沒講清楚產品是什麼，**自己先釘**：點名一個具體主題�
 - **字體**：**serif（Georgia/Songti/Noto Serif）給大數字與 wordmark 行政份量**；humanist sans（Avenir Next/PingFang）內文；mono 只留代碼/表名/工單號。
 - **可信鐵律（本案核心）**：畫面每個數字必掛來源表名（如 `CRM_service_tickets`/`pending_review`），環形儀表須可當場反推；刻意不美化信心度（誠實低值是加分）。
 - **avoid-list**：深藍墨+橘的通用 AI dashboard（合夥人舊原型即此）、深色區塊、純裝飾示意數字、glow、等寬卡片陣列、slogan 判定句。
+
+---
+
+## B0-BP. ✅ 戰情室 app 採用 profile：`blueprint`（2026-07-03 用戶裁定，取代 civic-trust）
+
+適用：台灣福祉戰情室網站 UI。隱喻＝工程圖紙/技術製圖（客戶為福祉車改裝廠，畫改裝圖紙）。參考 mockup 截圖 `docs/mockup/戰情室-總覽-v9.png`；研究見 `docs/modules/design-research-warroom.md`「v9 Blueprint」。**取代 civic-trust——因 civic-trust（奶油＋襯線＋赤土）經檢視即 §A1「AI 預設群集 #1」。**
+
+- **密度**：中高、可讀優先；工程製圖的規矩感。
+- **色彩**：冷石板白 canvas `#EEF1F4`、sheet `#F8FAFB`、well `#EAEEF2`；墨 `#1B2733`/`#55636E`/`#8996A1`；藍調 hairline `#D3DAE1`。主色藍圖藍 `#2D5B8E`；accent 訊號琥珀 `#B8791C`（僅告警/重點）。狀態：綠 `#2C7A6B`、黃 `#B8791C`、紅 `#C0492E`，皆色＋文字/mono tag 雙編碼。**冷淺色一致，禁深色區塊。**
+- **深度**：hairline border＋極淡單一陰影；**外露藍調格線底紋（28px）＋角落 registration 刻度框**，深度靠製圖線與留白，不靠 glow。
+- **填充**：實色非漸層；主色藍圖藍。狀態 pill 用**框線（outlined）非填底**。
+- **形狀**：**零/極小圓角（製圖感）**；量測刻度、尺規、引線為語彙。
+- **字體**：**grotesk（Helvetica/system）給標題與大數字用 mono（技術圖數據感）**；mono 大量用於資料/代碼/標註/table 表頭；CJK PingFang。**不用 serif**（避 AI 群集 #1）。
+- **signature**：量測刻度儀表（bullet＋四分格＋共用尺規）＋工程圖 title block。
+- **avoid-list**：奶油/米底＋襯線＋赤土（AI 群集 #1，即前 civic-trust）、近黑底＋螢光（#2）、深色區塊、donut 儀表、purple/blue glow、松綠×紙白（我自己的重複配色）。

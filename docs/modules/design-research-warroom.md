@@ -67,3 +67,21 @@
 - **六群組名冊（register）**：規線列表＋兩位數索引＋右對齊表名/時間，取代六等分方塊。
 - **線性 SVG 圖示**取代 emoji；小圓角（報告感）取代大圓角；serif 標題＋mono 資料。
 - 檔案：renderTenantAdminV8（render.ts）→ output/warroom-tenant_admin-v8.html。
+
+---
+
+## v9 向上設計：Blueprint 工程藍圖（2026-07-03）
+
+**關鍵反省**：重讀 `frontend-design-principles.md` §A1，發現 **v5–v8 的 civic-trust（奶油底#F6F3EC＋襯線標題＋赤土 accent）正好是文件點名的「AI 預設群集 #1」**；v8 報紙版面又踩「群集 #3」。用戶「拒絕重複配色/AI感」有據——我一直用文件明令避開的預設。
+
+**參考（≥3，2026 配色與工程美學）**：
+1. **2026 UI 配色趨勢**（IxDF/Recursion）— 做對的：冷中性 zinc/slate（帶藍調）取代通用米色、藍綠(teal)為年度趨勢、「藍是最安全＝最冒險」；弱點：趨勢文常流於清單。
+2. **Blueprint/Vercel 工程格線美學**（Setproduct）— 做對的：外露量測格線＋技術標註（刻度/引線）暗示「經過驗證與思考」，Swiss grid 紀律；弱點：格線濫用會變 dev-tool 通用味。
+3. **v8 自身**（報告骨架）— 做對的：數字寫進敘事＋腳註溯源、bullet meter 非 donut、單頁分節；弱點：奶油＋襯線＝AI 群集 #1。
+
+**向上設計（v9＝Blueprint）**：吸收冷 slate 中性＋工程格線紀律＋v8 的可溯源骨架，補上三者共缺的——**領域根植**（福祉車改裝廠＝畫改裝圖紙，用工程圖語言最貼題）。落地：
+- 配色全換：冷石板白 `#EEF1F4`／石墨藍黑 `#1B2733`／藍圖藍 `#2D5B8E`／訊號琥珀 `#B8791C`（僅告警）——非奶油非襯線非赤土非松綠。
+- 材質：外露藍調格線底、**角落 registration 刻度框**、工程圖 **title block**（日期/產線/檢視/狀態 mono 格）。
+- signature：**量測刻度儀表**（bullet bar＋四分格線＋共用 0–25–50–75–100 尺規），取代 donut/serif 數字；大數字改 mono（技術圖），與 v8 的 serif 徹底區隔。
+- 狀態：outlined pill（框線非填底）＋ ▍HIGH/MED/LOW mono tag，色＋文字雙編碼（A3）。
+- 檔案：renderTenantAdminV9（render.ts，自成一體 tokens）→ output/warroom-tenant_admin-v9.html。

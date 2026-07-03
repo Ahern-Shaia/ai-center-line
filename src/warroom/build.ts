@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { computeAggregate, pct } from "./aggregate.js";
-import { renderAiproot, renderGroupOwner, renderTenantAdmin, renderTenantAdminV8 } from "./render.js";
+import {
+  renderAiproot, renderGroupOwner, renderTenantAdmin, renderTenantAdminV8, renderTenantAdminV9,
+} from "./render.js";
 import type { AiprootData, WarRoomData } from "./types.js";
 
 // 戰情室資料綁定：讀 tickets 資料 → 計算聚合指標 → 渲染四層角色視圖。
@@ -27,6 +29,7 @@ function main(): void {
   const outputs: [string, string][] = [
     ["warroom-tenant_admin.html", renderTenantAdmin(data, agg)],
     ["warroom-tenant_admin-v8.html", renderTenantAdminV8(data, agg)],
+    ["warroom-tenant_admin-v9.html", renderTenantAdminV9(data, agg)],
     ["warroom-aiproot_admin.html", renderAiproot(aiproot, agg)],
     ["warroom-group_owner-D2.html", renderGroupOwner(data, agg, "D2")],
   ];
