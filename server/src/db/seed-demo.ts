@@ -40,6 +40,12 @@ const c = new pg.Client(pgConfig(url));
 await c.connect();
 try {
   await c.query("BEGIN");
+  // 通過所有表的 FORCE RLS policy：
+  // - aiproot_admin 逃生門通過 tenants / users / audit_log 的 policy
+  // - current_tenant 通過 departments / tickets（這兩張表沒有 aiproot_admin 逃生門）
+  // 本機 dev 用 superuser 連線時 RLS 直接 bypass，這幾行是 no-op；Render 等 non-superuser 環境靠這幾行才過。
+  await c.query(`SELECT set_config('app.actor_role', 'aiproot_admin', true)`);
+  await c.query(`SELECT set_config('app.current_tenant', $1, true)`, [TENANT]);
   await c.query(`DELETE FROM tenants WHERE tenant_id=$1`, [TENANT]); // FK cascade 清舊 demo 資料
   await c.query(`INSERT INTO tenants (tenant_id, tenant_name, onboard_status) VALUES ($1,'aiproot','測試中')`, [TENANT]);
 
