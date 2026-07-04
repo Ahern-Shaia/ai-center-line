@@ -108,15 +108,18 @@ export default function App() {
         onLogout={() => { logout(); setSession(null); }}
         onHelp={() => setRoute({ page: "onboarding" })}
       >
-        {route.page === "warroom" && <WarRoom onRegister={onRegister} onLoadingChange={setRefreshing} />}
-        {route.page === "rag" && <Rag />}
-        {route.page === "onboarding" && <Onboarding onDone={() => setRoute({ page: "warroom" })} />}
-        {route.page === "media" && <MediaLibrary />}
-        {route.page === "km" && <KnowledgeBase />}
-        {route.page === "map" && <CustomerMap />}
-        {route.page === "depts" && <DepartmentsMembers />}
-        {route.page === "config" && <TenantSettings />}
-        {route.page === "audit" && <AuditLog />}
+        {/* key 觸發 remount → CSS animation on mount，切換頁面時 fade+slide 進場 */}
+        <div key={route.page} className="page-fade">
+          {route.page === "warroom" && <WarRoom onRegister={onRegister} onLoadingChange={setRefreshing} />}
+          {route.page === "rag" && <Rag />}
+          {route.page === "onboarding" && <Onboarding onDone={() => setRoute({ page: "warroom" })} />}
+          {route.page === "media" && <MediaLibrary />}
+          {route.page === "km" && <KnowledgeBase />}
+          {route.page === "map" && <CustomerMap />}
+          {route.page === "depts" && <DepartmentsMembers />}
+          {route.page === "config" && <TenantSettings />}
+          {route.page === "audit" && <AuditLog />}
+        </div>
       </Shell>
     </ToastProvider>
   );

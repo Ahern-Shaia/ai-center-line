@@ -693,6 +693,97 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .al-td-dept { color:var(--ink-2); font-size:11.5px; }
 .al-td-ip { color:var(--ink-3); font-size:11px; }
 
+/* ==================== 頁面切換 · 視覺舒適動效 ==================== */
+/* 頁面 fade + slide-up 進場（key change 觸發 remount） */
+.page-fade { animation:page-in .22s var(--ease); }
+@keyframes page-in {
+  from { opacity:0; transform:translateY(8px); }
+  to { opacity:1; transform:none; }
+}
+
+/* 卡片 grid 進場 stagger（媒體/KM 卡） · 前 12 個依序稍晚一點 */
+.ml-grid .ml-card, .kb-grid .kb-card {
+  animation:card-in .28s var(--ease) both;
+}
+.ml-grid .ml-card:nth-child(1), .kb-grid .kb-card:nth-child(1) { animation-delay:.02s; }
+.ml-grid .ml-card:nth-child(2), .kb-grid .kb-card:nth-child(2) { animation-delay:.04s; }
+.ml-grid .ml-card:nth-child(3), .kb-grid .kb-card:nth-child(3) { animation-delay:.06s; }
+.ml-grid .ml-card:nth-child(4), .kb-grid .kb-card:nth-child(4) { animation-delay:.08s; }
+.ml-grid .ml-card:nth-child(5), .kb-grid .kb-card:nth-child(5) { animation-delay:.10s; }
+.ml-grid .ml-card:nth-child(6), .kb-grid .kb-card:nth-child(6) { animation-delay:.12s; }
+.ml-grid .ml-card:nth-child(7), .kb-grid .kb-card:nth-child(7) { animation-delay:.14s; }
+.ml-grid .ml-card:nth-child(8), .kb-grid .kb-card:nth-child(8) { animation-delay:.16s; }
+.ml-grid .ml-card:nth-child(n+9), .kb-grid .kb-card:nth-child(n+9) { animation-delay:.18s; }
+@keyframes card-in {
+  from { opacity:0; transform:translateY(6px); }
+  to { opacity:1; transform:none; }
+}
+
+/* Tile / 儀表 gauge 進場（三張儀表統一）*/
+.tiles > * { animation:tile-in .32s var(--ease) both; }
+.tiles > *:nth-child(1) { animation-delay:.04s; }
+.tiles > *:nth-child(2) { animation-delay:.10s; }
+.tiles > *:nth-child(3) { animation-delay:.16s; }
+@keyframes tile-in {
+  from { opacity:0; transform:translateY(6px) scale(.98); }
+  to { opacity:1; transform:none; }
+}
+
+/* signoff accordion 進場 stagger（部門列一個一個） */
+.signoff-list .so-item { animation:so-in .28s var(--ease) both; }
+.signoff-list .so-item:nth-child(1) { animation-delay:.04s; }
+.signoff-list .so-item:nth-child(2) { animation-delay:.07s; }
+.signoff-list .so-item:nth-child(3) { animation-delay:.10s; }
+.signoff-list .so-item:nth-child(4) { animation-delay:.13s; }
+.signoff-list .so-item:nth-child(5) { animation-delay:.16s; }
+.signoff-list .so-item:nth-child(6) { animation-delay:.19s; }
+.signoff-list .so-item:nth-child(n+7) { animation-delay:.22s; }
+@keyframes so-in {
+  from { opacity:0; transform:translateX(-6px); }
+  to { opacity:1; transform:none; }
+}
+
+/* 展開明細（點「展開」時內容淡入） */
+.so-detail { animation:detail-in .2s var(--ease); }
+@keyframes detail-in {
+  from { opacity:0; transform:translateY(-4px); }
+  to { opacity:1; transform:none; }
+}
+
+/* 表格列微淡入（部門/成員 · 稽核記錄）*/
+.dm-table tbody tr, .al-table tbody tr { animation:row-in .3s var(--ease) both; }
+.dm-table tbody tr:nth-child(1), .al-table tbody tr:nth-child(1) { animation-delay:.03s; }
+.dm-table tbody tr:nth-child(2), .al-table tbody tr:nth-child(2) { animation-delay:.05s; }
+.dm-table tbody tr:nth-child(3), .al-table tbody tr:nth-child(3) { animation-delay:.07s; }
+.dm-table tbody tr:nth-child(4), .al-table tbody tr:nth-child(4) { animation-delay:.09s; }
+.dm-table tbody tr:nth-child(5), .al-table tbody tr:nth-child(5) { animation-delay:.11s; }
+.dm-table tbody tr:nth-child(6), .al-table tbody tr:nth-child(6) { animation-delay:.13s; }
+.dm-table tbody tr:nth-child(n+7), .al-table tbody tr:nth-child(n+7) { animation-delay:.15s; }
+@keyframes row-in {
+  from { opacity:0; }
+  to { opacity:1; }
+}
+
+/* 設定 section stagger */
+.ts-list .ts-section { animation:tile-in .3s var(--ease) both; }
+.ts-list .ts-section:nth-child(1) { animation-delay:.03s; }
+.ts-list .ts-section:nth-child(2) { animation-delay:.08s; }
+.ts-list .ts-section:nth-child(3) { animation-delay:.13s; }
+.ts-list .ts-section:nth-child(4) { animation-delay:.18s; }
+.ts-list .ts-section:nth-child(5) { animation-delay:.23s; }
+
+/* 客戶地圖左右兩塊淡入 */
+.cm-map-layout > * { animation:page-in .3s var(--ease) both; }
+.cm-map-layout > *:nth-child(1) { animation-delay:.06s; }
+.cm-map-layout > *:nth-child(2) { animation-delay:.12s; }
+
+/* 微互動 · 統一 hover transition */
+.sb-link, .icon-btn, .btn, .rag-chip, .rag-cite-card, .ml-card, .kb-card, .kb-dept,
+.al-action-chip, .dm-tab, .cm-list-item, .ml-filter, .rag-cite {
+  transition:background-color .14s var(--ease), border-color .14s var(--ease),
+             color .14s var(--ease), box-shadow .14s var(--ease), transform .1s var(--ease);
+}
+
 @media (prefers-reduced-motion:reduce) {
   * { animation-duration:.01ms !important; transition-duration:.01ms !important; }
 }
