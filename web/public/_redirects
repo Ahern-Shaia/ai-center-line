@@ -1,8 +1,7 @@
 # Render Static Site rewrite rules
-# 動之前先把 BACKEND_URL 換成 Render 上 backend service 的實際網址（如 https://aiproot-warroom-api.onrender.com）
 
-# 前端 /api/* 代理到 backend service
-/api/*  https://BACKEND_URL/:splat  200
+# 前端 /api/* server-side rewrite 到 backend service（status 200 = 用戶瀏覽器看不到 backend URL，同時繞開 CORS）
+/api/*  https://ai-center-line.onrender.com/:splat  200
 
 # SPA fallback：所有未匹配路徑打回 index.html（React 內部 route）
-/*      /index.html                200
+/*      /index.html                                  200
