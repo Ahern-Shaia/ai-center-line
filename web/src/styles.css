@@ -217,15 +217,45 @@ button { cursor:pointer; }
 .pill.muted { color:var(--ink-3); }
 .pill.review { color:#BE123C; border-style:dashed; }
 
-/* ==================== BUTTONS ==================== */
-.btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:var(--r); font-size:13.5px; font-weight:500; border:1px solid transparent; transition:background .12s var(--ease),border-color .12s var(--ease); }
-.btn:disabled { opacity:.5; cursor:default; }
-.btn-primary { background:var(--primary); color:#fff; }
-.btn-primary:hover { background:var(--primary-2); }
-.btn-primary:active { transform:translateY(1px); }
+/* ==================== BUTTONS · 微動效節奏（hover 抬起 → active 按下）==================== */
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  padding:8px 14px; border-radius:var(--r); font-size:13.5px; font-weight:500;
+  border:1px solid transparent; cursor:pointer;
+  transition:background-color .16s var(--ease), border-color .16s var(--ease),
+             box-shadow .16s var(--ease), transform .14s var(--ease);
+  will-change:transform;
+}
+.btn:disabled { opacity:.5; cursor:default; transform:none !important; box-shadow:none !important; }
+
+/* Primary · 語意主 action：hover 明顯抬起 + 影子加深；active 快速按下 */
+.btn-primary { background:var(--primary); color:#fff; box-shadow:0 1px 2px rgba(79,70,229,.18); }
+.btn-primary:hover:not(:disabled) {
+  background:var(--primary-2);
+  box-shadow:0 4px 12px rgba(79,70,229,.28), 0 2px 4px rgba(79,70,229,.15);
+  transform:translateY(-1px);
+}
+.btn-primary:active:not(:disabled) {
+  transform:translateY(0);
+  box-shadow:0 1px 2px rgba(79,70,229,.18);
+  transition-duration:.06s;
+}
+
+/* Ghost · 次要 action：hover 極輕微抬起，配 hairline shadow */
 .btn-ghost { background:var(--surface); border-color:var(--line); color:var(--ink-2); }
-.btn-ghost:hover { background:var(--well); border-color:var(--ink-3); color:var(--ink); }
+.btn-ghost:hover:not(:disabled) {
+  background:var(--well); border-color:var(--ink-3); color:var(--ink);
+  transform:translateY(-1px);
+  box-shadow:0 1px 3px rgba(17,24,39,.08);
+}
+.btn-ghost:active:not(:disabled) {
+  transform:translateY(0);
+  box-shadow:none;
+  transition-duration:.06s;
+}
+
 .btn-sm { padding:5px 10px; font-size:12px; }
+.btn-sm.btn-primary { box-shadow:0 1px 2px rgba(79,70,229,.14); }
 
 /* ==================== TOOLTIP（Aria） ==================== */
 .infotip-target { display:inline-flex; align-items:center; outline:none; }
