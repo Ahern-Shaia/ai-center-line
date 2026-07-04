@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 import bcrypt from "bcryptjs";
+import { pgConfig } from "./pg-config.js";
 
 interface WarRoomJson {
   tenant_name: string;
@@ -35,7 +36,7 @@ const data = JSON.parse(fs.readFileSync(dataPath, "utf8")) as WarRoomJson;
 
 const TENANT = "77777777-0000-0000-0000-000000000001"; // 台灣福祉 demo 租戶
 
-const c = new pg.Client({ connectionString: url });
+const c = new pg.Client(pgConfig(url));
 await c.connect();
 try {
   await c.query("BEGIN");

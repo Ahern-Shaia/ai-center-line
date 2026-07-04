@@ -7,8 +7,9 @@ import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
 import * as schema from "./schema.js";
 import type { Role } from "./schema.js";
+import { pgConfig } from "./pg-config.js";
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool(pgConfig(process.env.DATABASE_URL ?? ""));
 
 export const db = drizzle(pool, { schema });
 export type Db = NodePgDatabase<typeof schema>;

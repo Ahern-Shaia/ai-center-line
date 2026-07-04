@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { pgConfig } from "./pg-config.js";
 
 const url = process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL;
 if (!url) {
@@ -17,7 +18,7 @@ const files = fs
   .filter((f) => f.endsWith(".sql") && !f.endsWith(".down.sql"))
   .sort();
 
-const client = new pg.Client({ connectionString: url });
+const client = new pg.Client(pgConfig(url));
 await client.connect();
 try {
   for (const f of files) {

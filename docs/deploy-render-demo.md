@@ -144,16 +144,41 @@ Render Dashboard → **New** → **Static Site** → 同一 repo
 
 ---
 
-## 3. 首次 migration + seed（Render backend Shell）
+## 3. 首次 migration + seed
 
-Render backend service → 頂部 Tabs → **Shell**（Starter plan 才有；Free 沒有 Shell 得用 One-off Job）
+### 3.a Starter Plan 以上（有 Shell）
+
+Render backend service → 頂部 Tabs → **Shell**：
 
 ```bash
 npm run migrate    # 應該印 → apply 0001_init.sql ... ok / 0002_users_display_name.sql ... ok
 npm run seed:demo  # 應該印 demo seed 完成：租戶「aiproot」· 6 部門 · 13 tickets
 ```
 
-驗證：
+### 3.b Free Plan（無 Shell / 無 One-off Job）
+
+**從你本機直接連 Render PG 的 External URL 跑**（Render Free tier 沒 Shell，但 PG 有 External URL 可外部連線）：
+
+1. Render Dashboard → 你的 PG service → **Connect** tab
+2. 找 **External Database URL**（不是 Internal）· 複製
+3. 本機執行：
+
+```bash
+cd server
+
+# migrate
+MIGRATION_DATABASE_URL="postgresql://user:pass@dpg-xxx.oregon-postgres.render.com/dbname" npm run migrate
+
+# seed:demo
+MIGRATION_DATABASE_URL="postgresql://user:pass@dpg-xxx.oregon-postgres.render.com/dbname" npm run seed:demo
+```
+
+（pg client 已自動處理 SSL — 見 `server/src/db/pg-config.ts`：hostname 非 localhost 時強制 `ssl: { rejectUnauthorized: false }`）
+
+4. 驗證：backend service 的 URL 打 `/health` 應該 200，然後 `/auth/login` 用 demo 帳號應該回 JWT
+
+### 3.c 兩者共通的驗證
+
 ```bash
 curl https://<backend-service>.onrender.com/health
 # 預期：{"status":"ok"}

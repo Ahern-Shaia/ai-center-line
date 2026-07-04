@@ -2,6 +2,7 @@
 // 以擁有者連線（superuser）繞過 RLS 寫入；僅 dev。帳號：admin-a@demo.test / admin-b@demo.test（pw123）。
 import pg from "pg";
 import bcrypt from "bcryptjs";
+import { pgConfig } from "./pg-config.js";
 
 const url = process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL;
 if (!url) {
@@ -9,7 +10,7 @@ if (!url) {
   process.exit(1);
 }
 
-const c = new pg.Client({ connectionString: url });
+const c = new pg.Client(pgConfig(url));
 await c.connect();
 try {
   const hash = await bcrypt.hash("pw123", 10);
