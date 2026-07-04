@@ -1,0 +1,36 @@
+{
+  "name": "@ai-center-line/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Phase 1 後端服務（NestJS/PG/RLS）。CLI 原型仍在專案根 src/。",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node --env-file=.env dist/main.js",
+    "dev": "tsc -p tsconfig.build.json && node --env-file=.env dist/main.js",
+    "migrate": "tsx --env-file=.env src/db/migrate.ts",
+    "seed:dev": "tsx --env-file=.env src/db/seed-dev.ts",
+    "test": "node --import tsx --env-file=.env --test test/rls.test.ts test/auth.test.ts",
+    "test:cov": "node --import tsx --env-file=.env --test --experimental-test-coverage test/rls.test.ts test/auth.test.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.27",
+    "@nestjs/core": "^11.1.27",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/platform-fastify": "^11.1.27",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.22.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^26.1.0",
+    "@types/pg": "^8.20.0",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3"
+  }
+}

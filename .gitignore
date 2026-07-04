@@ -1,4 +1,8 @@
 node_modules/
 output/
+dist/
 .env
 .DS_Store
+
+# 內含真名/PII 與原始 prototype — 絕不進版控（更不可推上 Render 拉取的 repo）
+合夥人/
