@@ -24,7 +24,21 @@ type Route =
   | { page: "config" }
   | { page: "audit" };
 
+// crumb 顯示上層分類（非當前頁名），避免與 pane h1 重複。
+// pane h1 對應 PAGE_TITLE，同步設定 document.title 提供瀏覽器 tab 辨識。
 const CRUMB: Record<Route["page"], string> = {
+  warroom: "戰情室",
+  rag: "資料 · 知識",
+  onboarding: "說明",
+  media: "資料 · 知識",
+  km: "資料 · 知識",
+  map: "資料 · 知識",
+  depts: "設定",
+  config: "設定",
+  audit: "設定",
+};
+
+const PAGE_TITLE: Record<Route["page"], string> = {
   warroom: "總覽儀表",
   rag: "智慧檢索",
   onboarding: "運作原理",
@@ -63,6 +77,10 @@ export default function App() {
     await pageRef.current.refresh();
     setAsOf(pageRef.current.asOf());
   }, []);
+
+  useEffect(() => {
+    document.title = `${PAGE_TITLE[route.page]} · aiproot 戰情室`;
+  }, [route.page]);
 
   if (!session) return <Login onLogin={() => setSession(getSession())} />;
 
