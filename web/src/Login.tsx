@@ -1,21 +1,22 @@
 import { useState } from "react";
-import { login } from "./api";
+import { ApiError, login } from "./api";
 
 export default function Login({ onLogin }: { onLogin: () => void }) {
-  const [email, setEmail] = useState("gm@taiwanhomecare.demo");
-  const [pw, setPw] = useState("demo123");
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
     setErr("");
     try {
       await login(email, pw);
       onLogin();
-    } catch {
-      setErr("帳號或密碼錯誤");
+    } catch (e) {
+      setErr(e instanceof ApiError && e.status === 401 ? "帳號或密碼錯誤" : "登入失敗，請稍後再試");
     } finally {
       setBusy(false);
     }
@@ -23,21 +24,30 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
 
   return (
     <div className="login-wrap">
-      <form className="login-card sheet" onSubmit={submit}>
-        <span className="rc tl" /><span className="rc tr" /><span className="rc bl" /><span className="rc br" />
-        <div className="login-brand">台灣福祉 · AI 戰情室</div>
-        <div className="login-sub">客戶專屬後台 · Powered by AIPROOT</div>
-        <label className="fld">
-          <span className="fld-k">帳號</span>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />
-        </label>
-        <label className="fld">
-          <span className="fld-k">密碼</span>
-          <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" />
-        </label>
-        {err && <div className="login-err">{err}</div>}
-        <button className="btn-primary" disabled={busy}>{busy ? "登入中…" : "登入"}</button>
-        <div className="login-hint">demo：gm@taiwanhomecare.demo / demo123</div>
+      <form className="login-card" onSubmit={submit}>
+        <div className="login-brand">
+          <span className="mark">AI</span>
+          <span className="name">AIPROOT 戰情室</span>
+        </div>
+        <div>
+          <div className="login-h1">登入</div>
+          <div className="login-sub">請使用您的公司帳號登入</div>
+        </div>
+        <div className="field">
+          <label htmlFor="email">Email</label>
+          <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required placeholder="you@company.com" />
+        </div>
+        <div className="field">
+          <label htmlFor="pw">密碼</label>
+          <input id="pw" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" required />
+        </div>
+        {err && <div className="login-err" role="alert">{err}</div>}
+        <button className="btn btn-primary" disabled={busy}>{busy ? "登入中…" : "登入"}</button>
+        {import.meta.env.DEV && (
+          <div className="login-hint">
+            demo：<code>gm@taiwanhomecare.demo</code> / <code>demo123</code>
+          </div>
+        )}
       </form>
     </div>
   );
