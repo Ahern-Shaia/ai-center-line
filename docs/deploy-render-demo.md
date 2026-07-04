@@ -24,15 +24,28 @@
 
 ### 1.1 CORS 啟用（`server/src/main.ts`）
 
+用 Fastify 原生 `onRequest` hook 手寫，**0 新依賴**（Fastify 引擎本來就在跑）：
+
 ```typescript
-const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
-await app.register(await import('@fastify/cors').then(m => m.default), {
-  origin: (process.env.CORS_ORIGINS ?? '').split(',').filter(Boolean),
-  credentials: false,
-});
+const corsOrigins = (process.env.CORS_ORIGINS ?? "").split(",").map(s => s.trim()).filter(Boolean);
+if (corsOrigins.length) {
+  const fastify = app.getHttpAdapter().getInstance();
+  fastify.addHook("onRequest", async (request, reply) => {
+    const origin = request.headers.origin;
+    if (origin && corsOrigins.includes(origin)) {
+      void reply.header("Access-Control-Allow-Origin", origin);
+      void reply.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+      void reply.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      void reply.header("Vary", "Origin");
+    }
+    if (request.method === "OPTIONS") {
+      return reply.status(204).send();
+    }
+  });
+}
 ```
 
-依賴：`npm i @fastify/cors`（server/）
+無 `CORS_ORIGINS` 環境變數時 hook 不註冊 → dev 同源不受影響。
 
 ### 1.2 Migration 相容 Render（`server/src/db/migrations/0001_init.sql`）
 
