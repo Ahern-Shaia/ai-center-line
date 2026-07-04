@@ -1,9 +1,18 @@
 import { Injectable } from "@nestjs/common";
+import { inArray } from "drizzle-orm";
 import { currentTx } from "../db/client.js";
-import { departments, tickets } from "../db/schema.js";
+import { departments, tickets, users } from "../db/schema.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 type Health = "green" | "yellow" | "red";
+
+export interface WarroomTicket {
+  ticket_id: string;
+  summary: string;
+  confidence: "high" | "medium" | "low" | null;
+  needs_review: boolean;
+  status: "待簽核" | "已簽核" | "逾時警示";
+}
 
 export interface WarroomGroup {
   department_id: string;
@@ -14,6 +23,11 @@ export interface WarroomGroup {
   today_total: number;
   high_count: number;
   has_low_pending: boolean;
+  // 已簽核部門顯示：最後簽核者+時間（未簽核為 null）
+  signed_by_name: string | null;
+  signed_at: string | null;
+  // 本日 tickets 摘要（供就地展開）
+  today_tickets: WarroomTicket[];
 }
 
 // 戰情室聚合。分母一律用 N＝該租戶（RLS 範圍內）實際部門數，非固定 6。
@@ -24,6 +38,15 @@ export class WarroomService {
     const tx = currentTx();
     const depts = await tx.select().from(departments);
     const tks = await tx.select().from(tickets);
+
+    // 抓已簽核者 display_name（一次撈，避免 N+1）
+    const signerIds = [...new Set(tks.map((t) => t.confirmedBy).filter((x): x is string => !!x))];
+    const signerRows = signerIds.length
+      ? await tx.select({ userId: users.userId, displayName: users.displayName, email: users.email }).from(users).where(inArray(users.userId, signerIds))
+      : [];
+    const signerById = new Map(
+      signerRows.map((r) => [r.userId, r.displayName ?? (r.email ? r.email.split("@")[0] : "未知")]),
+    );
 
     const N = depts.length;
     const times = tks.map((t) => new Date(t.createdAt).getTime());
@@ -37,6 +60,21 @@ export class WarroomService {
       const hasLow = dt.some((t) => t.confidence === "low" && t.confirmStatus === "待簽核");
       const signed = dt.length > 0 && dt.every((t) => t.confirmStatus === "已簽核");
       const health: Health = overdue || !active ? "red" : hasLow ? "yellow" : "green";
+
+      // 已簽核部門：找出最新 confirmed_at 的 ticket，取其簽核者+時間
+      let signedByName: string | null = null;
+      let signedAt: string | null = null;
+      if (signed) {
+        const signedTks = dt.filter((t) => t.confirmedAt).sort(
+          (a, b) => new Date(b.confirmedAt!).getTime() - new Date(a.confirmedAt!).getTime()
+        );
+        const latest = signedTks[0];
+        if (latest) {
+          signedAt = new Date(latest.confirmedAt!).toISOString();
+          signedByName = latest.confirmedBy ? signerById.get(latest.confirmedBy) ?? null : null;
+        }
+      }
+
       return {
         department_id: d.departmentId,
         name: d.departmentName,
@@ -46,6 +84,17 @@ export class WarroomService {
         today_total: dt.length,
         high_count: dt.filter((t) => t.confidence === "high").length,
         has_low_pending: hasLow,
+        signed_by_name: signedByName,
+        signed_at: signedAt,
+        today_tickets: dt
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+          .map<WarroomTicket>((t) => ({
+            ticket_id: t.ticketId,
+            summary: t.summary ?? "",
+            confidence: t.confidence,
+            needs_review: t.needsReview,
+            status: t.confirmStatus as WarroomTicket["status"],
+          })),
       };
     });
 

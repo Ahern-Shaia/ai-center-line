@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   departmentId: uuid("department_id").references(() => departments.departmentId, { onDelete: "set null" }),
   lineUserId: text("line_user_id"),
   email: text("email"),
+  displayName: text("display_name"), // 戰情室 UI 顯示用；為 null 時 fallback email prefix
   passwordHash: text("password_hash"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
