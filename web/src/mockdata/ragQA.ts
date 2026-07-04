@@ -3,11 +3,19 @@
 
 export interface Citation {
   id: number;            // [1] [2]
-  kind: "ticket" | "km" | "message" | "external";
-  ref: string;           // 顯示用短碼：WO-2506-041 / KM #0142 / 群組 07/02 11:05
-  title: string;         // 標題
+  kind: "ticket" | "km" | "message" | "external" | "image" | "spreadsheet";
+  ref: string;           // 顯示用短碼：WO-2506-041 / 升降機圖紙_v3.png
+  title: string;
   source: string;        // 來自哪個部門/系統
-  snippet: string;       // hover / drawer 內文摘要
+  snippet: string;       // 描述
+  // 多模態附件（image / spreadsheet 專用）
+  spreadsheet?: {
+    headers: string[];
+    rows: string[][];
+  };
+  image?: {
+    caption: string;   // 圖說；SVG 內嵌以 IMAGE_MOCK[ref] 對應
+  };
 }
 
 export interface RagQA {
@@ -27,6 +35,8 @@ export const RAG_QA: RagQA[] = [
       { citeId: 1 },
       "。保養週期建議每 3 個月檢查液壓油與鋼索張力一次",
       { citeId: 2 },
+      "。結構圖紙 v3 可參考鋼索走位與液壓油路",
+      { citeId: 3 },
       "。",
     ],
     citations: [
@@ -39,6 +49,12 @@ export const RAG_QA: RagQA[] = [
         id: 2, kind: "km", ref: "KM #0089", title: "升降機保養規範 v2",
         source: "技術研發群組",
         snippet: "液壓油：每 3 個月 / 5000 km 檢查；鋼索張力：每 3 個月檢查；異音、卡頓：立即停用回廠。",
+      },
+      {
+        id: 3, kind: "image", ref: "升降機結構圖_v3.png", title: "示範車號 A · 升降機結構圖（改裝後）",
+        source: "技術研發群組 · 檔案庫",
+        snippet: "側視圖標註鋼索走位、平台載重、液壓油路",
+        image: { caption: "示範車號 A · 側視圖 · v3（2026-06 更新）" },
       },
     ],
     followup: "需要我一併列出同款升降機近三個月的異常紀錄嗎？",
@@ -99,6 +115,8 @@ export const RAG_QA: RagQA[] = [
       { citeId: 1 },
       "；另有 2 筆推估工時（陳○○ ~2h、張○○ 未填）待簽核後併入",
       { citeId: 2 },
+      "。系統自動彙整的統計表可下載試算表",
+      { citeId: 3 },
       "。",
     ],
     citations: [
@@ -111,6 +129,24 @@ export const RAG_QA: RagQA[] = [
         id: 2, kind: "ticket", ref: "T-003, T-004", title: "待簽核 · 中信心",
         source: "技術工程群組",
         snippet: "T-003 陳○○ ~2.0h（工時填「大概」）· T-004 張○○ 未填工時（含「順便看了下 B 案」需歸類）",
+      },
+      {
+        id: 3, kind: "spreadsheet", ref: "7月改裝日報統計.xlsx",
+        title: "7月改裝日報總表（1-3 日）",
+        source: "改裝群 · 系統自動彙整",
+        snippet: "含姓名 / 車號 / 任務 / 工時 / 信心度",
+        spreadsheet: {
+          headers: ["日期", "工人", "車號", "任務", "工時 (h)", "信心度"],
+          rows: [
+            ["07/02", "王○○", "示範車號 A", "升降機水平調校", "2.5", "高"],
+            ["07/02", "王○○", "示範車號 A", "斜坡板焊接", "1.5", "高"],
+            ["07/02", "林○○", "CV-2507-02", "水電整合（熱水模組）", "3.0", "高"],
+            ["07/02", "陳○○", "CV-2506-18", "扶手安裝+無障礙固定", "~2.0", "中"],
+            ["07/02", "張○○", "示範車號 A", "協助試車 + B案查看", "—", "中"],
+            ["07/03", "王○○", "B 案", "升降尾門機構組裝", "4.0", "高"],
+            ["07/03", "陳○○", "CV-2506-18", "內裝收尾", "3.0", "高"],
+          ],
+        },
       },
     ],
   },

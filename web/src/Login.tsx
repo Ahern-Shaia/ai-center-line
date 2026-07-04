@@ -16,7 +16,9 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       await login(email, pw);
       onLogin();
     } catch (e) {
-      setErr(e instanceof ApiError && e.status === 401 ? "帳號或密碼錯誤" : "登入失敗，請稍後再試");
+      if (e instanceof ApiError && e.status === 401) setErr("帳號或密碼錯誤");
+      else if (e instanceof ApiError) setErr(e.message);
+      else setErr("登入失敗，請稍後再試");
     } finally {
       setBusy(false);
     }
@@ -27,14 +29,14 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       <form className="login-card" onSubmit={submit}>
         <div className="login-brand">
           <span className="mark">AI</span>
-          <span className="name">AIPROOT 戰情室</span>
+          <span className="name">aiproot 戰情室</span>
         </div>
         <div>
           <div className="login-h1">登入</div>
           <div className="login-sub">請使用您的公司帳號登入</div>
         </div>
         <div className="field">
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">電子郵件</label>
           <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required placeholder="you@company.com" />
         </div>
         <div className="field">
@@ -43,11 +45,6 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
         </div>
         {err && <div className="login-err" role="alert">{err}</div>}
         <button className="btn btn-primary" disabled={busy}>{busy ? "登入中…" : "登入"}</button>
-        {import.meta.env.DEV && (
-          <div className="login-hint">
-            demo：<code>gm@taiwanhomecare.demo</code> / <code>demo123</code>
-          </div>
-        )}
       </form>
     </div>
   );

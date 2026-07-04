@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { Button as AriaButton, Header as AriaHeader, Menu, MenuItem, MenuTrigger, Popover, Separator } from "react-aria-components";
 import type { Session } from "./api";
+import { useToast } from "./Toast";
 
-// module 導覽（demo 已實作 warroom / signoff / rag / onboarding；其餘標 soon）
+// 對照 docs/台灣福祉_系統設計文件_開發用.md §1-C C3 tenant_admin 8 module 全景。
+// 全部走 mock 資料頁面（demo 錄影用）；正式版逐步接後端。
 const NAV = [
   {
     group: "戰情室",
@@ -15,17 +17,17 @@ const NAV = [
     group: "資料 · 知識",
     items: [
       { key: "rag", label: "智慧檢索", ic: iconChat, done: true },
-      { key: "media", label: "素材看板", ic: iconMedia, done: false },
-      { key: "km", label: "知識庫", ic: iconBook, done: false },
-      { key: "map", label: "客戶地圖", ic: iconMap, done: false },
+      { key: "media", label: "素材看板", ic: iconMedia, done: true },
+      { key: "km", label: "知識庫", ic: iconBook, done: true },
+      { key: "map", label: "客戶地圖", ic: iconMap, done: true },
     ],
   },
   {
     group: "設定",
     items: [
-      { key: "depts", label: "部門/成員", ic: iconTeam, done: false },
-      { key: "config", label: "租戶設定", ic: iconCog, done: false },
-      { key: "audit", label: "稽核記錄", ic: iconShield, done: false },
+      { key: "depts", label: "部門/成員", ic: iconTeam, done: true },
+      { key: "config", label: "租戶設定", ic: iconCog, done: true },
+      { key: "audit", label: "稽核記錄", ic: iconShield, done: true },
     ],
   },
 ];
@@ -38,7 +40,7 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 const TENANT_NAME: Record<string, string> = {
-  "77777777-0000-0000-0000-000000000001": "台灣福祉科技",
+  "77777777-0000-0000-0000-000000000001": "aiproot",
 };
 
 interface Props {
@@ -55,18 +57,8 @@ interface Props {
 }
 
 export default function Shell({ session, active, onNav, onLogout, onRefresh, onHelp, refreshing, asOf, crumb, children }: Props) {
-  const [menu, setMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!menu) return;
-    const onDoc = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenu(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [menu]);
-
   const tenantName = TENANT_NAME[session.tenantId] ?? "租戶";
+  const toast = useToast();
   const tenantMark = tenantName.slice(0, 1);
   const initials = session.email.slice(0, 2).toUpperCase();
 
@@ -87,27 +79,27 @@ export default function Shell({ session, active, onNav, onLogout, onRefresh, onH
               {g.items.map((it) => (
                 <button
                   key={it.key}
-                  className={`sb-link${active === it.key ? " active" : ""}${!it.done ? " soon" : ""}`}
-                  onClick={() => it.done && onNav(it.key)}
-                  disabled={!it.done}
+                  className={`sb-link${active === it.key ? " active" : ""}${!it.done ? " planned" : ""}`}
+                  onClick={() => it.done ? onNav(it.key) : toast.show(`「${it.label}」規劃於後續版本推出`)}
                   aria-current={active === it.key ? "page" : undefined}
                 >
                   <it.ic />
                   <span>{it.label}</span>
-                  {!it.done && <span className="badge">soon</span>}
+                  {!it.done && <span className="sb-plan-dot" aria-label="規劃中" title="規劃中" />}
                 </button>
               ))}
             </div>
           ))}
         </nav>
         <div className="sb-foot">
-          <div>Powered by <span className="sb-foot-brand">AIPROOT</span></div>
-          <div className="sb-foot-ver">v0.1 · dev</div>
+          <div><span className="sb-foot-brand">aiproot</span> 技術支援</div>
+          <div className="sb-foot-ver">v0.1</div>
         </div>
       </aside>
 
       <div className="main">
         <div className="topbar">
+          <div className="topbar-inner">
           <div className="crumb">
             <span className="cur">{crumb ?? "總覽"}</span>
           </div>
@@ -126,26 +118,28 @@ export default function Shell({ session, active, onNav, onLogout, onRefresh, onH
           <button className={`icon-btn${refreshing ? " spin" : ""}`} onClick={onRefresh} aria-label="重新整理" title="重新整理">
             <IconRefresh />
           </button>
-          <div className="user" ref={menuRef}>
-            <button className="user-btn" onClick={() => setMenu((v) => !v)} aria-haspopup="menu" aria-expanded={menu}>
+          <MenuTrigger>
+            <AriaButton className="user-btn">
               <span className="user-avatar">{initials}</span>
               <span className="user-meta">
                 <span className="user-name">{session.email.split("@")[0]}</span>
                 <span className="user-role">{ROLE_LABEL[session.role] ?? session.role}</span>
               </span>
-            </button>
-            {menu && (
-              <div className="user-menu" role="menu">
-                <div className="user-menu-hdr">
+            </AriaButton>
+            <Popover className="user-menu-pop" placement="bottom right" offset={6}>
+              <Menu className="user-menu" onAction={(key) => { if (key === "logout") onLogout(); }}>
+                <AriaHeader className="user-menu-hdr">
                   <div className="n">{session.email.split("@")[0]}</div>
                   <div className="e">{session.email}</div>
                   <div className="t">{ROLE_LABEL[session.role] ?? session.role} · {tenantName}</div>
-                </div>
-                <button role="menuitem" disabled title="尚未實作">帳號設定</button>
-                <button role="menuitem" disabled title="尚未實作">切換租戶</button>
-                <button role="menuitem" className="danger" onClick={onLogout}>登出</button>
-              </div>
-            )}
+                </AriaHeader>
+                <Separator className="user-menu-sep" />
+                <MenuItem id="settings" isDisabled>帳號設定</MenuItem>
+                <MenuItem id="switch" isDisabled>切換租戶</MenuItem>
+                <MenuItem id="logout" className="danger">登出</MenuItem>
+              </Menu>
+            </Popover>
+          </MenuTrigger>
           </div>
         </div>
         <main className="pane">{children}</main>

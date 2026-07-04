@@ -82,12 +82,12 @@
 
   /* pill demos */
   .demo-row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin:8px 0; }
-  .pill { display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:999px; font-size:11.5px; font-weight:600; font-variant-numeric:tabular-nums; }
-  .pill.ok { background:var(--ok-tint); color:#065F46; }
-  .pill.warn { background:var(--warn-tint); color:#92400E; }
-  .pill.danger { background:var(--danger-tint); color:#9F1239; }
-  .pill.muted { background:var(--well); color:var(--ink-3); }
-  .pill.review { background:var(--warn-tint); color:#92400E; border:1px dashed var(--warn); }
+  .tag { display:inline-flex; align-items:center; gap:4px; padding:1px 6px; border-radius:2px; font-family:var(--mono); font-size:10.5px; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:.03em; text-transform:uppercase; border:1px solid currentColor; line-height:1.5; background:transparent; }
+  .tag.ok { color:#047857; } .tag.warn { color:#B45309; } .tag.danger { color:#BE123C; } .tag.muted { color:var(--ink-3); }
+  .tag.dashed { border-style:dashed; }
+  /* pill 保留給部分位置舊 demo；不做展示 */
+  .pill { display:inline-flex; align-items:center; gap:5px; padding:1px 6px; border-radius:2px; font-family:var(--mono); font-size:10.5px; font-weight:600; text-transform:uppercase; border:1px solid currentColor; background:transparent; }
+  .pill.ok { color:#047857; } .pill.warn { color:#B45309; } .pill.danger { color:#BE123C; }
 
   /* lamp demos */
   .lamp { display:inline-block; width:8px; height:8px; border-radius:50%; }
@@ -106,44 +106,53 @@
   .btn-ghost:hover { background:var(--well); border-color:var(--ink-3); color:var(--ink); }
   .btn-sm { padding:5px 10px; font-size:12px; }
 
-  /* tile */
+  /* gauge tile — 狀態靠 donut 環本身承載，tile 中性 */
   .tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
-  .tile { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:16px 18px; box-shadow:var(--sh-sm); }
-  .tile .label { font-size:12px; color:var(--ink-3); font-weight:500; }
-  .tile .metric { display:flex; align-items:baseline; gap:8px; margin-top:8px; }
-  .tile .num { font-size:32px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
-  .tile .num .pct { font-size:18px; color:var(--ink-3); font-weight:500; margin-left:2px; }
-  .tile .frac { font-family:var(--mono); font-size:12px; color:var(--ink-3); }
-  .tile .bar { margin-top:12px; height:4px; border-radius:2px; background:var(--well); overflow:hidden; }
-  .tile .bar > i { display:block; height:100%; border-radius:2px; }
+  .gauge-tile { background:var(--surface); border:1px solid var(--line); border-radius:3px; padding:14px 16px 12px; display:flex; flex-direction:column; align-items:center; }
+  .gauge-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+  .gauge-num { font-family:var(--mono); font-size:28px; font-weight:600; color:var(--ink); line-height:1; letter-spacing:-.01em; }
+  .gauge-num i { font-size:12px; color:var(--ink-3); font-style:normal; font-weight:500; margin-left:1px; }
+  .gauge-frac { font-size:10.5px; color:var(--ink-3); margin-top:6px; text-align:center; text-transform:uppercase; letter-spacing:.05em; }
+  .gauge-label { font-size:13px; font-weight:600; color:var(--ink); margin-top:8px; text-align:center; padding-top:8px; border-top:1px solid var(--line-2); width:100%; letter-spacing:-.01em; }
 
-  /* accordion signoff */
-  .signoff-demo { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--sh-sm); overflow:hidden; }
+  /* accordion signoff — 狀態靠 mono 文字前景色扛，行本身中性 */
+  .signoff-demo { background:var(--surface); border:1px solid var(--line); border-radius:3px; overflow:hidden; }
   .so-item { border-bottom:1px solid var(--line-2); }
   .so-item:last-child { border-bottom:0; }
-  .so-item.done { background:linear-gradient(0deg, var(--ok-tint) 0%, transparent 100%); }
-  .so-item.has-low { border-left:3px solid var(--warn); }
-  .so-head { display:flex; align-items:center; gap:12px; padding:12px 16px; }
-  .so-toggle { display:flex; align-items:center; gap:12px; flex:1; background:transparent; border:0; padding:0; font-family:inherit; font-size:inherit; color:inherit; text-align:left; }
-  .so-name { font-size:14px; font-weight:700; color:var(--ink); min-width:76px; }
-  .so-count { font-size:12.5px; color:var(--ink-2); }
-  .so-count.warn { color:#92400E; background:var(--warn-tint); padding:2px 8px; border-radius:var(--r-sm); font-weight:600; }
-  .so-count.done { color:var(--ok); font-weight:600; }
-  .so-chev { font-size:11px; color:var(--ink-3); margin-left:auto; width:14px; text-align:center; }
-  .so-detail { padding:8px 16px 16px 46px; background:var(--well); border-top:1px solid var(--line-2); display:flex; flex-direction:column; gap:6px; }
-  .so-line { display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--surface); border:1px solid var(--line-2); border-radius:var(--r); font-size:13px; }
-  .so-line.blocked { border-color:var(--danger); background:var(--danger-tint); }
-  .so-summary { flex:1; color:var(--ink); }
-  .so-source { background:transparent; border:0; color:var(--primary); font-size:12px; font-family:inherit; cursor:pointer; padding:0 4px; }
+  .so-item.st-yellow { background:rgba(217,119,6,.025); }
+  .so-item.st-signed .so-status { color:var(--ink-3); }
+  .so-head { display:flex; align-items:center; gap:14px; padding:11px 16px; }
+  .so-toggle { display:flex; align-items:center; gap:14px; flex:1; background:transparent; border:0; padding:0; font-family:inherit; font-size:inherit; color:inherit; text-align:left; }
+  .so-name { font-size:14px; font-weight:700; color:var(--ink); min-width:82px; letter-spacing:-.01em; }
+  .so-status { font-family:var(--mono); font-size:11.5px; color:var(--ink-2); display:inline-flex; align-items:center; gap:8px; font-variant-numeric:tabular-nums; }
+  .so-status .num { color:var(--ink); font-weight:600; }
+  .so-status .danger { color:var(--danger); font-weight:700; }
+  .so-status .signer { color:var(--ok); font-weight:600; text-transform:uppercase; letter-spacing:.05em; font-size:10.5px; }
+  .so-status .signer-name { color:var(--ink); font-weight:700; font-size:11.5px; margin-left:2px; }
+  .so-chev { font-family:var(--mono); font-size:10.5px; color:var(--ink-3); margin-left:auto; min-width:14px; text-align:center; }
+  .so-detail { padding:6px 16px 14px; border-top:1px dashed var(--line); }
+  .so-line { display:grid; grid-template-columns:14px 1fr auto auto; align-items:center; gap:12px; padding:8px 10px; border-bottom:1px dotted var(--line-2); font-size:13px; }
+  .so-line:last-of-type { border-bottom:0; }
+  .so-line.blocked { background:linear-gradient(90deg, rgba(225,29,72,.05) 0%, transparent 60%); }
+  .so-box { font-family:var(--mono); color:var(--ink-3); font-size:12px; }
+  .so-summary { color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .so-source { background:transparent; color:var(--ink-2); font-family:var(--mono); font-size:11px; cursor:pointer; padding:2px 6px; text-transform:uppercase; letter-spacing:.03em; border:1px solid var(--line); border-radius:2px; }
+  .so-source:hover { color:var(--primary); border-color:var(--primary); background:var(--primary-tint); }
+  .btn.confirmed-tag { background:transparent; color:var(--ok); border:1px solid var(--ok); font-family:var(--mono); font-size:11px; padding:4px 10px; text-transform:uppercase; letter-spacing:.05em; }
 
   /* banner */
   .banner { display:flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid var(--warn); background:var(--warn-tint); color:#78350F; border-radius:var(--r); font-size:13px; margin:10px 0; }
 
-  /* toast preview */
-  .toast { background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--primary); border-radius:var(--r); box-shadow:var(--sh); padding:10px 14px; min-width:280px; font-size:13px; color:var(--ink); display:inline-block; }
-  .toast.ok { border-left-color:var(--ok); }
-  .toast.warn { border-left-color:var(--warn); }
-  .toast.danger { border-left-color:var(--danger); }
+  /* toast — 上緣 metadata 頭條，狀態靠 type 文字前景色 */
+  .toast { background:var(--surface); border:1px solid var(--line); border-radius:2px; min-width:320px; font-size:13px; color:var(--ink); display:flex; flex-direction:column; overflow:hidden; }
+  .toast-tstamp { display:flex; align-items:baseline; gap:8px; padding:5px 12px; border-bottom:1px dashed var(--line); font-family:var(--mono); font-size:10.5px; color:var(--ink-3); letter-spacing:.03em; }
+  .toast-tstamp .time { font-variant-numeric:tabular-nums; }
+  .toast-tstamp .type { text-transform:uppercase; font-weight:700; margin-left:auto; }
+  .toast-body { padding:9px 12px 11px; line-height:1.5; }
+  .toast.ok .toast-tstamp .type { color:var(--ok); }
+  .toast.warn .toast-tstamp .type { color:var(--warn); }
+  .toast.danger .toast-tstamp .type { color:var(--danger); }
+  .toast .toast-tstamp .type { color:var(--ink-2); }
 
   /* elevation demo */
   .elev-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:10px; }
@@ -302,7 +311,7 @@
       <h2><span class="n">02</span>五條核心原則</h2>
       <div class="princ-grid">
         <div class="princ"><div class="princ-n">P1</div><div class="princ-h">每個數字要能反查來源</div><div class="princ-b">CLAUDE.md R11 落實。儀表、抽取、簽核，每筆背後掛得到原始 LINE 訊息或工單。</div></div>
-        <div class="princ"><div class="princ-n">P2</div><div class="princ-h">一頁掃描 &gt; 多頁跳轉</div><div class="princ-b">Daily driver 一頁看完六部門，深挖才用 drawer；不強迫用戶切頁。</div></div>
+        <div class="princ"><div class="princ-n">P2</div><div class="princ-h">一頁掃描 &gt; 多頁跳轉</div><div class="princ-b">Daily driver 一頁看完所有部門（N 由客戶自行配置，此處示範 6 個），深挖才用 drawer；不強迫用戶切頁。</div></div>
         <div class="princ"><div class="princ-n">P3</div><div class="princ-h">色彩帶意義，不做裝飾</div><div class="princ-b">emerald / amber / rose = 正常 / 待確認 / 逾時，配燈點與文字，非單靠色。</div></div>
         <div class="princ"><div class="princ-n">P4</div><div class="princ-h">AI 產出必配信心度</div><div class="princ-b">高綠、中黃、低紅框攔截；信心度理由可展開查。誠實低值是加分。</div></div>
         <div class="princ"><div class="princ-n">P5</div><div class="princ-h">警訊放在資訊旁</div><div class="princ-b">「已逾期未派工」直接寫在筆數旁，不只讓部門變黃燈就閃過。</div></div>
@@ -412,9 +421,9 @@
         <div class="type-row"><span class="type-tag">Metric</span><span class="type-sample" style="font-size:32px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;">33<span style="font-size:18px;color:var(--ink-3);font-weight:500;">%</span></span><span class="type-spec">32px / 700 / tabular</span></div>
         <div class="type-row"><span class="type-tag">Brand</span><span class="type-sample" style="font-size:15px;font-weight:700;letter-spacing:-.01em;">台灣福祉科技</span><span class="type-spec">15px / 700</span></div>
         <div class="type-row"><span class="type-tag">Section</span><span class="type-sample" style="font-size:14px;font-weight:600;">各部門今日狀態</span><span class="type-spec">14px / 600</span></div>
-        <div class="type-row"><span class="type-tag">Body</span><span class="type-sample" style="font-size:14px;">全 6 個 LINE 群組 · 每日 AI 分類結果匯總</span><span class="type-spec">14px / 400 / 1.5</span></div>
+        <div class="type-row"><span class="type-tag">Body</span><span class="type-sample" style="font-size:14px;">當前配置 N 個 LINE 群組 · 每日 AI 分類結果匯總</span><span class="type-spec">14px / 400 / 1.5</span></div>
         <div class="type-row"><span class="type-tag">Button</span><span class="type-sample" style="font-size:13.5px;font-weight:500;">確認今日進度</span><span class="type-spec">13.5px / 500</span></div>
-        <div class="type-row"><span class="type-tag">Sub</span><span class="type-sample" style="font-size:13px;color:var(--ink-3);">全 6 個 LINE 群組</span><span class="type-spec">13px / 400 / ink-3</span></div>
+        <div class="type-row"><span class="type-tag">Sub</span><span class="type-sample" style="font-size:13px;color:var(--ink-3);">當前配置 N 個 LINE 群組</span><span class="type-spec">13px / 400 / ink-3</span></div>
         <div class="type-row"><span class="type-tag">Hint</span><span class="type-sample" style="font-size:12.5px;color:var(--ink-3);">點列展開明細</span><span class="type-spec">12.5px / 400 / ink-3</span></div>
         <div class="type-row"><span class="type-tag">Sidebar Grp</span><span class="type-sample" style="font-size:11px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;">戰情室</span><span class="type-spec">11px / 600 / upper</span></div>
         <div class="type-row"><span class="type-tag">Timestamp</span><span class="type-sample mono" style="font-size:10.5px;color:var(--ink-3);">07/02 09:40</span><span class="type-spec">10.5px / mono</span></div>
@@ -425,22 +434,25 @@
       <h2><span class="n">10</span>燈號 & Pill</h2>
       <p class="lead">燈 = 部門/群組<strong>整體</strong>健康狀態（一部門一燈）· Pill = 單筆 ticket 的<strong>信心度/狀態</strong>（一筆一 pill）。</p>
 
-      <h4>燈點 · 8px + 3px 光暈</h4>
-      <div class="demo-card">
-        <span class="lamp-row"><span class="lamp green"></span>正常（technical: green）</span>
-        <span class="lamp-row"><span class="lamp yellow"></span>待確認（yellow）</span>
-        <span class="lamp-row"><span class="lamp red"></span>逾時（red）</span>
+      <h4>狀態語意 · 靠文字前景色扛（無側邊裝飾）</h4>
+      <p class="lead">砍掉燈點、砍掉左色帶。狀態全部搬進狀態文字：「4 筆待簽」中性、「1 筆低信心 · 已攔截」紅字、「已由 建國 09:15 簽核」綠字。低信心行只做整行極淡背景 wash（<code>rgba(warn, .025)</code>），不做 border。</p>
+      <div class="demo-card" style="font-size:13px;line-height:2.2;">
+        <div style="color:var(--ink-2);"><span style="color:var(--ink);font-weight:700;">4 筆待簽</span> — 標準狀態</div>
+        <div style="color:var(--ink-2);"><span style="color:var(--ink);font-weight:700;">2 筆待簽</span> · <span style="color:var(--warn);font-weight:700;">1 筆低信心 · 已攔截</span> — 含低信心</div>
+        <div style="color:var(--ink-2);"><span style="color:var(--ok);font-weight:600;">已由</span> <span style="color:var(--ink);font-weight:700;">建國</span> <span class="mono">09:15</span> <span style="color:var(--ok);font-weight:600;">簽核</span> — 已完成（行本身仍中性）</div>
+        <div style="color:var(--ink-3);">今日無待簽 — 群組安靜</div>
       </div>
 
-      <h4>Pill variant</h4>
+      <h4>Tag（狀態標記）</h4>
+      <p class="lead">Outline 硬邊 2px、tabular 對齊、中文優先。訊息量靠內容傳達（高信心 / 中信心 / 低信心 / 攔截 / 已同步 Ragic），不用縮寫代碼。</p>
       <div class="demo-card">
         <div class="demo-row">
-          <span class="pill ok">高信心</span>
-          <span class="pill ok">✓ 已同步 Ragic</span>
-          <span class="pill warn">中信心</span>
-          <span class="pill danger">低信心</span>
-          <span class="pill review">🛑 已即時攔截 · 需補件</span>
-          <span class="pill muted">今日無待簽</span>
+          <span class="tag ok">高信心</span>
+          <span class="tag warn">中信心</span>
+          <span class="tag danger">低信心</span>
+          <span class="tag danger dashed">低信心 · 攔截</span>
+          <span class="tag ok">已同步 Ragic</span>
+          <span class="tag muted">無資料</span>
         </div>
       </div>
     </section>
@@ -471,50 +483,67 @@
     <section id="components">
       <h2><span class="n">12</span>元件庫</h2>
 
-      <h3>Metric tile · <code>.tile</code></h3>
+      <h3>Metric tile · <code>.gauge-tile</code>（Recharts RadialBarChart 全圓 donut）</h3>
+      <p class="lead">Signature：<strong>左 4px 色帶</strong>對應語意 · mono 中心數字 · uppercase 分子分母 · 硬邊 3px · 標籤走 tracking 更寬 mono。</p>
       <div class="demo-card">
         <div class="tiles">
-          <div class="tile">
-            <div class="label">本日簽核完成率</div>
-            <div class="metric"><span class="num">33<span class="pct">%</span></span><span class="frac">2 / 6 部門</span></div>
-            <div class="bar"><i style="width:33%;background:var(--primary);"></i></div>
+          <div class="gauge-tile">
+            <div class="gauge-donut-mock" style="width:150px;height:150px;position:relative;">
+              <svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg);">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--well)" stroke-width="8" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--primary)" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="176.88" />
+              </svg>
+              <div class="gauge-center"><div class="gauge-num tnum">33<i>%</i></div><div class="gauge-frac mono">2 / 6 部門</div></div>
+            </div>
+            <div class="gauge-label">本日簽核率</div>
           </div>
-          <div class="tile">
-            <div class="label">群組整體健康度</div>
-            <div class="metric"><span class="num">67<span class="pct">%</span></span><span class="frac">4 / 6 綠燈</span></div>
-            <div class="bar"><i style="width:67%;background:var(--ok);"></i></div>
+          <div class="gauge-tile">
+            <div class="gauge-donut-mock" style="width:150px;height:150px;position:relative;">
+              <svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg);">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--well)" stroke-width="8" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--ok)" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="87.12" />
+              </svg>
+              <div class="gauge-center"><div class="gauge-num tnum">67<i>%</i></div><div class="gauge-frac mono">4 / 6 綠燈</div></div>
+            </div>
+            <div class="gauge-label">群組健康度</div>
           </div>
-          <div class="tile">
-            <div class="label">今日 AI 高信心比例</div>
-            <div class="metric"><span class="num">62<span class="pct">%</span></span><span class="frac">8 / 13 tickets</span></div>
-            <div class="bar"><i style="width:62%;background:var(--warn);"></i></div>
+          <div class="gauge-tile">
+            <div class="gauge-donut-mock" style="width:150px;height:150px;position:relative;">
+              <svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg);">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--well)" stroke-width="8" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--warn)" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="100.32" />
+              </svg>
+              <div class="gauge-center"><div class="gauge-num tnum">62<i>%</i></div><div class="gauge-frac mono">8 / 13 筆</div></div>
+            </div>
+            <div class="gauge-label">AI 高信心比例</div>
           </div>
         </div>
       </div>
 
       <h3>Sign-off accordion · <code>.signoff-list</code>（產品核心元件）</h3>
+      <p class="lead">Signature：狀態全靠內文承載（無側邊裝飾）。低信心行整行極淡黃色 wash 加強識別。tag 中文優先 · 硬邊角 2px。</p>
       <div class="demo-card">
         <div class="signoff-demo">
           <div class="so-item">
             <div class="so-head">
-              <button class="so-toggle"><span class="lamp green"></span><span class="so-name">技術工程</span><span class="so-count">4 筆待簽核</span><span class="so-chev">▸</span></button>
+              <button class="so-toggle"><span class="so-name">技術工程</span><span class="so-status"><span class="num">4</span> 筆待簽</span><span class="so-chev">展開</span></button>
               <button class="btn btn-primary btn-sm">確認今日進度</button>
             </div>
           </div>
-          <div class="so-item has-low">
+          <div class="so-item st-yellow">
             <div class="so-head">
-              <button class="so-toggle"><span class="lamp yellow"></span><span class="so-name">售後服務</span><span class="so-count warn">2 筆待簽核（1 筆低信心）</span><span class="so-chev">▾</span></button>
+              <button class="so-toggle"><span class="so-name">售後服務</span><span class="so-status"><span class="num">2</span> 筆待簽<span style="color:var(--ink-3)">·</span><span class="danger">1 筆低信心 · 已攔截</span></span><span class="so-chev">收合</span></button>
               <button class="btn btn-primary btn-sm">確認今日進度</button>
             </div>
             <div class="so-detail">
-              <div class="so-line"><span style="color:var(--ink-3)">·</span><span class="so-summary">示範車號 A：輪椅升降機鋼索斷裂</span><span class="pill ok" style="font-size:10px">高信心</span><button class="so-source">查來源 →</button></div>
-              <div class="so-line blocked"><span style="color:var(--ink-3)">·</span><span class="so-summary">「門壞了」— 車號與部位無法對應</span><span class="pill danger" style="font-size:10px">🛑 低信心 · 已即時攔截</span><button class="so-source">查來源 →</button></div>
+              <div class="so-line"><span class="so-box">□</span><span class="so-summary">示範車號 A · 輪椅升降機鋼索斷裂</span><span class="tag ok">高信心</span><button class="so-source">查來源 →</button></div>
+              <div class="so-line blocked"><span class="so-box">□</span><span class="so-summary">「門壞了」· 車號與部位無法對應</span><span class="tag danger">低信心 · 攔截</span><button class="so-source">查來源 →</button></div>
             </div>
           </div>
-          <div class="so-item done">
+          <div class="so-item">
             <div class="so-head">
-              <button class="so-toggle"><span class="lamp green"></span><span class="so-name">業務一部</span><span class="so-count done">✓ 已由 建國 於 09:15 簽核</span><span class="so-chev">▸</span></button>
-              <button class="btn btn-ghost btn-sm" disabled>已確認</button>
+              <button class="so-toggle"><span class="so-name">業務一部</span><span class="so-status"><span class="signer">已由</span><span class="signer-name">建國</span><span class="mono">09:15</span><span class="signer">簽核</span></span><span class="so-chev">展開</span></button>
+              <button class="btn confirmed-tag" disabled>已簽核</button>
             </div>
           </div>
         </div>
@@ -538,12 +567,13 @@
       </div>
 
       <h3>Toast · <code>.toast</code></h3>
+      <p class="lead">Signature：<strong>左側 76px 深色時間戳條</strong>（含 HH:MM:SS + type code）· 硬邊 2px · 2px 位移影子（terminal 對齊感）。</p>
       <div class="demo-card">
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <span class="toast ok">技術工程：已簽核 4 筆</span>
-          <span class="toast warn">售後服務：已簽核 1 筆，1 筆低信心攔截</span>
-          <span class="toast danger">簽核失敗，請重試</span>
-          <span class="toast">技術工程 詳細頁尚未實作</span>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div class="toast ok"><div class="toast-tstamp"><span class="time">09:17:22</span><span class="type">成功</span></div><div class="toast-body">技術工程：已簽核 4 筆</div></div>
+          <div class="toast warn"><div class="toast-tstamp"><span class="time">09:18:04</span><span class="type">警告</span></div><div class="toast-body">售後服務：已簽核 1 筆，1 筆低信心攔截</div></div>
+          <div class="toast danger"><div class="toast-tstamp"><span class="time">09:19:11</span><span class="type">失敗</span></div><div class="toast-body">簽核失敗，請重試</div></div>
+          <div class="toast"><div class="toast-tstamp"><span class="time">09:20:03</span><span class="type">通知</span></div><div class="toast-body">技術工程 詳細頁尚未實作</div></div>
         </div>
       </div>
 

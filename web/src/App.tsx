@@ -4,13 +4,37 @@ import Shell from "./Shell";
 import WarRoom from "./WarRoom";
 import Rag from "./Rag";
 import Onboarding from "./Onboarding";
+import MediaLibrary from "./MediaLibrary";
+import KnowledgeBase from "./KnowledgeBase";
+import CustomerMap from "./CustomerMap";
+import DepartmentsMembers from "./DepartmentsMembers";
+import TenantSettings from "./TenantSettings";
+import AuditLog from "./AuditLog";
 import { getSession, logout, login, type Session } from "./api";
 import { ToastProvider } from "./Toast";
 
 type Route =
   | { page: "warroom" }
   | { page: "rag" }
-  | { page: "onboarding" };
+  | { page: "onboarding" }
+  | { page: "media" }
+  | { page: "km" }
+  | { page: "map" }
+  | { page: "depts" }
+  | { page: "config" }
+  | { page: "audit" };
+
+const CRUMB: Record<Route["page"], string> = {
+  warroom: "總覽儀表",
+  rag: "智慧檢索",
+  onboarding: "運作原理",
+  media: "素材看板",
+  km: "知識庫",
+  map: "客戶地圖",
+  depts: "部門 / 成員",
+  config: "租戶設定",
+  audit: "稽核記錄",
+};
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(() => getSession());
@@ -42,16 +66,15 @@ export default function App() {
 
   if (!session) return <Login onLogin={() => setSession(getSession())} />;
 
-  const navActive = route.page === "rag" ? "rag" : route.page === "onboarding" ? "onboarding" : "warroom";
-  const crumb =
-    route.page === "warroom" ? "總覽儀表"
-    : route.page === "rag" ? "智慧檢索"
-    : route.page === "onboarding" ? "運作原理"
-    : "總覽";
+  const navActive = route.page === "warroom" ? "warroom" : route.page;
+  const crumb = CRUMB[route.page];
 
   const onNav = (key: string) => {
     if (key === "warroom" || key === "signoff") setRoute({ page: "warroom" });
-    else if (key === "rag") setRoute({ page: "rag" });
+    else if (key === "rag" || key === "media" || key === "km" || key === "map"
+      || key === "depts" || key === "config" || key === "audit") {
+      setRoute({ page: key });
+    }
   };
 
   return (
@@ -70,6 +93,12 @@ export default function App() {
         {route.page === "warroom" && <WarRoom onRegister={onRegister} onLoadingChange={setRefreshing} />}
         {route.page === "rag" && <Rag />}
         {route.page === "onboarding" && <Onboarding onDone={() => setRoute({ page: "warroom" })} />}
+        {route.page === "media" && <MediaLibrary />}
+        {route.page === "km" && <KnowledgeBase />}
+        {route.page === "map" && <CustomerMap />}
+        {route.page === "depts" && <DepartmentsMembers />}
+        {route.page === "config" && <TenantSettings />}
+        {route.page === "audit" && <AuditLog />}
       </Shell>
     </ToastProvider>
   );

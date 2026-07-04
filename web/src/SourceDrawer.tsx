@@ -22,15 +22,15 @@ export default function SourceDrawer({ open, onClose, summary, confidence, needs
       width={580}
     >
       {!ex && summary && (
-        <div className="tc-empty">（本 demo 尚未提供此筆 fixture · summary 前綴: <code>{summary.slice(0, 12)}</code>）</div>
+        <div className="tc-empty">尚無來源資料</div>
       )}
       {ex && (
         <>
           <div className="tc-hdr" style={{ marginTop: 0 }}>
-            <span className={`pill ${confidence === "high" ? "ok" : confidence === "medium" ? "warn" : "danger"}`}>
+            <span className={`tag ${confidence === "high" ? "ok" : confidence === "medium" ? "warn" : "danger"}`}>
               {confidence === "high" ? "高信心" : confidence === "medium" ? "中信心" : "低信心"}
             </span>
-            {needsReview && <span className="pill review">🛑 已即時攔截 · 需補資訊才可簽核</span>}
+            {needsReview && <span className="tag danger">已即時攔截 · 需補資訊</span>}
           </div>
 
           <div className="tc-sec">

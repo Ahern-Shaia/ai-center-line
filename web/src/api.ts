@@ -95,31 +95,67 @@ export function logout() {
   localStorage.removeItem(EMAIL_KEY);
 }
 
-async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
-  const res = await fetch(`/api${path}`, {
-    ...opts,
-    headers: {
-      "content-type": "application/json",
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-      ...opts.headers,
-    },
-  });
-  if (res.status === 401 && path !== "/auth/login") {
-    // 失效 token 清掉，讓上層決定要不要跳登入。
-    logout();
-    throw new ApiError(401, "工作階段已過期，請重新登入");
-  }
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new ApiError(res.status, body || `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<T>;
-}
-
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
   }
+}
+
+// HTTP status → 使用者可讀中文；避免把 Nest 預設英文（Internal server error / Unauthorized）
+// 直接秀給客戶。真正原因保留在 console（dev）供除錯。
+function friendlyStatusMessage(status: number): string {
+  if (status === 400) return "送出的資料不正確，請確認後再試";
+  if (status === 401) return "尚未登入或工作階段已過期，請重新登入";
+  if (status === 403) return "沒有權限執行此操作";
+  if (status === 404) return "找不到對應資料";
+  if (status === 409) return "資料狀態已被他人變更，請重新整理後再試";
+  if (status === 422) return "輸入的資料格式有誤";
+  if (status === 429) return "操作太頻繁，請稍後再試";
+  if (status >= 500) return "系統目前忙碌，請稍後再試";
+  return "發生錯誤，請稍後再試";
+}
+
+// 若 server 特意寫了中文訊息（非 Nest 預設英文），優先使用；否則走 mapping。
+const GENERIC_SERVER_MSG = /^(internal server error|bad request|not found|forbidden|unauthorized|too many requests|unprocessable entity|conflict|payload too large)$/i;
+
+async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, {
+      ...opts,
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...opts.headers,
+      },
+    });
+  } catch (e) {
+    // 網路失敗（離線、DNS、CORS block、server down）
+    if (import.meta.env.DEV) console.error(`[api] network failure on ${path}`, e);
+    throw new ApiError(0, "無法連線到伺服器，請確認網路後再試");
+  }
+
+  if (res.status === 401 && path !== "/auth/login") {
+    logout();
+    throw new ApiError(401, "工作階段已過期，請重新登入");
+  }
+
+  if (!res.ok) {
+    let serverMsg = "";
+    try {
+      const body = await res.clone().json();
+      if (typeof body?.message === "string") serverMsg = body.message.trim();
+      else if (Array.isArray(body?.message)) serverMsg = body.message.join("; ");
+    } catch {
+      // not JSON
+    }
+    const isGeneric = !serverMsg || GENERIC_SERVER_MSG.test(serverMsg);
+    const hasChinese = /[一-龥]/.test(serverMsg);
+    const friendly = !isGeneric && hasChinese ? serverMsg : friendlyStatusMessage(res.status);
+    if (import.meta.env.DEV) console.error(`[api] ${path} → ${res.status}`, serverMsg || "(no body)");
+    throw new ApiError(res.status, friendly);
+  }
+  return res.json() as Promise<T>;
 }
 
 export async function login(email: string, password: string): Promise<void> {

@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError, confirmSignoff, getWarroom, type Warroom, type WarroomGroup, type WarroomTicket } from "./api";
 import { useToast } from "./Toast";
 import SourceDrawer from "./SourceDrawer";
+import { InfoTip } from "./InfoTip";
+import Gauge from "./Gauge";
+import { findExcerpt } from "./mockdata/lineExcerpts";
 
 interface Props {
   onRegister: (fns: { refresh: () => Promise<void>; asOf: () => string | undefined }) => void;
@@ -94,19 +97,14 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
       <div className="pane-hdr">
         <div>
           <h1>總覽儀表</h1>
-          <div className="sub">全 {wr.dept_count} 個 LINE 群組 · 每日 AI 分類結果匯總</div>
+          <div className="sub">當前配置 {wr.dept_count} 個 LINE 群組 · 每日 AI 分類結果匯總（可於「部門/成員」自行新增）</div>
         </div>
       </div>
 
-      <div className="banner" role="status">
-        <IconInfo />
-        <span>本 demo 使用<b>假名化案例</b>展示端到端流程。正式版所有真實 LINE 訊息在您廠內去識別，敏感資料不出場。</span>
-      </div>
-
       <div className="tiles">
-        <Tile label="本日簽核完成率" num={pct(wr.signoff_rate)} frac={`${wr.signed_depts} / ${wr.dept_count} 部門`} color="var(--primary)" rate={wr.signoff_rate} />
-        <Tile label="群組整體健康度" num={pct(wr.health_rate)} frac={`${wr.green_depts} / ${wr.dept_count} 綠燈`} color="var(--ok)" rate={wr.health_rate} />
-        <Tile label="今日 AI 高信心比例" num={pct(wr.high_conf_ratio)} frac={`${wr.high_num} / ${wr.high_den} tickets`} color="var(--warn)" rate={wr.high_conf_ratio} />
+        <Gauge value={wr.signoff_rate} label="本日簽核率" frac={`${wr.signed_depts} / ${wr.dept_count} 部門`} color="#4F46E5" />
+        <Gauge value={wr.health_rate} label="群組健康度" frac={`${wr.green_depts} / ${wr.dept_count} 綠燈`} color="#059669" />
+        <Gauge value={wr.high_conf_ratio} label="AI 高信心比例" frac={`${wr.high_num} / ${wr.high_den} 筆`} color="#D97706" />
       </div>
 
       <div className="section">
@@ -151,29 +149,54 @@ function DeptItem({
     ? new Date(g.signed_at).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })
     : null;
 
+  const stateClass = g.signed_off
+    ? "st-signed"
+    : g.health === "green" ? "st-green"
+    : g.health === "yellow" ? "st-yellow"
+    : g.health === "red" ? "st-red"
+    : "";
+
   return (
-    <div className={`so-item${g.signed_off ? " done" : ""}${lowCount > 0 ? " has-low" : ""}`}>
+    <div className={`so-item ${stateClass}`}>
       <div className="so-head">
         <button className="so-toggle" onClick={onToggle} aria-expanded={expanded}>
-          <span className={`lamp ${g.health}`} aria-hidden />
           <span className="so-name">{g.name}</span>
-          <span className={`so-count${lowCount > 0 ? " warn" : ""}${g.signed_off ? " done" : ""}`}>
-            {g.signed_off
-              ? `✓ 已由 ${g.signed_by_name ?? "未知"} 於 ${signedAt} 簽核`
-              : pending.length === 0
-                ? "今日無待簽核"
-                : `${pending.length} 筆待簽核${lowCount > 0 ? `（${lowCount} 筆低信心）` : ""}`
-            }
+          <span className="so-status">
+            {g.signed_off ? (
+              <>
+                <span className="signer">已由</span>
+                <span className="signer-name">{g.signed_by_name ?? "—"}</span>
+                <span className="mono">{signedAt}</span>
+                <span className="signer">簽核</span>
+              </>
+            ) : pending.length === 0 ? (
+              <span style={{ color: "var(--ink-3)" }}>今日無待簽</span>
+            ) : (
+              <>
+                <span className="num">{pending.length}</span>
+                <span>筆待簽</span>
+                {lowCount > 0 && (
+                  <>
+                    <span style={{ color: "var(--ink-3)" }}>·</span>
+                    <span className="danger">{lowCount} 筆低信心 · 已攔截</span>
+                  </>
+                )}
+              </>
+            )}
           </span>
-          <span className="so-chev" aria-hidden>{expanded ? "▾" : "▸"}</span>
+          <span className="so-chev" aria-hidden>{expanded ? "收合" : "展開"}</span>
         </button>
-        <button
-          className={`btn ${g.signed_off ? "btn-ghost" : "btn-primary"} btn-sm`}
-          onClick={(e) => { e.stopPropagation(); onConfirm(); }}
-          disabled={g.signed_off || confirming || pending.length === 0}
-        >
-          {g.signed_off ? "已確認" : confirming ? "簽核中…" : "確認今日進度"}
-        </button>
+        {g.signed_off ? (
+          <button className="btn confirmed-tag" disabled>已簽核</button>
+        ) : (
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={(e) => { e.stopPropagation(); onConfirm(); }}
+            disabled={confirming || pending.length === 0}
+          >
+            {confirming ? "簽核中…" : "確認今日進度"}
+          </button>
+        )}
       </div>
 
       {expanded && (
@@ -184,18 +207,20 @@ function DeptItem({
           {g.today_tickets.map((t) => {
             const conf = t.confidence ?? "medium";
             const isSigned = t.status === "已簽核";
+            const ex = findExcerpt(t.summary);
+            const tagText = isSigned ? "已同步 Ragic" : t.needs_review ? "低信心 · 攔截" : conf === "high" ? "高信心" : conf === "medium" ? "中信心" : "低信心";
+            const tagClass = isSigned ? "ok" : t.needs_review ? "danger" : conf === "high" ? "ok" : "warn";
+            const tipContent = ex?.confidenceReason ?? (isSigned ? `已於簽核後同步至 ${ex?.ragicTarget ?? "Ragic"}` : "");
             return (
               <div key={t.ticket_id} className={`so-line${t.needs_review ? " blocked" : ""}${isSigned ? " signed" : ""}`}>
-                <span className="so-dot">·</span>
+                <span className="so-box">□</span>
                 <span className="so-summary">{t.summary}</span>
-                {isSigned ? (
-                  <span className="pill ok" style={{ fontSize: 10 }}>✓ 已同步 Ragic</span>
-                ) : t.needs_review ? (
-                  <span className="pill danger" style={{ fontSize: 10 }}>🛑 低信心 · 已即時攔截</span>
+                {tipContent ? (
+                  <InfoTip content={tipContent}>
+                    <span className={`tag ${tagClass}`}>{tagText}</span>
+                  </InfoTip>
                 ) : (
-                  <span className={`pill ${conf === "high" ? "ok" : "warn"}`} style={{ fontSize: 10 }}>
-                    {conf === "high" ? "高信心" : "中信心"}
-                  </span>
+                  <span className={`tag ${tagClass}`}>{tagText}</span>
                 )}
                 <button className="so-source" onClick={() => onSource(t)}>查來源 →</button>
               </div>
@@ -209,21 +234,6 @@ function DeptItem({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function pct(r: number) { return Math.round(r * 100); }
-
-function Tile({ label, num, frac, color, rate }: { label: string; num: number; frac: string; color: string; rate: number }) {
-  return (
-    <div className="tile">
-      <div className="label">{label}</div>
-      <div className="metric">
-        <span className="num tnum">{num}<span className="pct">%</span></span>
-        <span className="frac">{frac}</span>
-      </div>
-      <div className="bar"><i style={{ width: `${Math.min(100, rate * 100)}%`, background: color }} /></div>
     </div>
   );
 }
@@ -246,11 +256,3 @@ function WarRoomSkeleton() {
   );
 }
 
-function IconInfo() {
-  return (
-    <svg className="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 8h.01M11 12h1v5h1" />
-    </svg>
-  );
-}

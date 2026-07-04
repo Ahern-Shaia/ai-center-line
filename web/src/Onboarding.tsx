@@ -6,35 +6,35 @@ const STEPS = [
     title: "LINE 群組不改變",
     icon: "💬",
     body: "工廠員工照常在既有 LINE 群組報工、回報維修、傳照片影片。不用改行為、不用學新工具。",
-    detail: "官方帳號拉進群→ webhook 訂閱事件；所有訊息（含照片/影片/檔案）進來立即落地保存。",
+    detail: "系統以官方帳號加入您的群組，收到訊息即時保存原始內容（含所有照片、影片、檔案）。",
   },
   {
     n: 2,
-    title: "每日批次 · 地端去識別",
+    title: "每晚在您廠內脫敏",
     icon: "🌙",
-    body: "每晚定時批次：先在您廠內去識別（人名、電話、車牌 token 化），敏感資料不離廠。",
-    detail: "本地 NER + 規則遮罩 → 存 raw + pseudo；對照表只留您這裡，抽取階段用 pseudo。",
+    body: "每晚定時處理：先在您公司內部把人名、電話、車牌等敏感資料遮罩後才進入分析。原始對照表始終留在您這裡。",
+    detail: "遮罩對照表只存在您的伺服器，AI 分析階段完全看不到真實個資。",
   },
   {
     n: 3,
-    title: "AI 六路分析 · 每句可追溯",
+    title: "AI 分析且每一句都能反查",
     icon: "🧠",
-    body: "分類 / 抽取 / 聚類 / grounding / 知識抽取 / 信心度評分。每筆結果都掛 source_ids 反查原訊息。",
-    detail: "Claude Opus 分階；抽取欄位缺漏一律 null，不臆測；grounding 對照主檔（員工/機台/工單）。",
+    body: "分類、抽取、聚類、對應主檔、知識整理、信心度評分六路並行。每筆結果都能反查對應的原始 LINE 訊息。",
+    detail: "缺漏欄位一律留白，絕不猜測；對應您的員工 / 機台 / 工單主檔逐筆比對。",
   },
   {
     n: 4,
     title: "人工簽核 · AI 不代決策",
     icon: "✍",
-    body: "總經理室 / 群組負責人在戰情室看到今日 AI 產出，逐筆簽核；低信心自動攔截，須補資訊才可簽。",
-    detail: "簽核狀態機：待簽核 → 已簽核 / 已駁回 / 攔截補件；proxy 簽核（顧問代簽）有徽章 + audit。",
+    body: "總經理室或群組負責人在戰情室查看每日 AI 產出，逐筆簽核。低信心的項目自動攔截，須補資訊才能簽。",
+    detail: "誰簽的、什麼時候簽的、有沒有被顧問代簽，全部紀錄可稽核。",
   },
   {
     n: 5,
     title: "簽核後才同步 Ragic",
     icon: "🔄",
-    body: "已簽核的結構化資料才寫進您的 Ragic ERP。錯的資料不會流出戰情室外。",
-    detail: "Outbox 冪等重試；同步失敗顯示徽章可重跑；跨系統一致性保障。",
+    body: "只有簽核後的資料才會寫進您的 Ragic ERP。錯誤或未確認的內容不會流出戰情室。",
+    detail: "同步失敗會清楚顯示並可一鍵重跑，確保跨系統資料一致。",
   },
 ];
 
@@ -64,7 +64,7 @@ export default function Onboarding({ onDone }: Props) {
               </div>
               <div className="ob-desc">{s.body}</div>
               <div className="ob-detail">
-                <span className="ob-detail-lbl">技術細節</span>
+                <span className="ob-detail-lbl">保障重點</span>
                 {s.detail}
               </div>
             </div>
@@ -76,7 +76,7 @@ export default function Onboarding({ onDone }: Props) {
       <div className="ob-cta">
         <div>
           <div className="ob-cta-h">準備好看實際運作了嗎？</div>
-          <div className="ob-cta-sub">戰情室已載入台灣福祉科技的 demo 資料（假名化）</div>
+          <div className="ob-cta-sub">戰情室已載入本日案例，登入即可查看</div>
         </div>
         <button className="btn btn-primary" onClick={onDone}>進戰情室</button>
       </div>
