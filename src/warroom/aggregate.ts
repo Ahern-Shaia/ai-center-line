@@ -8,8 +8,8 @@ function ticketsOf(data: WarRoomData, deptId: string): Ticket[] {
 
 /**
  * 由 tickets 計算戰情室聚合指標。公式取自委員問答準備文件（設計鐵律，可當場反推）：
- *  - 簽核完成率 = 已簽核群組 ÷ 6
- *  - 健康度     = 綠燈群組 ÷ 6（綠=24h內活動且未逾時且無低信心待補）
+ *  - 簽核完成率 = 已簽核群組 ÷ N（N = 該租戶部門數，後台配置、非固定）
+ *  - 健康度     = 綠燈群組 ÷ N（綠=24h內活動且未逾時且無低信心待補）
  *  - 高信心比例 = high 筆數 ÷ 當日已標信心度總數
  */
 export function computeAggregate(data: WarRoomData, asOf: string): Aggregate {
@@ -42,7 +42,7 @@ export function computeAggregate(data: WarRoomData, asOf: string): Aggregate {
 
   const signedGroups = groups.filter((g) => g.signed_off).length;
   const greenGroups = groups.filter((g) => g.health === "green").length;
-  const total = data.departments.length; // 6
+  const total = data.departments.length; // N = 該租戶部門數（後台配置，非固定；勿寫死 6）
 
   const labeled = data.tickets.filter((t) => t.confidence !== null);
   const highNum = labeled.filter((t) => t.confidence === "high").length;
