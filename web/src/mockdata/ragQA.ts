@@ -101,7 +101,7 @@ export const RAG_QA: RagQA[] = [
       },
       {
         id: 2, kind: "ticket", ref: "T-030", title: "某長照機構 · STARIA 高頂 ×2 意向",
-        source: "業務一部群組（已同步 CRM_opportunities）",
+        source: "業務一部群組（已同步客戶機會記錄）",
         snippet: "客戶：某長照機構 · 車型：復康巴士 STARIA 高頂 · 數量：2 台 · 交期：月底 · 業務：建國",
       },
     ],

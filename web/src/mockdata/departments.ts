@@ -4,7 +4,7 @@ export interface DeptRow {
   name: string;
   lineGroupId: string;
   extractionSchema: string;
-  ragicTable: string;
+  recordCategory: string;  // 對應記錄類型（客戶可懂的業務語彙，非內部 schema 名）
   ownerName: string;
   memberCount: number;
   active: boolean;
@@ -20,12 +20,12 @@ export interface Member {
 }
 
 export const DEPT_ROWS: DeptRow[] = [
-  { code: "D1", name: "技術工程", lineGroupId: "Cc9f8b2a3xxxxxx", extractionSchema: "報工日報 · 每日結構化", ragicTable: "HR_daily_reports", ownerName: "組長-阿豪", memberCount: 8, active: true },
-  { code: "D2", name: "售後服務", lineGroupId: "Cd3e6f1c8xxxxxx", extractionSchema: "維修工單 · 車號部位症狀處置", ragicTable: "CRM_service_tickets", ownerName: "客服-婷婷", memberCount: 5, active: true },
-  { code: "D3", name: "報工生產", lineGroupId: "Ca7b2e9d4xxxxxx", extractionSchema: "產線進度 · 車體/工序/影像", ragicTable: "PROD_workflow", ownerName: "組長-美惠", memberCount: 7, active: true },
-  { code: "D4", name: "業務一部", lineGroupId: "Cf1d5c8a2xxxxxx", extractionSchema: "客戶意向 · OCR/採購單", ragicTable: "CRM_opportunities", ownerName: "業務-建國", memberCount: 4, active: true },
-  { code: "D5", name: "人資總務", lineGroupId: "Cb4e7f9c1xxxxxx", extractionSchema: "設施 · 請假 · 派工", ragicTable: "HR_facility", ownerName: "總務-秀敏", memberCount: 3, active: true },
-  { code: "D6", name: "技術研發", lineGroupId: "Ce8a1b6d5xxxxxx", extractionSchema: "技術決策 · 法規對應 · 選型", ragicTable: "KM_technical", ownerName: "研發-家豪", memberCount: 4, active: true },
+  { code: "D1", name: "技術工程", lineGroupId: "Cc9f8b2a3xxxxxx", extractionSchema: "報工日報 · 每日結構化", recordCategory: "報工日報記錄", ownerName: "組長-阿豪", memberCount: 8, active: true },
+  { code: "D2", name: "售後服務", lineGroupId: "Cd3e6f1c8xxxxxx", extractionSchema: "維修工單 · 車號部位症狀處置", recordCategory: "客服工單記錄", ownerName: "客服-婷婷", memberCount: 5, active: true },
+  { code: "D3", name: "報工生產", lineGroupId: "Ca7b2e9d4xxxxxx", extractionSchema: "產線進度 · 車體/工序/影像", recordCategory: "生產進度記錄", ownerName: "組長-美惠", memberCount: 7, active: true },
+  { code: "D4", name: "業務一部", lineGroupId: "Cf1d5c8a2xxxxxx", extractionSchema: "客戶意向 · OCR/採購單", recordCategory: "客戶機會記錄", ownerName: "業務-建國", memberCount: 4, active: true },
+  { code: "D5", name: "人資總務", lineGroupId: "Cb4e7f9c1xxxxxx", extractionSchema: "設施 · 請假 · 派工", recordCategory: "人資設施記錄", ownerName: "總務-秀敏", memberCount: 3, active: true },
+  { code: "D6", name: "技術研發", lineGroupId: "Ce8a1b6d5xxxxxx", extractionSchema: "技術決策 · 法規對應 · 選型", recordCategory: "技術知識庫", ownerName: "研發-家豪", memberCount: 4, active: true },
 ];
 
 export const MEMBERS: Member[] = [

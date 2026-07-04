@@ -43,7 +43,7 @@ function DeptTable() {
             <th>部門名</th>
             <th>LINE 群組 ID</th>
             <th>抽取結構</th>
-            <th>Ragic 表</th>
+            <th>對應記錄類型</th>
             <th>群組負責人</th>
             <th>成員</th>
             <th>狀態</th>
@@ -56,7 +56,7 @@ function DeptTable() {
               <td className="dm-td-name">{d.name}</td>
               <td className="mono dm-td-groupid">{d.lineGroupId}</td>
               <td className="dm-td-schema">{d.extractionSchema}</td>
-              <td className="mono">{d.ragicTable}</td>
+              <td>{d.recordCategory}</td>
               <td>{d.ownerName}</td>
               <td className="mono">{d.memberCount}</td>
               <td>{d.active ? <span className="tag ok">啟用</span> : <span className="tag muted">停用</span>}</td>

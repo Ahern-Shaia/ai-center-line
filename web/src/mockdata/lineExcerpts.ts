@@ -14,7 +14,7 @@ export interface TicketExcerpt {
   raw: LineMessage[];
   extracted: { field: string; value: string }[];
   confidenceReason: string;
-  ragicTarget: string;   // 簽核後會寫入哪張 Ragic 表
+  ragicTarget: string;   // 簽核後同步至的記錄類型（客戶可懂的中文，非內部 schema）
 }
 
 // 用 summary 字首（前 12 字）當查表 key，因為 DB 內 ticket_id 為 UUID（seed 時 generated），
@@ -40,7 +40,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "備註", value: "鋼索已換標準件，平台恢復正常" },
     ],
     confidenceReason: "格式完整（日期、姓名、車號、任務、工時、備註齊全）；工時明確標示；車號可對應主檔。",
-    ragicTarget: "HR_daily_reports · 7/2 王○○",
+    ragicTarget: "報工日報記錄 · 7/2 王○○",
   },
   "T-002": {
     ticketId: "T-002",
@@ -54,7 +54,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "工時", value: "3.0h" },
     ],
     confidenceReason: "工時明確；車號、車型完整；任務描述具體。",
-    ragicTarget: "HR_daily_reports · 7/2 林○○",
+    ragicTarget: "報工日報記錄 · 7/2 林○○",
   },
   "T-003": {
     ticketId: "T-003",
@@ -68,7 +68,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "工時（推估）", value: "~2.0h ⚠ 原始為「大概」" },
     ],
     confidenceReason: "工時填「大概 2h」「沒記很清楚」，數值可信度下降；姓名、車號、任務清楚。→ 標中信心，需簽核確認。",
-    ragicTarget: "HR_daily_reports · 7/2 陳○○（工時待確認）",
+    ragicTarget: "報工日報記錄 · 7/2 陳○○（工時待確認）",
   },
   "T-004": {
     ticketId: "T-004",
@@ -83,7 +83,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "總工時", value: "未填 ⚠" },
     ],
     confidenceReason: "無工時；「順便看了下 B 案」屬口語含糊描述，AI 無法判斷是否算獨立任務。→ 標中信心，需人工歸類。",
-    ragicTarget: "HR_daily_reports · 7/2 張○○（歸類待確認）",
+    ragicTarget: "報工日報記錄 · 7/2 張○○（歸類待確認）",
   },
   "T-010": {
     ticketId: "T-010",
@@ -101,7 +101,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "工單建議", value: "→ 建立售後工單，通知採購備標準鋼索並指派技師" },
     ],
     confidenceReason: "三則訊息交叉佐證：症狀（斷裂/卡住）、處置（換鋼索）、後續（採購下單+交期）都明確。",
-    ragicTarget: "CRM_service_tickets · 示範車號 A / 鋼索更換",
+    ragicTarget: "客服工單記錄 · 示範車號 A / 鋼索更換",
   },
   "T-011": {
     ticketId: "T-011",
@@ -114,7 +114,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "症狀", value: "❌ 「壞了」未具體描述" },
     ],
     confidenceReason: "三個關鍵欄位（車號、部位、症狀）都無法從單一訊息還原；沒有前後文可交叉。→ 攔截，需回頭補資訊才可入 Ragic。",
-    ragicTarget: "🛑 已攔截，尚未寫入 Ragic",
+    ragicTarget: "🛑 已即時攔截，尚未同步記錄",
   },
   "T-020": {
     ticketId: "T-020",
@@ -130,7 +130,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "叮嚀", value: "塗裝溫度需監控（組長交代）" },
     ],
     confidenceReason: "工序轉換明確；批次、車型、動作皆具體。",
-    ragicTarget: "PROD_workflow · B案 復康巴士 · 塗裝",
+    ragicTarget: "生產進度記錄 · B案 復康巴士 · 塗裝",
   },
   "T-021": {
     ticketId: "T-021",
@@ -145,7 +145,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "AI 影像判定", value: "出水溫度正常" },
     ],
     confidenceReason: "含影片佐證＋文字補充；狀態、車型、模組皆明確。",
-    ragicTarget: "PROD_workflow · 沐浴車 · 熱水模組完成",
+    ragicTarget: "生產進度記錄 · 沐浴車 · 熱水模組完成",
   },
   "T-022": {
     ticketId: "T-022",
@@ -158,7 +158,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "來源", value: "語音訊息（07/03 14:05）" },
     ],
     confidenceReason: "語音訊息，Whisper 辨識信心中等；「三百多台」屬模糊數字，需口頭複核。→ 標中信心，人工確認實際數字。",
-    ragicTarget: "PROD_workflow · B 線 產能（待確認）",
+    ragicTarget: "生產進度記錄 · B 線 產能（待確認）",
   },
   "T-030": {
     ticketId: "T-030",
@@ -175,7 +175,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "負責", value: "業務-建國" },
     ],
     confidenceReason: "跨兩則訊息前後文一致；客戶、數量、車型、交期都對得起來。",
-    ragicTarget: "CRM_opportunities · 某長照機構 · STARIA×2",
+    ragicTarget: "客戶機會記錄 · 某長照機構 · STARIA×2",
   },
   "T-031": {
     ticketId: "T-031",
@@ -189,7 +189,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "處理狀態", value: "採購-淑惠已拆解到採購子表" },
     ],
     confidenceReason: "OCR 結果與人工複核一致；品項齊全；有後續動作訊息閉環。",
-    ragicTarget: "PUR_purchase_orders · 復康巴士配件補貨",
+    ragicTarget: "採購單記錄 · 復康巴士配件補貨",
   },
   "T-060": {
     ticketId: "T-060",
@@ -205,7 +205,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "已同步", value: "工研院 RAG（技術 KM #0142）" },
     ],
     confidenceReason: "法規條文明確、部件位置量化、決策者具名、已同步到 KM。",
-    ragicTarget: "KM_technical · 消防法規對應 · 高壓閥調整",
+    ragicTarget: "技術知識庫 · 消防法規對應 · 高壓閥調整",
   },
   "T-061": {
     ticketId: "T-061",
@@ -220,7 +220,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "儲存位置", value: "技術 KM" },
     ],
     confidenceReason: "「大扭力款」缺具體型號、扭力值、規格；決策方向明確但技術細節不完整。→ 標中信心，需補型號。",
-    ragicTarget: "KM_technical · 升降機馬達 · 選型（待補型號）",
+    ragicTarget: "技術知識庫 · 升降機馬達 · 選型（待補型號）",
   },
 };
 

@@ -59,7 +59,7 @@ export default function SourceDrawer({ open, onClose, summary, confidence, needs
 
           <div className="tc-sec">
             <span className="tc-sec-lbl">簽核後同步至</span>
-            <div className="tc-ragic mono">→ {ex.ragicTarget}</div>
+            <div className="tc-ragic">→ {ex.ragicTarget}</div>
           </div>
         </>
       )}

@@ -210,7 +210,7 @@ function DeptItem({
             const ex = findExcerpt(t.summary);
             const tagText = isSigned ? "已同步 Ragic" : t.needs_review ? "低信心 · 攔截" : conf === "high" ? "高信心" : conf === "medium" ? "中信心" : "低信心";
             const tagClass = isSigned ? "ok" : t.needs_review ? "danger" : conf === "high" ? "ok" : "warn";
-            const tipContent = ex?.confidenceReason ?? (isSigned ? `已於簽核後同步至 ${ex?.ragicTarget ?? "Ragic"}` : "");
+            const tipContent = ex?.confidenceReason ?? (isSigned ? `已於簽核後同步至 ${ex?.ragicTarget ?? "記錄系統"}` : "");
             return (
               <div key={t.ticket_id} className={`so-line${t.needs_review ? " blocked" : ""}${isSigned ? " signed" : ""}`}>
                 <span className="so-box">□</span>
@@ -227,7 +227,7 @@ function DeptItem({
             );
           })}
           <div className="so-detail-foot">
-            <span className="mono">→ 對應 Ragic 表：<code>{g.ragic_table}</code></span>
+            <span>簽核後將同步至記錄系統</span>
             {!g.signed_off && confirmable > 0 && (
               <span>可簽核 <b>{confirmable}</b> 筆，低信心 <b>{lowCount}</b> 筆將被自動攔截</span>
             )}
