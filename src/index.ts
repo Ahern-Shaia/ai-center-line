@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { parseLineExport, segmentMessages } from "./parser.js";
-import { analyzeSegment, addUsage, emptyUsage } from "./classify.js";
+import { analyzeSegment, addUsage, emptyUsage, YOUCHENG_TENANT } from "./classify.js";
+import { TAIWANHOMECARE_TENANT } from "./masterData.taiwanhomecare.js";
 import { renderReport, type EnrichedMessage } from "./report.js";
 import type { AnalysisResultT, Category } from "./schemas.js";
 
@@ -47,6 +48,7 @@ async function main(): Promise<void> {
     const raw = fs.readFileSync(file, "utf8");
     const { groupName, messages } = parseLineExport(raw);
     const segments = segmentMessages(messages);
+    const tenant = path.basename(file).includes("台灣福祉") ? TAIWANHOMECARE_TENANT : YOUCHENG_TENANT;
     console.log(`\n=== ${groupName}（${file}）：${messages.length} 則訊息 → ${segments.length} 個會話段 ===`);
 
     const catMap = new Map<number, { category: Category; confidence: string }>();
@@ -57,7 +59,7 @@ async function main(): Promise<void> {
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
       process.stdout.write(`  會話段 ${i + 1}/${segments.length}（${seg.length} 則）分析中... `);
-      const { result, usage: u } = await analyzeSegment(client, groupName, seg);
+      const { result, usage: u } = await analyzeSegment(client, groupName, seg, tenant);
       for (const c of result.classifications) {
         catMap.set(c.id, { category: c.category, confidence: c.confidence });
       }

@@ -4,6 +4,11 @@ import { AnalysisResult, type AnalysisResultT } from "./schemas.js";
 import { masterDataJson } from "./masterData.js";
 import type { ChatMessage } from "./types.js";
 
+export interface Tenant {
+  systemPrompt: string;
+  masterDataJson: string;
+}
+
 export interface UsageStats {
   calls: number;
   inputTokens: number;
@@ -57,10 +62,13 @@ const SYSTEM_PROMPT = `你是「佑成精密」工廠的 LINE 群組對話分析
 - daily_reports 含 {date: "2026-06-29", reporter_name: "陳志明", reporter_code: "P-002", line: "A線", machine_code: "M-001", work_order: "WO-2506-018", output_qty: 1250, defect_qty: 12, work_hours: null, overtime_hours: 1, issues: "3號機早上卡料停約20分", source_ids: [5], confidence: "high"}
 - 備註中的 3 號機卡料屬設備異常線索，另在 records 建一筆 maintenance 記錄（machine_code: "M-003"）。`;
 
+export const YOUCHENG_TENANT: Tenant = { systemPrompt: SYSTEM_PROMPT, masterDataJson };
+
 export async function analyzeSegment(
   client: Anthropic,
   groupName: string,
   segment: ChatMessage[],
+  tenant: Tenant = YOUCHENG_TENANT,
 ): Promise<{ result: AnalysisResultT; usage: UsageStats }> {
   const body = segment
     .map((m) => `#${m.id} [${m.date} ${m.time}] ${m.sender}: ${m.text.replace(/\n/g, " ⏎ ")}`)
@@ -71,10 +79,10 @@ export async function analyzeSegment(
     max_tokens: 16000,
     thinking: { type: "adaptive" },
     system: [
-      { type: "text", text: SYSTEM_PROMPT },
+      { type: "text", text: tenant.systemPrompt },
       {
         type: "text",
-        text: `# 工廠主檔資料（模擬 Ragic 主檔，供實體對應）\n${masterDataJson}`,
+        text: `# 工廠主檔資料（模擬 Ragic 主檔，供實體對應）\n${tenant.masterDataJson}`,
         cache_control: { type: "ephemeral" },
       },
     ],
