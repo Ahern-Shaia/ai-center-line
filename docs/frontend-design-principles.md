@@ -87,7 +87,8 @@
 
 ## B. 美學 profile（本專案已鎖定）
 
-> 🔒 **本專案採用 `modern-SaaS-craft`（見 B0），不可換。** 由 CLAUDE.md R16 強制；任何前端產出一律以此為唯一美學依據。要改 profile 必須由人改本檔 + CLAUDE.md R16，並在 PR 說明理由 —— Claude Code 不得自行換 profile。
+> 🔒 **本專案採用 `observability-light`（見 B0-OL，本檔最下），不可換。** 由 CLAUDE.md R16 強制；任何前端產出一律以此為唯一美學依據。要改 profile 必須由人改本檔 + CLAUDE.md R16，並在 PR 說明理由 —— Claude Code 不得自行換 profile。
+> **歷史 profile**（不再採用）：`modern-SaaS-craft`（B0，起始）、`mission-control-dark`（B0-MC，2026-07-02）、`civic-trust`（B0-CT，2026-07-03）、`blueprint`（B0-BP，2026-07-03；因藍圖裝飾與企業 SaaS 慣例衝突，2026-07-04 廢止）。
 > B1 其餘 profile **僅供 fork 此模板時參考 / 自訂用**，**不是本專案的可選項**。
 >
 > profile 決定密度、形狀語言、色彩性格、是否用漸層、深度（陰影）、字體性格、動效個性、avoid-list。
@@ -200,3 +201,23 @@ brief 沒講清楚產品是什麼，**自己先釘**：點名一個具體主題�
 - **字體（v10 定案）**：**IBM Plex Sans（標題/內文）＋ IBM Plex Mono（大數字/資料/代碼/標註/table 表頭）**——工程 DNA、辨識度高；CJK 用 PingFang 承接。不用 serif（serif 屬編輯/年報語彙，非工程圖）。
 - **signature**：量測刻度儀表（bullet＋四分格＋共用尺規）＋工程圖 title block。
 - **avoid-list（blueprint 專屬，非普世禁令）**：漂回奶油/米底＋襯線＋赤土（前 civic-trust）、松綠×紙白（我重複用過的）、深色區塊、donut 儀表、purple/blue glow——這些會破壞 blueprint 的冷工程調性。（§A1 的普世配色黑名單已刪，這裡只是本 profile 的執行提醒。）
+
+---
+
+## B0-OL. ✅ 戰情室 app 採用 profile：`observability-light`（2026-07-04 用戶裁定，取代 blueprint）
+
+適用：多租戶 SaaS 戰情室後台（四角色入口）。**廢止 blueprint 的理由**：§01 章節符、四角量測記號、28px 網格背景、mono 濫用，都是「工程繪圖 / 編輯排版」慣例，與企業 SaaS 儀表板慣例衝突；客戶（工廠 GM、群組負責人）每天要用，日常使用的儀表板要「安靜、可靠、資訊密度高」，藍圖裝飾成本每天都在收。委員簡報要美學另做簡報素材（docs/mockup/*.png）。
+
+**§A5 對標（三個真實產品）**：
+1. **Datadog dashboards（light theme）** — 高密度 metric tile、燈點語意色（emerald/amber/rose）、無角落裝飾、hairline 分隔
+2. **Grafana light** — 儀表板為第一等公民、左側 icon+text sidebar、topbar 放時間範圍與刷新
+3. **Metabase** — 淺色 admin、tabular 數字、Inter body、pill badge 語意色
+
+- **密度**：高、可讀優先；儀表板產品的資訊密度。
+- **色彩**：中性冷淺色 canvas `#F7F8FA`、surface `#FFFFFF`、well `#F1F3F6`；墨 `#111827`/`#4B5563`/`#6B7280`；hairline `#E5E7EB`（AA 4.5:1 對 canvas）。primary 靛藍 `#4F46E5`（focus / primary button）；語意色 emerald `#059669`（正常）、amber `#D97706`（待確認）、rose `#E11D48`（逾時），皆色＋文字/icon 雙編碼。**冷淺色一致，禁深色區塊**（暗色模式另議，不在 P1）。
+- **深度**：`shadow-sm`（`0 1px 2px rgba(0,0,0,.04)`）＋ hairline border；hover 抬到 `shadow`（`0 1px 3px + 0 1px 2px`）；無 glow、無多層陰影堆疊。
+- **形狀**：中性圓角 `6px`（tile 8px）；tabular-nums 用於所有數字（`font-variant-numeric: tabular-nums`）。
+- **字體**：**Inter（拉丁）+ Noto Sans TC（中文）**；body 14px、metric num 24-40px tabular、metadata 12-13px；mono（JetBrains Mono / IBM Plex Mono）**僅**用於 code、ticket id、ratio 分數（如 `2/6`、`8/13`）。
+- **shell**：**左 sidebar（240px，icon+text 導覽）** + **上 topbar（tenant/role/as-of/refresh/user menu）** + main content max-width 依 breakpoint 撐開。
+- **狀態語意**：燈點（`●` 6px 圓）+ pill（淡底同色深字）雙軌；灰=無資料、綠=正常、琥珀=待確認/低信心、玫瑰=逾時。
+- **avoid-list（observability-light 專屬）**：`§01/§02/§03` 章節符、四角 `.rc` 量測記號、grid 背景線、mono 濫用於 label/hint、uppercase letter-spacing 帳號欄標籤、「客戶 × Vendor」共同 branding、glow、紫漸層、9-11px 小字（最小 12px）、纯 `.catch(()=>undefined)` 無 error/skeleton 三態、footer 塞 as-of 或 demo 警語。
