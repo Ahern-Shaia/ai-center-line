@@ -7,11 +7,11 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json",
-    "start": "node --env-file=.env dist/main.js",
+    "start": "node --env-file-if-exists=.env dist/main.js",
     "dev": "tsc -p tsconfig.build.json && node --env-file=.env dist/main.js",
-    "migrate": "tsx --env-file=.env src/db/migrate.ts",
-    "seed:dev": "tsx --env-file=.env src/db/seed-dev.ts",
-    "seed:demo": "tsx --env-file=.env src/db/seed-demo.ts",
+    "migrate": "tsx --env-file-if-exists=.env src/db/migrate.ts",
+    "seed:dev": "tsx --env-file-if-exists=.env src/db/seed-dev.ts",
+    "seed:demo": "tsx --env-file-if-exists=.env src/db/seed-demo.ts",
     "test": "node --import tsx --env-file=.env --test test/*.test.ts",
     "test:cov": "node --import tsx --env-file=.env --test --experimental-test-coverage test/*.test.ts"
   },

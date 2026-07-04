@@ -207,6 +207,7 @@ curl -X POST https://<backend-service>.onrender.com/auth/login \
 
 | 症狀 | 可能原因 | 解 |
 |---|---|---|
+| `node: .env: not found` · exit 9 | `npm start` 用 `--env-file=.env` 強制找檔 · Render 沒 `.env` 靠 env 注入 | 已修：改 `--env-file-if-exists=.env`（Node ≥ 20.12 支援）· 本機/Render 兩相容 |
 | 登入 500 | DB migration 沒跑 | Render Shell → `npm run migrate` |
 | 登入 401「帳號或密碼錯誤」但你打對 | seed 沒跑 | `npm run seed:demo` |
 | 前端 fetch `/api/*` 404 | `_redirects` 沒生效或 URL 拼錯 | 檢查 `web/public/_redirects` |
