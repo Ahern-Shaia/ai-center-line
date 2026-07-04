@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Brand Pilot · observability-light — 戰情室</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6;
+    --line:#E5E7EB; --line-2:#F0F2F5;
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --primary:#4F46E5; --primary-2:#4338CA; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5;
+    --warn:#D97706; --warn-tint:#FFFBEB;
+    --danger:#E11D48; --danger-tint:#FFF1F2;
+    --sans:'Inter','Noto Sans TC',system-ui,-apple-system,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
+    --ease:cubic-bezier(.32,.72,0,1);
+    --r-sm:4px; --r:6px; --r-lg:8px;
+    --sh-sm:0 1px 2px rgba(17,24,39,.04);
+    --sh:0 1px 3px rgba(17,24,39,.08),0 1px 2px rgba(17,24,39,.04);
+  }
+  *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+  html { scroll-behavior:smooth; }
+  body { background:var(--canvas); color:var(--ink); font-family:var(--sans); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  button { font-family:inherit; cursor:pointer; }
+  code, .mono { font-family:var(--mono); font-variant-numeric:tabular-nums; }
+  code { font-size:12.5px; background:var(--well); padding:1px 5px; border-radius:3px; color:var(--ink); }
+  a { color:var(--primary-2); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  :focus-visible { outline:2px solid var(--primary); outline-offset:2px; border-radius:var(--r-sm); }
+
+  /* layout */
+  .doc { display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  .toc { position:sticky; top:0; height:100vh; overflow-y:auto; background:var(--surface); border-right:1px solid var(--line); padding:22px 20px; }
+  .toc h1 { font-size:15px; font-weight:700; letter-spacing:-.01em; margin-bottom:2px; }
+  .toc .sub { font-size:11.5px; color:var(--ink-3); font-family:var(--mono); margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--line-2); }
+  .toc-group { margin-top:14px; }
+  .toc-group-lbl { font-size:11px; font-weight:600; color:var(--ink-3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+  .toc a { display:block; padding:5px 10px; margin:0 -10px; border-radius:var(--r); font-size:13px; color:var(--ink-2); }
+  .toc a:hover { background:var(--well); color:var(--ink); text-decoration:none; }
+
+  main { padding:32px 44px 80px; max-width:1080px; }
+  section { margin-bottom:52px; scroll-margin-top:20px; }
+  section h2 { font-size:22px; font-weight:700; letter-spacing:-.02em; margin-bottom:4px; display:flex; align-items:baseline; gap:12px; }
+  section h2 .n { font-family:var(--mono); font-size:14px; color:var(--ink-3); font-weight:500; }
+  section h3 { font-size:15px; font-weight:600; margin:22px 0 10px; }
+  section h4 { font-size:13px; font-weight:600; color:var(--ink-2); margin:14px 0 8px; text-transform:uppercase; letter-spacing:.04em; }
+  section p { font-size:14px; color:var(--ink-2); line-height:1.6; max-width:720px; }
+  section .lead { font-size:14px; color:var(--ink-3); margin-bottom:16px; max-width:720px; }
+  ul.dot { margin:8px 0 8px 20px; }
+  ul.dot li { margin:4px 0; color:var(--ink-2); font-size:13.5px; }
+  strong { color:var(--ink); font-weight:600; }
+
+  /* header hero */
+  .hero { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:26px 30px; margin-bottom:36px; box-shadow:var(--sh-sm); display:flex; align-items:center; gap:18px; }
+  .hero-mark { width:52px; height:52px; border-radius:var(--r-lg); background:#0F172A; color:#fff; display:grid; place-items:center; font-size:20px; font-weight:800; letter-spacing:-.02em; }
+  .hero-h { font-size:22px; font-weight:700; letter-spacing:-.02em; }
+  .hero-sub { font-size:13px; color:var(--ink-3); font-family:var(--mono); margin-top:4px; }
+  .hero-meta { margin-left:auto; text-align:right; font-size:11.5px; color:var(--ink-3); font-family:var(--mono); }
+
+  /* color swatches */
+  .swatch-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; }
+  .sw { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden; box-shadow:var(--sh-sm); }
+  .sw-color { height:80px; border-bottom:1px solid var(--line); }
+  .sw-body { padding:10px 12px; }
+  .sw-name { font-family:var(--mono); font-size:12px; color:var(--ink); }
+  .sw-hex { font-family:var(--mono); font-size:11px; color:var(--ink-3); margin-top:2px; }
+  .sw-ratio { display:inline-block; margin-top:6px; font-family:var(--mono); font-size:10.5px; padding:1px 6px; border-radius:3px; }
+  .sw-ratio.aaa { background:var(--ok-tint); color:#065F46; }
+  .sw-ratio.aa { background:var(--warn-tint); color:#92400E; }
+  .sw-ratio.fail { background:var(--danger-tint); color:#9F1239; }
+
+  /* type samples */
+  .type-row { display:grid; grid-template-columns:120px 1fr 200px; align-items:baseline; gap:16px; padding:14px 0; border-bottom:1px solid var(--line-2); }
+  .type-tag { font-family:var(--mono); font-size:11.5px; color:var(--ink-3); }
+  .type-sample { color:var(--ink); }
+  .type-spec { font-family:var(--mono); font-size:11px; color:var(--ink-3); text-align:right; }
+
+  /* pill demos */
+  .demo-row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin:8px 0; }
+  .pill { display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:999px; font-size:11.5px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .pill.ok { background:var(--ok-tint); color:#065F46; }
+  .pill.warn { background:var(--warn-tint); color:#92400E; }
+  .pill.danger { background:var(--danger-tint); color:#9F1239; }
+  .pill.muted { background:var(--well); color:var(--ink-3); }
+  .pill.review { background:var(--warn-tint); color:#92400E; border:1px dashed var(--warn); }
+
+  /* lamp demos */
+  .lamp { display:inline-block; width:8px; height:8px; border-radius:50%; }
+  .lamp.green { background:var(--ok); box-shadow:0 0 0 3px var(--ok-tint); }
+  .lamp.yellow { background:var(--warn); box-shadow:0 0 0 3px var(--warn-tint); }
+  .lamp.red { background:var(--danger); box-shadow:0 0 0 3px var(--danger-tint); }
+  .lamp-row { display:inline-flex; align-items:center; gap:8px; margin-right:22px; font-size:13.5px; color:var(--ink); }
+
+  /* buttons */
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:var(--r); font-size:13.5px; font-weight:500; border:1px solid transparent; transition:background .12s var(--ease),border-color .12s var(--ease); }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .btn-primary { background:var(--primary); color:#fff; }
+  .btn-primary:hover { background:var(--primary-2); }
+  .btn-primary:active { transform:translateY(1px); }
+  .btn-ghost { background:var(--surface); border-color:var(--line); color:var(--ink-2); }
+  .btn-ghost:hover { background:var(--well); border-color:var(--ink-3); color:var(--ink); }
+  .btn-sm { padding:5px 10px; font-size:12px; }
+
+  /* tile */
+  .tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .tile { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:16px 18px; box-shadow:var(--sh-sm); }
+  .tile .label { font-size:12px; color:var(--ink-3); font-weight:500; }
+  .tile .metric { display:flex; align-items:baseline; gap:8px; margin-top:8px; }
+  .tile .num { font-size:32px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  .tile .num .pct { font-size:18px; color:var(--ink-3); font-weight:500; margin-left:2px; }
+  .tile .frac { font-family:var(--mono); font-size:12px; color:var(--ink-3); }
+  .tile .bar { margin-top:12px; height:4px; border-radius:2px; background:var(--well); overflow:hidden; }
+  .tile .bar > i { display:block; height:100%; border-radius:2px; }
+
+  /* accordion signoff */
+  .signoff-demo { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--sh-sm); overflow:hidden; }
+  .so-item { border-bottom:1px solid var(--line-2); }
+  .so-item:last-child { border-bottom:0; }
+  .so-item.done { background:linear-gradient(0deg, var(--ok-tint) 0%, transparent 100%); }
+  .so-item.has-low { border-left:3px solid var(--warn); }
+  .so-head { display:flex; align-items:center; gap:12px; padding:12px 16px; }
+  .so-toggle { display:flex; align-items:center; gap:12px; flex:1; background:transparent; border:0; padding:0; font-family:inherit; font-size:inherit; color:inherit; text-align:left; }
+  .so-name { font-size:14px; font-weight:700; color:var(--ink); min-width:76px; }
+  .so-count { font-size:12.5px; color:var(--ink-2); }
+  .so-count.warn { color:#92400E; background:var(--warn-tint); padding:2px 8px; border-radius:var(--r-sm); font-weight:600; }
+  .so-count.done { color:var(--ok); font-weight:600; }
+  .so-chev { font-size:11px; color:var(--ink-3); margin-left:auto; width:14px; text-align:center; }
+  .so-detail { padding:8px 16px 16px 46px; background:var(--well); border-top:1px solid var(--line-2); display:flex; flex-direction:column; gap:6px; }
+  .so-line { display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--surface); border:1px solid var(--line-2); border-radius:var(--r); font-size:13px; }
+  .so-line.blocked { border-color:var(--danger); background:var(--danger-tint); }
+  .so-summary { flex:1; color:var(--ink); }
+  .so-source { background:transparent; border:0; color:var(--primary); font-size:12px; font-family:inherit; cursor:pointer; padding:0 4px; }
+
+  /* banner */
+  .banner { display:flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid var(--warn); background:var(--warn-tint); color:#78350F; border-radius:var(--r); font-size:13px; margin:10px 0; }
+
+  /* toast preview */
+  .toast { background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--primary); border-radius:var(--r); box-shadow:var(--sh); padding:10px 14px; min-width:280px; font-size:13px; color:var(--ink); display:inline-block; }
+  .toast.ok { border-left-color:var(--ok); }
+  .toast.warn { border-left-color:var(--warn); }
+  .toast.danger { border-left-color:var(--danger); }
+
+  /* elevation demo */
+  .elev-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:10px; }
+  .elev { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:16px; }
+  .elev-sm { box-shadow:var(--sh-sm); }
+  .elev-md { box-shadow:var(--sh); }
+  .elev-lg { box-shadow:0 8px 24px rgba(17,24,39,.12); }
+  .elev-name { font-family:var(--mono); font-size:11.5px; color:var(--ink-3); }
+  .elev-desc { font-size:12.5px; color:var(--ink-2); margin-top:4px; }
+
+  /* radius demo */
+  .radius-grid { display:flex; gap:16px; align-items:center; margin-top:10px; }
+  .radius { width:64px; height:64px; background:var(--primary-tint); border:1px solid var(--primary); display:grid; place-items:center; font-family:var(--mono); font-size:11px; color:var(--primary-2); }
+  .radius.rs { border-radius:var(--r-sm); }
+  .radius.rm { border-radius:var(--r); }
+  .radius.rl { border-radius:var(--r-lg); }
+
+  /* motion */
+  .motion-demo { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:20px; box-shadow:var(--sh-sm); }
+  .motion-row { display:flex; align-items:center; gap:20px; padding:12px 0; border-bottom:1px solid var(--line-2); }
+  .motion-row:last-child { border:0; }
+  .motion-lbl { min-width:140px; font-family:var(--mono); font-size:12px; color:var(--ink-2); }
+  .motion-spec { font-family:var(--mono); font-size:11px; color:var(--ink-3); min-width:180px; }
+  .motion-box { width:32px; height:32px; background:var(--primary); border-radius:var(--r); }
+  .motion-run { transition:transform .3s var(--ease); }
+  .motion-run.on { transform:translateX(140px); }
+  .motion-spin { animation:spin .6s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .sk-demo { height:20px; border-radius:var(--r-sm); background:linear-gradient(90deg,var(--well) 0%,var(--line-2) 50%,var(--well) 100%); background-size:200% 100%; animation:sk-shim 1.4s var(--ease) infinite; }
+  @keyframes sk-shim { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
+  .typ-demo { display:flex; gap:4px; padding:14px; background:var(--well); border-radius:var(--r); width:fit-content; }
+  .typ-demo span { width:6px; height:6px; border-radius:50%; background:var(--ink-3); animation:typ 1s var(--ease) infinite; }
+  .typ-demo span:nth-child(2) { animation-delay:.15s; }
+  .typ-demo span:nth-child(3) { animation-delay:.3s; }
+  @keyframes typ { 0%,60%,100% { opacity:.3; transform:translateY(0); } 30% { opacity:1; transform:translateY(-3px); } }
+
+  /* RAG citation demo */
+  .rag-bubble { background:var(--well); border-radius:var(--r-lg); padding:11px 14px; max-width:640px; font-size:14px; line-height:1.7; }
+  .rag-cite { display:inline-flex; padding:0 3px; margin:0 1px; background:var(--primary-tint); color:var(--primary-2); border:0; border-radius:3px; font-family:var(--mono); font-size:11px; font-weight:700; cursor:pointer; }
+  .rag-cite:hover { background:var(--primary); color:#fff; }
+  .rag-cite-card { display:flex; align-items:flex-start; gap:8px; padding:8px 10px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); text-align:left; margin-top:6px; }
+  .rag-cite-num { font-family:var(--mono); font-size:11px; font-weight:700; color:var(--primary-2); }
+  .rag-cite-title { font-size:12.5px; font-weight:600; color:var(--ink); display:block; }
+  .rag-cite-meta { font-size:11px; color:var(--ink-3); font-family:var(--mono); }
+
+  /* principle grid */
+  .princ-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+  .princ { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:14px 16px; box-shadow:var(--sh-sm); }
+  .princ-n { font-family:var(--mono); font-size:11px; color:var(--primary); font-weight:700; }
+  .princ-h { font-size:14px; font-weight:700; margin:4px 0 6px; }
+  .princ-b { font-size:12.5px; color:var(--ink-2); line-height:1.5; }
+
+  /* avoid list */
+  .avoid { background:var(--danger-tint); border:1px solid var(--danger); border-radius:var(--r); padding:14px 18px; }
+  .avoid-h { font-size:13px; font-weight:700; color:#9F1239; margin-bottom:8px; }
+  .avoid ul { margin-left:20px; }
+  .avoid li { font-size:12.5px; color:#7F1D1D; margin:3px 0; }
+
+  /* component demo shell */
+  .demo-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:20px 22px; box-shadow:var(--sh-sm); margin-top:10px; }
+  .demo-src { margin-top:12px; padding:10px 12px; background:#0F172A; color:#94A3B8; border-radius:var(--r); font-family:var(--mono); font-size:11.5px; line-height:1.6; overflow-x:auto; white-space:pre; }
+  .demo-src .c-tag { color:#7DD3FC; }
+  .demo-src .c-cls { color:#FCA5A5; }
+  .demo-src .c-str { color:#A7F3D0; }
+
+  /* page thumbs */
+  .thumbs { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .thumb { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:16px; box-shadow:var(--sh-sm); }
+  .thumb h5 { font-size:13.5px; font-weight:700; margin-bottom:6px; }
+  .thumb p { font-size:12px; color:var(--ink-3); }
+  .thumb a { display:inline-block; margin-top:10px; font-size:12px; color:var(--primary-2); font-weight:600; }
+
+  @media (max-width:960px) {
+    .doc { grid-template-columns:1fr; }
+    .toc { position:relative; height:auto; }
+    .tiles { grid-template-columns:1fr; }
+    .princ-grid { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="doc">
+  <!-- TOC -->
+  <aside class="toc">
+    <h1>Brand Pilot</h1>
+    <div class="sub">observability-light · v1<br>戰情室 · 2026-07-04</div>
+    <div class="toc-group">
+      <div class="toc-group-lbl">1. 識別</div>
+      <a href="#identity">產品定位</a>
+      <a href="#principles">五條核心原則</a>
+      <a href="#avoid">avoid-list（禁令）</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-lbl">2. 色彩</div>
+      <a href="#c-surface">Surface 層級</a>
+      <a href="#c-ink">Ink 文字</a>
+      <a href="#c-primary">Primary</a>
+      <a href="#c-semantic">Semantic 語意</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-lbl">3. 字體 & 燈號</div>
+      <a href="#t-font">字體家族</a>
+      <a href="#t-scale">Type scale</a>
+      <a href="#t-lamp">燈號 & Pill</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-lbl">4. 元件 & Token</div>
+      <a href="#shape">Shape / Elevation</a>
+      <a href="#components">元件庫</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-lbl">5. 動效</div>
+      <a href="#motion">Motion tokens</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-lbl">6. 頁面</div>
+      <a href="#pages">實作頁面</a>
+    </div>
+    <div class="toc-group" style="margin-top:24px;padding-top:14px;border-top:1px solid var(--line-2);">
+      <div class="toc-group-lbl">相關</div>
+      <a href="/">↑ 回戰情室 App</a>
+      <a href="#" onclick="return false" style="opacity:.5">docs/brand-pilot.md（原文）</a>
+      <a href="#" onclick="return false" style="opacity:.5">docs/frontend-design-principles.md §B0-OL</a>
+    </div>
+  </aside>
+
+  <main>
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-mark">台</div>
+      <div>
+        <div class="hero-h">戰情室 · observability-light</div>
+        <div class="hero-sub">Datadog light / Grafana light / Metabase 對標 · 淺色高密度儀表板</div>
+      </div>
+      <div class="hero-meta">
+        profile v1 · 2026-07-04<br>
+        CLAUDE.md R16 · §B0-OL
+      </div>
+    </div>
+
+    <!-- 1. 識別 -->
+    <section id="identity">
+      <h2><span class="n">01</span>產品定位</h2>
+      <p class="lead">戰情室是為工廠 GM 每天 09:00 開會前 30 秒掃完六格、出問題才深挖的儀表板產品。日常節奏優先，depth 藏在 drawer 裡。</p>
+      <div class="demo-card">
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <tr style="border-bottom:1px solid var(--line-2)"><td style="padding:8px 0;color:var(--ink-3);width:120px">產品</td><td style="padding:8px 0">戰情室（LINE 群組 AI 分類 → 每日簽核 → Ragic 匯流）</td></tr>
+          <tr style="border-bottom:1px solid var(--line-2)"><td style="padding:8px 0;color:var(--ink-3)">使用者</td><td style="padding:8px 0">工廠 GM · 群組負責人 · 顧問 · AIPROOT 內部</td></tr>
+          <tr style="border-bottom:1px solid var(--line-2)"><td style="padding:8px 0;color:var(--ink-3)">情境</td><td style="padding:8px 0">每天 09:00 掃六格 → 30 秒完成當日簽核 → 出問題時深挖來源</td></tr>
+          <tr><td style="padding:8px 0;color:var(--ink-3)">對標</td><td style="padding:8px 0">Datadog（light）· Grafana（light）· Metabase</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section id="principles">
+      <h2><span class="n">02</span>五條核心原則</h2>
+      <div class="princ-grid">
+        <div class="princ"><div class="princ-n">P1</div><div class="princ-h">每個數字要能反查來源</div><div class="princ-b">CLAUDE.md R11 落實。儀表、抽取、簽核，每筆背後掛得到原始 LINE 訊息或工單。</div></div>
+        <div class="princ"><div class="princ-n">P2</div><div class="princ-h">一頁掃描 &gt; 多頁跳轉</div><div class="princ-b">Daily driver 一頁看完六部門，深挖才用 drawer；不強迫用戶切頁。</div></div>
+        <div class="princ"><div class="princ-n">P3</div><div class="princ-h">色彩帶意義，不做裝飾</div><div class="princ-b">emerald / amber / rose = 正常 / 待確認 / 逾時，配燈點與文字，非單靠色。</div></div>
+        <div class="princ"><div class="princ-n">P4</div><div class="princ-h">AI 產出必配信心度</div><div class="princ-b">高綠、中黃、低紅框攔截；信心度理由可展開查。誠實低值是加分。</div></div>
+        <div class="princ"><div class="princ-n">P5</div><div class="princ-h">警訊放在資訊旁</div><div class="princ-b">「已逾期未派工」直接寫在筆數旁，不只讓部門變黃燈就閃過。</div></div>
+      </div>
+    </section>
+
+    <section id="avoid">
+      <h2><span class="n">03</span>avoid-list（禁令）</h2>
+      <div class="avoid">
+        <div class="avoid-h">🚫 以下元素於本 profile 一律禁用</div>
+        <ul>
+          <li><code>§01 §02 §03</code> 章節符（期刊/藍圖排版慣例）</li>
+          <li>四角量測記號 <code>.rc tl/tr/bl/br</code>（藍圖繪圖語彙）</li>
+          <li>網格背景線（工程圖紙感）</li>
+          <li>Mono 濫用於 label / hint / 按鈕（mono <strong>只</strong>用於數字、代碼、ratio、ticket id、路徑、時間戳）</li>
+          <li>「Client × Vendor」共同 branding（如「台灣福祉 × AIPROOT」）</li>
+          <li>9–11px 小字（最小 12px；sidebar group label uppercase 11px 為唯一例外）</li>
+          <li>Purple gradient / glow / neon / 深色區塊</li>
+          <li>純 <code>.catch(()=>undefined)</code> 卡「載入中」（三態必齊：skeleton / error / empty）</li>
+          <li>Footer 塞 as-of / demo 警語（該資訊放頂部）</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 2. 色彩 -->
+    <section id="c-surface">
+      <h2><span class="n">04</span>色彩 · Surface 層級</h2>
+      <p class="lead">層級由淺到深：canvas → surface → well。任何卡片內再嵌套時，優先用 well／tint，避免第三層 surface。</p>
+      <div class="swatch-grid">
+        <div class="sw"><div class="sw-color" style="background:#F7F8FA"></div><div class="sw-body"><div class="sw-name">--canvas</div><div class="sw-hex">#F7F8FA</div><span class="sw-ratio aaa">ink 15.5:1 AAA</span></div></div>
+        <div class="sw"><div class="sw-color" style="background:#FFFFFF;border-bottom:1px solid var(--line)"></div><div class="sw-body"><div class="sw-name">--surface</div><div class="sw-hex">#FFFFFF</div><span class="sw-ratio aaa">ink 16.6:1 AAA</span></div></div>
+        <div class="sw"><div class="sw-color" style="background:#F1F3F6"></div><div class="sw-body"><div class="sw-name">--well</div><div class="sw-hex">#F1F3F6</div><span class="sw-ratio aaa">ink 14.6:1 AAA</span></div></div>
+        <div class="sw"><div class="sw-color" style="background:#E5E7EB"></div><div class="sw-body"><div class="sw-name">--line</div><div class="sw-hex">#E5E7EB</div><span class="sw-ratio">hairline only</span></div></div>
+        <div class="sw"><div class="sw-color" style="background:#F0F2F5"></div><div class="sw-body"><div class="sw-name">--line-2</div><div class="sw-hex">#F0F2F5</div><span class="sw-ratio">虛/淡分隔</span></div></div>
+      </div>
+    </section>
+
+    <section id="c-ink">
+      <h2><span class="n">05</span>色彩 · Ink 文字</h2>
+      <div class="swatch-grid">
+        <div class="sw"><div class="sw-color" style="background:#111827"></div><div class="sw-body"><div class="sw-name">--ink</div><div class="sw-hex">#111827</div><span class="sw-ratio aaa">canvas 15.5:1 AAA</span><div style="margin-top:8px;color:#111827;font-size:14px;">主要文字：Aa 王總</div></div></div>
+        <div class="sw"><div class="sw-color" style="background:#4B5563"></div><div class="sw-body"><div class="sw-name">--ink-2</div><div class="sw-hex">#4B5563</div><span class="sw-ratio aaa">canvas 7.4:1 AAA</span><div style="margin-top:8px;color:#4B5563;font-size:14px;">副標：資料截止時間</div></div></div>
+        <div class="sw"><div class="sw-color" style="background:#6B7280"></div><div class="sw-body"><div class="sw-name">--ink-3</div><div class="sw-hex">#6B7280</div><span class="sw-ratio aa">canvas 4.7:1 AA</span><div style="margin-top:8px;color:#6B7280;font-size:14px;">metadata / hint</div></div></div>
+      </div>
+    </section>
+
+    <section id="c-primary">
+      <h2><span class="n">06</span>色彩 · Primary</h2>
+      <div class="swatch-grid">
+        <div class="sw"><div class="sw-color" style="background:#4F46E5"></div><div class="sw-body"><div class="sw-name">--primary</div><div class="sw-hex">#4F46E5</div><div class="sw-ratio">主 button / focus / citation</div></div></div>
+        <div class="sw"><div class="sw-color" style="background:#4338CA"></div><div class="sw-body"><div class="sw-name">--primary-2</div><div class="sw-hex">#4338CA</div><div class="sw-ratio">primary hover</div></div></div>
+        <div class="sw"><div class="sw-color" style="background:#EEF2FF"></div><div class="sw-body"><div class="sw-name">--primary-tint</div><div class="sw-hex">#EEF2FF</div><div class="sw-ratio">focus 光暈 / cite chip</div></div></div>
+      </div>
+      <h4>使用範例</h4>
+      <div class="demo-row">
+        <button class="btn btn-primary">主 action</button>
+        <button class="btn btn-primary" disabled>disabled</button>
+        <span class="rag-cite">[1]</span>
+        <span style="border:2px solid var(--primary);box-shadow:0 0 0 3px var(--primary-tint);padding:6px 10px;border-radius:var(--r);font-size:12px;">focus ring</span>
+      </div>
+    </section>
+
+    <section id="c-semantic">
+      <h2><span class="n">07</span>色彩 · Semantic（狀態雙編碼）</h2>
+      <p class="lead">每個語意色都必配文字或 icon — 不能只靠色傳遞資訊（a11y 硬底線）。</p>
+      <div class="swatch-grid">
+        <div class="sw"><div class="sw-color" style="background:#059669"></div><div class="sw-body"><div class="sw-name">--ok</div><div class="sw-hex">#059669</div><div class="sw-ratio">綠燈 / 高信心 / 已同步</div></div></div>
+        <div class="sw"><div class="sw-color" style="background:#ECFDF5"></div><div class="sw-body"><div class="sw-name">--ok-tint</div><div class="sw-hex">#ECFDF5</div><div class="sw-ratio">pill 底 / 光暈</div></div></div>
+        <div class="sw"><div class="sw-color" style="background:#D97706"></div><div class="sw-body"><div class="sw-name">--warn</div><div class="sw-hex">#D97706</div><div class="sw-ratio">黃燈 / 中信心 / 待確認</div></div></div>
+        <div class="sw"><div class="sw-color" style="background:#FFFBEB"></div><div class="sw-body"><div class="sw-name">--warn-tint</div><div class="sw-hex">#FFFBEB</div><div class="sw-ratio">banner / pill 底</div></div></div>
+        <div class="sw"><div class="sw-color" style="background:#E11D48"></div><div class="sw-body"><div class="sw-name">--danger</div><div class="sw-hex">#E11D48</div><div class="sw-ratio">紅燈 / 低信心 / 逾時</div></div></div>
+        <div class="sw"><div class="sw-color" style="background:#FFF1F2"></div><div class="sw-body"><div class="sw-name">--danger-tint</div><div class="sw-hex">#FFF1F2</div><div class="sw-ratio">攔截行 / error state</div></div></div>
+      </div>
+    </section>
+
+    <!-- 3. 字體 & 燈號 -->
+    <section id="t-font">
+      <h2><span class="n">08</span>字體家族</h2>
+      <div class="demo-card">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;">
+          <div>
+            <div style="font-family:var(--sans);font-size:28px;font-weight:700;letter-spacing:-.02em;">Inter · Noto Sans TC</div>
+            <div style="font-family:var(--sans);font-size:14px;color:var(--ink-2);margin-top:8px;">The quick brown fox 敏捷的棕狐狸躍過懶狗<br>Aa Bb Cc 中文字體與拉丁字體並排</div>
+            <div style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-top:12px;">--sans</div>
+          </div>
+          <div>
+            <div style="font-family:var(--mono);font-size:28px;font-weight:600;">JetBrains Mono</div>
+            <div style="font-family:var(--mono);font-size:14px;color:var(--ink-2);margin-top:8px;">2026-07-04 09:15<br>WO-2506-041 · T-010 · 8 / 13</div>
+            <div style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-top:12px;">--mono</div>
+          </div>
+        </div>
+        <h4 style="margin-top:22px;">Mono 白名單（其他用 sans）</h4>
+        <ul class="dot">
+          <li>Ticket id（<code>T-001</code>、<code>WO-2506-041</code>）</li>
+          <li>Ragic 表名（<code>CRM_service_tickets</code>）</li>
+          <li>Ratio 分數（<code>8 / 13</code>、<code>2 / 6</code>）</li>
+          <li>時間戳（<code>07/02 09:40</code>）</li>
+          <li>路徑、版號、citation ref code</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="t-scale">
+      <h2><span class="n">09</span>Type scale</h2>
+      <div class="demo-card" style="padding:6px 20px;">
+        <div class="type-row"><span class="type-tag">H1</span><span class="type-sample" style="font-size:20px;font-weight:700;letter-spacing:-.01em;">總覽儀表</span><span class="type-spec">20px / 700 / -.01em</span></div>
+        <div class="type-row"><span class="type-tag">Metric</span><span class="type-sample" style="font-size:32px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;">33<span style="font-size:18px;color:var(--ink-3);font-weight:500;">%</span></span><span class="type-spec">32px / 700 / tabular</span></div>
+        <div class="type-row"><span class="type-tag">Brand</span><span class="type-sample" style="font-size:15px;font-weight:700;letter-spacing:-.01em;">台灣福祉科技</span><span class="type-spec">15px / 700</span></div>
+        <div class="type-row"><span class="type-tag">Section</span><span class="type-sample" style="font-size:14px;font-weight:600;">各部門今日狀態</span><span class="type-spec">14px / 600</span></div>
+        <div class="type-row"><span class="type-tag">Body</span><span class="type-sample" style="font-size:14px;">全 6 個 LINE 群組 · 每日 AI 分類結果匯總</span><span class="type-spec">14px / 400 / 1.5</span></div>
+        <div class="type-row"><span class="type-tag">Button</span><span class="type-sample" style="font-size:13.5px;font-weight:500;">確認今日進度</span><span class="type-spec">13.5px / 500</span></div>
+        <div class="type-row"><span class="type-tag">Sub</span><span class="type-sample" style="font-size:13px;color:var(--ink-3);">全 6 個 LINE 群組</span><span class="type-spec">13px / 400 / ink-3</span></div>
+        <div class="type-row"><span class="type-tag">Hint</span><span class="type-sample" style="font-size:12.5px;color:var(--ink-3);">點列展開明細</span><span class="type-spec">12.5px / 400 / ink-3</span></div>
+        <div class="type-row"><span class="type-tag">Sidebar Grp</span><span class="type-sample" style="font-size:11px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;">戰情室</span><span class="type-spec">11px / 600 / upper</span></div>
+        <div class="type-row"><span class="type-tag">Timestamp</span><span class="type-sample mono" style="font-size:10.5px;color:var(--ink-3);">07/02 09:40</span><span class="type-spec">10.5px / mono</span></div>
+      </div>
+    </section>
+
+    <section id="t-lamp">
+      <h2><span class="n">10</span>燈號 & Pill</h2>
+      <p class="lead">燈 = 部門/群組<strong>整體</strong>健康狀態（一部門一燈）· Pill = 單筆 ticket 的<strong>信心度/狀態</strong>（一筆一 pill）。</p>
+
+      <h4>燈點 · 8px + 3px 光暈</h4>
+      <div class="demo-card">
+        <span class="lamp-row"><span class="lamp green"></span>正常（technical: green）</span>
+        <span class="lamp-row"><span class="lamp yellow"></span>待確認（yellow）</span>
+        <span class="lamp-row"><span class="lamp red"></span>逾時（red）</span>
+      </div>
+
+      <h4>Pill variant</h4>
+      <div class="demo-card">
+        <div class="demo-row">
+          <span class="pill ok">高信心</span>
+          <span class="pill ok">✓ 已同步 Ragic</span>
+          <span class="pill warn">中信心</span>
+          <span class="pill danger">低信心</span>
+          <span class="pill review">🛑 已即時攔截 · 需補件</span>
+          <span class="pill muted">今日無待簽</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. 元件 & Token -->
+    <section id="shape">
+      <h2><span class="n">11</span>Shape / Elevation</h2>
+
+      <h4>Radius</h4>
+      <div class="radius-grid">
+        <div class="radius rs">4px<br>--r-sm</div>
+        <div class="radius rm">6px<br>--r</div>
+        <div class="radius rl">8px<br>--r-lg</div>
+        <div style="font-size:12.5px;color:var(--ink-3);max-width:280px;">
+          小圓角 = code / id chip · 一般 = button / input / pill · 大 = tile / drawer / card。
+          不做 &gt;8px 的大圓角，不做 pill 以外的完全圓（999px 只用 pill）。
+        </div>
+      </div>
+
+      <h4 style="margin-top:22px;">Elevation</h4>
+      <div class="elev-grid">
+        <div class="elev elev-sm"><div class="elev-name">--sh-sm</div><div class="elev-desc">tile / card 靜態 · 極淡</div></div>
+        <div class="elev elev-md"><div class="elev-name">--sh</div><div class="elev-desc">drawer / hover 抬升 · 二層陰影</div></div>
+        <div class="elev elev-lg"><div class="elev-name">(inline)</div><div class="elev-desc">絕不使用 · glow / 多層堆疊禁令</div></div>
+      </div>
+    </section>
+
+    <section id="components">
+      <h2><span class="n">12</span>元件庫</h2>
+
+      <h3>Metric tile · <code>.tile</code></h3>
+      <div class="demo-card">
+        <div class="tiles">
+          <div class="tile">
+            <div class="label">本日簽核完成率</div>
+            <div class="metric"><span class="num">33<span class="pct">%</span></span><span class="frac">2 / 6 部門</span></div>
+            <div class="bar"><i style="width:33%;background:var(--primary);"></i></div>
+          </div>
+          <div class="tile">
+            <div class="label">群組整體健康度</div>
+            <div class="metric"><span class="num">67<span class="pct">%</span></span><span class="frac">4 / 6 綠燈</span></div>
+            <div class="bar"><i style="width:67%;background:var(--ok);"></i></div>
+          </div>
+          <div class="tile">
+            <div class="label">今日 AI 高信心比例</div>
+            <div class="metric"><span class="num">62<span class="pct">%</span></span><span class="frac">8 / 13 tickets</span></div>
+            <div class="bar"><i style="width:62%;background:var(--warn);"></i></div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Sign-off accordion · <code>.signoff-list</code>（產品核心元件）</h3>
+      <div class="demo-card">
+        <div class="signoff-demo">
+          <div class="so-item">
+            <div class="so-head">
+              <button class="so-toggle"><span class="lamp green"></span><span class="so-name">技術工程</span><span class="so-count">4 筆待簽核</span><span class="so-chev">▸</span></button>
+              <button class="btn btn-primary btn-sm">確認今日進度</button>
+            </div>
+          </div>
+          <div class="so-item has-low">
+            <div class="so-head">
+              <button class="so-toggle"><span class="lamp yellow"></span><span class="so-name">售後服務</span><span class="so-count warn">2 筆待簽核（1 筆低信心）</span><span class="so-chev">▾</span></button>
+              <button class="btn btn-primary btn-sm">確認今日進度</button>
+            </div>
+            <div class="so-detail">
+              <div class="so-line"><span style="color:var(--ink-3)">·</span><span class="so-summary">示範車號 A：輪椅升降機鋼索斷裂</span><span class="pill ok" style="font-size:10px">高信心</span><button class="so-source">查來源 →</button></div>
+              <div class="so-line blocked"><span style="color:var(--ink-3)">·</span><span class="so-summary">「門壞了」— 車號與部位無法對應</span><span class="pill danger" style="font-size:10px">🛑 低信心 · 已即時攔截</span><button class="so-source">查來源 →</button></div>
+            </div>
+          </div>
+          <div class="so-item done">
+            <div class="so-head">
+              <button class="so-toggle"><span class="lamp green"></span><span class="so-name">業務一部</span><span class="so-count done">✓ 已由 建國 於 09:15 簽核</span><span class="so-chev">▸</span></button>
+              <button class="btn btn-ghost btn-sm" disabled>已確認</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Banner · <code>.banner</code></h3>
+      <div class="banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>
+        <span>本 demo 使用<strong>假名化案例</strong>展示端到端流程。正式版所有真實 LINE 訊息在您廠內去識別，敏感資料不出場。</span>
+      </div>
+
+      <h3>Buttons</h3>
+      <div class="demo-card">
+        <div class="demo-row">
+          <button class="btn btn-primary">主 action</button>
+          <button class="btn btn-ghost">次 action</button>
+          <button class="btn btn-primary btn-sm">小 primary</button>
+          <button class="btn btn-ghost btn-sm">小 ghost</button>
+          <button class="btn btn-primary" disabled>disabled</button>
+        </div>
+      </div>
+
+      <h3>Toast · <code>.toast</code></h3>
+      <div class="demo-card">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <span class="toast ok">技術工程：已簽核 4 筆</span>
+          <span class="toast warn">售後服務：已簽核 1 筆，1 筆低信心攔截</span>
+          <span class="toast danger">簽核失敗，請重試</span>
+          <span class="toast">技術工程 詳細頁尚未實作</span>
+        </div>
+      </div>
+
+      <h3>Skeleton · <code>.sk</code></h3>
+      <div class="demo-card">
+        <div class="sk-demo" style="width:180px;margin-bottom:6px;"></div>
+        <div class="sk-demo" style="width:260px;margin-bottom:14px;"></div>
+        <div class="sk-demo" style="height:52px;border-radius:var(--r);"></div>
+      </div>
+
+      <h3>RAG citation（grounded） · <code>.rag-cite</code></h3>
+      <div class="demo-card">
+        <div class="rag-bubble">
+          該車輛升降機於 2026-06-18 完成鋼索更換<button class="rag-cite">[1]</button>。保養週期建議每 3 個月檢查液壓油與鋼索張力一次<button class="rag-cite">[2]</button>。
+          <div class="rag-cite-card">
+            <span class="rag-cite-num">[1]</span>
+            <div>
+              <span class="rag-cite-title">示範車號 A · 升降機鋼索更換工單</span>
+              <span class="rag-cite-meta">工單 · WO-2506-041 · 售後服務群組</span>
+            </div>
+          </div>
+          <div class="rag-cite-card">
+            <span class="rag-cite-num">[2]</span>
+            <div>
+              <span class="rag-cite-title">升降機保養規範 v2</span>
+              <span class="rag-cite-meta">知識庫 · KM #0089 · 技術研發群組</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. 動效 -->
+    <section id="motion">
+      <h2><span class="n">13</span>動效</h2>
+      <p class="lead">唯一 easing · <code>cubic-bezier(.32, .72, 0, 1)</code>（fast-out slow-in）。不做多 easing、不做大位移、不做色相過渡。</p>
+
+      <div class="motion-demo">
+        <div class="motion-row">
+          <span class="motion-lbl">Micro</span>
+          <span class="motion-spec">100–150ms · hover / focus</span>
+          <button class="btn btn-primary">hover 我</button>
+        </div>
+        <div class="motion-row">
+          <span class="motion-lbl">Enter</span>
+          <span class="motion-spec">180–200ms · drawer / toast</span>
+          <button class="btn btn-ghost btn-sm" onclick="this.nextElementSibling.classList.toggle('on')">觸發 →</button>
+          <div class="motion-box motion-run"></div>
+        </div>
+        <div class="motion-row">
+          <span class="motion-lbl">Loading spin</span>
+          <span class="motion-spec">600ms linear infinite · 刷新中</span>
+          <div class="motion-box motion-spin"></div>
+        </div>
+        <div class="motion-row">
+          <span class="motion-lbl">Skeleton shim</span>
+          <span class="motion-spec">1400ms infinite</span>
+          <div class="sk-demo" style="width:160px;"></div>
+        </div>
+        <div class="motion-row">
+          <span class="motion-lbl">Typing dots</span>
+          <span class="motion-spec">1s infinite · RAG 對話 pending</span>
+          <div class="typ-demo"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+
+      <h4 style="margin-top:22px;">動效原則</h4>
+      <ul class="dot">
+        <li>一律靠近 UI 邊緣（drawer 從右滑、toast 從右上進）</li>
+        <li>移動距離 4–24px，不用大位移</li>
+        <li>不做迴圈動畫，除非表達 loading</li>
+        <li>顏色不做過渡（瞬切或 100ms 內完成）</li>
+        <li>不做 transform 3D、scale &gt; 1.05、filter blur/glow</li>
+        <li><code>prefers-reduced-motion</code> → 全域 .01ms（保功能不保效果）</li>
+      </ul>
+    </section>
+
+    <!-- 6. 頁面 -->
+    <section id="pages">
+      <h2><span class="n">14</span>實作頁面</h2>
+      <p class="lead">本 profile 已落地的頁面 · 點連結進實作。</p>
+      <div class="thumbs">
+        <div class="thumb"><h5>總覽儀表 + 就地簽核</h5><p>三張 metric tile、六格 accordion 就地展開、單筆 Source drawer。Daily driver 主戰場。</p><a href="/#demo">開啟 →</a></div>
+        <div class="thumb"><h5>智慧檢索（RAG）</h5><p>Typewriter + inline citation + source drawer。5 對預錄 Q&amp;A 展示 grounded 反查。</p><a href="/#demo" onclick="localStorage.setItem('acl.route','rag')">開啟 →</a></div>
+        <div class="thumb"><h5>運作原理 · Onboarding</h5><p>5 步驟：LINE 群組 → 每日批次 → AI 六路 → 人工簽核 → Ragic 同步。</p><a href="/#demo">Topbar ? →</a></div>
+        <div class="thumb"><h5>登入</h5><p>純 email/密碼 · demo hint 只在 DEV mode 顯示。</p><a href="/">/</a></div>
+      </div>
+    </section>
+
+    <div style="margin-top:60px;padding-top:20px;border-top:1px solid var(--line-2);font-size:12px;color:var(--ink-3);font-family:var(--mono);">
+      profile <strong style="color:var(--ink-2)">observability-light</strong> · 2026-07-04 定案 · 上位規範 CLAUDE.md R16 + docs/frontend-design-principles.md §B0-OL · 元件實作 web/src/*.tsx · token 源 web/src/styles.css :root
+    </div>
+  </main>
+</div>
+</body>
+</html>
