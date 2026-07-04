@@ -40,7 +40,7 @@ await c.connect();
 try {
   await c.query("BEGIN");
   await c.query(`DELETE FROM tenants WHERE tenant_id=$1`, [TENANT]); // FK cascade 清舊 demo 資料
-  await c.query(`INSERT INTO tenants (tenant_id, tenant_name, onboard_status) VALUES ($1,$2,'測試中')`, [TENANT, data.tenant_name]);
+  await c.query(`INSERT INTO tenants (tenant_id, tenant_name, onboard_status) VALUES ($1,'aiproot','測試中')`, [TENANT]);
 
   const deptMap: Record<string, string> = {};
   for (const d of data.departments) {
@@ -100,7 +100,7 @@ try {
   }
 
   await c.query("COMMIT");
-  console.log(`demo seed 完成：租戶「${data.tenant_name}」· ${data.departments.length} 部門 · ${n} tickets`);
+  console.log(`demo seed 完成：租戶「aiproot」· ${data.departments.length} 部門 · ${n} tickets`);
   console.log("帳號：gm@taiwanhomecare.demo（總經理室）/ owner-d2@taiwanhomecare.demo（售後群）· 密碼 demo123");
 } catch (e) {
   await c.query("ROLLBACK");
