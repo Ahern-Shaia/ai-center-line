@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Session } from "./api";
 
-// module 導覽（P1 只 warroom + signoff 有實作，其餘標 soon）
+// module 導覽（demo 已實作 warroom / signoff / rag / onboarding；其餘標 soon）
 const NAV = [
   {
     group: "戰情室",
@@ -14,7 +14,7 @@ const NAV = [
   {
     group: "資料 · 知識",
     items: [
-      { key: "rag", label: "RAG 對話", ic: iconChat, done: false },
+      { key: "rag", label: "智慧檢索", ic: iconChat, done: true },
       { key: "media", label: "素材看板", ic: iconMedia, done: false },
       { key: "km", label: "知識庫", ic: iconBook, done: false },
       { key: "map", label: "客戶地圖", ic: iconMap, done: false },
@@ -47,13 +47,14 @@ interface Props {
   onNav: (key: string) => void;
   onLogout: () => void;
   onRefresh: () => void;
+  onHelp?: () => void;
   refreshing?: boolean;
   asOf?: string;
   crumb?: string;
   children: ReactNode;
 }
 
-export default function Shell({ session, active, onNav, onLogout, onRefresh, refreshing, asOf, crumb, children }: Props) {
+export default function Shell({ session, active, onNav, onLogout, onRefresh, onHelp, refreshing, asOf, crumb, children }: Props) {
   const [menu, setMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -117,6 +118,11 @@ export default function Shell({ session, active, onNav, onLogout, onRefresh, ref
               資料截止 {new Date(asOf).toLocaleString("zh-TW", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
             </span>
           )}
+          {onHelp && (
+            <button className="icon-btn" onClick={onHelp} aria-label="運作原理" title="運作原理">
+              <IconHelp />
+            </button>
+          )}
           <button className={`icon-btn${refreshing ? " spin" : ""}`} onClick={onRefresh} aria-label="重新整理" title="重新整理">
             <IconRefresh />
           </button>
@@ -159,6 +165,7 @@ function iconTeam() { return svg(<><circle cx="9" cy="8" r="3" /><path d="M3 20a
 function iconCog() { return svg(<><circle cx="12" cy="12" r="3" /><path d="M12 3v2M12 19v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M3 12h2M19 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>); }
 function iconShield() { return svg(<><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3z" /></>); }
 function IconRefresh() { return svg(<><path d="M4 12a8 8 0 0 1 14-5.3L20 9" /><path d="M20 4v5h-5" /><path d="M20 12a8 8 0 0 1-14 5.3L4 15" /><path d="M4 20v-5h5" /></>); }
+function IconHelp() { return svg(<><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2.5-2.5 4M12 17h.01" /></>); }
 
 function svg(children: ReactNode) {
   return (

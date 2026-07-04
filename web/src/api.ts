@@ -1,5 +1,13 @@
 // 後端 API client。dev 走 Vite proxy（/api → :3000）。
 
+export interface WarroomTicket {
+  ticket_id: string;
+  summary: string;
+  confidence: "high" | "medium" | "low" | null;
+  needs_review: boolean;
+  status: "待簽核" | "已簽核" | "逾時警示";
+}
+
 export interface WarroomGroup {
   department_id: string;
   name: string;
@@ -9,6 +17,9 @@ export interface WarroomGroup {
   today_total: number;
   high_count: number;
   has_low_pending: boolean;
+  signed_by_name: string | null;
+  signed_at: string | null;
+  today_tickets: WarroomTicket[];
 }
 export interface Warroom {
   as_of: string;
