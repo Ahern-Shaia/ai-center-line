@@ -6,11 +6,15 @@
 BEGIN;
 
 -- 1) 最小權限應用角色（非 superuser、非 owner → 受 RLS 約束）
+-- dev 環境正常執行；Render 等 managed PG 若 owner 無 CREATEROLE 權限則跳過，改用 owner 承擔（FORCE RLS 對 owner 一樣生效）
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_rw') THEN
     CREATE ROLE app_rw LOGIN PASSWORD 'app_rw_pw';
   END IF;
+EXCEPTION
+  WHEN insufficient_privilege THEN
+    RAISE NOTICE 'skip CREATE ROLE app_rw (insufficient_privilege) · owner 將承擔 app_rw 角色';
 END $$;
 
 -- 2) 表（所有業務表帶 tenant_id）
@@ -84,13 +88,19 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_log (tenant_id, created_at);
 
--- 3) 授權 app_rw（DML）；不給 DDL/owner 權限
-GRANT USAGE ON SCHEMA public TO app_rw;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_rw;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_rw;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_rw;
--- audit_log 僅可寫入與查詢，不可竄改
-REVOKE UPDATE, DELETE ON audit_log FROM app_rw;
+-- 3) 授權 app_rw（DML）；不給 DDL/owner 權限（app_rw 不存在時全 DO 塊跳過）
+DO $$
+BEGIN
+  GRANT USAGE ON SCHEMA public TO app_rw;
+  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_rw;
+  GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_rw;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_rw;
+  -- audit_log 僅可寫入與查詢，不可竄改
+  REVOKE UPDATE, DELETE ON audit_log FROM app_rw;
+EXCEPTION
+  WHEN undefined_object THEN
+    RAISE NOTICE 'skip GRANT app_rw · Render 環境用 owner 執行 · FORCE RLS 已保安全性';
+END $$;
 
 -- 4) RLS：ENABLE + FORCE（FORCE 讓 owner 也受約束，避免測試/工具用 owner 連線時 bypass）
 --    以 session 變數為準：app.current_tenant / app.actor_role / app.current_department
