@@ -1,38 +1,77 @@
+import type { ReactNode } from "react";
+
 interface Props { onDone: () => void }
 
-const STEPS = [
+interface Step {
+  n: number;
+  title: string;
+  icon: ReactNode;
+  body: string;
+  detail: string;
+}
+
+// SVG icons · 1.6 stroke · 20×20 · currentColor（吃 primary indigo）
+function svgIcon(children: ReactNode) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {children}
+    </svg>
+  );
+}
+
+const STEPS: Step[] = [
   {
     n: 1,
     title: "LINE 群組不改變",
-    icon: "💬",
+    icon: svgIcon(<>
+      <path d="M4 6h16v10H8l-4 4V6z" />
+      <path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01" />
+    </>),
     body: "工廠員工照常在既有 LINE 群組報工、回報維修、傳照片影片。不用改行為、不用學新工具。",
     detail: "系統以官方帳號加入您的群組，收到訊息即時保存原始內容（含所有照片、影片、檔案）。",
   },
   {
     n: 2,
     title: "每晚在您廠內脫敏",
-    icon: "🌙",
+    icon: svgIcon(<>
+      <path d="M12 2 3 6v6c0 5 3.5 8 9 10 5.5-2 9-5 9-10V6l-9-4z" />
+      <path d="m9 12 2 2 4-4" />
+    </>),
     body: "每晚定時處理：先在您公司內部把人名、電話、車牌等敏感資料遮罩後才進入分析。原始對照表始終留在您這裡。",
     detail: "遮罩對照表只存在您的伺服器，AI 分析階段完全看不到真實個資。",
   },
   {
     n: 3,
     title: "AI 分析且每一句都能反查",
-    icon: "🧠",
+    icon: svgIcon(<>
+      <circle cx="6" cy="7" r="2" />
+      <circle cx="6" cy="17" r="2" />
+      <circle cx="18" cy="12" r="2.5" />
+      <path d="m8 8 8 3M8 16l8-3" />
+    </>),
     body: "分類、抽取、聚類、對應主檔、知識整理、信心度評分六路並行。每筆結果都能反查對應的原始 LINE 訊息。",
     detail: "缺漏欄位一律留白，絕不猜測；對應您的員工 / 機台 / 工單主檔逐筆比對。",
   },
   {
     n: 4,
     title: "人工簽核 · AI 不代決策",
-    icon: "✍",
+    icon: svgIcon(<>
+      <path d="m4 20 4-1 10-10-3-3L5 16l-1 4z" />
+      <path d="m14 6 3 3" />
+      <path d="M13 20h8" />
+    </>),
     body: "總經理室或群組負責人在戰情室查看每日 AI 產出，逐筆簽核。低信心的項目自動攔截，須補資訊才能簽。",
     detail: "誰簽的、什麼時候簽的、有沒有被顧問代簽，全部紀錄可稽核。",
   },
   {
     n: 5,
     title: "簽核後才同步 Ragic",
-    icon: "🔄",
+    icon: svgIcon(<>
+      <path d="M20 8a8 8 0 0 0-14-3L4 7" />
+      <path d="M4 3v4h4" />
+      <path d="M4 16a8 8 0 0 0 14 3l2-2" />
+      <path d="M20 21v-4h-4" />
+    </>),
     body: "只有簽核後的資料才會寫進您的 Ragic ERP。錯誤或未確認的內容不會流出戰情室。",
     detail: "同步失敗會清楚顯示並可一鍵重跑，確保跨系統資料一致。",
   },

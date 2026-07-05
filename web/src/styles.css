@@ -535,7 +535,7 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .ob-num .mono { display:grid; place-items:center; width:52px; height:52px; border-radius:50%; background:var(--primary-tint); color:var(--primary-2); font-size:16px; font-weight:700; }
 .ob-body { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:16px 20px; box-shadow:var(--sh-sm); }
 .ob-head { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-.ob-icon { font-size:22px; }
+.ob-icon { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r); background:var(--primary-tint); color:var(--primary-2); flex-shrink:0; }
 .ob-title { font-size:16px; font-weight:700; color:var(--ink); letter-spacing:-.01em; }
 .ob-desc { font-size:14px; color:var(--ink); line-height:1.6; margin-bottom:10px; }
 .ob-detail { font-size:12.5px; color:var(--ink-3); background:var(--well); padding:8px 12px; border-radius:var(--r); line-height:1.5; }
