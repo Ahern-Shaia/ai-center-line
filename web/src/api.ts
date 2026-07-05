@@ -118,10 +118,17 @@ function friendlyStatusMessage(status: number): string {
 // 若 server 特意寫了中文訊息（非 Nest 預設英文），優先使用；否則走 mapping。
 const GENERIC_SERVER_MSG = /^(internal server error|bad request|not found|forbidden|unauthorized|too many requests|unprocessable entity|conflict|payload too large)$/i;
 
+// API base URL：
+// - dev（本機）：不設 VITE_API_BASE_URL → 空字串 → `/api${path}` 走 Vite proxy 到 localhost:3000
+// - prod（Render）：設 VITE_API_BASE_URL=https://ai-center-line.onrender.com → 前端直打 backend
+//   （Render Static Site _redirects 對 POST 不可靠 · 直打 backend + CORS 白名單更穩）
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   let res: Response;
+  const url = API_BASE ? `${API_BASE}${path}` : `/api${path}`;
   try {
-    res = await fetch(`/api${path}`, {
+    res = await fetch(url, {
       ...opts,
       headers: {
         "content-type": "application/json",

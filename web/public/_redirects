@@ -1,7 +1,6 @@
 # Render Static Site rewrite rules
 
-# 前端 /api/* server-side rewrite 到 backend service（status 200 = 用戶瀏覽器看不到 backend URL，同時繞開 CORS）
-/api/*  https://ai-center-line.onrender.com/:splat  200
-
 # SPA fallback：所有未匹配路徑打回 index.html（React 內部 route）
-/*      /index.html                                  200
+# 注意：/api/* 由前端直打 backend URL（VITE_API_BASE_URL 環境變數控制）
+# Render Static Site 對 POST 的 rewrite 不可靠，所以不走 rewrite proxy
+/*  /index.html  200

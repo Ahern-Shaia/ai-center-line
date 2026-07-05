@@ -74,16 +74,23 @@ END $$;
 
 Backend 用 `DATABASE_URL`（owner）連線；`FORCE RLS` 對 owner 生效，安全性不受影響。
 
-### 1.3 Frontend `/api/*` 代理（`web/public/_redirects`）
+### 1.3 Frontend 打 backend 的方式（環境變數 · 非 _redirects）
 
-Render Static Site 讀 `_redirects` 檔做 rewrite / redirect：
+**踩坑紀錄**：Render Static Site 的 `_redirects` rewrite (status 200 · proxy 到其他 domain) **對 POST 不可靠**——會走 SPA fallback 回 index.html。symptom：登入 POST 拿到 200 但 body 是 `<!doctype html>`，`res.json()` 炸。
 
+**解**：前端 build 時吃 `VITE_API_BASE_URL` 環境變數 · 直打 backend · backend 開 CORS 白名單。
+
+`web/src/api.ts`：
+```typescript
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+// dev：空字串 → `/api${path}` 走 Vite proxy 到 localhost:3000
+// prod：https://backend-service.onrender.com → 前端直打 backend
 ```
-/api/*  https://<你的-backend-service>.onrender.com/:splat  200
-/*      /index.html                                          200
-```
 
-**注意**：`<你的-backend-service>` 要在 Render 建 backend 後才知道，先建 backend、拿到 URL 再回來填。
+`web/public/_redirects` 只留 SPA fallback：
+```
+/*  /index.html  200
+```
 
 ---
 
@@ -115,10 +122,10 @@ Render Dashboard → **New** → **Web Service** → 連 GitHub repo
 | Key | Value |
 |---|---|
 | `NODE_VERSION` | `24` |
-| `DATABASE_URL` | 從 2.1 PG 帶出（Internal Connection String） |
+| `DATABASE_URL` | 從 2.1 PG 帶出（**Internal** Connection String，於 Render 內部走） |
 | `MIGRATION_DATABASE_URL` | 同上 |
 | `JWT_SECRET` | 用 `openssl rand -hex 32` 產生 64 字元隨機值 |
-| `CORS_ORIGINS` | `https://<前端-service>.onrender.com`（暫時填 `*` 之後改） |
+| `CORS_ORIGINS` | `https://<前端-service>.onrender.com`（**必填** · 前端直打 backend 需要 CORS 白名單） |
 
 按 Create → 等第一次 build（第一次會失敗因為 DB 沒 migrate；不理它）
 
@@ -131,8 +138,15 @@ Render Dashboard → **New** → **Static Site** → 同一 repo
 - Publish Directory: `dist`
 - Region: Singapore
 
-**Redirects/Rewrites**（Render 會讀 `web/public/_redirects` 若有；也可在 UI 加）：
-- `/api/*` → backend URL + `/:splat` (Status 200 rewrite)
+**Environment 環境變數**：
+
+| Key | Value |
+|---|---|
+| `VITE_API_BASE_URL` | `https://<backend-service>.onrender.com`（**必填** · 沒填前端會嘗試打 `/api` 走 dev proxy，prod 沒 proxy 會 404） |
+
+Vite build 會在 npm run build 時把 `import.meta.env.VITE_API_BASE_URL` 值嵌進 bundle · 之後改要重 build。
+
+**Redirects/Rewrites**（`web/public/_redirects` 已預設）：
 - `/*` → `/index.html` (Status 200 SPA fallback)
 
 按 Create → build 完成後拿到 URL
