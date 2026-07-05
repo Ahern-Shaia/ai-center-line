@@ -16,15 +16,18 @@ services:
       timeout: 3s
       retries: 10
 
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+  # Redis：Phase 1 M3/M4 demo 階段未使用（server/src/ 無 code import），暫停以省記憶體。
+  # 走到 M2 才會用（BullMQ Outbox 排空、批次鎖、LINE reply_token 暫存 · 見設計文件 §5.2 §8.2 §10.2）。
+  # 恢復時：docker compose up -d redis
+  # redis:
+  #   image: redis:7
+  #   ports:
+  #     - "6379:6379"
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 10
 
 volumes:
   pgdata:
