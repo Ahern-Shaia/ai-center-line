@@ -155,6 +155,12 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
     if (import.meta.env.DEV) console.error(`[api] ${path} → ${res.status}`, serverMsg || "(no body)");
     throw new ApiError(res.status, friendly);
   }
+  // 2xx 但拿到非 JSON（常見於 Static Site 的 SPA fallback 抓到 API 路徑，回 index.html）
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    if (import.meta.env.DEV) console.error(`[api] ${path} → 2xx 但非 JSON · content-type=${contentType} · 可能是 _redirects 沒生效`);
+    throw new ApiError(0, "伺服器回應格式異常，請確認前端 API 代理設定");
+  }
   return res.json() as Promise<T>;
 }
 
