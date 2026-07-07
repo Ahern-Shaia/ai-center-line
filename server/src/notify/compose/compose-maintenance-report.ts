@@ -14,10 +14,12 @@ function s(v: string | undefined | null): string {
 export function composeMaintenanceReportMessage(
   rec: MaintenanceRecord,
   trigger: "save" | "button",
+  sheetName?: string,
 ): string {
   const label = trigger === "save" ? "已更新" : "手動發送";
+  const title = s(sheetName) === "（未填）" ? "維修保養通知" : s(sheetName);
   const lines: string[] = [
-    `【維修保養通知 · ${label}】`,
+    `【${title} · ${label}】`,
     ``,
     `📋 單據 #${s(rec.單據編號)}（${s(rec.單據日期)}）`,
     `來源：${s(rec.來源別)} - ${s(rec.來源單據編號)}`,

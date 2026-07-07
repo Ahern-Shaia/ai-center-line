@@ -28,6 +28,7 @@ var recordId = param.getRootNodeId();
 var payload = {
   trigger: "save",
   sheetPath: SHEET_PATH,
+  sheetName: "TB-P71維修保養單-中部",
   recordId: parseInt(recordId, 10) || 0,
   record: {
     // 單據 header

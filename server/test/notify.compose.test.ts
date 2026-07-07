@@ -24,7 +24,7 @@ const baseRec: MaintenanceRecord = {
   經辦人員簽名: "李承辦",
 };
 
-test("compose save trigger: 標題含【已更新】", () => {
+test("compose save trigger: 標題含【已更新】、預設 fallback 到「維修保養通知」", () => {
   const msg = composeMaintenanceReportMessage(baseRec, "save");
   assert.match(msg, /^【維修保養通知 · 已更新】$/m);
 });
@@ -32,6 +32,16 @@ test("compose save trigger: 標題含【已更新】", () => {
 test("compose button trigger: 標題改為【手動發送】", () => {
   const msg = composeMaintenanceReportMessage(baseRec, "button");
   assert.match(msg, /^【維修保養通知 · 手動發送】$/m);
+});
+
+test("compose 帶 sheetName: 標題用 sheetName 覆寫預設", () => {
+  const msg = composeMaintenanceReportMessage(baseRec, "save", "TB-P71維修保養單-中部");
+  assert.match(msg, /^【TB-P71維修保養單-中部 · 已更新】$/m);
+});
+
+test("compose sheetName 空字串 / undefined → fallback「維修保養通知」", () => {
+  assert.match(composeMaintenanceReportMessage(baseRec, "save", ""), /【維修保養通知 · 已更新】/);
+  assert.match(composeMaintenanceReportMessage(baseRec, "save", undefined), /【維修保養通知 · 已更新】/);
 });
 
 test("compose 分 5 段（單據 / 車輛 / 設備 / 狀況 / 人員），每段有 emoji header", () => {
