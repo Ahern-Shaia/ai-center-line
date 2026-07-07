@@ -6,3 +6,6 @@ dist/
 
 # 內含真名/PII 與原始 prototype — 絕不進版控（更不可推上 Render 拉取的 repo）
 合夥人/
+
+# Ragic 全量匯出（客戶原始資料，禁 commit）
+.ragic-export/

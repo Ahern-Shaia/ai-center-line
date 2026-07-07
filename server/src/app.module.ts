@@ -12,6 +12,7 @@ import { SignoffController } from "./signoff/signoff.controller.js";
 import { SignoffService } from "./signoff/signoff.service.js";
 import { WarroomController } from "./warroom/warroom.controller.js";
 import { WarroomService } from "./warroom/warroom.service.js";
+import { NotifyModule } from "./notify/notify.module.js";
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { WarroomService } from "./warroom/warroom.service.js";
       secret: process.env.JWT_SECRET ?? "dev-only-change-me",
       signOptions: { expiresIn: "8h" },
     }),
+    NotifyModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [

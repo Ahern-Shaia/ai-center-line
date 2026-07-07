@@ -1,7 +1,7 @@
 // Drizzle 型別化查詢層。權威 DDL＋RLS 在 migrations/0001_init.sql（drizzle-kit 不產 RLS）。
 // 本檔須與該 SQL 保持同步。對應系統設計文件 §3（Phase 1 M1 子集）。
 import {
-  pgTable, uuid, text, timestamp, boolean, integer, bigserial,
+  pgTable, uuid, text, timestamp, boolean, integer, bigserial, jsonb,
 } from "drizzle-orm/pg-core";
 
 export type Role = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owner";
@@ -69,4 +69,23 @@ export const auditLog = pgTable("audit_log", {
   result: text("result").notNull().default("allowed").$type<"allowed" | "denied">(),
   ip: text("ip"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Ragic → LINE 通知 audit（對應 docs/modules/notify.md §7.1）
+// Phase 1 不掛 RLS；Phase 2 多租戶時加 tenant_id + policy
+export const notificationLog = pgTable("notification_log", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  requestId: uuid("request_id").notNull().defaultRandom(),
+  receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+  trigger: text("trigger").notNull().$type<"save" | "button">(),
+  sheetPath: text("sheet_path").notNull(),
+  recordId: integer("record_id").notNull(),
+  status: text("status").notNull()
+    .$type<"sent" | "skipped_dedup" | "line_failed" | "invalid_body" | "invalid_secret">(),
+  lineStatus: integer("line_status"),
+  lineMessage: text("line_message"),
+  latencyMs: integer("latency_ms").notNull(),
+  messageText: text("message_text"),
+  tenantId: uuid("tenant_id"),
+  audit: jsonb("audit").notNull().default({}).$type<Record<string, unknown>>(),
 });
