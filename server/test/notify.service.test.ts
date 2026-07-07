@@ -28,14 +28,22 @@ const basePayload: RagicMaintenanceReportPayload = {
   sheetPath: "/service-tickets/10",
   recordId: 42,
   record: {
-    維修保養單號: "MR-2026-0128",
-    客戶全稱: "喬醫健康事業有限公司",
-    聯絡人: "李柏君",
-    聯絡電話: "02-2835-7700",
-    車型: "福特旅玩家",
-    車牌號碼: "AAA-1234",
-    維修保養狀況: "冷氣不冷",
-    客戶詳細地址: "台北市士林區",
+    單據編號: "202607188-003",
+    單據日期: "2026/07/07",
+    來源別: "客戶申請",
+    來源單據編號: "S-0001",
+    車型: "SUV",
+    車牌號碼: "uy7-098",
+    車身號碼: "VIN-ABC-123",
+    產品序號: "PROD-001",
+    出廠日期: "2024/01/15",
+    設備類型: "升降機",
+    設備型號: "E-Series",
+    設備序號: "EQ-556",
+    維修保養狀況: "已完成",
+    維修人員編號: "T161",
+    維修人員姓名: "張澤志",
+    經辦人員簽名: "李承辦",
   },
 };
 
@@ -49,7 +57,7 @@ test("service: LINE 200 OK → status=sent、寫 audit log 一筆", async () => 
   assert.equal(repo.writes[0].status, "sent");
   assert.equal(repo.writes[0].sheetPath, "/service-tickets/10");
   assert.equal(repo.writes[0].recordId, 42);
-  assert.ok(repo.writes[0].messageText?.includes("MR-2026-0128"));
+  assert.ok(repo.writes[0].messageText?.includes("202607188-003"));
   assert.equal(line.calls.length, 1);
 });
 

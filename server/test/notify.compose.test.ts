@@ -6,56 +6,81 @@ import { composeMaintenanceReportMessage } from "../src/notify/compose/compose-m
 import type { MaintenanceRecord } from "../src/notify/dto/ragic-maintenance-report.dto.js";
 
 const baseRec: MaintenanceRecord = {
-  維修保養單號: "MR-2026-0128",
-  客戶全稱: "喬醫健康事業有限公司",
-  聯絡人: "李柏君",
-  聯絡電話: "02-2835-7700",
-  車型: "福特旅玩家",
-  車牌號碼: "AAA-1234",
-  維修保養狀況: "冷氣不冷、需檢查壓縮機",
-  客戶詳細地址: "台北市士林區中正路420號14樓",
+  單據編號: "202607188-003",
+  單據日期: "2026/07/07",
+  來源別: "客戶申請",
+  來源單據編號: "S-0001",
+  車型: "SUV",
+  車牌號碼: "uy7-098",
+  車身號碼: "VIN-ABC-123",
+  產品序號: "PROD-001",
+  出廠日期: "2024/01/15",
+  設備類型: "升降機",
+  設備型號: "E-Series",
+  設備序號: "EQ-556",
+  維修保養狀況: "已完成",
+  維修人員編號: "T161",
+  維修人員姓名: "張澤志",
+  經辦人員簽名: "李承辦",
 };
 
-test("compose save trigger: 產出完整 7 行訊息、含【已更新】標籤", () => {
+test("compose save trigger: 標題含【已更新】", () => {
   const msg = composeMaintenanceReportMessage(baseRec, "save");
   assert.match(msg, /^【維修保養通知 · 已更新】$/m);
-  assert.match(msg, /單號：MR-2026-0128/);
-  assert.match(msg, /客戶：喬醫健康事業有限公司/);
-  assert.match(msg, /聯絡人：李柏君（02-2835-7700）/);
-  assert.match(msg, /車型 \/ 車牌：福特旅玩家 \/ AAA-1234/);
-  assert.match(msg, /狀況：冷氣不冷、需檢查壓縮機/);
-  assert.match(msg, /地址：台北市士林區中正路420號14樓/);
-  assert.equal(msg.split("\n").length, 7);
 });
 
-test("compose button trigger: 標籤改為【手動發送】", () => {
+test("compose button trigger: 標題改為【手動發送】", () => {
   const msg = composeMaintenanceReportMessage(baseRec, "button");
   assert.match(msg, /^【維修保養通知 · 手動發送】$/m);
 });
 
-test("compose 空欄位: 顯示（未填）而非空白，避免訊息結構跑掉", () => {
-  const msg = composeMaintenanceReportMessage(
-    { ...baseRec, 客戶全稱: "", 維修保養狀況: "" },
-    "save",
-  );
-  assert.match(msg, /客戶：（未填）/);
-  assert.match(msg, /狀況：（未填）/);
+test("compose 分 5 段（單據 / 車輛 / 設備 / 狀況 / 人員），每段有 emoji header", () => {
+  const msg = composeMaintenanceReportMessage(baseRec, "save");
+  assert.match(msg, /📋 單據 #202607188-003（2026\/07\/07）/);
+  assert.match(msg, /🚗 車輛/);
+  assert.match(msg, /🛠 設備/);
+  assert.match(msg, /📝 狀況：已完成/);
+  assert.match(msg, /👤 維修：張澤志（#T161）/);
 });
 
-test("compose 注入防禦: 含 \\n 的欄位值被摺成空白，訊息只保 7 行", () => {
+test("compose 車輛段：車型 / 車牌 用斜線分隔", () => {
+  const msg = composeMaintenanceReportMessage(baseRec, "save");
+  assert.match(msg, /車型 \/ 車牌：SUV \/ uy7-098/);
+});
+
+test("compose 空欄位: 顯示（未填）而非空白", () => {
+  const msg = composeMaintenanceReportMessage(
+    { ...baseRec, 車型: "", 維修保養狀況: "", 經辦人員簽名: "" },
+    "save",
+  );
+  assert.match(msg, /車型 \/ 車牌：（未填） \/ uy7-098/);
+  assert.match(msg, /📝 狀況：（未填）/);
+  assert.match(msg, /經辦：（未填）/);
+});
+
+test("compose 注入防禦: 含 \\n 的欄位值被摺成空白", () => {
   const injected: MaintenanceRecord = {
     ...baseRec,
     維修保養狀況: "line1\nline2\r\nline3\tline4",
   };
   const msg = composeMaintenanceReportMessage(injected, "save");
-  assert.equal(msg.split("\n").length, 7);
-  assert.match(msg, /狀況：line1 line2 line3 line4/);
+  assert.match(msg, /📝 狀況：line1 line2 line3 line4/);
+  // 訊息應該還是原來的行數（5 段結構不被 \n 破壞）
+  assert.equal(msg.split("\n").filter((l) => l.startsWith("📋") || l.startsWith("🚗") || l.startsWith("🛠") || l.startsWith("📝") || l.startsWith("👤")).length, 5);
 });
 
 test("compose 超長值截斷: > 200 字元被截、訊息不炸", () => {
   const long = "A".repeat(500);
-  const msg = composeMaintenanceReportMessage({ ...baseRec, 客戶詳細地址: long }, "save");
-  const addressLine = msg.split("\n").find((l) => l.startsWith("地址：")) ?? "";
-  const addressValue = addressLine.replace(/^地址：/, "");
-  assert.ok(addressValue.length <= 200, `地址應 <= 200 字，實際 ${addressValue.length}`);
+  const msg = composeMaintenanceReportMessage({ ...baseRec, 車身號碼: long }, "save");
+  const vinLine = msg.split("\n").find((l) => l.startsWith("車身號碼：")) ?? "";
+  const vinValue = vinLine.replace(/^車身號碼：/, "");
+  assert.ok(vinValue.length <= 200, `車身號碼應 <= 200 字，實際 ${vinValue.length}`);
+});
+
+test("compose optional 欄位缺（undefined）→ 全（未填）不炸", () => {
+  const partial = { 單據編號: "X-001", 維修保養狀況: "檢查中" } as MaintenanceRecord;
+  const msg = composeMaintenanceReportMessage(partial, "save");
+  assert.match(msg, /單據 #X-001/);
+  assert.match(msg, /狀況：檢查中/);
+  assert.match(msg, /車型 \/ 車牌：（未填） \/ （未填）/);
 });
