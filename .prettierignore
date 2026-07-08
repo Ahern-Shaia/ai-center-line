@@ -1,0 +1,7 @@
+# Ragic Workflow JS 範本 · 目標執行環境為 Ragic Rhino/Nashorn（ES5）
+# Prettier 拆行時會加尾逗號 → ES5 引擎爆 `Expected an operand but found )`
+# 見 docs/sop/ragic-workflow-templates.md §0.6
+docs/sop/ragic-workflow-templates/*.js
+
+# 客戶 Ragic 匯出（gitignored 內容、無需 Prettier）
+.ragic-export/
