@@ -50,6 +50,7 @@
 | 症狀 | 通常原因 | 解 |
 |---|---|---|
 | **按鈕沒任何反應 · backend 收不到 request · Ragic 也沒錯誤彈窗** | ⚠️ **Ragic Action Button 的 JS 存在 `<input type="text">` 單行輸入框**，貼上多行 code 時**換行被壓成空白**，若含 `//` 註解 → 後面 code **全被註解掉**、Ragic 靜默失敗 | (1) **所有 `//` 註解全部拿掉**（改用 `/* */` 或無註解）(2) 貼進去看能不能容納完整長度、太長就精簡 (3) 對比 §0.5 「Action Button 單行陷阱」 |
+| `Post-workflow:N:2 Expected an operand but found )` (Ragic 儲存記錄時 popup) | ES5 引擎不支援 **函數呼叫**參數列尾逗號 · Prettier 拆行時會自動加 `,` on `foo(a, b,)` | 該行改成**單行**寫（不拆行 Prettier 就不加尾逗號）；或行尾**明確拿掉逗號** |
 | `Syntax Error at line N` 但看起來沒問題 | 貼碼時複製到中文全形引號 `「」` / `『』` 而不是英文 `"` | 重貼、用純文字編輯器中轉一次 |
 | Line X 附近有 orphaned property | 貼了兩次或中間插入 | `Cmd+A` 清空重貼 |
 | `record is not defined` / `util is not defined` | Ragic 版本 API 不同、或用了 Post workflow 專屬 API 在 Action button 內 | 見下方 §6 相容性表；Post workflow 用 `record`，Action button 得用 `_ragicId` + `db.getAPIQuery()` |
@@ -70,6 +71,30 @@
 **Post Workflow 沒此限制**（Post workflow 是 textarea 編輯器、多行 OK、支援 `//` 註解）。
 
 **另一個 Ragic 語法檢查會擋的**：`db.getAPIQuery()` 空手呼叫會被擋 —— 必須帶 sheet path：`db.getAPIQuery("/service-tickets/10")`。這對 Post workflow 也適用。
+
+### 0.6 Prettier 尾逗號陷阱（Post workflow · ES5 引擎）
+
+**症狀**：`Post-workflow:N:2 Expected an operand but found )`（Ragic 儲存記錄時 popup 錯誤）
+
+**原因**：Ragic Post workflow 引擎是 ES5（Rhino/Nashorn），**函數呼叫**的參數列不允許尾逗號。物件字面量 `{a: 1, b: 2,}` 尾逗號 OK，函數呼叫 `foo(a, b,)` **不 OK**。
+
+Prettier / IDE 自動格式化時，會把跨行函數呼叫改成：
+```javascript
+util.postURL(
+  URL,
+  JSON.stringify(payload),   ← 這個尾逗號 = ES5 syntax error
+);
+```
+
+**解**（三選一，本專案用方案 1）：
+1. **重點函數呼叫寫單行**、不拆行 → Prettier 不會加尾逗號：
+   ```javascript
+   util.postURL(URL, JSON.stringify(payload));
+   ```
+2. 手動拿掉尾逗號 + 前面加 `// prettier-ignore` 註解防再加
+3. Project 加 `.prettierrc`：`"trailingComma": "es5"`（會影響全專案 style，不推薦只為 Ragic 改）
+
+**只影響 Post workflow / Pre workflow / Global workflow 這種存 textarea 的多行 JS**。Action button 已經是單行、無此問題。
 
 ---
 

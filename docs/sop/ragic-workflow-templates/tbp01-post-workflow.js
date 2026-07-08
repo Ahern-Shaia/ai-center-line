@@ -60,10 +60,8 @@ util.setHeader("Content-Type", "application/json");
 util.setHeader("X-Notify-Secret", GLOBAL_NOTIFY_SECRET);
 
 try {
-  var res = util.postURL(
-    BACKEND_URL + "/notify/ragic/analysis-sheet",
-    JSON.stringify(payload),
-  );
+  // ⚠ 一行寫完 · Ragic Rhino ES5 引擎不支援函數呼叫參數列的尾逗號
+  var res = util.postURL(BACKEND_URL + "/notify/ragic/analysis-sheet", JSON.stringify(payload));
   log.info("[notify] " + res);
 } catch (e) {
   log.error("[notify] failed: " + e);
