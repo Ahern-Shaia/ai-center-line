@@ -1,4 +1,5 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { notificationLog } from "../db/schema.js";
 
@@ -20,8 +21,21 @@ export interface WriteLogInput {
 }
 
 @Injectable()
-export class NotifyRepository {
+export class NotifyRepository implements OnModuleInit {
   private readonly logger = new Logger(NotifyRepository.name);
+
+  // D2 緩解（notify.md §12）：startup 檢查 notification_log 表存在。
+  // 缺表 → 大聲 log error 讓 dev 立刻發現，但不 crash app（讓其他 route 仍能 serve）。
+  async onModuleInit(): Promise<void> {
+    try {
+      await db.execute(sql`SELECT 1 FROM notification_log LIMIT 1`);
+      this.logger.log("notification_log 表就緒 ✓");
+    } catch (e) {
+      this.logger.error(
+        `🚨 notification_log 表缺失或無存取權！notify endpoint 會 5xx。請跑 migrations/0003_notification_log.sql。原始錯誤：${String((e as Error).message ?? e)}`,
+      );
+    }
+  }
 
   async writeLog(input: WriteLogInput): Promise<{ id: number; requestId: string } | null> {
     try {

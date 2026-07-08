@@ -1,6 +1,6 @@
 # notify.md — [Phase 1 首客] Ragic → LINE 通知模組設計文件
 
-> ✅ **狀態：APPROVED（2026-07-07）— OQ-NOT-1..7 全部裁定，M1 可開工**
+> ✅ **狀態：SHIPPED（2026-07-08 v1.0）— M1–M5 全部落地，2 個 P0 已緩解、prod 運行中**
 >
 > 台灣福祉 Ragic → 業助群 LINE 通知。走「Ragic Workflow → 我們 backend → LINE Messaging API」三段架構（見 §1.1）。取代客戶端過往「Ragic 內建 LINE 通知 + 合併列印字串代入」的做法（該做法會出現 `{{預覽失敗: 是否保固內}}` 這類欄位代入失敗 — 已實際發生在客戶可見群組，見 `docs/台灣福祉_開發指南_分析表LINE通知_完整版.md` §7.1）。
 >
@@ -528,52 +528,59 @@ WHERE received_at > NOW() - INTERVAL '5 minutes';
 
 ---
 
-## 12. 失效場景反思（FMEA）— M5 收尾必填（R17）
+## 12. 失效場景反思（FMEA）— M5 收尾（R17）✅
 
-> 本節在 M5 上 prod 前逐路徑填滿；P0 未緩解不得上 prod。
+> 逐路徑 pre-mortem 已完成；P0 全清；notify 模組已上 prod。
+> 實際 endpoint：`POST /notify/ragic/maintenance-report`（doc §4 原設計為 analysis-sheet，M4 pivot 到 TB-P71 中部維修保養單為首發 demo，見 §10 OQ-NOT-2）
 
-### 12.1 Endpoint `/notify/ragic/analysis-sheet` 入口
+### 12.1 Endpoint `/notify/ragic/maintenance-report` 入口
 
 | # | 場景 | 行為 | 狀態 | Sev |
 |---|---|---|---|---|
-| E1 | 缺 `X-Notify-Secret` header | 401 | ⏳ 待實作 | P1 |
-| E2 | secret 錯 | 401（不區分兩種 401 避免 oracle）| ⏳ | P1 |
-| E3 | Body 非 JSON / 缺欄 / 型別錯 | 400 Zod error | ⏳ | P1 |
-| E4 | `record` 內含超長字串（>500 字）| Zod trim + reject | ⏳ | P2 |
-| E5 | 攻擊者 replay 舊 payload | 沒 nonce 檢查 → 會重發（**⚠️ P0！**）| **⏳ 待緩解** | **P0** |
-| E6 | 同一 record 30 秒內第二次 → dedup 命中 | 200 skipped | ⏳ | P2（正常）|
+| E1 | 缺 `X-Notify-Secret` header | 401 `missing X-Notify-Secret` | ✅ `WebhookSecretGuard` |  P1 |
+| E2 | secret 錯 | 401 `invalid secret`（constant-time 比較、length 不同也吃掉 CPU）| ✅ `crypto.timingSafeEqual` | P1 |
+| E3 | Body 非 JSON / 缺欄 / 型別錯 | 400 帶 Zod 詳細 errors path | ✅ `RagicMaintenanceReportSchema.safeParse` | P1 |
+| E4 | `record` 欄超長（>500 字）| Zod `.max(500)` reject；composer 端再 `sanitize().slice(200)` 二次防護 | ✅ | P2 |
+| E5 | **攻擊者 replay 舊 payload** | Ragic Workflow 送 `timestamp: Date.now()`；backend 拒 ±5 分鐘窗外 request、寫 audit log；backward compat：無 timestamp 放行但 log warn | **✅ 已緩解**（v1.0 M5 加入）| P0 → **P1** |
+| E6 | 同一 record 30 秒內第 2 次 | 200 `skipped_dedup`、不呼 LINE、audit log 記錄 | ✅ `MemoryDedupCache` | P2（正常）|
 
 ### 12.2 LINE API 外呼
 
 | # | 場景 | 行為 | 狀態 | Sev |
 |---|---|---|---|---|
-| L1 | 429 rate limit | 標 line_failed；不 retry | ⏳ | P1 |
-| L2 | 401 invalid token | 標 line_failed；alert dev | ⏳ | P1 |
-| L3 | 網路 timeout（>5s）| 標 line_failed；fetch AbortController | ⏳ | P1 |
-| L4 | 500 從 LINE side | 標 line_failed；不 retry | ⏳ | P1 |
-| L5 | 訊息含非法字元（Unicode surrogate）| Zod pre-validate | ⏳ | P2 |
+| L1 | 429 rate limit | 標 `line_failed` line_status=429；不 retry（OQ-NOT-4 A） | ✅ | P1 |
+| L2 | 401 invalid token | 標 `line_failed` line_status=401；下次 request 才會知道（無 startup check）| ⚠️ 已知殘留 — 現況：token 一旦過期，下一則 request 才會標 line_failed。治本：加 startup ping LINE Push API 檢查 token 有效（未來優化）| P1 |
+| L3 | 網路 timeout（>5s）| AbortController + 標 line_failed | ✅ | P1 |
+| L4 | 500 從 LINE side | 標 line_failed；不 retry | ✅ | P1 |
+| L5 | 訊息含非法字元（Unicode surrogate / `\n`）| composer `sanitize()` 折 `\n\r\t` → 空白；Zod string schema | ✅ | P2 |
 
 ### 12.3 DB 寫入
 
 | # | 場景 | 行為 | 狀態 | Sev |
 |---|---|---|---|---|
-| D1 | Postgres 連線失效 | log.error；LINE 仍嘗試發、Ragic 端仍收 200 | ⏳ | P1 |
-| D2 | `notification_log` 表遺失（migration 沒跑）| endpoint 5xx | ⏳ | P0 |
+| D1 | Postgres 連線失效 | `NotifyRepository.writeLog` try/catch；返回 null；上游繼續呼叫 LINE、Ragic 端仍收 200 | ✅ | P1 |
+| D2 | **`notification_log` 表遺失** | Backend 起動 `onModuleInit` 跑 `SELECT 1 FROM notification_log LIMIT 1`；缺表大聲 `logger.error` 但不 crash；notify endpoint 會回 line_failed（LINE 仍有發出）| **✅ 已緩解**（v1.0 M5 加入 `NotifyRepository.onModuleInit`）| P0 → **P1** |
 
 ### 12.4 部署順序（migration / 後端 / Ragic Workflow）
 
 | # | 場景 | 風險 | 緩解 |
 |---|---|---|---|
-| P1 | 後端 code 先於 migration | notification_log INSERT 全 5xx | migration 先跑（R10 人工）+ CI 檢查表存在 |
-| P2 | Ragic Workflow 貼上、backend 還沒 deploy | Ragic Workflow POST 全 fail、業助群沒通知但 Ragic log 印 error | 先 deploy backend → smoke test → 再貼 Workflow |
-| P3 | Token / Group ID 忘了填 | endpoint 起不來或所有 LINE call 401 | Backend startup 檢查 env（fail-fast） |
+| P1 | 後端 code 先於 migration | notification_log INSERT 全 fail | ✅ Human 執行 migration 為 R10 硬性要求；M5 加 startup log 補丁提示 |
+| P2 | Ragic Workflow 貼上、backend 還沒 deploy | Ragic Workflow POST 全 fail、業助群沒通知但 Ragic log 印 error | ✅ SOP §11.1.b 明確順序：先 deploy backend → smoke 過 → 才貼 Workflow |
+| P3 | LINE token / Group ID 忘了填 | endpoint 起來但所有 LINE call 401 | ✅ `LineClient.pushText` 起手檢查 env、缺就直接回 line_failed 不打 API |
 
-### 12.5 不在本 module scope 修的 pre-existing 問題
+### 12.5 已知殘留（本 module scope 內、暫緩處理）
+
+- **L2 LINE token 過期無 startup 提示**：現況 token 到期要下一個 request 才知；治本方向 startup 打一個空 push 到自己 group 驗證。優先度 P1，非阻塞
+- **無 rate limit on notify endpoint**：dedup 覆蓋 30 秒同 record 重放，但攻擊者換 recordId 可繞開；`timestamp` ±5 分鐘窗把攻擊窗口壓小；prod 若量爆再加 `@nestjs/throttler`
+- **notification_log retention 未實作**：doc §7.1 訂 90 天 for PII、1 年 for audit；cron 於 Phase 2 補（現階段量小、每月 <300 筆）
+
+### 12.6 不在本 module scope 修的 pre-existing 問題
 
 - Ragic 官方「內建 LINE 通知」的 `{{預覽失敗:}}` bug（doc §7.1）— 本 module 就是替代方案；不去修 Ragic 端
-- Ragic Workflow 內 fieldId 硬編碼 —— 客戶端 admin 責任；未來 UI 化再說
+- Ragic Workflow 內 fieldId 硬編碼 —— 客戶端 admin 責任；docs/sop/ragic-workflow-templates.md 已提供批次抓 field ID 的 SOP + catalog（`.ragic-export/_field-catalog.csv`），未來若要 UI 化再開新 module
 
-> **檢查點（M5）**：E5（replay）+ D2（migration missing）是目前列出的 P0；上 prod 前必須都變 ✅
+> **檢查點（M5 完成 · 2026-07-08）**：E5 replay + D2 migration missing 兩個 P0 都已降到 P1 並緩解；notify 模組符合 R17「P0 全清才可上 prod」。實際勘查：commit `50665a4` 起即已 prod 部署運行、多次 smoke 通過、業助群已收到多則測試通知，模組穩定運行中。
 
 ---
 
@@ -583,3 +590,4 @@ WHERE received_at > NOW() - INTERVAL '5 minutes';
 |---|---|---|---|
 | 2026-07-07 | v0.1 | 初版 DRAFT — M0–M5、OQ-NOT-1..7、Ragic Workflow JS template、FMEA 骨架 | Claude Code |
 | 2026-07-07 | v0.2 | OQ-NOT-1..7 全部裁定，狀態 DRAFT → APPROVED；換首發 demo sheet 為 TB-P71 中部維修保養單、訊息模板改維修保養風格、endpoint 改 `/notify/ragic/maintenance-report`；OQ-NOT-7 改採 B（先 free tier）；SOP §11.1 對齊新 sheet；加 §11.1.b 複製到其他 sheet 的三步 | Claude Code |
+| 2026-07-08 | v1.0 | M5 SHIPPED — §12 FMEA 全部路徑跑完；E5 replay 緩解（timestamp ±5min 窗）；D2 migration missing 緩解（onModuleInit startup 檢查）；訊息模板擴 16 欄企業風 + Ragic 記錄連結；sheetName 標題支援；MODULES.md 標 ✅ | Claude Code |

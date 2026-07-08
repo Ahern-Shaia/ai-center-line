@@ -32,6 +32,7 @@ var payload = {
   sheetPath: SHEET_PATH,
   sheetName: SHEET_NAME,
   recordUrl: RAGIC_ACCOUNT_URL + SHEET_PATH + "/" + recordId,
+  timestamp: new Date().getTime(),
   recordId: parseInt(recordId, 10) || 0,
   record: {
     // 單據 header

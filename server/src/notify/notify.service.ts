@@ -3,13 +3,25 @@ import { LineClient } from "./line.client.js";
 import { NotifyRepository } from "./notify.repository.js";
 import { MemoryDedupCache, type DedupCache } from "./dedup.js";
 import { composeMaintenanceReportMessage } from "./compose/compose-maintenance-report.js";
+import { composeAnalysisSheetMessage } from "./compose/compose-analysis-sheet.js";
 import type { RagicMaintenanceReportPayload } from "./dto/ragic-maintenance-report.dto.js";
+import type { RagicAnalysisSheetPayload } from "./dto/ragic-analysis-sheet.dto.js";
 
 export interface HandleResult {
   status: "sent" | "skipped_dedup" | "line_failed";
   requestId?: string;
   lineStatus?: number;
   lineMessage?: string;
+}
+
+// 通用 payload 頂層欄位（Maintenance / Analysis / 未來新 sheet 共用）
+interface NotifyCommon {
+  trigger: "save" | "button";
+  sheetPath: string;
+  sheetName?: string;
+  recordUrl?: string;
+  timestamp?: number;
+  recordId: number;
 }
 
 // 編排：dedup → compose → LINE push → audit log。
@@ -32,8 +44,43 @@ export class NotifyService {
   }
 
   async handleMaintenanceReport(payload: RagicMaintenanceReportPayload): Promise<HandleResult> {
+    return this.handle(payload, (rec, trigger) =>
+      composeMaintenanceReportMessage(rec, trigger, payload.sheetName, payload.recordUrl),
+    );
+  }
+
+  async handleAnalysisSheet(payload: RagicAnalysisSheetPayload): Promise<HandleResult> {
+    return this.handle(payload, (rec, trigger) =>
+      composeAnalysisSheetMessage(rec, trigger, payload.sheetName, payload.recordUrl),
+    );
+  }
+
+  // 通用編排邏輯（timestamp 檢查 / dedup / compose / LINE push / audit log）
+  private async handle<P extends NotifyCommon & { record: any }>(
+    payload: P,
+    composer: (rec: P["record"], trigger: "save" | "button") => string,
+  ): Promise<HandleResult> {
     const startedAt = Date.now();
-    const { trigger, sheetPath, sheetName, recordUrl, recordId, record } = payload;
+    const { trigger, sheetPath, recordId, record, timestamp } = payload;
+
+    // 0) Replay attack 緩解（notify.md §12 E5）：payload 帶 timestamp 就檢查 ±5 分鐘窗
+    //    不帶（backward compat）→ 記 warning 但放行；由 dedup 30s + audit log 兜底
+    if (timestamp != null) {
+      const drift = Math.abs(startedAt - timestamp);
+      const MAX_DRIFT_MS = 5 * 60 * 1000;
+      if (drift > MAX_DRIFT_MS) {
+        this.logger.warn(
+          `拒絕過期 request: sheetPath=${sheetPath} recordId=${recordId} drift=${drift}ms (max=${MAX_DRIFT_MS}ms)`,
+        );
+        await this.repo.writeLog({
+          trigger, sheetPath, recordId,
+          status: "invalid_body",
+          latencyMs: Date.now() - startedAt,
+          audit: { reason: "timestamp_out_of_window", drift_ms: drift, max_drift_ms: MAX_DRIFT_MS },
+        });
+        return { status: "line_failed", lineStatus: 400, lineMessage: `timestamp drift ${drift}ms 超過 5 分鐘窗` };
+      }
+    }
 
     // 1) Dedup 30 秒窗
     if (this.dedup.shouldSkip(sheetPath, recordId)) {
@@ -48,7 +95,7 @@ export class NotifyService {
     }
 
     // 2) Compose 訊息
-    const text = composeMaintenanceReportMessage(record, trigger, sheetName, recordUrl);
+    const text = composer(record, trigger);
 
     // 3) Push LINE
     const lineResult = await this.lineClient.pushText(text);
