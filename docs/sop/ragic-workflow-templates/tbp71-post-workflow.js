@@ -19,7 +19,9 @@
 
 var BACKEND_URL = "https://ai-center-line.onrender.com";
 var GLOBAL_NOTIFY_SECRET = "<REPLACE_WITH_NOTIFY_WEBHOOK_SECRET_FROM_ENV>";
+var RAGIC_ACCOUNT_URL = "https://ap16.ragic.com/aitode"; // 你 Ragic 帳號 base URL
 var SHEET_PATH = "/service-tickets/10";
+var SHEET_NAME = "TB-P71維修保養單-中部";
 
 // Post workflow 從 param 拿當前記錄（不是 record — Ragic Cloud 2026-07 版本無 record 全域）
 var entry = param.getUpdatedEntry();
@@ -28,7 +30,8 @@ var recordId = param.getRootNodeId();
 var payload = {
   trigger: "save",
   sheetPath: SHEET_PATH,
-  sheetName: "TB-P71維修保養單-中部",
+  sheetName: SHEET_NAME,
+  recordUrl: RAGIC_ACCOUNT_URL + SHEET_PATH + "/" + recordId,
   recordId: parseInt(recordId, 10) || 0,
   record: {
     // 單據 header

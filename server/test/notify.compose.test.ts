@@ -24,59 +24,79 @@ const baseRec: MaintenanceRecord = {
   經辦人員簽名: "李承辦",
 };
 
-test("compose save trigger: 標題含【已更新】、預設 fallback 到「維修保養通知」", () => {
+test("compose save trigger: 標題含【已更新】、預設 fallback「維修保養通知」", () => {
   const msg = composeMaintenanceReportMessage(baseRec, "save");
-  assert.match(msg, /^【維修保養通知 · 已更新】$/m);
+  assert.match(msg, /^【維修保養通知｜已更新】$/m);
 });
 
 test("compose button trigger: 標題改為【手動發送】", () => {
   const msg = composeMaintenanceReportMessage(baseRec, "button");
-  assert.match(msg, /^【維修保養通知 · 手動發送】$/m);
+  assert.match(msg, /^【維修保養通知｜手動發送】$/m);
 });
 
-test("compose 帶 sheetName: 標題用 sheetName 覆寫預設", () => {
+test("compose 帶 sheetName: 標題用 sheetName 覆寫", () => {
   const msg = composeMaintenanceReportMessage(baseRec, "save", "TB-P71維修保養單-中部");
-  assert.match(msg, /^【TB-P71維修保養單-中部 · 已更新】$/m);
+  assert.match(msg, /^【TB-P71維修保養單-中部｜已更新】$/m);
 });
 
-test("compose sheetName 空字串 / undefined → fallback「維修保養通知」", () => {
-  assert.match(composeMaintenanceReportMessage(baseRec, "save", ""), /【維修保養通知 · 已更新】/);
-  assert.match(composeMaintenanceReportMessage(baseRec, "save", undefined), /【維修保養通知 · 已更新】/);
+test("compose sheetName 空 → fallback「維修保養通知」", () => {
+  assert.match(composeMaintenanceReportMessage(baseRec, "save", ""), /【維修保養通知｜已更新】/);
+  assert.match(composeMaintenanceReportMessage(baseRec, "save", undefined), /【維修保養通知｜已更新】/);
 });
 
-test("compose 分 5 段（單據 / 車輛 / 設備 / 狀況 / 人員），每段有 emoji header", () => {
+test("compose 全欄逐行「欄位：值」、無 emoji、無區塊標題", () => {
+  const msg = composeMaintenanceReportMessage(baseRec, "save", "TB-P71維修保養單-中部");
+  // 不該有 emoji
+  assert.doesNotMatch(msg, /[📋🚗🛠📝👤]/);
+  // 每個欄位一行
+  assert.match(msg, /^單據編號：202607188-003$/m);
+  assert.match(msg, /^單據日期：2026\/07\/07$/m);
+  assert.match(msg, /^來源別：客戶申請$/m);
+  assert.match(msg, /^來源單據編號：S-0001$/m);
+  assert.match(msg, /^車型：SUV$/m);
+  assert.match(msg, /^車牌號碼：uy7-098$/m);
+  assert.match(msg, /^車身號碼：VIN-ABC-123$/m);
+  assert.match(msg, /^產品序號：PROD-001$/m);
+  assert.match(msg, /^出廠日期：2024\/01\/15$/m);
+  assert.match(msg, /^設備類型：升降機$/m);
+  assert.match(msg, /^設備型號：E-Series$/m);
+  assert.match(msg, /^設備序號：EQ-556$/m);
+  assert.match(msg, /^維修保養狀況：已完成$/m);
+  assert.match(msg, /^維修人員：張澤志（T161）$/m);
+  assert.match(msg, /^經辦人員：李承辦$/m);
+});
+
+test("compose 帶 recordUrl: 末尾附「檢視完整資料：URL」", () => {
+  const url = "https://ap16.ragic.com/aitode/service-tickets/10/22222";
+  const msg = composeMaintenanceReportMessage(baseRec, "save", "TB-P71維修保養單-中部", url);
+  assert.match(msg, /^檢視完整資料：$/m);
+  assert.ok(msg.endsWith(url));
+  // URL 前應該有空行分隔
+  assert.match(msg, /\n\n檢視完整資料：/);
+});
+
+test("compose 不帶 recordUrl: 末尾就是最後一個欄位、沒有連結", () => {
   const msg = composeMaintenanceReportMessage(baseRec, "save");
-  assert.match(msg, /📋 單據 #202607188-003（2026\/07\/07）/);
-  assert.match(msg, /🚗 車輛/);
-  assert.match(msg, /🛠 設備/);
-  assert.match(msg, /📝 狀況：已完成/);
-  assert.match(msg, /👤 維修：張澤志（#T161）/);
+  assert.doesNotMatch(msg, /檢視完整資料/);
+  assert.ok(msg.trim().endsWith("李承辦"));
 });
 
-test("compose 車輛段：車型 / 車牌 用斜線分隔", () => {
-  const msg = composeMaintenanceReportMessage(baseRec, "save");
-  assert.match(msg, /車型 \/ 車牌：SUV \/ uy7-098/);
-});
-
-test("compose 空欄位: 顯示（未填）而非空白", () => {
+test("compose 空欄位: 顯示（未填）", () => {
   const msg = composeMaintenanceReportMessage(
-    { ...baseRec, 車型: "", 維修保養狀況: "", 經辦人員簽名: "" },
+    { ...baseRec, 車型: "", 維修保養狀況: "" },
     "save",
   );
-  assert.match(msg, /車型 \/ 車牌：（未填） \/ uy7-098/);
-  assert.match(msg, /📝 狀況：（未填）/);
-  assert.match(msg, /經辦：（未填）/);
+  assert.match(msg, /^車型：（未填）$/m);
+  assert.match(msg, /^維修保養狀況：（未填）$/m);
 });
 
-test("compose 注入防禦: 含 \\n 的欄位值被摺成空白", () => {
+test("compose 注入防禦: 含 \\n 折成空白", () => {
   const injected: MaintenanceRecord = {
     ...baseRec,
     維修保養狀況: "line1\nline2\r\nline3\tline4",
   };
   const msg = composeMaintenanceReportMessage(injected, "save");
-  assert.match(msg, /📝 狀況：line1 line2 line3 line4/);
-  // 訊息應該還是原來的行數（5 段結構不被 \n 破壞）
-  assert.equal(msg.split("\n").filter((l) => l.startsWith("📋") || l.startsWith("🚗") || l.startsWith("🛠") || l.startsWith("📝") || l.startsWith("👤")).length, 5);
+  assert.match(msg, /^維修保養狀況：line1 line2 line3 line4$/m);
 });
 
 test("compose 超長值截斷: > 200 字元被截、訊息不炸", () => {
@@ -85,12 +105,4 @@ test("compose 超長值截斷: > 200 字元被截、訊息不炸", () => {
   const vinLine = msg.split("\n").find((l) => l.startsWith("車身號碼：")) ?? "";
   const vinValue = vinLine.replace(/^車身號碼：/, "");
   assert.ok(vinValue.length <= 200, `車身號碼應 <= 200 字，實際 ${vinValue.length}`);
-});
-
-test("compose optional 欄位缺（undefined）→ 全（未填）不炸", () => {
-  const partial = { 單據編號: "X-001", 維修保養狀況: "檢查中" } as MaintenanceRecord;
-  const msg = composeMaintenanceReportMessage(partial, "save");
-  assert.match(msg, /單據 #X-001/);
-  assert.match(msg, /狀況：檢查中/);
-  assert.match(msg, /車型 \/ 車牌：（未填） \/ （未填）/);
 });

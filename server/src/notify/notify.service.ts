@@ -33,7 +33,7 @@ export class NotifyService {
 
   async handleMaintenanceReport(payload: RagicMaintenanceReportPayload): Promise<HandleResult> {
     const startedAt = Date.now();
-    const { trigger, sheetPath, sheetName, recordId, record } = payload;
+    const { trigger, sheetPath, sheetName, recordUrl, recordId, record } = payload;
 
     // 1) Dedup 30 秒窗
     if (this.dedup.shouldSkip(sheetPath, recordId)) {
@@ -48,7 +48,7 @@ export class NotifyService {
     }
 
     // 2) Compose 訊息
-    const text = composeMaintenanceReportMessage(record, trigger, sheetName);
+    const text = composeMaintenanceReportMessage(record, trigger, sheetName, recordUrl);
 
     // 3) Push LINE
     const lineResult = await this.lineClient.pushText(text);

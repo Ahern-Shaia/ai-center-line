@@ -10,6 +10,7 @@ export const RagicMaintenanceReportSchema = z.object({
   trigger: z.enum(["save", "button"]),
   sheetPath: z.string().regex(/^\/[a-z0-9-]+\/\d+$/, "sheetPath 需 /tab/id 格式"),
   sheetName: strField, // 選填：Ragic sheet 的顯示名稱，會用作訊息標題（沒帶就 fallback 到「維修保養通知」）
+  recordUrl: z.string().trim().url().max(500).optional(), // 選填：Ragic 記錄的直接連結，會附在訊息末尾
   recordId: z.number().int().nonnegative().max(1e12),
   record: z.object({
     // 單據 header
