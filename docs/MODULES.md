@@ -9,7 +9,7 @@
 | 智慧檢索 RAG 對話 | [`modules/rag-conversations.md`](modules/rag-conversations.md) | 🚧 **M0 DRAFT v0.2** | 對應 §1-C C3 · P1；待用戶裁定 OQ-RAG-1..8；前端已跑通 mock（兩窗格 NotebookLM 風 + 多模態 source viewer · image/spreadsheet 已可 render） |
 | 戰情室設計研究（v9/v10 blueprint） | [`modules/design-research-warroom.md`](modules/design-research-warroom.md) | ✅ 參考 | 前端視覺研究，非落地模組 |
 | Ragic → LINE 通知（notify） | [`modules/notify.md`](modules/notify.md) | ✅ **SHIPPED v1.0**（2026-07-08）| 首發 sheet：TB-P71 中部維修保養單（aitode `/service-tickets/10`）；Post workflow + Action Button 皆通；企業風 16 欄訊息 + Ragic 記錄連結；`/notify/ragic/maintenance-report` prod endpoint (Render `ai-center-line.onrender.com`)；33 個 unit tests、2 個 P0 (E5/D2) 已緩解 |
-| notify 多租戶化 + 鮮勇兩表 | [`modules/notify-multi-tenant.md`](modules/notify-multi-tenant.md) | 🧪 **APPROVED v0.9**（2026-07-17）· 待 push checklist | M1–M5 code + 71 unit tests 全綠；tenant registry（secret 兼識別）+ WebhookSecretGuard tenant-aware + LineClient stateless + notification_log tenant_id text NOT NULL + migration 0004；鮮勇 quotation/material-inspection 兩 endpoint + 4 Ragic Workflow template；FMEA 逐路徑 P0 全清；push 前需人工補 sheet path × 2 + secret + prod migration 先跑（見 doc §11.0） |
+| notify 多租戶化 + 鮮勇兩表 | [`modules/notify-multi-tenant.md`](modules/notify-multi-tenant.md) | ✅ **SHIPPED v1.0**（2026-07-17）| M1–M5 全部落地、上 prod、smoke 全過（台灣福祉 back-compat/鮮勇報價單 `/erp/1`/鮮勇原料驗貨單 `/erp/64` 皆通）；tenant registry（secret 兼識別）+ WebhookSecretGuard tenant-aware + LineClient stateless + notification_log tenant_id text NOT NULL + migration 0004；72 unit tests 全綠；兩踩坑：**NestJS DI 有 default 的 param 仍會被 resolve → 用 @Optional()**（hotfix 04703c8）、**Ragic Post-workflow 儲存後不立即生效、需登出重進才 active** |
 
 ## 狀態圖例
 - 🚧 **M0 DRAFT**：design doc 草擬中／待用戶裁定 OQ

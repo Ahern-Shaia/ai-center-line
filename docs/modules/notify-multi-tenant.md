@@ -517,6 +517,7 @@ SELECT tenant_id, COUNT(*) FROM notification_log GROUP BY 1;
   [NotifyRepository] notification_log 表就緒 ✓
   ```
 - [ ] 若 boot crash → 檢查 D 的 env 拼字、E migration 是否跑完
+- [ ] ⚠️ **Ragic 端 Post-workflow 貼完後、業助 admin 需登出 Ragic 重新登入**才會生效（[[pitfall_ragic_post_workflow_relogin]]）；否則 workflow 儲存了但不 fire
 
 **G. 台灣福祉 back-compat smoke**（不能被 M2 改動搞壞）：
 

@@ -15,6 +15,7 @@
 // 3. 貼此整份
 // 4. 把 GLOBAL_NOTIFY_SECRET 換成 backend .env 內 NOTIFY_WEBHOOK_SECRET_XIANYONG 實際值
 // 5. 儲存 workflow → 儲存修改設計
+// 6. ⚠️ 登出 Ragic + 重新登入（否則 workflow 儲存了但不 fire、session cache 需 refresh）
 // ============================================================
 
 var BACKEND_URL = "https://ai-center-line.onrender.com";
