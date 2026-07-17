@@ -2,6 +2,8 @@
 
 > ✅ **狀態：SHIPPED（2026-07-08 v1.0）— M1–M5 全部落地，2 個 P0 已緩解、prod 運行中**
 >
+> 🔗 **後續擴展**：多租戶化 + 鮮勇兩張新表 → [`notify-multi-tenant.md`](notify-multi-tenant.md) v0.9（2026-07-17 APPROVED）
+>
 > 台灣福祉 Ragic → 業助群 LINE 通知。走「Ragic Workflow → 我們 backend → LINE Messaging API」三段架構（見 §1.1）。取代客戶端過往「Ragic 內建 LINE 通知 + 合併列印字串代入」的做法（該做法會出現 `{{預覽失敗: 是否保固內}}` 這類欄位代入失敗 — 已實際發生在客戶可見群組，見 `docs/台灣福祉_開發指南_分析表LINE通知_完整版.md` §7.1）。
 >
 > **首發 demo sheet**：`/service-tickets/10` **TB-P71 維修保養單-中部**（aitode 已建 schema、有 3 筆資料可 API 補匯、剛好對應 doc §7.1 的原始 bug 情境；OQ-NOT-2 裁定）
