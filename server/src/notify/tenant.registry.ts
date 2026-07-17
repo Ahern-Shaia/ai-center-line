@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Optional } from "@nestjs/common";
 
 // notify 多租戶登錄。
 // 設計文件：docs/modules/notify-multi-tenant.md §4
@@ -143,8 +143,11 @@ export class TenantRegistry {
   private readonly logger = new Logger(TenantRegistry.name);
   private readonly tenants: TenantConfig[];
 
-  constructor(env: Record<string, string | undefined> = process.env) {
-    this.tenants = buildTenantRegistry(env);
+  // @Optional() 告訴 Nest DI 這個參數可以不 inject（Nest 塞 undefined）
+  // 生產：Nest new 時無 param → 走 process.env
+  // 測試：直接 `new TenantRegistry(customEnv)` 傳入 env 對象
+  constructor(@Optional() env?: Record<string, string | undefined>) {
+    this.tenants = buildTenantRegistry(env ?? process.env);
     this.logger.log(
       `notify tenants 註冊：${this.tenants.map((t) => `${t.slug}(${t.displayName})`).join(", ")}`,
     );
