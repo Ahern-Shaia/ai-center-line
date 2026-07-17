@@ -1,10 +1,11 @@
-// 通知去重：同一 sheetPath + recordId 在 windowMs 內只發一次（OQ-NOT-3 A：30 秒）。
+// 通知去重：同一 tenant + sheetPath + recordId 在 windowMs 內只發一次（OQ-NOT-3 A：30 秒）。
+// M2 起 key 加 tenant prefix，避免不同 tenant 的同 recordId 誤 dedup（notify-multi-tenant.md §5.2）。
 // Phase 1 backend 單 replica，記憶體 Map 足夠；多實例改 Redis SETNX（見 §6.2）。
 // TTL-based，非嚴格 LRU；空間上限由 maxSize 兜底，超過就清最舊 20%。
 
 export interface DedupCache {
   /** true = 命中窗口內、應跳過；false = 通過、記下這次時間戳 */
-  shouldSkip(sheetPath: string, recordId: number, now?: number): boolean;
+  shouldSkip(tenantSlug: string, sheetPath: string, recordId: number, now?: number): boolean;
   size(): number;
 }
 
@@ -15,8 +16,8 @@ export class MemoryDedupCache implements DedupCache {
     private readonly maxSize = 10_000,
   ) {}
 
-  shouldSkip(sheetPath: string, recordId: number, now = Date.now()): boolean {
-    const key = `${sheetPath}:${recordId}`;
+  shouldSkip(tenantSlug: string, sheetPath: string, recordId: number, now = Date.now()): boolean {
+    const key = `${tenantSlug}:${sheetPath}:${recordId}`;
     const prev = this.entries.get(key);
     if (prev != null && now - prev < this.windowMs) return true;
 

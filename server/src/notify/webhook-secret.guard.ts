@@ -1,39 +1,51 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { timingSafeEqual } from "node:crypto";
+import { TenantRegistry, type TenantConfig } from "./tenant.registry.js";
 
-// notify 專用驗簽 guard：驗 X-Notify-Secret 對 NOTIFY_WEBHOOK_SECRET。
-// 走 constant-time 比較，避免 timing attack；env 未設就 fail-fast 拒絕。
-// 因為此 endpoint 標 @Public()（跳過 JwtAuthGuard），這是唯一的入口驗證。
+// notify 專用驗簽 guard：驗 X-Notify-Secret 對 tenant registry 內任一 tenant 的 secret。
+// 命中 → req.tenant = matched；未命中 → 401。
+// Timing 安全性：掃完所有 tenant 才回應（不 early return），避免藉回應時間推測 tenant 數量。
+
+export interface NotifyRequest {
+  headers: Record<string, string | string[] | undefined>;
+  tenant?: TenantConfig;
+}
+
 @Injectable()
 export class WebhookSecretGuard implements CanActivate {
+  constructor(private readonly tenants: TenantRegistry) {}
+
   canActivate(context: ExecutionContext): boolean {
-    const req = context.switchToHttp().getRequest<{
-      headers: Record<string, string | string[] | undefined>;
-    }>();
+    const req = context.switchToHttp().getRequest<NotifyRequest>();
     const rawHeader = req.headers["x-notify-secret"];
     const provided = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
-    const expected = process.env.NOTIFY_WEBHOOK_SECRET;
 
-    if (!expected || expected.length < 16) {
-      // 設計文件 §7-bis.1：secret 未設 → endpoint 拒絕啟用（不是 500，是 401，避免 oracle）
-      throw new UnauthorizedException("secret 未設或過短");
-    }
     if (typeof provided !== "string" || provided.length === 0) {
       throw new UnauthorizedException("missing X-Notify-Secret");
     }
 
-    const a = Buffer.from(provided, "utf-8");
-    const b = Buffer.from(expected, "utf-8");
-    // 長度先比：不同長度 timingSafeEqual 會 throw，所以先擋
-    // 但為避免 length oracle，仍要吃掉 CPU 做假比較
-    const dummy = Buffer.alloc(b.length, 0);
-    if (a.length !== b.length) {
-      timingSafeEqual(dummy, b); // dummy work
+    const providedBuf = Buffer.from(provided, "utf-8");
+    let matched: TenantConfig | null = null;
+
+    for (const t of this.tenants.all()) {
+      const expectedBuf = Buffer.from(t.webhookSecret, "utf-8");
+      // 長度不同 timingSafeEqual 會 throw；仍做 dummy 比較消耗 CPU 避免 length oracle
+      if (providedBuf.length !== expectedBuf.length) {
+        const dummy = Buffer.alloc(expectedBuf.length, 0);
+        timingSafeEqual(dummy, expectedBuf);
+        continue;
+      }
+      if (timingSafeEqual(providedBuf, expectedBuf)) {
+        matched = t;
+        // 不 break — 掃完所有 tenant 讓回應時間不洩漏「命中在第幾個」
+      }
+    }
+
+    if (!matched) {
       throw new UnauthorizedException("invalid secret");
     }
-    if (!timingSafeEqual(a, b)) {
-      throw new UnauthorizedException("invalid secret");
-    }
+
+    req.tenant = matched;
     return true;
   }
 }

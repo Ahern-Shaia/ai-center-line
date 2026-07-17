@@ -71,8 +71,8 @@ export const auditLog = pgTable("audit_log", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Ragic → LINE 通知 audit（對應 docs/modules/notify.md §7.1）
-// Phase 1 不掛 RLS；Phase 2 多租戶時加 tenant_id + policy
+// Ragic → LINE 通知 audit（對應 docs/modules/notify.md §7.1 + notify-multi-tenant.md §7.1）
+// M2 起 tenant_id text NOT NULL default 'twh'（存 slug；OQ-NMT-5 A）；未來多租戶 read API 再加 RLS
 export const notificationLog = pgTable("notification_log", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   requestId: uuid("request_id").notNull().defaultRandom(),
@@ -81,11 +81,11 @@ export const notificationLog = pgTable("notification_log", {
   sheetPath: text("sheet_path").notNull(),
   recordId: integer("record_id").notNull(),
   status: text("status").notNull()
-    .$type<"sent" | "skipped_dedup" | "line_failed" | "invalid_body" | "invalid_secret">(),
+    .$type<"sent" | "skipped_dedup" | "line_failed" | "invalid_body" | "invalid_secret" | "sheet_not_allowed">(),
   lineStatus: integer("line_status"),
   lineMessage: text("line_message"),
   latencyMs: integer("latency_ms").notNull(),
   messageText: text("message_text"),
-  tenantId: uuid("tenant_id"),
+  tenantId: text("tenant_id").notNull().default("twh"),
   audit: jsonb("audit").notNull().default({}).$type<Record<string, unknown>>(),
 });

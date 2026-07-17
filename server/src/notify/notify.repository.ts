@@ -11,12 +11,19 @@ export interface WriteLogInput {
   trigger: "save" | "button";
   sheetPath: string;
   recordId: number;
-  status: "sent" | "skipped_dedup" | "line_failed" | "invalid_body" | "invalid_secret";
+  status:
+    | "sent"
+    | "skipped_dedup"
+    | "line_failed"
+    | "invalid_body"
+    | "invalid_secret"
+    | "sheet_not_allowed";
   lineStatus?: number;
   lineMessage?: string;
   latencyMs: number;
   messageText?: string;
-  tenantId?: string | null;
+  // M2 起 tenant_id NOT NULL；未帶 → DB default 'twh'（back-compat 台灣福祉）
+  tenantId?: string;
   audit?: Record<string, unknown>;
 }
 
@@ -50,7 +57,8 @@ export class NotifyRepository implements OnModuleInit {
           lineMessage: input.lineMessage,
           latencyMs: input.latencyMs,
           messageText: input.messageText,
-          tenantId: input.tenantId ?? null,
+          // 未帶 tenantId 由 DB default 'twh' 兜底（M2 前建的舊 row 已 backfill）
+          ...(input.tenantId ? { tenantId: input.tenantId } : {}),
           audit: input.audit ?? {},
         })
         .returning({ id: notificationLog.id, requestId: notificationLog.requestId });

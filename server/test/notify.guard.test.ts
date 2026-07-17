@@ -1,79 +1,64 @@
-// Unit tests：WebhookSecretGuard。
-// 手工組 ExecutionContext（僅需 switchToHttp().getRequest().headers），不啟動 Nest。
+// Unit tests：WebhookSecretGuard（tenant-aware）。
+// 手工組 ExecutionContext + 用真 TenantRegistry 直接吃自訂 env（不啟動 Nest、不動 process.env）。
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { UnauthorizedException } from "@nestjs/common";
-import { WebhookSecretGuard } from "../src/notify/webhook-secret.guard.js";
+import { WebhookSecretGuard, type NotifyRequest } from "../src/notify/webhook-secret.guard.js";
+import { TenantRegistry } from "../src/notify/tenant.registry.js";
 
-function makeCtx(headers: Record<string, string | string[] | undefined>): any {
+const SECRET_TWH = "a".repeat(32);
+const SECRET_XY = "b".repeat(32);
+
+const TWO_TENANT_ENV = {
+  NOTIFY_WEBHOOK_SECRET: SECRET_TWH,
+  LINE_CHANNEL_ACCESS_TOKEN: "twh-token",
+  LINE_GROUP_ID_BUSINESS_ASSIST: "twh-group",
+  NOTIFY_WEBHOOK_SECRET_XIANYONG: SECRET_XY,
+  LINE_GROUP_ID_BUSINESS_ASSIST_XIANYONG: "xy-group",
+};
+
+function makeCtx(headers: Record<string, string | string[] | undefined>): {
+  ctx: any;
+  req: NotifyRequest;
+} {
+  const req: NotifyRequest = { headers };
   return {
-    switchToHttp: () => ({ getRequest: () => ({ headers }) }),
+    ctx: { switchToHttp: () => ({ getRequest: () => req }) },
+    req,
   };
 }
 
-const SECRET = "a".repeat(32); // 32 字元
-
-function withEnv<T>(overrides: Record<string, string | undefined>, fn: () => T): T {
-  const prev: Record<string, string | undefined> = {};
-  for (const k of Object.keys(overrides)) prev[k] = process.env[k];
-  for (const [k, v] of Object.entries(overrides)) {
-    if (v === undefined) delete process.env[k];
-    else process.env[k] = v;
-  }
-  try {
-    return fn();
-  } finally {
-    for (const [k, v] of Object.entries(prev)) {
-      if (v === undefined) delete process.env[k];
-      else process.env[k] = v;
-    }
-  }
-}
-
-test("guard: 正確 secret → true", () => {
-  withEnv({ NOTIFY_WEBHOOK_SECRET: SECRET }, () => {
-    const guard = new WebhookSecretGuard();
-    const ctx = makeCtx({ "x-notify-secret": SECRET });
-    assert.equal(guard.canActivate(ctx), true);
-  });
+test("guard: default tenant secret → 命中 twh、req.tenant 設好", () => {
+  const guard = new WebhookSecretGuard(new TenantRegistry(TWO_TENANT_ENV));
+  const { ctx, req } = makeCtx({ "x-notify-secret": SECRET_TWH });
+  assert.equal(guard.canActivate(ctx), true);
+  assert.equal(req.tenant?.slug, "twh");
+  assert.equal(req.tenant?.lineGroupIdBusinessAssist, "twh-group");
 });
 
-test("guard: 錯誤 secret → 401", () => {
-  withEnv({ NOTIFY_WEBHOOK_SECRET: SECRET }, () => {
-    const guard = new WebhookSecretGuard();
-    const ctx = makeCtx({ "x-notify-secret": "b".repeat(32) });
-    assert.throws(() => guard.canActivate(ctx), UnauthorizedException);
-  });
+test("guard: 鮮勇 tenant secret → 命中 xianyong、req.tenant 設好", () => {
+  const guard = new WebhookSecretGuard(new TenantRegistry(TWO_TENANT_ENV));
+  const { ctx, req } = makeCtx({ "x-notify-secret": SECRET_XY });
+  assert.equal(guard.canActivate(ctx), true);
+  assert.equal(req.tenant?.slug, "xianyong");
+  assert.equal(req.tenant?.lineGroupIdBusinessAssist, "xy-group");
 });
 
-test("guard: 缺 header → 401（missing）", () => {
-  withEnv({ NOTIFY_WEBHOOK_SECRET: SECRET }, () => {
-    const guard = new WebhookSecretGuard();
-    const ctx = makeCtx({});
-    assert.throws(() => guard.canActivate(ctx), /missing X-Notify-Secret/);
-  });
+test("guard: 未知 secret（不屬於任何 tenant）→ 401", () => {
+  const guard = new WebhookSecretGuard(new TenantRegistry(TWO_TENANT_ENV));
+  const { ctx } = makeCtx({ "x-notify-secret": "c".repeat(32) });
+  assert.throws(() => guard.canActivate(ctx), UnauthorizedException);
+  assert.throws(() => guard.canActivate(ctx), /invalid secret/);
 });
 
-test("guard: env 未設 → 401 fail-fast（不 leak 為 500）", () => {
-  withEnv({ NOTIFY_WEBHOOK_SECRET: undefined }, () => {
-    const guard = new WebhookSecretGuard();
-    const ctx = makeCtx({ "x-notify-secret": SECRET });
-    assert.throws(() => guard.canActivate(ctx), /secret 未設或過短/);
-  });
+test("guard: 缺 header → 401 missing", () => {
+  const guard = new WebhookSecretGuard(new TenantRegistry(TWO_TENANT_ENV));
+  const { ctx } = makeCtx({});
+  assert.throws(() => guard.canActivate(ctx), /missing X-Notify-Secret/);
 });
 
-test("guard: env 過短（< 16）→ 401（避免弱 secret 上線）", () => {
-  withEnv({ NOTIFY_WEBHOOK_SECRET: "short" }, () => {
-    const guard = new WebhookSecretGuard();
-    const ctx = makeCtx({ "x-notify-secret": "short" });
-    assert.throws(() => guard.canActivate(ctx), /secret 未設或過短/);
-  });
-});
-
-test("guard: 不同長度也擋（避免 length oracle），且不 throw RangeError", () => {
-  withEnv({ NOTIFY_WEBHOOK_SECRET: SECRET }, () => {
-    const guard = new WebhookSecretGuard();
-    const ctx = makeCtx({ "x-notify-secret": "a".repeat(31) }); // 差 1 字元
-    assert.throws(() => guard.canActivate(ctx), /invalid secret/);
-  });
+test("guard: 長度不同（避免 length oracle）也不 throw RangeError，仍拒", () => {
+  const guard = new WebhookSecretGuard(new TenantRegistry(TWO_TENANT_ENV));
+  const { ctx } = makeCtx({ "x-notify-secret": "a".repeat(31) }); // 少 1 字元
+  assert.throws(() => guard.canActivate(ctx), /invalid secret/);
 });
