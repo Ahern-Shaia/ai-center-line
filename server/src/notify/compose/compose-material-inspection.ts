@@ -1,6 +1,6 @@
 // 鮮勇原料驗貨單（上游-4a）通知訊息組裝（pure function）。
 // 對應 docs/modules/notify-multi-tenant.md §6.2。企業風格：無 emoji、逐行「欄位：值」、末尾 Ragic 連結。
-// 8 欄全上；trigger=save 語意為「檢驗完成勾起」（Ragic Post workflow 端條件式 push，見 xianyong-material-inspection-post.js）
+// 8 欄全上；trigger=save 語意為「已更新」（OQ-NMT-9 修訂：任何 save 都發，Ragic Post workflow 無條件 push）
 import type { MaterialInspectionRecord } from "../dto/ragic-material-inspection.dto.js";
 
 const MAX_LINE_LENGTH = 200;
@@ -39,9 +39,7 @@ export function composeMaterialInspectionMessage(
   sheetName?: string,
   recordUrl?: string,
 ): string {
-  // save 語意 = Ragic Workflow 條件式 push（檢驗完成勾起才呼叫 backend）
-  // 見 xianyong-material-inspection-post.js
-  const label = trigger === "save" ? "檢驗完成" : "手動發送";
+  const label = trigger === "save" ? "已更新" : "手動發送";
   const title = s(sheetName) === "（未填）" ? "原料驗貨單通知" : s(sheetName);
   const lines: string[] = [
     `【${title}｜${label}】`,

@@ -15,9 +15,9 @@ const baseRec: MaterialInspectionRecord = {
   檢驗完成: "合格",
 };
 
-test("material compose save: 標題【原料驗貨單通知｜檢驗完成】(fallback、save 語意=檢驗完成)", () => {
+test("material compose save: 標題【原料驗貨單通知｜已更新】(fallback、save 語意=已更新，任何 save 都發)", () => {
   const msg = composeMaterialInspectionMessage(baseRec, "save");
-  assert.match(msg, /^【原料驗貨單通知｜檢驗完成】$/m);
+  assert.match(msg, /^【原料驗貨單通知｜已更新】$/m);
 });
 
 test("material compose button + sheetName: 標題被 sheetName 覆寫、trigger label 手動發送", () => {

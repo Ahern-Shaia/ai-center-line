@@ -1,6 +1,6 @@
 # notify-multi-tenant.md — [Phase 1.5] Ragic → LINE 通知多租戶化 + 鮮勇兩張新表
 
-> 🧪 **狀態：APPROVED · M1–M5 code + tests + FMEA 完成（2026-07-17）· 待 push checklist 落地上 prod**
+> ✅ **狀態：SHIPPED v1.0（2026-07-17）· M1–M5 全部落地、上 prod、smoke 進行中**
 >
 > `notify` 模組已 SHIPPED（v1.0，2026-07-08）但只支援單租戶（LINE token / group id 寫死 env）。第二客戶「鮮勇」進來後，此模組須加 **tenant routing** 才能：(1) 依 request 判斷來源 tenant → (2) 選對應的 LINE token/group → (3) push 到正確業助群，同時避免 cross-tenant 訊息串線。此 doc 同時規劃鮮勇兩張新 sheet（報價單、原料驗貨單）的 endpoint / DTO / compose / Ragic Workflow JS。
 >
@@ -456,7 +456,7 @@ NOTIFY_TENANT_SHEETS_TWH=/service-tickets/10,/order-operation/11    # 補既有�
 | **OQ-NMT-6** | B1 | `LineClient` 設計？ | A. Factory / B. stateless `pushText(cfg, text)` / C. per-tenant instance | ✅ **B** | 最單純、無 instance 生命週期、易測 |
 | **OQ-NMT-7** | B2 | 本次一次做完鮮勇兩表？ | A. 是 / B. 只做 infra、鮮勇表另開 M | ✅ **A** | 避免 tenant infra 抽完沒真 tenant 使用 = 空架構 |
 | **OQ-NMT-8** | B2 | 報價單訊息模板選欄？ | A. §6.1 表擇 8 欄 / B. 另份 / C. 全 14 欄 | ✅ **A** | 訊息長度可控；DTO 全 14 欄 optional 收、compose 只輸出 8 |
-| **OQ-NMT-9** | B2 | 觸發時機？ | 報價單 a1/a2/a3；驗貨單 b1/b2/b3 | ✅ **報價單 a1+a2 · 驗貨單 b2+b3** | 驗貨單每筆存都發太吵；Post workflow 端 `檢驗完成` 空 → skip |
+| **OQ-NMT-9** | B2 | 觸發時機？ | 報價單 a1/a2/a3；驗貨單 b1/b2/b3 | ✅ **報價單 a1+a2 · 驗貨單 b1+b2**（2026-07-17 修訂）| 原本裁定 b2+b3（條件式 push）；實測時用戶要求「任何修改都通知」→ 改與報價單同策略、每次 save 都發、backend 30 秒 dedup 兜底 |
 | **OQ-NMT-10** | B2 | 兩張新 sheet path？ | 需鮮勇端提供 | ✅ **報價單=`/erp/1`（下游-1）· 原料驗貨單=`/erp/64`（上游-4a）**（2026-07-17 用戶確認；4 支 Ragic Workflow template SHEET_PATH 已定值）|
 | **OQ-NMT-11** | B2 | 鮮勇 LINE 官方帳號共用還獨立？ | A. 共用 / B. 獨立 | ✅ **A** | 共用簡單、fallback default token；日後品牌需求再切 B |
 
@@ -527,7 +527,7 @@ SELECT tenant_id, COUNT(*) FROM notification_log GROUP BY 1;
 
 - [ ] 貼 4 支 workflow（Post + Action Button × 2 sheets）
 - [ ] 鮮勇報價單建一筆 → 儲存 → 鮮勇業助群 30 秒內收到訊息
-- [ ] 鮮勇原料驗貨單「檢驗完成」勾起 → 儲存 → 鮮勇業助群收到訊息
+- [ ] 鮮勇原料驗貨單任意欄位修改 → 儲存 → 鮮勇業助群收到訊息（無條件 push · OQ-NMT-9 修訂）
 - [ ] 動作按鈕各測一次 → 立即收到
 - [ ] `SELECT * FROM notification_log WHERE tenant_id='xianyong' ORDER BY received_at DESC LIMIT 5` → 有筆、status 全綠
 
@@ -636,3 +636,4 @@ SELECT tenant_id, COUNT(*) FROM notification_log GROUP BY 1;
 | 2026-07-17 | v0.1 | 初版 DRAFT — M0–M5、OQ-NMT-1..11、FMEA skeleton | Claude Code |
 | 2026-07-17 | v0.2 | OQ-NMT-1..9、11 全部裁定（OQ-10 sheet path 留 push checklist）；狀態 DRAFT → APPROVED | Claude Code |
 | 2026-07-17 | v0.9 | M1–M5 code + 71 unit tests 全綠；migration 0004 寫好；4 個 Ragic Workflow template；onboarding SOP；FMEA 逐路徑填齊、P0 全清；待人工補 §11 push checklist 即可上 prod | Claude Code |
+| 2026-07-17 | v1.0 | 上 prod（commit `fc772a5` + `a04141d`）；migration 已跑（37 舊 row backfill 'twh'）；台灣福祉 back-compat 保持；OQ-NMT-9 驗貨單改「任何 save 都發」（原 b2+b3 條件式 push 實測太保守、改 b1+b2 與報價單同策略） | Claude Code |
