@@ -16,6 +16,7 @@
     "test:cov": "node --import tsx --env-file=.env --test --experimental-test-coverage test/*.test.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.112.3",
     "@nestjs/common": "^11.1.27",
     "@nestjs/core": "^11.1.27",
     "@nestjs/jwt": "^11.0.2",

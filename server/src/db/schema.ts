@@ -1,7 +1,7 @@
 // Drizzle 型別化查詢層。權威 DDL＋RLS 在 migrations/0001_init.sql（drizzle-kit 不產 RLS）。
 // 本檔須與該 SQL 保持同步。對應系統設計文件 §3（Phase 1 M1 子集）。
 import {
-  pgTable, uuid, text, timestamp, boolean, integer, bigserial, jsonb,
+  pgTable, uuid, text, timestamp, boolean, integer, bigserial, bigint, jsonb,
 } from "drizzle-orm/pg-core";
 
 export type Role = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owner";
@@ -88,4 +88,43 @@ export const notificationLog = pgTable("notification_log", {
   messageText: text("message_text"),
   tenantId: text("tenant_id").notNull().default("twh"),
   audit: jsonb("audit").notNull().default({}).$type<Record<string, unknown>>(),
+});
+
+// LINE 對話分析 pilot（對應 docs/modules/conversation-analysis-pilot.md v0.3 §9.1 · migration 0005）
+// Pilot Stage 1 · 不掛 RLS（Stage 2 才加）
+
+export const analysisUpload = pgTable("analysis_upload", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  tenantId: uuid("tenant_id").references(() => tenants.tenantId, { onDelete: "cascade" }),
+  tenantSlug: text("tenant_slug").notNull(),
+  filename: text("filename").notNull(),
+  rawContent: text("raw_content").notNull(),
+  uploadedBy: uuid("uploaded_by").notNull().references(() => users.userId),
+  uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
+  status: text("status").notNull().default("pending")
+    .$type<"pending" | "running" | "done" | "failed">(),
+  errorMessage: text("error_message"),
+  messageCount: integer("message_count"),
+  segmentCount: integer("segment_count"),
+  usageStats: jsonb("usage_stats").$type<Record<string, unknown>>(),
+});
+
+export const analysisResult = pgTable("analysis_result", {
+  uploadId: bigint("upload_id", { mode: "number" }).primaryKey().references(() => analysisUpload.id, { onDelete: "cascade" }),
+  messages: jsonb("messages").notNull().default([]).$type<unknown[]>(),
+  dailyReports: jsonb("daily_reports").notNull().default([]).$type<unknown[]>(),
+  records: jsonb("records").notNull().default([]).$type<unknown[]>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const analysisLabel = pgTable("analysis_label", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  uploadId: bigint("upload_id", { mode: "number" }).notNull().references(() => analysisUpload.id, { onDelete: "cascade" }),
+  targetType: text("target_type").notNull()
+    .$type<"classification" | "daily_report" | "record">(),
+  targetId: text("target_id").notNull(),
+  correct: boolean("correct").notNull(),
+  note: text("note"),
+  labeledBy: uuid("labeled_by").notNull().references(() => users.userId),
+  labeledAt: timestamp("labeled_at", { withTimezone: true }).notNull().defaultNow(),
 });

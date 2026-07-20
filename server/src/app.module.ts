@@ -13,6 +13,7 @@ import { SignoffService } from "./signoff/signoff.service.js";
 import { WarroomController } from "./warroom/warroom.controller.js";
 import { WarroomService } from "./warroom/warroom.service.js";
 import { NotifyModule } from "./notify/notify.module.js";
+import { ConversationAnalysisModule } from "./conversation-analysis/conversation-analysis.module.js";
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { NotifyModule } from "./notify/notify.module.js";
       signOptions: { expiresIn: "8h" },
     }),
     NotifyModule,
+    ConversationAnalysisModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [
