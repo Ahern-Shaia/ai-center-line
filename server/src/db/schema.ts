@@ -1,7 +1,7 @@
 // Drizzle 型別化查詢層。權威 DDL＋RLS 在 migrations/0001_init.sql（drizzle-kit 不產 RLS）。
 // 本檔須與該 SQL 保持同步。對應系統設計文件 §3（Phase 1 M1 子集）。
 import {
-  pgTable, uuid, text, timestamp, boolean, integer, bigserial, bigint, jsonb,
+  pgTable, uuid, text, timestamp, boolean, integer, bigserial, bigint, jsonb, numeric, date,
 } from "drizzle-orm/pg-core";
 
 export type Role = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owner";
@@ -127,4 +127,92 @@ export const analysisLabel = pgTable("analysis_label", {
   note: text("note"),
   labeledBy: uuid("labeled_by").notNull().references(() => users.userId),
   labeledAt: timestamp("labeled_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// 中介資料層 · Data Sync Layer（對應 docs/modules/data-sync-layer.md v0.2 · migration 0006）
+// 5 表 · 全掛 tenant_id + RLS
+
+export const dataSyncCustomer = pgTable("data_sync_customer", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  sourceConnector: text("source_connector").notNull()
+    .$type<"ragic" | "weyver" | "sap" | "manual">(),
+  sourceRecordId: text("source_record_id").notNull(),
+  sourceSheetPath: text("source_sheet_path"),
+  name: text("name").notNull(),
+  code: text("code"),
+  category: text("category"),
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  raw: jsonb("raw").notNull().default({}).$type<Record<string, unknown>>(),
+  syncedAt: timestamp("synced_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const dataSyncOrder = pgTable("data_sync_order", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  sourceConnector: text("source_connector").notNull()
+    .$type<"ragic" | "weyver" | "sap" | "manual">(),
+  sourceRecordId: text("source_record_id").notNull(),
+  sourceSheetPath: text("source_sheet_path"),
+  orderNo: text("order_no").notNull(),
+  customerName: text("customer_name"),
+  orderDate: date("order_date"),
+  expectedDeliveryDate: date("expected_delivery_date"),
+  status: text("status"),
+  amount: numeric("amount", { precision: 15, scale: 2 }),
+  currency: text("currency").notNull().default("TWD"),
+  ownerName: text("owner_name"),
+  raw: jsonb("raw").notNull().default({}).$type<Record<string, unknown>>(),
+  syncedAt: timestamp("synced_at", { withTimezone: true }).notNull().defaultNow(),
+  writeBackStatus: text("write_back_status").notNull().default("synced")
+    .$type<"synced" | "pending" | "failed">(),
+});
+
+export const dataSyncContact = pgTable("data_sync_contact", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  sourceConnector: text("source_connector").notNull()
+    .$type<"ragic" | "weyver" | "sap" | "manual">(),
+  sourceRecordId: text("source_record_id").notNull(),
+  customerId: uuid("customer_id").references(() => dataSyncCustomer.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  title: text("title"),
+  email: text("email"),
+  phone: text("phone"),
+  lineId: text("line_id"),
+  raw: jsonb("raw").notNull().default({}).$type<Record<string, unknown>>(),
+  syncedAt: timestamp("synced_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const dataSyncLog = pgTable("data_sync_log", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  connector: text("connector").notNull(),
+  operation: text("operation").notNull()
+    .$type<"pull" | "push" | "backfill" | "shadow">(),
+  entity: text("entity").notNull()
+    .$type<"order" | "customer" | "contact">(),
+  recordsProcessed: integer("records_processed").notNull().default(0),
+  errors: integer("errors").notNull().default(0),
+  latencyMs: integer("latency_ms").notNull().default(0),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+  metadata: jsonb("metadata").notNull().default({}).$type<Record<string, unknown>>(),
+});
+
+export const dataSyncWritebackQueue = pgTable("data_sync_writeback_queue", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  connector: text("connector").notNull(),
+  entity: text("entity").notNull()
+    .$type<"order" | "customer" | "contact">(),
+  payload: jsonb("payload").notNull().$type<Record<string, unknown>>(),
+  status: text("status").notNull().default("pending")
+    .$type<"pending" | "retrying" | "synced" | "failed">(),
+  attempts: integer("attempts").notNull().default(0),
+  lastError: text("last_error"),
+  nextRetryAt: timestamp("next_retry_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  syncedAt: timestamp("synced_at", { withTimezone: true }),
 });

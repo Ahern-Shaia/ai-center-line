@@ -14,6 +14,7 @@ import { WarroomController } from "./warroom/warroom.controller.js";
 import { WarroomService } from "./warroom/warroom.service.js";
 import { NotifyModule } from "./notify/notify.module.js";
 import { ConversationAnalysisModule } from "./conversation-analysis/conversation-analysis.module.js";
+import { DataSyncLayerModule } from "./data-sync-layer/data-sync-layer.module.js";
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ConversationAnalysisModule } from "./conversation-analysis/conversation
     }),
     NotifyModule,
     ConversationAnalysisModule,
+    DataSyncLayerModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [
