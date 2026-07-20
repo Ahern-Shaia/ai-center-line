@@ -38,7 +38,27 @@
 | 「污染率實際多糟」 | 我方戰略決策 | §6 accuracy metric 工具 |
 | 「pay for R&D」 | 我方 cash flow | §3 M4 pilot 接單 + 收費 |
 
-### 1.3 不做的事（scope 邊界、防 scope creep）
+### 1.3 Scope 選項比較與 rationale · 為什麼選 pilot 版而不是 SaaS
+
+M0 propose 階段列出 5 檔位、用戶裁定 A：
+
+| 選項 | Scope | 工程估量 | 對應用途 | 風險 | 裁定 |
+|---|---|---|---|---|---|
+| **A** | **本 doc scope**：對話分析 · **pilot 版**（手動接客戶匯出檔 → 我方跑 → 給結構化報告 PDF/Excel）| 2-4 週 · 微量增強現有 CLI + PDF/Excel 出口 + YAML 主檔 + metric 工具 | 用途 B · 賺 pilot 收入 + 驗證污染率 | 低（單人可 handle、無 prod 依賴、無承諾）| ✅ **選** |
+| B | 對話分析 · **M4+M6 minimum SaaS**（LINE webhook + 只抽日報 + Flex confirm 迴圈 reuse notify 基建）| 2-3 個月 | 用途 C 的 MVP | 中（污染率未驗前投入偏高、假設 pilot 客戶會付月費未證明）| ❌ 待 A 出實測數據再考慮 |
+| C | 對話分析 · **全套 SaaS**（LINE webhook + 主檔 API + 寫 Ragic + 確認 UI + dedup + 媒體 OCR + 版本化 + prompt injection 全套防護）| 3-6 個月 | 用途 C full | **高**（六大件全做、還沒證明有付費客戶願買）| ❌ 未經 pilot 驗證的 3-6 個月工程 = 賭博 |
+| D | **對話污染獨立技術研究**（two-pass vs LLM baseline / benchmark / accuracy 對比 human label）| 1-2 週 | 為 A/B/C 之前的技術驗證 | 中（學術性、缺 human-labeled data、成果難落地商業）| ❌ 沒 pilot 客戶付錢跑技術研究 = 沉沒成本 |
+| E | 其他 scope（新 idea） | — | — | — | ❌ 用戶當時未提出 |
+
+**Rationale 三條**（為什麼 A > 其他）：
+
+1. **驗證優於建設**：反思 doc §1.2 明確指出 mock 樣本抽取率 ~80%、真實推估 50-70%、**我方目前不知真實污染率是多少**。SaaS 化前需要真實數據 gate、pilot 是最快取得數據的方式
+2. **付費信號優於猜測**：B/C 假設「客戶會付訂閱」未證明。Pilot 一次性收費（NT$10-30k/客戶）能立刻驗證 willingness-to-pay
+3. **Sunk cost 風險最小**：A 若失敗（客戶不覺得有用）只損失 2-4 週 + 少量 API cost；B/C 若失敗（污染率太高、市場不買帳）損失 2-6 個月工程 —— 差 10-20 倍
+
+**未來 pivot 決策點**：M5 checkpoint（OQ-CVA-9）將依 pilot 三大 metric + 客戶付費意願判斷是否升級到 B/C。若失敗、可能 pivot 到 notify（Ragic → LINE，已 SHIPPED 有付費客戶）方向為主、對話分析暫緩。
+
+### 1.4 不做的事（scope 邊界、防 scope creep）
 
 - ❌ **LINE webhook / 即時 ingest** — 用途 C 才做（見 §12 未來擴展）
 - ❌ **Ragic 寫回 / 主檔 API 拉取** — 用途 C 才做
@@ -64,7 +84,7 @@
 | Accuracy metric | ❌ 無 | 污染率量表 + human label 對比 | **全新做**（§5 M2）|
 | Pilot 收單流程 | ❌ 無 | 收檔 → 跑 → 出報告 → 收費 SOP | **全新做**（§5 M4 + §11 SOP）|
 | Segment 策略 | 按天切、超 60 則再切 | pilot 可能有大檔（跨月）| 需 upper limit + cost pre-flight |
-| Prompt injection sanitize | ❌ 無 | pilot 讀 offline 檔、風險低 | out of scope（見 §1.3）|
+| Prompt injection sanitize | ❌ 無 | pilot 讀 offline 檔、風險低 | out of scope（見 §1.4）|
 
 ---
 
