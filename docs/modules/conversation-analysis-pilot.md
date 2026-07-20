@@ -1,6 +1,6 @@
 # conversation-analysis-pilot.md — [Priority-1] LINE 對話分析 · 用途 B pilot 設計文件
 
-> 🚧 **狀態：DRAFT — 待用戶裁定 OQ-CVA-1..10（2026-07-20）**
+> 🧪 **狀態：APPROVED · OQ-CVA-1..10 全部裁定（2026-07-20）· 待進 M1**
 >
 > Scope: **用途 B pilot 版** — 手動接客戶匯出檔 → 我方跑分析 → 給結構化報告（PDF / Excel）供客戶付費。**不做 SaaS 化**（webhook / 寫 Ragic / confirm UI 全都不在本 scope），是「決定要不要 SaaS 化」之前的**驗證階段**。
 >
@@ -291,27 +291,27 @@ Pilot 是**驗證產品-市場適配**、不是驗證 code；測試策略也降�
 
 ---
 
-## 10. 開放問題（OQ-CVA-N）
+## 10. 開放問題（OQ-CVA-N）· ✅ 全部裁定（2026-07-20）
 
-### 10.1 Pilot 本期 OQ（1-4、需用戶裁定）
+### 10.1 Pilot 本期 OQ（1-4）
 
-| # | 議題 | 選項 | 建議 |
+| # | 議題 | 裁定 | 裁定理由 |
 |---|---|---|---|
-| **OQ-CVA-1** | 報告格式 | A. Excel+PDF 都做 / B. 只 Excel / C. 只 PDF | **A** — 兩者成本差不多、覆蓋不同客戶偏好 |
-| **OQ-CVA-2** | 客製主檔套用 | A. YAML config 檔 / B. Google Sheet / C. 客戶自行編 code | **A** — YAML 直觀、我方可 version control |
-| **OQ-CVA-3** | Metric label 工具 & 誰 label | A. HTML+Google Sheet 我方 label / B. web UI + 客戶 label / C. mixed | **A** — 快、單人可 handle、pilot 少不需 UI |
-| **OQ-CVA-4** | Pilot 收費模式 | A. 一次性 NT$10-30k / B. 訂閱 NT$5k/月 / C. 免費賺 case study | **A** — pilot 一次性合理、訂閱要 SaaS 才 make sense |
+| **OQ-CVA-1** | 報告格式 | ✅ **A · Excel+PDF 都做** | 兩者成本差不多、覆蓋不同客戶偏好 |
+| **OQ-CVA-2** | 客製主檔套用 | ✅ **A · YAML config 檔** | 直觀、我方可 version control |
+| **OQ-CVA-3** | Metric label 工具 & 誰 label | ✅ **A · HTML+Google Sheet 我方 label** | 快、單人可 handle、pilot 少不需 UI |
+| **OQ-CVA-4** | Pilot 收費模式 | ✅ **A · 一次性 NT$10-30k** | pilot 一次性合理、訂閱要 SaaS 才 make sense |
 
-### 10.2 未來 SaaS OQ（5-10、pre-decision 給用戶 confirm；SaaS 落地時再 formally 走）
+### 10.2 未來 SaaS OQ（5-10 · pre-decision · SaaS 落地時再 formally 走完整 M0）
 
-| # | 議題 | 選項 | 建議 |
+| # | 議題 | 裁定 | 裁定理由 |
 |---|---|---|---|
-| **OQ-CVA-5** | Tier 3 手動 trigger 是否納入未來 SaaS | A. 納入 / B. **砍** | ✅ **B 已裁定**（2026-07-20 用戶戳）— 6 個 abuse 場景（thundering herd / 無 auth / bot 誤觸 / 無 rate limit / 跟 auto batch 撞單 / scope creep）；mitigation 成本 > feature value |
-| **OQ-CVA-6** | SaaS 頻率設計 | A. 即時 / B. N 分鐘 / C. 每小時 / D. 每天 / E. 事件驅動 / F. 手動 / H. layered | ✅ **H = Tier 1 (D daily 20:00) + Tier 2 (E event-driven) + Tier 4 (confirm reuse notify)**（2026-07-20 用戶 confirm）|
-| **OQ-CVA-7** | Tier 2 abuse 防護 | 需明確 rate limit / dedup / signature | rate=5min 內同 sheet 3 次上限 / dedup by (sheet_id, record_id, 15min window) / signature = Ragic Workflow secret（reuse notify pattern）|
-| **OQ-CVA-8** | Tier 4 race condition | 同 candidate 多人 confirm 誰贏 | **first-confirm-wins** + Ragic status 加 `confirmed_by` + `confirmed_at` lock |
-| **OQ-CVA-9** | Pilot → SaaS checkpoint | 什麼條件下決定投 SaaS | 提議：**污染率 < 20% + 至少 1 客戶願付 NT$5k/月 + client feedback qualitative 正面**（三條全滿足才投）|
-| **OQ-CVA-10** | Pilot 時效 | 多久做決策 | 提議：**3 個月**（M4 起算）—超過 3 個月無決策 → 資源投別的 |
+| **OQ-CVA-5** | Tier 3 手動 trigger 是否納入未來 SaaS | ✅ **B 砍** | 6 個 abuse 場景（thundering herd / 無 auth / bot 誤觸 / 無 rate limit / 跟 auto batch 撞單 / scope creep）；mitigation 成本 > feature value |
+| **OQ-CVA-6** | SaaS 頻率設計 | ✅ **H layered = Tier 1 (D daily 20:00) + Tier 2 (E event-driven) + Tier 4 (confirm reuse notify)** | 各層各司其職、避免單一頻率極端 trade-off |
+| **OQ-CVA-7** | Tier 2 abuse 防護 | ✅ **rate=5min 同 sheet 3 次上限 / dedup by (sheet_id, record_id, 15min window) / signature = Ragic Workflow secret** | Reuse notify pattern |
+| **OQ-CVA-8** | Tier 4 race condition | ✅ **first-confirm-wins + Ragic status 加 `confirmed_by` + `confirmed_at` lock** | 避免同 candidate 多人 confirm 衝突 |
+| **OQ-CVA-9** | Pilot → SaaS checkpoint | ✅ **污染率 < 20% AND ≥1 客戶願付 NT$5k/月 AND client feedback qualitative 正面**（三條全滿足才投）| 保守三 AND、避免確認偏誤 |
+| **OQ-CVA-10** | Pilot 時效 | ✅ **3 個月**（M4 起算） | 超過 3 個月無決策 → 資源投別處 |
 
 ---
 
@@ -424,3 +424,4 @@ Pilot 是**驗證產品-市場適配**、不是驗證 code；測試策略也降�
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
 | 2026-07-20 | v0.1 | 初版 DRAFT — Scope 用途 B pilot；M0-M5、OQ-CVA-1..10、FMEA skeleton；§12 未來 SaaS 擴展 pre-decision（Tier 3 砍、Tier 1+2+4 頻率、Tier 2 abuse、Tier 4 race）| Claude Code |
+| 2026-07-20 | v0.2 | §1.3 補 Scope 選項比較與 rationale（決策 artifact 進 doc）；OQ-CVA-1..10 全部裁定；狀態 DRAFT → APPROVED；進入 M1 | Claude Code |
