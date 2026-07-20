@@ -1,17 +1,12 @@
-// Claude Opus 4.7 分類抽取 · adaptive thinking · prompt caching
-// ⚠️ Backend self-contained copy — keep in sync with ../../../../../src/classify.ts
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+// 對話分類抽取 · 走 LLMProvider 抽象 · 支援 5 家 provider（Anthropic/OpenAI/Google/Ollama/DeepSeek）
+// ⚠️ Backend self-contained · 未來遷 shared package
 import { AnalysisResult, type AnalysisResultT } from "./schemas.js";
 import type { Tenant } from "./tenant-twh.js";
 import type { ChatMessage } from "./parser.js";
+import type { ChatUsage, LLMProvider } from "../../llm/provider.interface.js";
 
-export interface UsageStats {
+export interface UsageStats extends ChatUsage {
   calls: number;
-  inputTokens: number;
-  outputTokens: number;
-  cacheWriteTokens: number;
-  cacheReadTokens: number;
 }
 
 export function emptyUsage(): UsageStats {
@@ -27,7 +22,7 @@ export function addUsage(total: UsageStats, u: UsageStats): void {
 }
 
 export async function analyzeSegment(
-  client: Anthropic,
+  provider: LLMProvider,
   groupName: string,
   segment: ChatMessage[],
   tenant: Tenant,
@@ -36,39 +31,21 @@ export async function analyzeSegment(
     .map((m) => `#${m.id} [${m.date} ${m.time}] ${m.sender}: ${m.text.replace(/\n/g, " ⏎ ")}`)
     .join("\n");
 
-  const response = await client.messages.parse({
-    model: "claude-opus-4-7",
-    max_tokens: 16000,
-    thinking: { type: "adaptive" },
-    system: [
-      { type: "text", text: tenant.systemPrompt },
-      {
-        type: "text",
-        text: `# 工廠主檔資料（模擬 Ragic 主檔，供實體對應）\n${tenant.masterDataJson}`,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: [
-      {
-        role: "user",
-        content: `群組名稱：${groupName}\n\n請分析以下 ${segment.length} 則訊息：\n${body}`,
-      },
-    ],
-    output_config: { format: zodOutputFormat(AnalysisResult) },
+  const output = await provider.chat({
+    systemPrompt: tenant.systemPrompt,
+    cacheableContext: `# 工廠主檔資料（模擬 Ragic 主檔，供實體對應）\n${tenant.masterDataJson}`,
+    userMessage: `群組名稱：${groupName}\n\n請分析以下 ${segment.length} 則訊息：\n${body}`,
+    outputSchema: AnalysisResult,
   });
 
-  const result = response.parsed_output;
-  if (!result) throw new Error("結構化輸出解析失敗（parsed_output 為空）");
-
-  const u = response.usage;
   return {
-    result,
+    result: output.parsed as AnalysisResultT,
     usage: {
       calls: 1,
-      inputTokens: u.input_tokens,
-      outputTokens: u.output_tokens,
-      cacheWriteTokens: u.cache_creation_input_tokens ?? 0,
-      cacheReadTokens: u.cache_read_input_tokens ?? 0,
+      inputTokens: output.usage.inputTokens,
+      outputTokens: output.usage.outputTokens,
+      cacheWriteTokens: output.usage.cacheWriteTokens,
+      cacheReadTokens: output.usage.cacheReadTokens,
     },
   };
 }

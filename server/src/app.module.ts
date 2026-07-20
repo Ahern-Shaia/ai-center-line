@@ -15,6 +15,7 @@ import { WarroomService } from "./warroom/warroom.service.js";
 import { NotifyModule } from "./notify/notify.module.js";
 import { ConversationAnalysisModule } from "./conversation-analysis/conversation-analysis.module.js";
 import { DataSyncLayerModule } from "./data-sync-layer/data-sync-layer.module.js";
+import { LlmModule } from "./llm/llm.module.js";
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { DataSyncLayerModule } from "./data-sync-layer/data-sync-layer.module.js
       signOptions: { expiresIn: "8h" },
     }),
     NotifyModule,
+    LlmModule,
     ConversationAnalysisModule,
     DataSyncLayerModule,
   ],

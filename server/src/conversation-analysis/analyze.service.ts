@@ -1,23 +1,22 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { eq, sql } from "drizzle-orm";
-import Anthropic from "@anthropic-ai/sdk";
 import { currentTx } from "../db/client.js";
 import { analysisUpload, analysisResult } from "../db/schema.js";
-import { runPipeline } from "./pipeline/index.js";
+import { runPipeline, defaultAnthropicProvider } from "./pipeline/index.js";
 import type { UploadCreatePayload } from "./dto/upload.dto.js";
+import { LlmConfigService } from "../llm/llm-config.service.js";
+import { createLLMProvider } from "../llm/provider.factory.js";
+import type { LLMProvider } from "../llm/provider.interface.js";
 
 // LINE 對話分析 · async job 執行邏輯
 // 對應 docs/modules/conversation-analysis-pilot.md v0.3 §4.4
 // setImmediate 排 background · 不做正式 queue（SaaS 才需要）
+// LLM: 若 tenant 有 llm-config → 用之 · 否則 fallback env ANTHROPIC_API_KEY
 @Injectable()
 export class AnalyzeService {
   private readonly logger = new Logger(AnalyzeService.name);
-  // 單一 Anthropic client · lazy init（缺 ANTHROPIC_API_KEY 也不 crash boot、留給實際 upload 才報）
-  private clientCached: Anthropic | null = null;
-  private client(): Anthropic {
-    if (!this.clientCached) this.clientCached = new Anthropic();
-    return this.clientCached;
-  }
+
+  constructor(private readonly llmConfig: LlmConfigService) {}
 
   async createUpload(
     payload: UploadCreatePayload,
@@ -37,8 +36,6 @@ export class AnalyzeService {
       })
       .returning({ id: analysisUpload.id, status: analysisUpload.status });
     const row = rows[0];
-    // async job · non-blocking · 用 setImmediate 免鎖住 request
-    // 注意：job 內部無 tenant tx（AsyncLocalStorage 出 request scope 就 lose），需自己 withTenant 或用 raw db
     setImmediate(() => {
       void this.runJob(row.id).catch((e) =>
         this.logger.error(`runJob(${row.id}) uncaught: ${String((e as Error).message ?? e)}`),
@@ -47,21 +44,44 @@ export class AnalyzeService {
     return row;
   }
 
-  // Job runner · 不在 tenant tx 內（AsyncLocalStorage scope 早離開）· 直接 raw db
-  // Pilot 階段 upload/result 都無 RLS · 直接讀寫 OK
+  // 從 tenant llm-config 建 provider · fallback env
+  private async resolveProvider(tenantId: string | null): Promise<LLMProvider> {
+    if (tenantId) {
+      const cfg = await this.llmConfig.getForRuntime(tenantId);
+      if (cfg) {
+        this.logger.log(`upload runJob · 用 tenant ${tenantId} 的 llm-config · provider=${cfg.provider} model=${cfg.model}`);
+        return createLLMProvider({
+          provider: cfg.provider,
+          model: cfg.model,
+          apiKey: cfg.apiKey,
+          baseUrl: cfg.baseUrl ?? undefined,
+          temperature: cfg.temperature ?? undefined,
+          maxTokens: cfg.maxTokens ?? undefined,
+        });
+      }
+    }
+    this.logger.log("upload runJob · 無 tenant llm-config · fallback env Anthropic");
+    return defaultAnthropicProvider();
+  }
+
   async runJob(uploadId: number): Promise<void> {
     const { db } = await import("../db/client.js");
     await db.update(analysisUpload).set({ status: "running" }).where(eq(analysisUpload.id, uploadId));
     try {
       const rows = await db
-        .select({ rawContent: analysisUpload.rawContent, tenantSlug: analysisUpload.tenantSlug })
+        .select({
+          rawContent: analysisUpload.rawContent,
+          tenantSlug: analysisUpload.tenantSlug,
+          tenantId: analysisUpload.tenantId,
+        })
         .from(analysisUpload)
         .where(eq(analysisUpload.id, uploadId))
         .limit(1);
       const row = rows[0];
       if (!row) throw new Error(`upload ${uploadId} 不存在`);
 
-      const result = await runPipeline(row.rawContent, row.tenantSlug, this.client());
+      const provider = await this.resolveProvider(row.tenantId);
+      const result = await runPipeline(row.rawContent, row.tenantSlug, provider);
 
       await db.insert(analysisResult).values({
         uploadId,
@@ -91,7 +111,6 @@ export class AnalyzeService {
     }
   }
 
-  // 提供給 controller 讀 upload 列表 / 詳情
   async listUploads() {
     const tx = currentTx();
     return tx

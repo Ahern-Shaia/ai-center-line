@@ -201,6 +201,20 @@ export const dataSyncLog = pgTable("data_sync_log", {
   metadata: jsonb("metadata").notNull().default({}).$type<Record<string, unknown>>(),
 });
 
+// Tenant LLM 設定 · 對應 migration 0007
+// api_key_enc 是 pgcrypto AES-256 加密 · drizzle 走 raw sql 讀寫（見 llm-config.service）
+export const tenantLlmConfig = pgTable("tenant_llm_config", {
+  tenantId: uuid("tenant_id").primaryKey().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  provider: text("provider").notNull()
+    .$type<"anthropic" | "openai" | "google" | "ollama" | "deepseek">(),
+  model: text("model").notNull(),
+  baseUrl: text("base_url"),
+  temperature: numeric("temperature", { precision: 3, scale: 2 }),
+  maxTokens: integer("max_tokens"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedBy: uuid("updated_by").references(() => users.userId),
+});
+
 export const dataSyncWritebackQueue = pgTable("data_sync_writeback_queue", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),

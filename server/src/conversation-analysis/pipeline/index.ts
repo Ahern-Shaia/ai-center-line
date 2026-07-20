@@ -1,10 +1,11 @@
 // runPipeline · pilot backend orchestration
 // LINE 匯出檔 raw text → parser → segments → analyzeSegment × N → 匯總 result
-import Anthropic from "@anthropic-ai/sdk";
 import { parseLineExport, segmentMessages, type ChatMessage } from "./parser.js";
 import { analyzeSegment, addUsage, emptyUsage, type UsageStats } from "./classify.js";
 import { TWH_TENANT, type Tenant } from "./tenant-twh.js";
 import type { AnalysisResultT, Category } from "./schemas.js";
+import type { LLMProvider } from "../../llm/provider.interface.js";
+import { createLLMProvider } from "../../llm/provider.factory.js";
 
 export type EnrichedMessage = ChatMessage & {
   category: Category | null;
@@ -27,10 +28,23 @@ export function resolveTenant(slug: string): Tenant {
   throw new Error(`unknown tenant slug: ${slug}（pilot 階段只支援 twh · M6 才擴充）`);
 }
 
+// Fallback provider · 若 tenant 沒 llm-config · 用 env ANTHROPIC_API_KEY
+export function defaultAnthropicProvider(): LLMProvider {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY 未設 · 且 tenant 無 llm-config · 無 LLM 可用");
+  }
+  return createLLMProvider({
+    provider: "anthropic",
+    model: "claude-opus-4-7",
+    apiKey,
+  });
+}
+
 export async function runPipeline(
   rawText: string,
   tenantSlug: string,
-  client: Anthropic = new Anthropic(),
+  provider: LLMProvider = defaultAnthropicProvider(),
 ): Promise<PipelineResult> {
   const tenant = resolveTenant(tenantSlug);
   const { groupName, messages } = parseLineExport(rawText);
@@ -42,7 +56,7 @@ export async function runPipeline(
   const usage = emptyUsage();
 
   for (const seg of segments) {
-    const { result, usage: u } = await analyzeSegment(client, groupName, seg, tenant);
+    const { result, usage: u } = await analyzeSegment(provider, groupName, seg, tenant);
     for (const c of result.classifications) {
       catMap.set(c.id, { category: c.category, confidence: c.confidence });
     }
