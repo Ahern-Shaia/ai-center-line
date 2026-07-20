@@ -270,16 +270,18 @@ async runJob(uploadId) {
 
 ---
 
-## 6. Stage 1 · M3 Label 機制 · reuse signoff pattern
+## 6. Stage 1 · M3 Label 機制 · 新建 analysis_label module（pattern 抄 signoff）
 
-### 6.1 Signoff pattern audit（Stage 1 M0 完後、M3 開始前 explore）
+### 6.1 Signoff pattern audit（M0.5 完成 · 2026-07-20）
 
-需驗證：
-- signoff 現況是否有 pending → confirmed/rejected 狀態機
-- 是否有 label 對象抽象（sheet_row / analysis_item）
-- 是否可加 label 對象 type：`classification` / `daily_report` / `record`
+**Explore 結論**：signoff module 針對 warroom tickets 表、狀態機 `待簽核→已簽核`、無「對/錯 label」語意。**不能直接 reuse module**、但 **pattern 可 100% 抄**：
 
-**待 M3 開始前 quick explore**（半天）決定 reuse 深度 vs 另建；若 reuse cost > 新建 → 新做 label table
+- 狀態機命名（`confirmStatus` / `confirmedBy` / `confirmedAt` 欄位命名）
+- Role guard 慣例（`@Roles(...)` 四角色系統 · aiproot_admin / consultant / tenant_admin / group_owner · **業助角色對應 group_owner**）
+- RLS by tenant_id + `currentTx()` client pattern
+- Confidence gate 想法（signoff 有 `needsReview` blocked、label 可有 confidence threshold sort）
+
+**M3 實作**：新建 `analysis_label` 表（見 §6.2）+ 新 `LabelService`、pattern 全抄 signoff。**不動 warroom tickets 表**（避免耦合）。
 
 ### 6.2 DB schema · migration 0005
 
