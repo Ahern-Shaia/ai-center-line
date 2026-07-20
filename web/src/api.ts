@@ -308,3 +308,39 @@ export const deleteConvoLabel = (uploadId: number, targetType: string, targetId:
 
 export const getConvoMetrics = (id: number) =>
   req<ConvoMetrics>(`/conversation-analysis/uploads/${id}/metrics`);
+
+// === LLM Config ===
+
+export type LlmProviderName = "anthropic" | "openai" | "google" | "ollama" | "deepseek";
+
+export interface LlmConfigMasked {
+  tenantId: string;
+  provider: LlmProviderName;
+  model: string;
+  apiKeyMasked: string;
+  baseUrl: string | null;
+  temperature: number | null;
+  maxTokens: number | null;
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+export interface LlmConfigGetResponse {
+  config: LlmConfigMasked | null;
+  providerModels: Record<LlmProviderName, string[]>;
+}
+
+export const getLlmConfig = () => req<LlmConfigGetResponse>("/llm-config");
+
+export const putLlmConfig = (payload: {
+  provider: LlmProviderName;
+  model: string;
+  apiKey: string;
+  baseUrl?: string;
+  temperature?: number;
+  maxTokens?: number;
+}) =>
+  req<{ masked: string }>("/llm-config", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });

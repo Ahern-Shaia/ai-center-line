@@ -27,6 +27,7 @@ const NAV = [
     items: [
       { key: "convo-list", label: "分析列表", ic: iconChat, done: true },
       { key: "convo-upload", label: "上傳新對話", ic: iconMedia, done: true },
+      { key: "llm-settings", label: "語言模型設定", ic: iconCog, done: true },
     ],
   },
   {
