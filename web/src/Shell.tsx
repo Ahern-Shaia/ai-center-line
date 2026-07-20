@@ -23,6 +23,13 @@ const NAV = [
     ],
   },
   {
+    group: "AI 對話分析",
+    items: [
+      { key: "convo-list", label: "分析列表", ic: iconChat, done: true },
+      { key: "convo-upload", label: "上傳新對話", ic: iconMedia, done: true },
+    ],
+  },
+  {
     group: "設定",
     items: [
       { key: "depts", label: "部門/成員", ic: iconTeam, done: true },

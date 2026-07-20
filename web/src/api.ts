@@ -183,3 +183,128 @@ export const getWarroom = () => req<Warroom>("/warroom");
 export const getPending = () => req<{ pending: PendingTicket[] }>("/signoff");
 export const confirmSignoff = (ticket_ids: string[]) =>
   req<ConfirmResult>("/signoff", { method: "POST", body: JSON.stringify({ ticket_ids }) });
+
+// === 對話分析 · conversation-analysis pilot ===
+
+export interface ConvoUpload {
+  id: number;
+  filename: string;
+  tenantSlug: string;
+  uploadedAt: string;
+  status: "pending" | "running" | "done" | "failed";
+  errorMessage: string | null;
+  messageCount: number | null;
+  segmentCount: number | null;
+}
+
+export interface ConvoMessage {
+  id: number;
+  date: string;
+  time: string;
+  sender: string;
+  text: string;
+  kind: "text" | "media" | "system";
+  category: string | null;
+  confidence: "high" | "medium" | "low" | null;
+}
+
+export interface ConvoDailyReport {
+  date: string | null;
+  reporter_name: string | null;
+  reporter_code: string | null;
+  line: string | null;
+  machine_code: string | null;
+  work_order: string | null;
+  output_qty: number | null;
+  defect_qty: number | null;
+  work_hours: number | null;
+  overtime_hours: number | null;
+  issues: string | null;
+  source_ids: number[];
+  confidence: "high" | "medium" | "low";
+}
+
+export interface ConvoRecord {
+  category: string;
+  title: string;
+  detail: string;
+  status: "open" | "in_progress" | "resolved" | "info" | null;
+  person: string | null;
+  machine_code: string | null;
+  work_order: string | null;
+  source_ids: number[];
+  confidence: "high" | "medium" | "low";
+}
+
+export interface ConvoLabel {
+  targetType: "classification" | "daily_report" | "record";
+  targetId: string;
+  correct: boolean;
+  note: string | null;
+  labeledBy: string;
+  labeledAt: string;
+}
+
+export interface ConvoUploadDetail {
+  upload: ConvoUpload & {
+    rawContent: string;
+    uploadedBy: string;
+    usageStats: Record<string, unknown> | null;
+  };
+  result: {
+    messages: ConvoMessage[];
+    dailyReports: ConvoDailyReport[];
+    records: ConvoRecord[];
+    createdAt: string;
+  } | null;
+  labels: ConvoLabel[];
+}
+
+export interface ConvoMetrics {
+  contamination_rate: number | null;
+  daily_report_accuracy: number | null;
+  record_accuracy: number | null;
+  label_count: number;
+  by_type: {
+    classification: { target_type: string; total: number; correct_count: number } | null;
+    daily_report: { target_type: string; total: number; correct_count: number } | null;
+    record: { target_type: string; total: number; correct_count: number } | null;
+  };
+}
+
+export const listConvoUploads = () =>
+  req<{ uploads: ConvoUpload[] }>("/conversation-analysis/uploads");
+
+export const getConvoUpload = (id: number) =>
+  req<ConvoUploadDetail>(`/conversation-analysis/uploads/${id}`);
+
+export const createConvoUpload = (payload: {
+  filename: string;
+  rawContent: string;
+  tenantSlug: "twh";
+}) =>
+  req<{ id: number; status: string }>("/conversation-analysis/uploads", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const createConvoLabel = (payload: {
+  uploadId: number;
+  targetType: "classification" | "daily_report" | "record";
+  targetId: string;
+  correct: boolean;
+  note?: string;
+}) =>
+  req<{ id: number }>("/conversation-analysis/labels", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const deleteConvoLabel = (uploadId: number, targetType: string, targetId: string) =>
+  req<{ status: string }>(
+    `/conversation-analysis/labels?uploadId=${uploadId}&targetType=${targetType}&targetId=${encodeURIComponent(targetId)}`,
+    { method: "DELETE" },
+  );
+
+export const getConvoMetrics = (id: number) =>
+  req<ConvoMetrics>(`/conversation-analysis/uploads/${id}/metrics`);
