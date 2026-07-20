@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getConvoUpload,
   getConvoMetrics,
@@ -6,6 +6,7 @@ import {
   type ConvoUploadDetail,
   type ConvoMetrics,
   type ConvoLabel,
+  type ConvoMessage,
   ApiError,
 } from "./api";
 import { useToast } from "./Toast";
@@ -15,367 +16,380 @@ interface Props {
   onBack: () => void;
 }
 
-type Tab = "messages" | "daily_reports" | "records";
-
-const CATEGORY_LABEL: Record<string, string> = {
-  daily_report: "日報",
-  attendance: "出勤",
-  maintenance: "維修",
-  rnd: "研發",
-  procurement: "採購",
-  chitchat: "閒聊",
+// 分類語意 · muted CSS class 對應
+const CAT_META: Record<string, { label: string; cls: string; rec: string }> = {
+  daily_report: { label: "報工日報", cls: "cat-daily",    rec: "rec-daily" },
+  maintenance:  { label: "維保異常", cls: "cat-maint",    rec: "rec-maint" },
+  attendance:   { label: "出勤異動", cls: "cat-attend",   rec: "rec-attend" },
+  rnd:          { label: "研發討論", cls: "cat-rd",       rec: "rec-rd" },
+  procurement:  { label: "採購",     cls: "cat-purchase", rec: "rec-purchase" },
+  chitchat:     { label: "閒聊",     cls: "cat-chat",     rec: "rec-chat" },
 };
 
-const CATEGORY_COLOR: Record<string, string> = {
-  daily_report: "#2b9348",
-  attendance: "#9b59b6",
-  maintenance: "#e74c3c",
-  rnd: "#3498db",
-  procurement: "#f39c12",
-  chitchat: "#95a5a6",
-};
+const CAT_ORDER = ["daily_report", "maintenance", "procurement", "rnd", "attendance", "chitchat"];
 
-const CONFIDENCE_COLOR: Record<string, string> = {
-  high: "#2b9348",
-  medium: "#f39c12",
-  low: "#c62828",
+const STATUS_LABEL: Record<string, string> = {
+  open: "未處理",
+  in_progress: "處理中",
+  resolved: "已解決",
+  info: "資訊",
 };
 
 export default function ConversationAnalysisDetail({ uploadId, onBack }: Props) {
   const [detail, setDetail] = useState<ConvoUploadDetail | null>(null);
   const [metrics, setMetrics] = useState<ConvoMetrics | null>(null);
-  const [tab, setTab] = useState<Tab>("messages");
+  const [filterCat, setFilterCat] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
   const fetchAll = useCallback(async () => {
     try {
-      const [d, m] = await Promise.all([getConvoUpload(uploadId), getConvoMetrics(uploadId).catch(() => null)]);
+      const [d, m] = await Promise.all([
+        getConvoUpload(uploadId),
+        getConvoMetrics(uploadId).catch(() => null),
+      ]);
       setDetail(d);
       setMetrics(m);
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "載入失敗";
-      toast.show(msg, "danger");
+      toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
     } finally {
       setLoading(false);
     }
   }, [uploadId, toast]);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const labelIndex = new Map<string, ConvoLabel>();
-  for (const l of detail?.labels ?? []) {
-    labelIndex.set(`${l.targetType}:${l.targetId}`, l);
-  }
+  const labelIndex = useMemo(() => {
+    const m = new Map<string, ConvoLabel>();
+    for (const l of detail?.labels ?? []) m.set(`${l.targetType}:${l.targetId}`, l);
+    return m;
+  }, [detail]);
 
-  async function handleLabel(targetType: Tab, targetId: string, correct: boolean) {
+  const catCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const m of detail?.result?.messages ?? []) {
+      if (m.category) counts[m.category] = (counts[m.category] ?? 0) + 1;
+    }
+    return counts;
+  }, [detail]);
+
+  async function handleLabel(targetType: ConvoLabel["targetType"], targetId: string, correct: boolean) {
     try {
-      await createConvoLabel({ uploadId, targetType: targetType as ConvoLabel["targetType"], targetId, correct });
+      await createConvoLabel({ uploadId, targetType, targetId, correct });
       toast.show(`已標記為${correct ? "正確" : "錯誤"}`, "ok");
       await fetchAll();
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "標記失敗";
-      toast.show(msg, "danger");
+      toast.show(err instanceof ApiError ? err.message : "標記失敗", "danger");
     }
   }
 
-  if (loading) return <div className="pane"><div style={{ padding: 40, textAlign: "center", color: "#999" }}>載入中...</div></div>;
-  if (!detail) return <div className="pane"><div style={{ padding: 40, textAlign: "center", color: "#c62828" }}>找不到資料</div></div>;
+  if (loading) {
+    return <div className="pane"><div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>載入中…</div></div>;
+  }
+  if (!detail) {
+    return <div className="pane"><div style={{ padding: 40, textAlign: "center", color: "var(--cat-maint)" }}>找不到資料</div></div>;
+  }
 
   const { upload, result } = detail;
+  const messages = result?.messages ?? [];
+  const dailyReports = result?.dailyReports ?? [];
+  const records = result?.records ?? [];
+  const filteredMessages = filterCat ? messages.filter((m) => m.category === filterCat) : messages;
+  const messagesByDate = groupMessagesByDate(filteredMessages);
+  const classifiedCount = messages.filter((m) => m.category != null).length;
+  const coveragePct = messages.length > 0 ? Math.round((classifiedCount / messages.length) * 100) : 0;
 
   return (
     <div className="pane">
       {/* Header */}
-      <div style={{ marginBottom: 20 }}>
-        <button
-          onClick={onBack}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#0066cc",
-            cursor: "pointer",
-            padding: 0,
-            fontSize: 14,
-            marginBottom: 8,
-          }}
-        >
-          ← 返回列表
-        </button>
-        <h1 style={{ margin: 0 }}>{upload.filename}</h1>
-        <div style={{ color: "#666", marginTop: 4, fontSize: 13 }}>
-          #{upload.id} · {upload.tenantSlug} · {upload.messageCount ?? 0} 訊息 · {upload.segmentCount ?? 0} 段 ·
-          上傳於 {new Date(upload.uploadedAt).toLocaleString("zh-TW", { hour12: false })}
+      <div className="detail-hdr">
+        <button className="detail-back" onClick={onBack}>← 返回列表</button>
+        <h1>{upload.filename}</h1>
+        <div className="detail-hdr-meta">
+          <span>#{upload.id}</span>
+          <span>{upload.tenantSlug}</span>
+          <span>{messages.length} 訊息</span>
+          <span>{dailyReports.length} 結構化日報</span>
+          <span>{records.length} 事件記錄</span>
+          <span>上傳於 {new Date(upload.uploadedAt).toLocaleString("zh-TW", { hour12: false })}</span>
         </div>
-      </div>
 
-      {/* Metric bar */}
-      {metrics && metrics.label_count > 0 && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 12,
-            padding: 16,
-            background: "#f5faff",
-            border: "1px solid #b3d7ff",
-            borderRadius: 6,
-            marginBottom: 20,
-          }}
-        >
-          <MetricCard
-            title="訊息分類"
-            value={metrics.contamination_rate != null ? `${((1 - metrics.contamination_rate) * 100).toFixed(0)}%` : "-"}
-            sub={`${metrics.by_type.classification?.total ?? 0} 已標`}
-            color="#2b9348"
-          />
-          <MetricCard
-            title="日報準確"
-            value={metrics.daily_report_accuracy != null ? `${(metrics.daily_report_accuracy * 100).toFixed(0)}%` : "-"}
-            sub={`${metrics.by_type.daily_report?.total ?? 0} 已標`}
-            color="#3498db"
-          />
-          <MetricCard
-            title="記錄準確"
-            value={metrics.record_accuracy != null ? `${(metrics.record_accuracy * 100).toFixed(0)}%` : "-"}
-            sub={`${metrics.by_type.record?.total ?? 0} 已標`}
-            color="#9b59b6"
-          />
-          <MetricCard title="總 label" value={`${metrics.label_count}`} sub="筆" color="#666" />
+        {/* Coverage bar */}
+        <div className="detail-cov">
+          <span className="detail-cov-lbl">訊息分類覆蓋</span>
+          <div className="detail-cov-bar">
+            <div className="detail-cov-fill" style={{ width: `${coveragePct}%` }} />
+          </div>
+          <span className="detail-cov-lbl"><b>{classifiedCount}</b> / {messages.length} · {coveragePct}%</span>
         </div>
-      )}
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 4, borderBottom: "2px solid #e0e0e0", marginBottom: 20 }}>
-        <TabBtn active={tab === "messages"} onClick={() => setTab("messages")}>
-          訊息分類 ({result?.messages.length ?? 0})
-        </TabBtn>
-        <TabBtn active={tab === "daily_reports"} onClick={() => setTab("daily_reports")}>
-          日報 ({result?.dailyReports.length ?? 0})
-        </TabBtn>
-        <TabBtn active={tab === "records"} onClick={() => setTab("records")}>
-          事件記錄 ({result?.records.length ?? 0})
-        </TabBtn>
-      </div>
-
-      {/* Tab content */}
-      {tab === "messages" && (
-        <div>
-          {result?.messages.map((m) => {
-            const label = labelIndex.get(`classification:${m.id}`);
+        {/* Category chip strip */}
+        <div className="detail-chips" role="tablist">
+          <button
+            className={`detail-chip${filterCat === null ? " active" : ""}`}
+            style={filterCat === null ? undefined : { borderColor: "var(--line)", color: "var(--ink-2)" }}
+            onClick={() => setFilterCat(null)}
+          >
+            全部
+            <span className="detail-chip-count">{messages.length}</span>
+          </button>
+          {CAT_ORDER.filter((c) => catCounts[c]).map((c) => {
+            const meta = CAT_META[c];
+            const active = filterCat === c;
+            const catColor = `var(--${meta.cls})`;
             return (
-              <div
-                key={m.id}
-                style={{
-                  padding: 12,
-                  border: "1px solid #eee",
-                  borderLeft: `4px solid ${m.category ? CATEGORY_COLOR[m.category] ?? "#ccc" : "#ccc"}`,
-                  borderRadius: 4,
-                  marginBottom: 8,
-                  background: label ? (label.correct ? "#f0fdf4" : "#fef2f2") : "white",
-                }}
+              <button
+                key={c}
+                className={`detail-chip${active ? " active" : ""}`}
+                style={active ? undefined : { borderColor: catColor, color: catColor }}
+                onClick={() => setFilterCat(active ? null : c)}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, fontSize: 13, color: "#666" }}>
-                  <span style={{ color: "#999" }}>#{m.id}</span>
-                  <span>{m.date} {m.time}</span>
-                  <b style={{ color: "#333" }}>{m.sender}</b>
-                  {m.category && (
-                    <span
-                      style={{
-                        padding: "2px 8px",
-                        background: CATEGORY_COLOR[m.category] ?? "#ccc",
-                        color: "white",
-                        borderRadius: 10,
-                        fontSize: 11,
-                      }}
-                    >
-                      {CATEGORY_LABEL[m.category] ?? m.category}
-                    </span>
-                  )}
-                  {m.confidence && (
-                    <span
-                      style={{
-                        padding: "2px 8px",
-                        border: `1px solid ${CONFIDENCE_COLOR[m.confidence]}`,
-                        color: CONFIDENCE_COLOR[m.confidence],
-                        borderRadius: 10,
-                        fontSize: 11,
-                      }}
-                    >
-                      信心 {m.confidence}
-                    </span>
-                  )}
-                  <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-                    <LabelBtn correct={true} active={label?.correct === true} onClick={() => handleLabel("messages", String(m.id), true)} />
-                    <LabelBtn correct={false} active={label?.correct === false} onClick={() => handleLabel("messages", String(m.id), false)} />
-                  </div>
-                </div>
-                <div style={{ whiteSpace: "pre-wrap", fontSize: 14 }}>{m.text}</div>
-              </div>
+                {meta.label}
+                <span className="detail-chip-count">{catCounts[c]}</span>
+              </button>
             );
           })}
         </div>
+
+        {/* Metrics strip · 4 tile · 一行式 */}
+        {metrics && metrics.label_count > 0 && (
+          <div className="detail-metrics">
+            <MetricTile label="分類正確率"
+              value={metrics.contamination_rate != null ? `${((1 - metrics.contamination_rate) * 100).toFixed(0)}` : "—"}
+              unit={metrics.contamination_rate != null ? "%" : ""}
+              sub={`已標 ${metrics.by_type.classification?.total ?? 0} 則`}
+            />
+            <MetricTile label="日報準確率"
+              value={metrics.daily_report_accuracy != null ? `${(metrics.daily_report_accuracy * 100).toFixed(0)}` : "—"}
+              unit={metrics.daily_report_accuracy != null ? "%" : ""}
+              sub={`已標 ${metrics.by_type.daily_report?.total ?? 0} 筆`}
+            />
+            <MetricTile label="記錄準確率"
+              value={metrics.record_accuracy != null ? `${(metrics.record_accuracy * 100).toFixed(0)}` : "—"}
+              unit={metrics.record_accuracy != null ? "%" : ""}
+              sub={`已標 ${metrics.by_type.record?.total ?? 0} 筆`}
+            />
+            <MetricTile label="總標註"
+              value={`${metrics.label_count}`}
+              unit="筆"
+              sub="人工回饋"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* §1 結構化報工日報 */}
+      {dailyReports.length > 0 && (
+        <section className="detail-sec">
+          <div className="detail-sec-hdr">
+            <div className="detail-sec-title">
+              結構化報工日報
+              <span className="detail-sec-title-mark">→ Ragic 報工表單</span>
+            </div>
+            <div className="detail-sec-count">{dailyReports.length} 筆 · 高信心 {dailyReports.filter((d) => d.confidence === "high").length}</div>
+          </div>
+          <table className="detail-tbl">
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>回報人</th>
+                <th>工單</th>
+                <th>機台</th>
+                <th>備註 / 異常</th>
+                <th className="num">工時</th>
+                <th>信心</th>
+                <th>來源</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {dailyReports.map((d, idx) => {
+                const label = labelIndex.get(`daily_report:${idx}`);
+                return (
+                  <tr key={idx}>
+                    <td className="mono">{d.date ?? <span className="null">—</span>}</td>
+                    <td>
+                      {d.reporter_name ?? <span className="null">—</span>}
+                      {d.reporter_code && <span className="detail-personcode">{d.reporter_code}</span>}
+                    </td>
+                    <td className="mono">{d.work_order ?? <span className="null">—</span>}</td>
+                    <td className="mono">{d.machine_code ?? <span className="null">—</span>}</td>
+                    <td>{d.issues ?? <span className="null">—</span>}</td>
+                    <td className="num">{d.work_hours != null ? d.work_hours : <span className="null">—</span>}</td>
+                    <td><ConfPill c={d.confidence} /></td>
+                    <td className="src">#{d.source_ids.join(", #")}</td>
+                    <td className="actions">
+                      <LabelToggle
+                        active={label != null}
+                        correct={label?.correct}
+                        onCorrect={() => handleLabel("daily_report", String(idx), true)}
+                        onWrong={() => handleLabel("daily_report", String(idx), false)}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
       )}
 
-      {tab === "daily_reports" && (
-        <div>
-          {result?.dailyReports.map((d, idx) => {
-            const label = labelIndex.get(`daily_report:${idx}`);
-            return (
-              <div
-                key={idx}
-                style={{
-                  padding: 16,
-                  border: "1px solid #eee",
-                  borderLeft: "4px solid #2b9348",
-                  borderRadius: 4,
-                  marginBottom: 12,
-                  background: label ? (label.correct ? "#f0fdf4" : "#fef2f2") : "white",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div style={{ fontSize: 13, color: "#666" }}>
-                    #{idx} · {d.date} · <b>{d.reporter_name ?? "-"}</b>
-                    {d.reporter_code && <span style={{ marginLeft: 4, color: "#999" }}>({d.reporter_code})</span>}
-                    <span style={{ marginLeft: 8, padding: "2px 8px", border: `1px solid ${CONFIDENCE_COLOR[d.confidence]}`, color: CONFIDENCE_COLOR[d.confidence], borderRadius: 10, fontSize: 11 }}>
-                      {d.confidence}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <LabelBtn correct={true} active={label?.correct === true} onClick={() => handleLabel("daily_reports", String(idx), true)} />
-                    <LabelBtn correct={false} active={label?.correct === false} onClick={() => handleLabel("daily_reports", String(idx), false)} />
-                  </div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px", fontSize: 13 }}>
-                  {d.work_order && (<><b>工單</b><span>{d.work_order}</span></>)}
-                  {d.machine_code && (<><b>工位</b><span>{d.machine_code}</span></>)}
-                  {d.line && (<><b>產線</b><span>{d.line}</span></>)}
-                  {d.output_qty != null && (<><b>產量</b><span>{d.output_qty}</span></>)}
-                  {d.defect_qty != null && (<><b>不良</b><span>{d.defect_qty}</span></>)}
-                  {d.work_hours != null && (<><b>工時</b><span>{d.work_hours} 小時</span></>)}
-                  {d.overtime_hours != null && (<><b>加班</b><span>{d.overtime_hours} 小時</span></>)}
-                  {d.issues && (<><b>備註</b><span>{d.issues}</span></>)}
-                  <b>來源訊息</b><span style={{ color: "#999", fontSize: 12 }}>#{d.source_ids.join(", #")}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {tab === "records" && (
-        <div>
-          {result?.records.map((r, idx) => {
-            const label = labelIndex.get(`record:${idx}`);
-            return (
-              <div
-                key={idx}
-                style={{
-                  padding: 16,
-                  border: "1px solid #eee",
-                  borderLeft: `4px solid ${CATEGORY_COLOR[r.category] ?? "#ccc"}`,
-                  borderRadius: 4,
-                  marginBottom: 12,
-                  background: label ? (label.correct ? "#f0fdf4" : "#fef2f2") : "white",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <span
-                        style={{
-                          padding: "2px 8px",
-                          background: CATEGORY_COLOR[r.category] ?? "#ccc",
-                          color: "white",
-                          borderRadius: 10,
-                          fontSize: 11,
-                        }}
-                      >
-                        {CATEGORY_LABEL[r.category] ?? r.category}
-                      </span>
-                      {r.status && (
-                        <span style={{ padding: "2px 8px", background: "#e8e8e8", borderRadius: 10, fontSize: 11 }}>
-                          {r.status}
-                        </span>
-                      )}
-                      <span style={{ padding: "2px 8px", border: `1px solid ${CONFIDENCE_COLOR[r.confidence]}`, color: CONFIDENCE_COLOR[r.confidence], borderRadius: 10, fontSize: 11 }}>
-                        {r.confidence}
-                      </span>
+      {/* §2 事件記錄 */}
+      {records.length > 0 && (
+        <section className="detail-sec">
+          <div className="detail-sec-hdr">
+            <div className="detail-sec-title">
+              事件記錄
+              <span className="detail-sec-title-mark">→ Ragic 待辦 / KM</span>
+            </div>
+            <div className="detail-sec-count">{records.length} 筆</div>
+          </div>
+          <div className="detail-records">
+            {records.map((r, idx) => {
+              const meta = CAT_META[r.category] ?? { label: r.category, cls: "cat-chat", rec: "rec-chat" };
+              const label = labelIndex.get(`record:${idx}`);
+              return (
+                <div key={idx} className={`detail-record ${meta.rec}`}>
+                  <div className="detail-record-head">
+                    <span className={`cat ${meta.cls}`}>{meta.label}</span>
+                    {r.status && <span className={`stat stat-${r.status}`}>{STATUS_LABEL[r.status] ?? r.status}</span>}
+                    <ConfPill c={r.confidence} />
+                    <div style={{ marginLeft: "auto" }}>
+                      <LabelToggle
+                        active={label != null}
+                        correct={label?.correct}
+                        onCorrect={() => handleLabel("record", String(idx), true)}
+                        onWrong={() => handleLabel("record", String(idx), false)}
+                      />
                     </div>
-                    <div style={{ fontWeight: 500, fontSize: 15 }}>{r.title}</div>
                   </div>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <LabelBtn correct={true} active={label?.correct === true} onClick={() => handleLabel("records", String(idx), true)} />
-                    <LabelBtn correct={false} active={label?.correct === false} onClick={() => handleLabel("records", String(idx), false)} />
+                  <div className="detail-record-title">{r.title}</div>
+                  <div className="detail-record-body">{r.detail}</div>
+                  <div className="detail-record-foot">
+                    {r.person && <span><b>人員</b>{r.person}</span>}
+                    {r.machine_code && <span><b>機台</b>{r.machine_code}</span>}
+                    {r.work_order && <span><b>工單</b>{r.work_order}</span>}
+                    <span className="src">來源 #{r.source_ids.join(", #")}</span>
                   </div>
                 </div>
-                <div style={{ fontSize: 13, color: "#333", marginBottom: 8 }}>{r.detail}</div>
-                <div style={{ fontSize: 12, color: "#666", display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  {r.person && <span>人員：{r.person}</span>}
-                  {r.machine_code && <span>工位：{r.machine_code}</span>}
-                  {r.work_order && <span>工單：{r.work_order}</span>}
-                  <span style={{ color: "#999" }}>來源：#{r.source_ids.join(", #")}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </section>
       )}
+
+      {/* §3 訊息時間軸 */}
+      <section className="detail-sec">
+        <div className="detail-sec-hdr">
+          <div className="detail-sec-title">
+            訊息時間軸
+            {filterCat && <span className="detail-sec-title-mark">已篩選：{CAT_META[filterCat]?.label ?? filterCat}</span>}
+          </div>
+          <div className="detail-sec-count">
+            {filteredMessages.length} / {messages.length} 則
+          </div>
+        </div>
+        <div className="detail-timeline">
+          {messagesByDate.map(([date, msgs]) => (
+            <div key={date}>
+              <div className="detail-time-daterow">
+                <span>{date}</span>
+                <div className="detail-time-daterow-hairline" />
+                <span style={{ fontWeight: 400, color: "var(--ink-3)" }}>{msgs.length} 則</span>
+              </div>
+              {msgs.map((m) => {
+                const meta = m.category ? CAT_META[m.category] : null;
+                const label = labelIndex.get(`classification:${m.id}`);
+                const isLowConf = m.confidence === "low";
+                return (
+                  <div key={m.id} className={`detail-time-row${isLowConf ? " contaminated" : ""}`}>
+                    <div className="detail-time-time">{m.time}</div>
+                    <div className="detail-time-sender">{m.sender}</div>
+                    <div className="detail-time-text">
+                      {m.kind === "media" ? <span className="media">{m.text}</span> : m.text}
+                    </div>
+                    <div className="detail-time-cat">
+                      {meta ? (
+                        <>
+                          <span className={`cat ${meta.cls}`}>{meta.label}</span>
+                          {m.confidence && m.confidence !== "high" && (
+                            <ConfPill c={m.confidence} />
+                          )}
+                        </>
+                      ) : (
+                        <span className="src">未分類</span>
+                      )}
+                      <LabelToggle
+                        active={label != null}
+                        correct={label?.correct}
+                        onCorrect={() => handleLabel("classification", String(m.id), true)}
+                        onWrong={() => handleLabel("classification", String(m.id), false)}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
 
-function MetricCard({ title, value, sub, color }: { title: string; value: string; sub: string; color: string }) {
+function MetricTile({ label, value, unit, sub }: { label: string; value: string; unit?: string; sub?: string }) {
   return (
-    <div style={{ padding: 12, background: "white", border: "1px solid #e0e0e0", borderRadius: 4, textAlign: "center" }}>
-      <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>{title}</div>
-      <div style={{ fontSize: 24, fontWeight: 600, color, lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>{sub}</div>
+    <div className="detail-metric">
+      <div className="detail-metric-lbl">{label}</div>
+      <div className="detail-metric-val">{value}{unit && <span className="u">{unit}</span>}</div>
+      {sub && <div className="detail-metric-sub">{sub}</div>}
     </div>
   );
 }
 
-function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function ConfPill({ c }: { c: "high" | "medium" | "low" | null | undefined }) {
+  if (!c) return null;
+  const label = c === "high" ? "高信心" : c === "medium" ? "中信心" : "低信心";
+  return <span className={`conf conf-${c}`}>{label}</span>;
+}
+
+function LabelToggle({
+  active,
+  correct,
+  onCorrect,
+  onWrong,
+}: {
+  active: boolean;
+  correct: boolean | undefined;
+  onCorrect: () => void;
+  onWrong: () => void;
+}) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "10px 16px",
-        background: "none",
-        border: "none",
-        borderBottom: active ? "3px solid #0066cc" : "3px solid transparent",
-        color: active ? "#0066cc" : "#666",
-        cursor: "pointer",
-        fontSize: 14,
-        fontWeight: active ? 500 : 400,
-        marginBottom: -2,
-      }}
-    >
-      {children}
-    </button>
+    <div className={`detail-lbl${active ? " active" : ""}`}>
+      <button
+        className={`detail-lbl-btn correct${correct === true ? " on" : ""}`}
+        onClick={onCorrect}
+        title="標記為正確"
+      >
+        正確
+      </button>
+      <button
+        className={`detail-lbl-btn wrong${correct === false ? " on" : ""}`}
+        onClick={onWrong}
+        title="標記為錯誤"
+      >
+        錯誤
+      </button>
+    </div>
   );
 }
 
-function LabelBtn({ correct, active, onClick }: { correct: boolean; active: boolean; onClick: () => void }) {
-  const bg = active ? (correct ? "#2b9348" : "#c62828") : "white";
-  const fg = active ? "white" : correct ? "#2b9348" : "#c62828";
-  const border = correct ? "#2b9348" : "#c62828";
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "4px 12px",
-        background: bg,
-        color: fg,
-        border: `1px solid ${border}`,
-        borderRadius: 4,
-        cursor: "pointer",
-        fontSize: 12,
-      }}
-    >
-      {correct ? "✓ 正確" : "✗ 錯誤"}
-    </button>
-  );
+function groupMessagesByDate(messages: ConvoMessage[]): [string, ConvoMessage[]][] {
+  const byDate = new Map<string, ConvoMessage[]>();
+  for (const m of messages) {
+    const arr = byDate.get(m.date) ?? [];
+    arr.push(m);
+    byDate.set(m.date, arr);
+  }
+  return Array.from(byDate.entries());
 }
