@@ -558,6 +558,97 @@ M4 收尾走一次完整流程：登入 → 上傳 mock 檔 → 等分析 → �
 
 ---
 
+## 17. 競品分析（Landscape scan + 定位 · 2026-07-20）
+
+> **背景重整**：2026-07-20 用戶揭露 `work_work/weyver/`（我方 Ragic 替代品）+ `LINE CRM 企業智能平台 開發需求文件.pdf`（EEA 超級平台總設計 · 對話分析為 §5.12「大案」）→ 原上輪 v0.3 「Ragic 是最大平台威脅」判斷被中和 · 定位重新校準
+
+### 17.1 四大類 Landscape
+
+| 類別 | 代表 | 距離我方 | 威脅度 |
+|---|---|---|---|
+| **L1 · 直接對打**（LINE→AI 抽取→ERP 結構化）| LINE 官方「訊息摘要」（免費）· 江宇德 DIY 提示詞（Threads/vocus） | 摘要不深、非結構化、無 ERP · DIY 只解個人 productivity | 低（互補 / 低價替代）|
+| **L2 · 鄰近 LINE 客服 SaaS** | 超人氣 / 麥當勞線上 / CYBERBIZ AI / Cresclab · Chat-Data / GPTBots / SleekFlow | **全部對外客服、非內部群管理** | 低（不同用戶群）|
+| **L3 · Slack 對應 · reference model** | Unthread / Question Base / ClearFeed / Zendesk Slack App | Slack 生態成熟、LINE 生態幾乎沒 equivalent | 0 威脅（可借 pattern）|
+| **L4 · Ragic AI Agent** | Ragic 官方 AI（data input assistant · form design helper · 內建 AI Agent 報價/客服/知識庫）| **原視為最大平台威脅** · 但 EEA PDF §2.6 已明確定位「Ragic AI Agent 僅作合作關係風險對沖、輕量補充」+ 我方 weyver 走取代路線 | **中→低**（見 §17.3）|
+
+### 17.2 我方產品線架構（一次講清）
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ EEA 超級平台（我方主戰場 · LINE CRM 需求文件 §2.2 終局願景） │
+│                                                              │
+│  SAM 銷售助理管理（8 模組已 ready · 客戶地圖/列表/銷售統計   │
+│  /聯絡人/業務通訊/互動 Timeline/市場觀察/我的 LINE 助手）    │
+│                                                              │
+│  ┌────────────┐   ┌────────────────┐   ┌────────────┐        │
+│  │ ERP 接頭層 │→ │ 資料/AI 智能層 │ ←│ 通訊接頭層 │        │
+│  │            │   │ ← ai-center-  │   │            │        │
+│  │ · Ragic    │   │   line 主戰場 │   │ · LINE     │        │
+│  │ · weyver ⭐│   │               │   │ · WhatsApp │        │
+│  │ · SAP/鼎新 │   │ · 對話分析     │   │ · WeChat   │        │
+│  │            │   │ · 中介資料層   │   │ · Telegram │        │
+│  └────────────┘   │ · KM 萃取     │   └────────────┘        │
+│                    └────────────────┘                        │
+└──────────────────────────────────────────────────────────────┘
+
+⭐ weyver = 我方自研 Ragic 替代品（Phase 1 工程起跑 · Solo R1 2-2.5 年）
+```
+
+**三大定位事實**：
+
+1. **ai-center-line 是 ERP-agnostic 的資料/AI/通訊層** · 不綁 Ragic 或 weyver · PDF §2.3「三層架構 · ERP 交易層唯讀存取、不寫入」是硬紀律
+2. **對話分析 pilot = EEA PDF §5.12「LINE 群組對話分析與 KM 萃取（大案）」的技術驗證前導** · 不是獨立 SaaS · Stage 2 併入 EEA · 未來完整版加「LINE 官方帳號被動監聽群組 + webhook」= 完整 §5.12
+3. **notify 模組 SHIPPED = EEA PDF §4 P0** · 已完成 · 未來將依 PDF §8 三階段規範遷移到中介資料層 5.1
+
+### 17.3 Ragic 平台威脅重新評估（原 v0.3 判斷 supersede）
+
+| 面向 | v0.3 判斷 | v0.4 修正 |
+|---|---|---|
+| Ragic native 加 LINE ingest + AI 抽取 | 「最大平台威脅、我方 dead」 | **中和** · 若 Ragic 做、EEA 客戶已跑我方 weyver 或準備遷移；且 EEA PDF §2.6 明確 Ragic AI Agent 是**風險對沖**（歸屬客戶帳號、非我方資產） |
+| 客戶被 Ragic 綁定 | 中風險 | **weyver 中和** · pipeline 十家客戶目標之一就是脫離 Ragic |
+| 定位語言 | 「Ragic 加值服務、避免被封殺」 | **改為「Ragic 遷移 partner + weyver 上位」** · 更主動、不 defensive |
+
+### 17.4 未來威脅監控 SOP
+
+| 監控項 | 頻率 | 觸發動作 |
+|---|---|---|
+| Ragic 官方產品路線圖（AI 相關）| 每季 | 若 Ragic native 加 LINE 對話 ingest → EEA weyver 遷移加速 · pipeline 溝通升級「Ragic 遷移窗口」|
+| LINE 官方新 AI 功能（摘要深度 / 群組分析 / API）| 每季 | 若 LINE 加更深 AI → 客戶「DIY 更容易」→ pilot 定價與 differentiation 重審 |
+| 台灣本地新對手（LINE→ERP 抽取 SaaS）| 每半年 | 若出現新 direct competitor → 加速 pilot 落地 + 差異化（工廠 domain / 主檔 grounding / 中介資料層）|
+| Weyver 產品路線圖（避免功能對打）| 每月（同人 Solo 開發、易同步）| ai-center-line 與 weyver 對話分析 / KM 相關功能**必須 sync**、避免同時做重疊 |
+| EEA/SAM 8 模組演進 | 每月 | pilot 對話分析要能 fit SAM 「⑧ 我的 LINE 助手」既有 tab、不另起爐灶（PDF §5.3 rule）|
+
+### 17.5 我方 differentiation（相對所有競品）
+
+1. **工廠 domain 專精**（主檔 grounding · 詞庫 · glossary · person/machine/work_order code 對應）— L1/L2 都做不到
+2. **雙方向 pair**（notify Ragic→LINE 已 SHIPPED · 對話分析 LINE→Ragic pilot 中）— 對照 Slack 生態、Ragic 生態都缺這個 combo
+3. **EEA 超級平台會員** · 客戶買的是「不管換 ERP / 換通訊軟體、體驗一致」的中介層價值（PDF §2.2）— 這是純 SaaS 對手做不出來的定位
+4. **weyver 內建路線** · 對長期客戶 = 「Ragic 遷 weyver + 對話分析 native」= 純 SaaS 對手更難追
+
+### 17.6 隱形競爭 · 客戶 DIY 替代品
+
+**最大低價位威脅仍是「客戶自己複製 LINE 對話 → 貼 ChatGPT」**（L1 江宇德博客路徑）：
+
+- **Pilot 定價敏感度**（OQ-CVA-4 一次性 NT$10-30k / OQ-CVA-9 SaaS ≥NT$5k/月）需回答「我 ChatGPT 訂閱 NT$600/月為什麼要買你的」
+- **回答重點**：多群 + 團隊 confirm + 主檔對應 + audit 進 Ragic/weyver + metric 量化 —— 都是個人 DIY 做不到的企業級價值
+- **反面說**：如果客戶只覺得「摘要就夠」= 不是我方 target customer · sales qualify 要抓緊
+
+### 17.7 Sources（本輪 landscape scan）
+
+**Web search**：
+- [LINE Bot 群組聊天摘要生成器 · LINE Corp Engineering](https://engineering.linecorp.com/zh-hant/blog/linebot-chatgpt)
+- [跟不上群組對話？LINE AI 自動整理聊天室 · INSIDE](https://www.inside.com.tw/article/33257-line-ai-summary-feature)
+- [用 LINE 群組討論卻找不到重要訊息 · 江宇德 · Threads](https://www.threads.com/@jiang_yude_coach/post/DRGY05dEjMw/)
+- [Slack AI Integration Tools 2026 · ClearFeed](https://clearfeed.ai/blogs/slack-ai-integration-tools)
+- [Slack Ticketing Tools 2026 · Unthread](https://unthread.io/blog/slack-ticketing-tools-enterprise/)
+- [Ragic AI](https://www.ragic.com/intl/zh-TW/doc/140/ragic-ai) · [Ragic 產品路線圖](https://www.ragic.com/intl/zh-TW/blog/446/ragic-product-roadmap-ai-report-ui-improvement)
+
+**內部文件**：
+- `~/Downloads/LINE CRM 企業智能平台 開發需求文件.pdf`（EEA 超級平台總設計 · 2026-07 · §2.2 終局願景 / §4 P0 / §5.1-5.12 P1 大案清單 / §6.1 AI 對話分析系統 / §7 拍板決策 / §8 三階段切換 / §11 一句話總結）
+- `~/Documents/work_work/weyver/README.md`（Weyver 織雲產品 · Ragic 替代 · Solo Phase 1）
+- `~/Documents/work_work/weyver/CLAUDE.md`（Weyver 專案記憶）
+- 上輪反思：[`對話分析功能-可行性反思-2026-07-20.md`](../對話分析功能-可行性反思-2026-07-20.md)
+
 ## 16. 變更紀錄
 
 | 日期 | 版本 | 變更 | 作者 |
@@ -565,3 +656,4 @@ M4 收尾走一次完整流程：登入 → 上傳 mock 檔 → 等分析 → �
 | 2026-07-20 | v0.1 | 初版 DRAFT — Scope 用途 B pilot（CLI + PDF/Excel + Google Sheet label）；M0-M5、OQ-CVA-1..10、FMEA skeleton；§12 未來 SaaS 擴展 | Claude Code |
 | 2026-07-20 | v0.2 | §1.3 補 Scope 選項比較與 rationale；OQ-CVA-1..10 全裁定；狀態 DRAFT → APPROVED；進 M1 | Claude Code |
 | 2026-07-20 | v0.3 | **大改 · scope 從 CLI+PDF/Excel 改為 web-based · leverage 現有後台**（auth/shell/signoff/warroom/notify）· 加**兩階段 pilot**（Stage 1 mock validation + Stage 2 real client）· M1-M5 重切為 M1-M8 · 新增 OQ-CVA-11..15 · OQ-CVA-1/3 supersede · §2 加 asset inventory · §4-7 Stage 1 sub-task 詳細 · §8 Stage 2 sketch · §15 FMEA 分 Stage 1/2 | Claude Code |
+| 2026-07-20 | v0.4 | **戰略對齊 · 用戶揭露 EEA/SAM 平台 + weyver Ragic 替代品** · 加 §17 競品分析（4 大類 landscape + 產品線架構圖 + Ragic 威脅重新評估 supersede v0.3 判斷 + 監控 SOP + differentiation + 客戶 DIY 隱形競爭 + sources）· pilot 重新定位為「EEA PDF §5.12 大案技術驗證前導」不是獨立 SaaS · Stage 2 併入 EEA 而非自建 · ⚠️ M1-M5 sub-task / OQ-CVA-1..15 未動、下輪 rev 再對齊 EEA §5.1 中介資料層架構（P1 起手式）| Claude Code |
