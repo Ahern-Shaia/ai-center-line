@@ -7,7 +7,7 @@ import Onboarding from "./kb/Onboarding";
 import MediaLibrary from "./kb/MediaLibrary";
 import KnowledgeBase from "./kb/KnowledgeBase";
 import CustomerMap from "./kb/CustomerMap";
-import DepartmentsMembers from "./settings/DepartmentsMembers";
+import DepartmentsMembers from "./settings/depts-members/Page";
 import TenantSettings from "./settings/TenantSettings";
 import AuditLog from "./settings/AuditLog";
 import ConversationAnalysisUpload from "./convo-analysis/Upload";

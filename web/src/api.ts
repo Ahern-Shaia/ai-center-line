@@ -433,3 +433,91 @@ export const patchLineGroup = (groupRegistryId: string, patch: {
 
 export const probeLineGroupName = (groupRegistryId: string) =>
   req<{ displayName: string | null }>(`/line-groups/${groupRegistryId}/probe-name`, { method: "POST" });
+
+// === Tenant Admin Console (aiproot 統包客戶方組織) ===
+
+export type UserRole = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owner";
+
+export interface DepartmentDto {
+  departmentId: string;
+  tenantId: string;
+  departmentName: string;
+  displayName: string | null;
+  lineGroupId: string | null;
+  extractionSchema: string | null;
+  ragicTable: string | null;
+  memberCount: number;
+  groupBindingCount: number;
+}
+
+export interface TenantUserDto {
+  userId: string;
+  tenantId: string | null;
+  role: UserRole;
+  departmentId: string | null;
+  departmentName: string | null;
+  email: string | null;
+  displayName: string | null;
+  lineUserId: string | null;
+  createdAt: string;
+  hasPassword: boolean;
+}
+
+export const listDepartments = (tenantId: string) =>
+  req<{ departments: DepartmentDto[] }>(`/tenant-admin/departments?tenantId=${encodeURIComponent(tenantId)}`);
+
+export const createDepartment = (payload: { tenantId: string; departmentName: string; displayName?: string }) =>
+  req<{ department: DepartmentDto }>("/tenant-admin/departments", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const updateDepartment = (departmentId: string, payload: {
+  tenantId: string;
+  departmentName?: string;
+  displayName?: string | null;
+}) =>
+  req<{ department: DepartmentDto }>(`/tenant-admin/departments/${departmentId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+
+export const deleteDepartment = (departmentId: string, tenantId: string) =>
+  req<{ status: string }>(`/tenant-admin/departments/${departmentId}`, {
+    method: "DELETE",
+    body: JSON.stringify({ tenantId }),
+  });
+
+export const listTenantUsers = (tenantId: string) =>
+  req<{ users: TenantUserDto[] }>(`/tenant-admin/users?tenantId=${encodeURIComponent(tenantId)}`);
+
+export const createTenantUser = (payload: {
+  tenantId: string;
+  email: string;
+  role: UserRole;
+  displayName?: string;
+  departmentId?: string;
+  password: string;
+}) =>
+  req<{ user: TenantUserDto }>("/tenant-admin/users", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const updateTenantUser = (userId: string, payload: {
+  tenantId: string;
+  role?: UserRole;
+  displayName?: string | null;
+  departmentId?: string | null;
+  password?: string;
+}) =>
+  req<{ user: TenantUserDto }>(`/tenant-admin/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+
+export const deleteTenantUser = (userId: string, tenantId: string) =>
+  req<{ status: string }>(`/tenant-admin/users/${userId}`, {
+    method: "DELETE",
+    body: JSON.stringify({ tenantId }),
+  });
