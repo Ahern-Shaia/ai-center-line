@@ -89,13 +89,22 @@ export class AnalyzeService {
         dailyReports: result.dailyReports,
         records: result.records,
       });
+      // 補進 provider / model 給 cost service 用 · runtime 讀 provider 物件
+      const providerName = (provider as unknown as { name?: string }).name ?? "anthropic";
+      const modelName = (provider as unknown as { model?: string; cfg?: { model?: string } }).cfg?.model
+        ?? (provider as unknown as { model?: string }).model
+        ?? "claude-opus-4-7";
       await db
         .update(analysisUpload)
         .set({
           status: "done",
           messageCount: result.messageCount,
           segmentCount: result.segmentCount,
-          usageStats: result.usage as unknown as Record<string, unknown>,
+          usageStats: {
+            ...(result.usage as unknown as Record<string, unknown>),
+            provider: providerName,
+            model: modelName,
+          } as Record<string, unknown>,
         })
         .where(eq(analysisUpload.id, uploadId));
       this.logger.log(

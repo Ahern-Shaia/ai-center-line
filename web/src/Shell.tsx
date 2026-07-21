@@ -55,9 +55,10 @@ const NAV: Array<{
   },
   {
     group: "AIPROOT 管理",
-    roles: ["aiproot_admin"],
+    roles: ["aiproot_admin", "consultant"],
     items: [
       { key: "onboard-tenant", label: "開通新租戶", ic: iconTeam, done: true },
+      { key: "cost-dashboard", label: "AI 成本管理", ic: iconGauge, done: true },
     ],
   },
 ];

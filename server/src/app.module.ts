@@ -22,6 +22,7 @@ import { LineIngestModule } from "./line-ingest/line-ingest.module.js";
 import { TenantAdminModule } from "./tenant-admin/tenant-admin.module.js";
 import { TenantProvisioningModule } from "./tenant-provisioning/tenant-provisioning.module.js";
 import { PermissionModule } from "./permission/permission.module.js";
+import { AiprootConsoleModule } from "./aiproot-console/aiproot-console.module.js";
 import { PermissionGuard } from "./permission/permission.guard.js";
 
 @Module({
@@ -39,6 +40,7 @@ import { PermissionGuard } from "./permission/permission.guard.js";
     TenantAdminModule,
     TenantProvisioningModule,
     PermissionModule,
+    AiprootConsoleModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [

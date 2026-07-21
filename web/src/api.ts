@@ -618,3 +618,20 @@ export const listPermissions = () =>
   req<{ permissions: PermissionDto[] }>("/permissions");
 export const listRoles = () =>
   req<{ roles: RoleDto[] }>("/roles");
+
+// === AI Cost Management ===
+
+export interface CostSummaryDto {
+  totals: {
+    today: { cost: number; tokens: number; calls: number };
+    month: { cost: number; tokens: number; calls: number };
+    all:   { cost: number; tokens: number; calls: number };
+  };
+  byTenant: Array<{ tenantId: string | null; tenantName: string; cost: number; tokens: number; calls: number; percent: number }>;
+  byProvider: Array<{ provider: string; model: string; cost: number; tokens: number; calls: number; percent: number }>;
+  trend30d: Array<{ date: string; cost: number; tokens: number }>;
+  pricingTable: Array<{ provider: string; model: string; inputPer1M: number; outputPer1M: number; cacheReadPer1M: number; cacheWritePer1M: number }>;
+}
+
+export const getCostSummary = () =>
+  req<CostSummaryDto>("/aiproot-console/cost/summary");

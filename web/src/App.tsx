@@ -16,6 +16,7 @@ import ConversationAnalysisDetail from "./convo-analysis/Detail";
 import LlmSettings from "./settings/LlmSettings";
 import LineBots from "./line-bots/Page";
 import OnboardWizard from "./aiproot-console/OnboardWizard";
+import CostDashboard from "./aiproot-console/CostDashboard";
 import FirstLoginChangePassword from "./auth/FirstLoginChangePassword";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
 import { getSession, logout, login, type Session } from "./api";
@@ -36,7 +37,8 @@ type Route =
   | { page: "convo-detail"; uploadId: number }
   | { page: "llm-settings" }
   | { page: "line-bots" }
-  | { page: "onboard-tenant" };
+  | { page: "onboard-tenant" }
+  | { page: "cost-dashboard" };
 
 // crumb 顯示上層分類（非當前頁名），避免與 pane h1 重複。
 // pane h1 對應 PAGE_TITLE，同步設定 document.title 提供瀏覽器 tab 辨識。
@@ -56,6 +58,7 @@ const CRUMB: Record<Route["page"], string> = {
   "llm-settings": "AI 對話分析",
   "line-bots": "通訊接頭層",
   "onboard-tenant": "AIPROOT 管理",
+  "cost-dashboard": "AIPROOT 管理",
 };
 
 const PAGE_TITLE: Record<Route["page"], string> = {
@@ -74,6 +77,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "llm-settings": "語言模型設定",
   "line-bots": "LINE 機器人管理",
   "onboard-tenant": "開通新租戶",
+  "cost-dashboard": "AI 成本管理",
 };
 
 export default function App() {
@@ -132,9 +136,11 @@ export default function App() {
       if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
       setRoute({ page: "line-bots" });
     } else if (key === "onboard-tenant") {
-      // AIPROOT 管理 · 只 aiproot_admin
       if (session.role !== "aiproot_admin") return;
       setRoute({ page: "onboard-tenant" });
+    } else if (key === "cost-dashboard") {
+      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
+      setRoute({ page: "cost-dashboard" });
     }
   };
 
@@ -182,6 +188,7 @@ export default function App() {
           {route.page === "llm-settings" && <LlmSettings />}
           {route.page === "line-bots" && <LineBots />}
           {route.page === "onboard-tenant" && <OnboardWizard />}
+          {route.page === "cost-dashboard" && <CostDashboard />}
         </div>
       </Shell>
     </ToastProvider>
