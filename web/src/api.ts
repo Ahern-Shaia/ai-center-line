@@ -127,11 +127,14 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   let res: Response;
   const url = API_BASE ? `${API_BASE}${path}` : `/api${path}`;
+  // Fastify JSON parser 對 empty body + content-type: application/json 400
+  // → 只在真的有 body 時才送 content-type
+  const hasBody = opts.body != null;
   try {
     res = await fetch(url, {
       ...opts,
       headers: {
-        "content-type": "application/json",
+        ...(hasBody ? { "content-type": "application/json" } : {}),
         ...(token ? { authorization: `Bearer ${token}` } : {}),
         ...opts.headers,
       },
