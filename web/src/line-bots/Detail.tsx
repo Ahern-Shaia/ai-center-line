@@ -183,8 +183,8 @@ function GroupRow({
       <td className="lbot-grp-time">{formatRelative(group.lastEventAt)}</td>
       <td className="lbot-grp-actions">
         {!isLeft && (
-          <button className="btn btn-sm btn-ghost" onClick={handleProbe} disabled={probing} title="從 LINE API 拉群名（可能失敗）">
-            {probing ? "…" : "從 LINE 拉"}
+          <button className="btn btn-sm btn-ghost" onClick={handleProbe} disabled={probing} title="呼叫 LINE API 同步群顯示名稱">
+            {probing ? "同步中…" : "同步群名"}
           </button>
         )}
       </td>
