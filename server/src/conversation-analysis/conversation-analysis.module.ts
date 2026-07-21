@@ -8,5 +8,6 @@ import { LlmModule } from "../llm/llm.module.js";
   imports: [LlmModule],
   controllers: [ConversationAnalysisController],
   providers: [AnalyzeService, LabelService],
+  exports: [AnalyzeService],   // convo-analysis-realtime AnalysisBatchService 需 createBatchUpload
 })
 export class ConversationAnalysisModule {}

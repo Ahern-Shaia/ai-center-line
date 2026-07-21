@@ -24,6 +24,7 @@ import { TenantProvisioningModule } from "./tenant-provisioning/tenant-provision
 import { PermissionModule } from "./permission/permission.module.js";
 import { AiprootConsoleModule } from "./aiproot-console/aiproot-console.module.js";
 import { PermissionGuard } from "./permission/permission.guard.js";
+import { ConvoAnalysisRealtimeModule } from "./convo-analysis-realtime/convo-analysis-realtime.module.js";
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { PermissionGuard } from "./permission/permission.guard.js";
     TenantProvisioningModule,
     PermissionModule,
     AiprootConsoleModule,
+    ConvoAnalysisRealtimeModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [

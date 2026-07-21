@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { eq, sql } from "drizzle-orm";
-import { currentTx } from "../db/client.js";
+import { currentTx, type Db } from "../db/client.js";
 import { analysisUpload, analysisResult } from "../db/schema.js";
 import { runPipeline, defaultAnthropicProvider } from "./pipeline/index.js";
 import type { UploadCreatePayload } from "./dto/upload.dto.js";
@@ -33,12 +33,50 @@ export class AnalyzeService {
         rawContent: payload.rawContent,
         uploadedBy,
         status: "pending",
+        source: "manual",
       })
       .returning({ id: analysisUpload.id, status: analysisUpload.status });
     const row = rows[0];
     setImmediate(() => {
       void this.runJob(row.id).catch((e) =>
         this.logger.error(`runJob(${row.id}) uncaught: ${String((e as Error).message ?? e)}`),
+      );
+    });
+    return row;
+  }
+
+  /**
+   * Batch 版本 · 從 convo-analysis-realtime AnalysisBatchService 呼叫
+   * · tx 由 caller 傳（withSystemTx 內執行）· uploadedBy=null (cron / aiproot manual)
+   * · tenantSlug 走系統標記 "batch" (不影響 pipeline · 只是 tenant_slug NOT NULL 需填)
+   * · source = 'webhook' or 'webhook_manual' · pipeline 相同 · 標記讓 aggregate 分辨
+   */
+  async createBatchUpload(args: {
+    tenantId: string;
+    filename: string;
+    rawContent: string;
+    source: "webhook" | "webhook_manual";
+    groupId: string;
+    batchDate: string;
+  }, tx: Db): Promise<{ id: number; status: string }> {
+    const rows = await tx
+      .insert(analysisUpload)
+      .values({
+        tenantId: args.tenantId,
+        tenantSlug: "batch",
+        filename: args.filename,
+        rawContent: args.rawContent,
+        uploadedBy: null,
+        status: "pending",
+        source: args.source,
+        groupId: args.groupId,
+        batchDate: args.batchDate,
+      })
+      .returning({ id: analysisUpload.id, status: analysisUpload.status });
+    const row = rows[0];
+    setImmediate(() => {
+      void this.runJob(row.id).catch((e) =>
+        this.logger.error(`batch runJob(${row.id}) uncaught: ${String((e as Error).message ?? e)}`),
       );
     });
     return row;

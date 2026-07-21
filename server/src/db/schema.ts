@@ -113,7 +113,7 @@ export const analysisUpload = pgTable("analysis_upload", {
   tenantSlug: text("tenant_slug").notNull(),
   filename: text("filename").notNull(),
   rawContent: text("raw_content").notNull(),
-  uploadedBy: uuid("uploaded_by").notNull().references(() => users.userId),
+  uploadedBy: uuid("uploaded_by").references(() => users.userId),     // batch (cron / aiproot manual) 為 null
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
   status: text("status").notNull().default("pending")
     .$type<"pending" | "running" | "done" | "failed">(),
@@ -121,6 +121,10 @@ export const analysisUpload = pgTable("analysis_upload", {
   messageCount: integer("message_count"),
   segmentCount: integer("segment_count"),
   usageStats: jsonb("usage_stats").$type<Record<string, unknown>>(),
+  source: text("source").notNull().default("manual")
+    .$type<"manual" | "webhook" | "webhook_manual">(),               // 0013 加
+  groupId: text("group_id"),                                          // 0013 加 · LINE groupId · manual = null
+  batchDate: text("batch_date"),                                      // 0013 加 · date (postgres date · driver 回 string)
 });
 
 export const analysisResult = pgTable("analysis_result", {
