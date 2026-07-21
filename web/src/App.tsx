@@ -17,6 +17,7 @@ import LlmSettings from "./settings/LlmSettings";
 import LineBots from "./line-bots/Page";
 import OnboardWizard from "./aiproot-console/OnboardWizard";
 import CostDashboard from "./aiproot-console/CostDashboard";
+import BatchHistory from "./aiproot-console/BatchHistory";
 import FirstLoginChangePassword from "./auth/FirstLoginChangePassword";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
 import { getSession, logout, login, type Session } from "./api";
@@ -38,7 +39,8 @@ type Route =
   | { page: "llm-settings" }
   | { page: "line-bots" }
   | { page: "onboard-tenant" }
-  | { page: "cost-dashboard" };
+  | { page: "cost-dashboard" }
+  | { page: "batch-history" };
 
 // crumb 顯示上層分類（非當前頁名），避免與 pane h1 重複。
 // pane h1 對應 PAGE_TITLE，同步設定 document.title 提供瀏覽器 tab 辨識。
@@ -59,6 +61,7 @@ const CRUMB: Record<Route["page"], string> = {
   "line-bots": "通訊接頭層",
   "onboard-tenant": "AIPROOT 管理",
   "cost-dashboard": "AIPROOT 管理",
+  "batch-history": "AIPROOT 管理",
 };
 
 const PAGE_TITLE: Record<Route["page"], string> = {
@@ -78,6 +81,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "line-bots": "LINE 機器人管理",
   "onboard-tenant": "開通新租戶",
   "cost-dashboard": "AI 成本管理",
+  "batch-history": "對話分析歷程",
 };
 
 export default function App() {
@@ -141,6 +145,9 @@ export default function App() {
     } else if (key === "cost-dashboard") {
       if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
       setRoute({ page: "cost-dashboard" });
+    } else if (key === "batch-history") {
+      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
+      setRoute({ page: "batch-history" });
     }
   };
 
@@ -190,6 +197,7 @@ export default function App() {
           {route.page === "line-bots" && <LineBots />}
           {route.page === "onboard-tenant" && <OnboardWizard />}
           {route.page === "cost-dashboard" && <CostDashboard />}
+          {route.page === "batch-history" && <BatchHistory />}
         </div>
       </Shell>
     </ToastProvider>

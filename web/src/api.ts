@@ -635,3 +635,34 @@ export interface CostSummaryDto {
 
 export const getCostSummary = () =>
   req<CostSummaryDto>("/aiproot-console/cost/summary");
+
+// convo-analysis-realtime batch history
+export interface AnalysisBatchRow {
+  batchId: string;
+  tenantId: string;
+  groupId: string;
+  batchDate: string;
+  uploadId: number | null;
+  status: "pending" | "running" | "completed" | "failed" | "empty";
+  messageCount: number;
+  triggeredBy: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  errorMessage: string | null;
+}
+
+export const listAnalysisBatches = (tenantId?: string) => {
+  const qs = tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : "";
+  return req<{ batches: AnalysisBatchRow[] }>(`/aiproot-console/batches${qs}`);
+};
+
+export const rerunAnalysisBatch = (body: { tenantId: string; groupId: string; batchDate: string }) =>
+  req<{ batchId: string; status: string; uploadId: number | null; messageCount: number }>(
+    "/aiproot-console/batches/rerun", { method: "POST", body: JSON.stringify(body) },
+  );
+
+export const runPendingBatches = (lookbackDays?: number) =>
+  req<{ total: number; completed: number; empty: number; failed: number }>(
+    "/aiproot-console/batches/run-pending",
+    { method: "POST", body: JSON.stringify({ lookbackDays }) },
+  );

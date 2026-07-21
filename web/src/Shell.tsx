@@ -59,6 +59,7 @@ const NAV: Array<{
     items: [
       { key: "onboard-tenant", label: "開通新租戶", ic: iconTeam, done: true },
       { key: "cost-dashboard", label: "AI 成本管理", ic: iconGauge, done: true },
+      { key: "batch-history", label: "對話分析歷程", ic: iconChat, done: true },
     ],
   },
 ];
