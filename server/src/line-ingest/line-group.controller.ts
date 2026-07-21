@@ -9,7 +9,7 @@ export class LineGroupController {
 
   // 分派 department / 更新 displayName / analyzeEnabled
   @Patch(":groupRegistryId")
-  @Roles("aiproot_admin", "consultant", "tenant_admin")
+  @Roles("aiproot_admin", "consultant")
   async patch(@Param("groupRegistryId") id: string, @Body() body: unknown) {
     const parsed = LineGroupPatchSchema.safeParse(body);
     if (!parsed.success) {
@@ -24,7 +24,7 @@ export class LineGroupController {
 
   // 手動觸發 LINE API 拉群名稱
   @Post(":groupRegistryId/probe-name")
-  @Roles("aiproot_admin", "consultant", "tenant_admin")
+  @Roles("aiproot_admin", "consultant")
   async probeName(@Param("groupRegistryId") id: string) {
     return this.svc.probeDisplayName(id);
   }

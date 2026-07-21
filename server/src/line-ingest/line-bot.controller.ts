@@ -15,14 +15,14 @@ export class LineBotController {
 
   // Refs 給 UI 下拉（tenants + departments）· 放最前避免被 :id 路由吃掉
   @Get("refs")
-  @Roles("aiproot_admin", "consultant", "tenant_admin")
+  @Roles("aiproot_admin", "consultant")
   async refs() {
     return this.botSvc.getRefs();
   }
 
   // 列表 · tenant_admin 看 own · aiproot_admin / consultant 看全（透過 RLS · 前者 tenant_id 過濾 · 後者 tenant 空看全）
   @Get()
-  @Roles("aiproot_admin", "consultant", "tenant_admin")
+  @Roles("aiproot_admin", "consultant")
   async list() {
     const bots = await this.botSvc.listBots();
     return { bots };
@@ -30,7 +30,7 @@ export class LineBotController {
 
   // 詳情
   @Get(":id")
-  @Roles("aiproot_admin", "consultant", "tenant_admin")
+  @Roles("aiproot_admin", "consultant")
   async get(@Param("id") id: string) {
     const bot = await this.botSvc.getBot(id);
     const groups = await this.groupSvc.listGroupsByBot(id);
