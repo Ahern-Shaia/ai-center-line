@@ -344,3 +344,89 @@ export const putLlmConfig = (payload: {
     method: "PUT",
     body: JSON.stringify(payload),
   });
+
+// === LINE Bot / Group Registry (line-ingest module) ===
+
+export interface LineBotDto {
+  botId: string;
+  tenantId: string;
+  name: string;
+  botUserId: string;
+  channelId: string | null;
+  channelSecretMasked: string;
+  channelAccessTokenMasked: string;
+  status: "active" | "disabled";
+  webhookVerifiedAt: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  groupCount: number;
+}
+
+export interface LineGroupRow {
+  groupRegistryId: string;
+  botId: string;
+  groupId: string;
+  displayName: string | null;
+  departmentId: string | null;
+  departmentName: string | null;
+  analyzeEnabled: boolean;
+  firstSeenAt: string;
+  lastEventAt: string;
+  eventCount: number;
+  status: "active" | "left";
+}
+
+export interface LineRefsDto {
+  tenants: Array<{ tenantId: string; tenantName: string }>;
+  departments: Array<{ departmentId: string; departmentName: string }>;
+}
+
+export const listLineBots = () =>
+  req<{ bots: LineBotDto[] }>("/line-bots");
+
+export const getLineBot = (botId: string) =>
+  req<{ bot: LineBotDto; groups: LineGroupRow[] }>(`/line-bots/${botId}`);
+
+export const getLineRefs = () =>
+  req<LineRefsDto>("/line-bots/refs");
+
+export const createLineBot = (payload: {
+  tenantId: string;
+  name: string;
+  channelId?: string;
+  channelSecret: string;
+  channelAccessToken: string;
+}) =>
+  req<{ bot: LineBotDto }>("/line-bots", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const updateLineBot = (botId: string, patch: {
+  name?: string;
+  channelId?: string | null;
+  channelSecret?: string;
+  channelAccessToken?: string;
+  status?: "active" | "disabled";
+}) =>
+  req<{ bot: LineBotDto }>(`/line-bots/${botId}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+
+export const disableLineBot = (botId: string) =>
+  req<{ status: string }>(`/line-bots/${botId}`, { method: "DELETE" });
+
+export const patchLineGroup = (groupRegistryId: string, patch: {
+  departmentId?: string | null;
+  displayName?: string;
+  analyzeEnabled?: boolean;
+}) =>
+  req<{ group: LineGroupRow }>(`/line-groups/${groupRegistryId}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+
+export const probeLineGroupName = (groupRegistryId: string) =>
+  req<{ displayName: string | null }>(`/line-groups/${groupRegistryId}/probe-name`, { method: "POST" });

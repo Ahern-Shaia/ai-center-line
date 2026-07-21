@@ -1126,3 +1126,195 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .detail-metric-val { font-size:18px; font-weight:600; color:var(--ink); font-variant-numeric:tabular-nums; line-height:1.2; }
 .detail-metric-val .u { font-size:11px; color:var(--ink-3); margin-left:3px; font-weight:400; }
 .detail-metric-sub { font-size:11px; color:var(--ink-3); margin-top:3px; }
+
+/* === LINE Bot 管理頁 · Master-Detail Split · observability-light === */
+
+.lbot-pane { padding:20px 24px 40px; max-width:1400px; }
+.lbot-hdr { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:16px; }
+.lbot-hdr h1 { font-size:20px; font-weight:700; letter-spacing:-.01em; color:var(--ink); }
+
+.lbot-split {
+  display:grid; grid-template-columns:280px 1fr; gap:16px;
+  align-items:start;
+}
+@media (max-width:900px) { .lbot-split { grid-template-columns:1fr; } }
+
+/* === 左 pane · Bot list === */
+.lbot-list {
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  overflow:hidden; min-height:400px;
+}
+.lbot-list-hdr {
+  padding:12px 14px; border-bottom:1px solid var(--line-2);
+  font-size:12px; color:var(--ink-3); font-weight:600; letter-spacing:.02em;
+  display:flex; justify-content:space-between; align-items:baseline;
+}
+.lbot-list-count { color:var(--ink); font-family:var(--mono); font-variant-numeric:tabular-nums; }
+.lbot-list-empty {
+  padding:32px 16px; text-align:center; color:var(--ink-3); font-size:13px; line-height:1.6;
+}
+.lbot-list-empty-hint { color:var(--ink-3); font-size:11.5px; margin-top:6px; }
+.lbot-list-ul { list-style:none; margin:0; padding:0; }
+.lbot-list-item {
+  width:100%; display:flex; align-items:center; gap:10px;
+  background:none; border:none; border-left:3px solid transparent;
+  padding:11px 14px; cursor:pointer; outline:none;
+  transition:background .12s var(--ease), border-color .12s var(--ease);
+  text-align:left;
+}
+.lbot-list-item:hover { background:var(--well); }
+.lbot-list-item.selected {
+  background:var(--primary-tint); border-left-color:var(--primary);
+}
+.lbot-list-item:focus-visible { box-shadow:inset 0 0 0 2px var(--primary); }
+.lbot-list-body { display:flex; flex-direction:column; min-width:0; flex:1; }
+.lbot-list-name {
+  font-size:13px; font-weight:600; color:var(--ink);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.lbot-list-sub { font-size:11px; color:var(--ink-3); margin-top:2px; }
+
+.lbot-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.lbot-dot--on { background:var(--ok); }
+.lbot-dot--pending { background:var(--warn); }
+.lbot-dot--off { background:transparent; border:1px solid var(--ink-3); }
+
+/* === 右 pane · Detail === */
+.lbot-detail {
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  min-height:400px;
+}
+.lbot-detail-empty {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:60px 20px; color:var(--ink-3); gap:14px; text-align:center;
+}
+.lbot-detail-empty svg { color:var(--ink-3); opacity:.55; }
+.lbot-detail-empty-title { font-size:13.5px; color:var(--ink-2); }
+
+/* === Bot info · collapsible === */
+.lbot-info { border-bottom:1px solid var(--line); padding:14px 18px 12px; }
+.lbot-info-hdr {
+  width:100%; display:flex; align-items:center; gap:10px;
+  background:none; border:none; padding:0; cursor:pointer; outline:none;
+  text-align:left;
+}
+.lbot-chevron {
+  font-family:var(--mono); color:var(--ink-3); font-size:12px;
+  transition:transform .12s var(--ease); width:12px; text-align:center;
+}
+.lbot-chevron.open { transform:rotate(90deg); }
+.lbot-info-name { font-size:15px; font-weight:600; color:var(--ink); flex:1; min-width:0; }
+.lbot-info-actions { display:flex; gap:6px; margin-left:auto; }
+
+.lbot-status {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:500;
+}
+.lbot-status::before { content:""; width:5px; height:5px; border-radius:50%; background:currentColor; }
+.lbot-status--on { background:var(--ok-tint); color:var(--ok); }
+.lbot-status--pending { background:var(--warn-tint); color:var(--warn); }
+.lbot-status--off { background:var(--well); color:var(--ink-3); }
+
+.lbot-info-sub {
+  margin-top:8px; padding-left:22px; display:flex; gap:8px; flex-wrap:wrap;
+  font-size:12px; color:var(--ink-3);
+}
+
+.lbot-info-body {
+  margin-top:14px; padding-left:22px;
+  display:grid; grid-template-columns:130px 1fr; gap:8px 14px;
+  font-size:12.5px;
+}
+.lbot-info-row { display:contents; }
+.lbot-info-lbl { color:var(--ink-3); font-size:12px; padding-top:2px; }
+.lbot-info-val {
+  color:var(--ink); overflow:hidden; text-overflow:ellipsis; word-break:break-all;
+  display:flex; align-items:center; gap:8px;
+}
+.lbot-info-val.mono { font-family:var(--mono); font-size:12px; }
+.lbot-info-hint { grid-column:2; font-size:11px; color:var(--ink-3); margin-top:-4px; margin-bottom:4px; }
+
+.lbot-copy {
+  background:none; border:1px solid var(--line); color:var(--ink-3);
+  padding:1px 8px; border-radius:var(--r-sm); font-size:11px; cursor:pointer;
+  transition:border-color .12s var(--ease), color .12s var(--ease);
+}
+.lbot-copy:hover { border-color:var(--ink-3); color:var(--ink); }
+
+/* === Groups table === */
+.lbot-groups-hdr {
+  padding:12px 18px 6px;
+  display:flex; align-items:baseline; justify-content:space-between;
+}
+.lbot-groups-title { font-size:13px; font-weight:600; color:var(--ink); }
+.lbot-groups-count {
+  color:var(--ink-3); font-family:var(--mono); font-size:11.5px; margin-left:6px;
+  font-variant-numeric:tabular-nums;
+}
+
+.lbot-groups-empty {
+  padding:32px 20px; text-align:center; color:var(--ink-3);
+  font-size:13px; line-height:1.6;
+}
+.lbot-groups-empty-hint { font-size:11.5px; color:var(--ink-3); margin-top:6px; }
+
+.lbot-groups-tbl {
+  width:100%; border-collapse:collapse; font-size:12.5px;
+}
+.lbot-groups-tbl thead th {
+  padding:8px 12px; text-align:left;
+  border-top:1px solid var(--line-2); border-bottom:1px solid var(--line-2);
+  background:var(--well); color:var(--ink-2);
+  font-size:11px; font-weight:600; letter-spacing:.02em;
+  white-space:nowrap;
+}
+.lbot-groups-tbl thead th.num { text-align:right; }
+.lbot-groups-tbl tbody td {
+  padding:8px 12px; border-bottom:1px solid var(--line-2); vertical-align:middle;
+}
+.lbot-groups-tbl tbody tr:hover { background:var(--well); }
+.lbot-groups-tbl tbody tr:last-child td { border-bottom:none; }
+.lbot-groups-tbl td.mono { font-family:var(--mono); font-size:11.5px; color:var(--ink-3); }
+.lbot-groups-tbl td.num { text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums; }
+.lbot-groups-tbl td.truncate { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.lbot-grp-left { opacity:.55; }
+.lbot-grp-time { color:var(--ink-3); font-size:11.5px; white-space:nowrap; }
+.lbot-grp-actions { text-align:right; }
+.lbot-grp-probe {
+  background:none; border:1px dashed var(--line); color:var(--ink-3);
+  padding:2px 8px; border-radius:var(--r-sm); font-size:11.5px; cursor:pointer;
+  transition:border-color .12s var(--ease), color .12s var(--ease);
+}
+.lbot-grp-probe:hover:not(:disabled) { border-color:var(--primary); color:var(--primary); border-style:solid; }
+.lbot-grp-probe:disabled { cursor:default; opacity:.6; }
+
+.lbot-tag {
+  display:inline-block; margin-left:8px;
+  padding:1px 7px; border-radius:var(--r-sm); font-size:10.5px; font-weight:500;
+}
+.lbot-tag--muted { background:var(--well); color:var(--ink-3); }
+
+/* Dept select 縮小適合 table row */
+.lbot-dept-btn { padding:5px 10px 5px 10px; min-width:130px; font-size:12px; }
+
+/* Edit drawer · rotate 區塊 */
+.lbot-rotate {
+  padding:12px; background:var(--well); border-radius:var(--r); border:1px solid var(--line-2);
+}
+.lbot-rotate-hdr {
+  display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink); cursor:pointer;
+}
+.lbot-rotate-hdr input[type="checkbox"] { margin:0; }
+.lbot-rotate-input { margin-top:8px; }
+
+/* Confirm modal */
+.lbot-confirm { padding:8px 0; }
+.lbot-confirm p { font-size:14px; color:var(--ink); margin:0 0 12px; }
+.lbot-confirm ul { margin:0 0 20px; padding-left:18px; font-size:12.5px; color:var(--ink-2); line-height:1.7; }
+
+/* btn variants used */
+.btn-danger { background:#DC2626; color:var(--surface); border-color:#DC2626; }
+.btn-danger:hover:not(:disabled) { background:#B91C1C; border-color:#B91C1C; }
+.btn-ghost { background:none; border:1px solid var(--line); color:var(--ink-2); }
+.btn-ghost:hover:not(:disabled) { background:var(--well); color:var(--ink); }

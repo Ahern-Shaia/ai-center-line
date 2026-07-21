@@ -14,6 +14,7 @@ import ConversationAnalysisUpload from "./ConversationAnalysisUpload";
 import ConversationAnalysisList from "./ConversationAnalysisList";
 import ConversationAnalysisDetail from "./ConversationAnalysisDetail";
 import LlmSettings from "./LlmSettings";
+import LineBots from "./LineBots";
 import { getSession, logout, login, type Session } from "./api";
 import { ToastProvider } from "./Toast";
 
@@ -30,7 +31,8 @@ type Route =
   | { page: "convo-list" }
   | { page: "convo-upload" }
   | { page: "convo-detail"; uploadId: number }
-  | { page: "llm-settings" };
+  | { page: "llm-settings" }
+  | { page: "line-bots" };
 
 // crumb 顯示上層分類（非當前頁名），避免與 pane h1 重複。
 // pane h1 對應 PAGE_TITLE，同步設定 document.title 提供瀏覽器 tab 辨識。
@@ -48,6 +50,7 @@ const CRUMB: Record<Route["page"], string> = {
   "convo-upload": "AI 對話分析",
   "convo-detail": "AI 對話分析",
   "llm-settings": "AI 對話分析",
+  "line-bots": "通訊接頭層",
 };
 
 const PAGE_TITLE: Record<Route["page"], string> = {
@@ -64,6 +67,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "convo-upload": "上傳新對話",
   "convo-detail": "分析詳情",
   "llm-settings": "語言模型設定",
+  "line-bots": "LINE 機器人管理",
 };
 
 export default function App() {
@@ -110,6 +114,8 @@ export default function App() {
       setRoute({ page: key });
     } else if (key === "convo-list" || key === "convo-upload" || key === "llm-settings") {
       setRoute({ page: key });
+    } else if (key === "line-bots") {
+      setRoute({ page: "line-bots" });
     }
   };
 
@@ -155,6 +161,7 @@ export default function App() {
             />
           )}
           {route.page === "llm-settings" && <LlmSettings />}
+          {route.page === "line-bots" && <LineBots />}
         </div>
       </Shell>
     </ToastProvider>

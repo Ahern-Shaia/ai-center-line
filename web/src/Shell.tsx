@@ -31,6 +31,12 @@ const NAV = [
     ],
   },
   {
+    group: "通訊接頭層",
+    items: [
+      { key: "line-bots", label: "LINE 機器人", ic: iconChat, done: true },
+    ],
+  },
+  {
     group: "設定",
     items: [
       { key: "depts", label: "部門/成員", ic: iconTeam, done: true },
