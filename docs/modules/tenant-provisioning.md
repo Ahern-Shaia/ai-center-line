@@ -1,6 +1,6 @@
 # tenant-provisioning.md — [P1] 租戶開通與帳號安全政策設計文件
 
-> 🚧 **狀態：DRAFT — 待用戶裁定 OQ-TP-1..14（2026-07-21）**
+> ✅ **狀態：APPROVED — OQ-TP-1..14 全採建議（2026-07-21）· 進 M1**
 >
 > 把「新客戶上線」與「帳號安全 lifecycle」從 dev-grade 手 SQL 升級到 SaaS 商用級。
 > 目前狀態：手 SQL 建 tenant / user · 密碼最短 6 字 · 無過期 / 無鎖定 / 無首次改 · JWT 8h · 無 MFA · 客戶密碼 rotate 走不安全管道。

@@ -1,6 +1,6 @@
 # permission-engine.md — [P1] 權限細度分配設計文件
 
-> 🚧 **狀態：DRAFT — 待用戶裁定 OQ-PE-1..12（2026-07-21）**
+> ✅ **狀態：APPROVED — OQ-PE-1..12 全採建議（2026-07-21）· tenant-provisioning M1-M4 完成後進本模組 M1**
 >
 > 把「4 個 hardcoded role」升級成「RBAC extensible」·  4 個內建 role 保留為 template · 未來 tenant 可自訂 role · 每個 role 由 (resource, action) permission 組成 · 支援 fine-grained UI gating。
 >
