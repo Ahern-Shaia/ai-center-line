@@ -20,6 +20,7 @@ import { DataSyncLayerModule } from "./data-sync-layer/data-sync-layer.module.js
 import { LlmModule } from "./llm/llm.module.js";
 import { LineIngestModule } from "./line-ingest/line-ingest.module.js";
 import { TenantAdminModule } from "./tenant-admin/tenant-admin.module.js";
+import { TenantProvisioningModule } from "./tenant-provisioning/tenant-provisioning.module.js";
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { TenantAdminModule } from "./tenant-admin/tenant-admin.module.js";
     DataSyncLayerModule,
     LineIngestModule,
     TenantAdminModule,
+    TenantProvisioningModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [
