@@ -118,6 +118,24 @@ export class LineGroupRepository {
     };
   }
 
+  // 訊息落庫時查 (botId, groupId) → tenantId + departmentId
+  // tenantId 從 line_bot 拉 · departmentId 從 line_group 拉 · 未綁 tenant 回 null → webhook 就丟該訊息
+  async getRefForMessage(tx: Db, botId: string, groupId: string): Promise<{
+    tenantId: string | null;
+    departmentId: string | null;
+  } | null> {
+    const res = await tx.execute<{ tenant_id: string | null; department_id: string | null }>(sql`
+      SELECT b.tenant_id, g.department_id
+      FROM line_group g
+      JOIN line_bot b ON b.bot_id = g.bot_id
+      WHERE g.bot_id = ${botId} AND g.group_id = ${groupId}
+      LIMIT 1
+    `);
+    const r = res.rows[0];
+    if (!r) return null;
+    return { tenantId: r.tenant_id, departmentId: r.department_id };
+  }
+
   async patchAssignment(tx: Db, groupRegistryId: string, patch: {
     departmentId?: string | null;
     displayName?: string;

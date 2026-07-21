@@ -155,14 +155,17 @@ export class LineBotRepository {
   // Webhook lookup · 靠 bot_user_id (destination) 找 bot + secret 驗簽
   // 走 owner-context tx 或加 SECURITY DEFINER · webhook 無 session
   async getByBotUserIdWithSecret(tx: Db, botUserId: string): Promise<{
-    botId: string; tenantId: string; channelSecret: string; status: string;
+    botId: string; tenantId: string; channelSecret: string; channelAccessToken: string; status: string;
   } | null> {
     const key = this.encKey();
     const res = await tx.execute<{
-      bot_id: string; tenant_id: string; channel_secret: string; status: string;
+      bot_id: string; tenant_id: string;
+      channel_secret: string; channel_access_token: string;
+      status: string;
     }>(sql`
       SELECT bot_id, tenant_id,
              pgp_sym_decrypt(channel_secret_enc, ${key})::text AS channel_secret,
+             pgp_sym_decrypt(channel_access_token_enc, ${key})::text AS channel_access_token,
              status
       FROM line_bot
       WHERE bot_user_id = ${botUserId} AND status = 'active'
@@ -170,7 +173,13 @@ export class LineBotRepository {
     `);
     const r = res.rows[0];
     if (!r) return null;
-    return { botId: r.bot_id, tenantId: r.tenant_id, channelSecret: r.channel_secret, status: r.status };
+    return {
+      botId: r.bot_id,
+      tenantId: r.tenant_id,
+      channelSecret: r.channel_secret,
+      channelAccessToken: r.channel_access_token,
+      status: r.status,
+    };
   }
 
   // 列表 · 走 tenant RLS · 不 return secret
