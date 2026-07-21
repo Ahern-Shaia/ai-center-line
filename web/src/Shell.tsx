@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { Button as AriaButton, Header as AriaHeader, Menu, MenuItem, MenuTrigger, Popover, Separator } from "react-aria-components";
+import { useState } from "react";
 import type { Role, Session } from "./api";
 import { useToast } from "./Toast";
+import ChangePasswordDialog from "./auth/ChangePasswordDialog";
 
 // 對照 docs/台灣福祉_系統設計文件_開發用.md §1-C C3 tenant_admin 8 module 全景。
 // 全部走 mock 資料頁面（demo 錄影用）；正式版逐步接後端。
@@ -51,6 +53,13 @@ const NAV: Array<{
       { key: "audit", label: "稽核記錄", ic: iconShield, done: true },
     ],
   },
+  {
+    group: "AIPROOT 管理",
+    roles: ["aiproot_admin"],
+    items: [
+      { key: "onboard-tenant", label: "開通新租戶", ic: iconTeam, done: true },
+    ],
+  },
 ];
 
 const ROLE_LABEL: Record<string, string> = {
@@ -82,6 +91,7 @@ export default function Shell({ session, active, onNav, onLogout, onRefresh, onH
   const toast = useToast();
   const tenantMark = tenantName.slice(0, 1);
   const initials = session.email.slice(0, 2).toUpperCase();
+  const [changePwOpen, setChangePwOpen] = useState(false);
 
   return (
     <div className="app">
@@ -148,14 +158,17 @@ export default function Shell({ session, active, onNav, onLogout, onRefresh, onH
               </span>
             </AriaButton>
             <Popover className="user-menu-pop" placement="bottom right" offset={6}>
-              <Menu className="user-menu" onAction={(key) => { if (key === "logout") onLogout(); }}>
+              <Menu className="user-menu" onAction={(key) => {
+                if (key === "logout") onLogout();
+                else if (key === "change-password") setChangePwOpen(true);
+              }}>
                 <AriaHeader className="user-menu-hdr">
                   <div className="n">{session.email.split("@")[0]}</div>
                   <div className="e">{session.email}</div>
                   <div className="t">{ROLE_LABEL[session.role] ?? session.role} · {tenantName}</div>
                 </AriaHeader>
                 <Separator className="user-menu-sep" />
-                <MenuItem id="settings" isDisabled>帳號設定</MenuItem>
+                <MenuItem id="change-password">變更密碼</MenuItem>
                 <MenuItem id="switch" isDisabled>切換租戶</MenuItem>
                 <MenuItem id="logout" className="danger">登出</MenuItem>
               </Menu>
@@ -165,6 +178,7 @@ export default function Shell({ session, active, onNav, onLogout, onRefresh, onH
         </div>
         <main className="pane">{children}</main>
       </div>
+      <ChangePasswordDialog open={changePwOpen} onClose={() => setChangePwOpen(false)} />
     </div>
   );
 }

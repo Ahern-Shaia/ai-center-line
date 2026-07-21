@@ -15,6 +15,9 @@ import ConversationAnalysisList from "./convo-analysis/List";
 import ConversationAnalysisDetail from "./convo-analysis/Detail";
 import LlmSettings from "./settings/LlmSettings";
 import LineBots from "./line-bots/Page";
+import OnboardWizard from "./aiproot-console/OnboardWizard";
+import FirstLoginChangePassword from "./auth/FirstLoginChangePassword";
+import ChangePasswordDialog from "./auth/ChangePasswordDialog";
 import { getSession, logout, login, type Session } from "./api";
 import { ToastProvider } from "./Toast";
 
@@ -32,7 +35,8 @@ type Route =
   | { page: "convo-upload" }
   | { page: "convo-detail"; uploadId: number }
   | { page: "llm-settings" }
-  | { page: "line-bots" };
+  | { page: "line-bots" }
+  | { page: "onboard-tenant" };
 
 // crumb 顯示上層分類（非當前頁名），避免與 pane h1 重複。
 // pane h1 對應 PAGE_TITLE，同步設定 document.title 提供瀏覽器 tab 辨識。
@@ -51,6 +55,7 @@ const CRUMB: Record<Route["page"], string> = {
   "convo-detail": "AI 對話分析",
   "llm-settings": "AI 對話分析",
   "line-bots": "通訊接頭層",
+  "onboard-tenant": "AIPROOT 管理",
 };
 
 const PAGE_TITLE: Record<Route["page"], string> = {
@@ -68,6 +73,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "convo-detail": "分析詳情",
   "llm-settings": "語言模型設定",
   "line-bots": "LINE 機器人管理",
+  "onboard-tenant": "開通新租戶",
 };
 
 export default function App() {
@@ -104,6 +110,11 @@ export default function App() {
 
   if (!session) return <Login onLogin={() => setSession(getSession())} />;
 
+  // 首次登入 / 過期強制改密碼 · 沒改前擋在此頁 · 不可進 shell
+  if (session.mustChangePassword) {
+    return <FirstLoginChangePassword email={session.email} onDone={() => setSession(getSession())} />;
+  }
+
   const navActive = route.page === "warroom" ? "warroom" : route.page;
   const crumb = CRUMB[route.page];
 
@@ -120,6 +131,10 @@ export default function App() {
       // 通訊接頭層屬 aiproot 平台方管理 · 非 aiproot_admin / consultant 擋下
       if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
       setRoute({ page: "line-bots" });
+    } else if (key === "onboard-tenant") {
+      // AIPROOT 管理 · 只 aiproot_admin
+      if (session.role !== "aiproot_admin") return;
+      setRoute({ page: "onboard-tenant" });
     }
   };
 
@@ -166,6 +181,7 @@ export default function App() {
           )}
           {route.page === "llm-settings" && <LlmSettings />}
           {route.page === "line-bots" && <LineBots />}
+          {route.page === "onboard-tenant" && <OnboardWizard />}
         </div>
       </Shell>
     </ToastProvider>

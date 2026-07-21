@@ -1373,3 +1373,74 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 }
 .dm-info-note-lbl { font-size:11.5px; color:var(--ink-3); font-weight:600; margin-bottom:4px; }
 .dm-info-note-hint { font-size:11.5px; color:var(--warn); margin-top:6px; }
+
+/* === IAM · First-login change password 全螢幕 === */
+.firstlogin-wrap {
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  background:var(--canvas); padding:20px;
+}
+.firstlogin-card {
+  background:var(--surface); border:1px solid var(--line); border-radius:8px;
+  padding:32px 36px; max-width:480px; width:100%;
+  box-shadow:0 4px 12px rgba(17,24,39,.06);
+}
+.firstlogin-hdr { margin-bottom:24px; }
+.firstlogin-hdr h1 { font-size:19px; font-weight:700; margin:0 0 8px; color:var(--ink); }
+.firstlogin-hdr p { font-size:13px; color:var(--ink-3); margin:0 0 4px; line-height:1.6; }
+.firstlogin-email { font-family:var(--mono); font-size:12.5px; color:var(--primary); margin-top:8px !important; }
+
+/* === Onboard wizard === */
+.onboard-wrap { padding:20px 24px 40px; max-width:820px; }
+.wizard-steps {
+  display:flex; gap:0; margin:16px 0 24px;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  overflow:hidden;
+}
+.wizard-step {
+  flex:1; display:flex; align-items:center; gap:10px;
+  padding:12px 16px; border-right:1px solid var(--line-2);
+  color:var(--ink-3); font-size:12.5px;
+}
+.wizard-step:last-child { border-right:none; }
+.wizard-step.active { background:var(--primary-tint); color:var(--primary-2); }
+.wizard-step.done { color:var(--ok); }
+.wizard-step-n {
+  width:22px; height:22px; border-radius:50%;
+  background:var(--well); color:var(--ink-3);
+  display:grid; place-items:center; font-size:11px; font-weight:700; flex-shrink:0;
+}
+.wizard-step.active .wizard-step-n { background:var(--primary); color:var(--surface); }
+.wizard-step.done .wizard-step-n { background:var(--ok); color:var(--surface); }
+
+.wizard-body {
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  padding:24px 28px;
+}
+.wizard-body h2 { font-size:15px; font-weight:600; margin:0 0 16px; color:var(--ink); }
+.wizard-body .field { margin-bottom:14px; }
+.wizard-note { font-size:12.5px; color:var(--ink-3); margin:0 0 16px; }
+
+.onboard-depts { display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+.onboard-dept-row { display:flex; gap:8px; }
+.onboard-dept-row input { flex:1; }
+
+.onboard-summary { display:grid; grid-template-columns:120px 1fr; gap:8px 14px; margin-bottom:20px; font-size:13px; }
+.onboard-summary > div { display:contents; }
+.onboard-summary span { color:var(--ink-3); font-size:12.5px; padding-top:2px; }
+.onboard-summary b { color:var(--ink); font-weight:600; }
+
+.onboard-success { padding:8px 0; }
+.onboard-success-row { display:grid; grid-template-columns:100px 1fr; gap:12px; margin-bottom:10px; font-size:13px; }
+.onboard-success-row .lbl { color:var(--ink-3); }
+.onboard-success-row .val { color:var(--ink); word-break:break-all; }
+.onboard-success-password {
+  margin-top:20px; padding:16px; background:var(--primary-tint); border:1px solid var(--primary);
+  border-radius:var(--r); display:grid; grid-template-columns:100px 1fr auto; gap:12px; align-items:center;
+}
+.onboard-pw { font-family:var(--mono); font-size:16px; font-weight:700; color:var(--primary-2); }
+.onboard-warn {
+  margin-top:20px; padding:14px 16px; background:var(--warn-tint); border:1px solid var(--warn);
+  border-left-width:3px; border-radius:var(--r);
+}
+.onboard-warn strong { display:block; margin-bottom:6px; color:var(--ink); font-size:13px; }
+.onboard-warn p { margin:0; font-size:12.5px; color:var(--ink-2); line-height:1.7; }

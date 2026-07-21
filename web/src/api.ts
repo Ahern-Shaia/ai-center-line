@@ -53,10 +53,14 @@ export interface Session {
   tenantId: string;
   departmentId: string | null;
   exp: number;
+  mustChangePassword: boolean;
+  passwordExpiresAt: string | null;
 }
 
 const TOKEN_KEY = "acl.token";
 const EMAIL_KEY = "acl.email";
+const MUST_CHANGE_KEY = "acl.must_change";
+const EXPIRES_AT_KEY = "acl.password_expires";
 
 let token: string | null = localStorage.getItem(TOKEN_KEY);
 export const getToken = () => token;
@@ -87,12 +91,20 @@ export function getSession(): Session | null {
     tenantId: (p.tenant_id as string) ?? "",
     departmentId: (p.department_id as string | null) ?? null,
     exp: (p.exp as number) ?? 0,
+    mustChangePassword: localStorage.getItem(MUST_CHANGE_KEY) === "1",
+    passwordExpiresAt: localStorage.getItem(EXPIRES_AT_KEY),
   };
+}
+
+export function clearMustChange() {
+  localStorage.removeItem(MUST_CHANGE_KEY);
 }
 
 export function logout() {
   setToken(null);
   localStorage.removeItem(EMAIL_KEY);
+  localStorage.removeItem(MUST_CHANGE_KEY);
+  localStorage.removeItem(EXPIRES_AT_KEY);
 }
 
 export class ApiError extends Error {
@@ -174,13 +186,22 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function login(email: string, password: string): Promise<void> {
-  const d = await req<{ access_token: string }>("/auth/login", {
+export async function login(email: string, password: string): Promise<{ mustChange: boolean }> {
+  const d = await req<{
+    access_token: string;
+    must_change_password: boolean;
+    password_expires_at: string | null;
+  }>("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
   setToken(d.access_token);
   localStorage.setItem(EMAIL_KEY, email);
+  if (d.must_change_password) localStorage.setItem(MUST_CHANGE_KEY, "1");
+  else localStorage.removeItem(MUST_CHANGE_KEY);
+  if (d.password_expires_at) localStorage.setItem(EXPIRES_AT_KEY, d.password_expires_at);
+  else localStorage.removeItem(EXPIRES_AT_KEY);
+  return { mustChange: d.must_change_password };
 }
 export const getWarroom = () => req<Warroom>("/warroom");
 export const getPending = () => req<{ pending: PendingTicket[] }>("/signoff");
@@ -520,4 +541,52 @@ export const deleteTenantUser = (userId: string, tenantId: string) =>
   req<{ status: string }>(`/tenant-admin/users/${userId}`, {
     method: "DELETE",
     body: JSON.stringify({ tenantId }),
+  });
+
+// === IAM: Tenant Provisioning + Password Policy ===
+
+export interface OnboardResult {
+  tenantId: string;
+  adminUserId: string;
+  adminEmail: string;
+  initialPassword: string;             // 一次性 · 前端顯示後不 persist
+  mustChangeAtFirstLogin: true;
+  departments: Array<{ departmentId: string; departmentName: string }>;
+}
+
+export interface ResetPasswordResult {
+  newPassword: string;
+  userId: string;
+  email: string | null;
+  mustChangeAtNextLogin: true;
+}
+
+export const onboardTenant = (payload: {
+  tenantName: string;
+  industry?: string;
+  adminEmail: string;
+  adminDisplayName?: string;
+  departments?: string[];
+}) =>
+  req<OnboardResult>("/tenant-provisioning/onboard", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const resetUserPassword = (userId: string, tenantId: string) =>
+  req<ResetPasswordResult>(`/tenant-provisioning/users/${userId}/reset-password`, {
+    method: "POST",
+    body: JSON.stringify({ tenantId }),
+  });
+
+export const unlockUser = (userId: string, tenantId: string) =>
+  req<{ userId: string }>(`/tenant-provisioning/users/${userId}/unlock`, {
+    method: "POST",
+    body: JSON.stringify({ tenantId }),
+  });
+
+export const changePassword = (oldPassword: string, newPassword: string) =>
+  req<{ status: "ok" }>("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ oldPassword, newPassword }),
   });
