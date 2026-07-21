@@ -22,6 +22,7 @@ type DrawerState = null | { kind: "new" } | { kind: "edit"; botId: string };
 export default function LineBots() {
   const session = getSession();
   const canManage = session?.role === "aiproot_admin";
+  const canView = session?.role === "aiproot_admin" || session?.role === "consultant";
   const toast = useToast();
 
   const [bots, setBots] = useState<LineBotDto[]>([]);
@@ -33,6 +34,7 @@ export default function LineBots() {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
+    if (!canView) return;                    // 早退防禦 · 避免無權限使用者連續打 API
     setLoading(true);
     try {
       const [botsRes, refsRes] = await Promise.all([listLineBots(), getLineRefs()]);
@@ -43,9 +45,22 @@ export default function LineBots() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, canView]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  // 無權限使用者直接顯示空狀態 · 不打任何 API
+  if (!canView) {
+    return (
+      <div className="pane lbot-pane">
+        <div className="lbot-hdr"><h1>LINE 機器人管理</h1></div>
+        <div className="lbot-list-empty" style={{ marginTop: 40 }}>
+          <div>此頁僅限 aiproot 平台方管理</div>
+          <div className="lbot-list-empty-hint">如需協助 · 請聯繫 aiproot 支援</div>
+        </div>
+      </div>
+    );
+  }
 
   // 從 URL hash 讀選中 · 支援 deep link (#/line-bots/<botId>)
   useEffect(() => {

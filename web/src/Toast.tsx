@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 type Kind = "ok" | "warn" | "danger" | "info";
@@ -20,8 +20,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setItems((s) => [...s, { id, msg, kind, time }]);
     setTimeout(() => setItems((s) => s.filter((x) => x.id !== id)), 3800);
   }, []);
+  // 必 useMemo · 否則每 render 建新 {show} 物件 · 讓所有 useToast() 消費者的 useCallback/useEffect deps
+  // 每 render 都被視為變 · 觸發 infinite loop（實例：2026-07-21 tenant_admin 誤入 line-bots 頁 · Toast 換
+  // reference → refresh 換 → useEffect 每 render fire → 打 API 403 → state 變 → re-render · 死循環）
+  const value = useMemo(() => ({ show }), [show]);
   return (
-    <ToastCtx.Provider value={{ show }}>
+    <ToastCtx.Provider value={value}>
       {children}
       <div className="toast-region" role="status" aria-live="polite">
         {items.map((t) => (
