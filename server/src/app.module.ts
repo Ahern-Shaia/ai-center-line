@@ -5,6 +5,8 @@ import { HealthController } from "./health/health.controller.js";
 import { HealthService } from "./health/health.service.js";
 import { AuthController } from "./auth/auth.controller.js";
 import { AuthService } from "./auth/auth.service.js";
+import { PasswordPolicyService } from "./auth/password-policy.service.js";
+import { PasswordHistoryRepository } from "./auth/password-history.repository.js";
 import { JwtAuthGuard } from "./auth/jwt-auth.guard.js";
 import { RolesGuard } from "./auth/roles.guard.js";
 import { TenantTxInterceptor } from "./tenant/tenant.interceptor.js";
@@ -37,6 +39,8 @@ import { TenantAdminModule } from "./tenant-admin/tenant-admin.module.js";
   providers: [
     HealthService,
     AuthService,
+    PasswordPolicyService,
+    PasswordHistoryRepository,
     SignoffService,
     WarroomService,
     // 全域三層：先驗 JWT（設 req.user）→ 再檢查角色 → interceptor 包租戶交易＋audit

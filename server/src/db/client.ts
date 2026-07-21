@@ -18,6 +18,7 @@ export interface TenantContext {
   tenantId: string | null; // aiproot/consultant 可為 null（跨租戶，靠 role 判斷）
   role: Role;
   departmentId?: string | null; // group_owner 專屬
+  userId?: string | null;       // 用於 password_history RLS · 未來 owner-scoped table 也用
 }
 
 // 當前請求的租戶交易，由 TenantTxInterceptor 注入。
@@ -39,6 +40,7 @@ export async function withTenant<T>(ctx: TenantContext, fn: (tx: Db) => Promise<
     await tx.execute(sql`SELECT set_config('app.current_tenant', ${ctx.tenantId ?? ""}, true)`);
     await tx.execute(sql`SELECT set_config('app.actor_role', ${ctx.role}, true)`);
     await tx.execute(sql`SELECT set_config('app.current_department', ${ctx.departmentId ?? ""}, true)`);
+    await tx.execute(sql`SELECT set_config('app.current_user_id', ${ctx.userId ?? ""}, true)`);
     return fn(tx as unknown as Db);
   });
 }

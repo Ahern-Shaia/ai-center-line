@@ -17,6 +17,7 @@ export class TenantTxInterceptor implements NestInterceptor {
       tenantId: user.tenant_id ?? null,
       role: user.role,
       departmentId: user.department_id ?? null,
+      userId: user.user_id,
     };
     const action = `${req.method} ${req.url}`;
 

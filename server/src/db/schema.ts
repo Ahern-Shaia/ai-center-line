@@ -34,7 +34,21 @@ export const users = pgTable("users", {
   email: text("email"),
   displayName: text("display_name"), // 戰情室 UI 顯示用；為 null 時 fallback email prefix
   passwordHash: text("password_hash"),
+  // 密碼 policy (migration 0009 · tenant-provisioning M1)
+  passwordUpdatedAt: timestamp("password_updated_at", { withTimezone: true }),
+  passwordExpiresAt: timestamp("password_expires_at", { withTimezone: true }),
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
+  failedLoginCount: integer("failed_login_count").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const passwordHistory = pgTable("password_history", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.userId, { onDelete: "cascade" }),
+  passwordHash: text("password_hash").notNull(),
+  setAt: timestamp("set_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const tickets = pgTable("tickets", {
