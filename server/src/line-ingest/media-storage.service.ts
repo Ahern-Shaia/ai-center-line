@@ -2,14 +2,19 @@ import { Injectable, Logger } from "@nestjs/common";
 import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 
 /**
- * S3 客戶端 · 支援 AWS S3 官方 endpoint (預設)
+ * S3-相容 客戶端 · 預設 Cloudflare R2 (OQ-CAR-2 v0.3 裁定 · 省 egress)
  *
- * env:
+ * env (R2 · 推薦)：
+ *   S3_ENDPOINT         — https://<account_id>.r2.cloudflarestorage.com
  *   S3_BUCKET           — bucket name (必要)
- *   S3_REGION           — e.g. "ap-northeast-1" (東京 · 對台灣延遲低) (必要)
- *   S3_ACCESS_KEY_ID    — IAM key (必要)
- *   S3_SECRET_ACCESS_KEY — IAM secret (必要)
- *   S3_ENDPOINT         — custom endpoint (optional · Cloudflare R2 用)
+ *   S3_REGION           — "auto" (R2 用 auto · S3 用 ap-northeast-1)
+ *   S3_ACCESS_KEY_ID    — R2 API token access key
+ *   S3_SECRET_ACCESS_KEY — R2 API token secret
+ *
+ * env (AWS S3 · 備選)：
+ *   S3_ENDPOINT         — 不設 (走 AWS 官)
+ *   S3_REGION           — e.g. "ap-northeast-1" (東京 · 對台灣延遲低)
+ *   其餘同上
  *
  * storage_key 慣例：`<tenant_id>/<messageId>` · 避跨 tenant 撞
  */

@@ -1,6 +1,6 @@
 # convo-analysis-realtime.md — [Priority-1] LINE 即時對話分析 · webhook driven
 
-> ✅ **狀態：APPROVED v0.2（2026-07-21）· OQ-CAR-1..7 全採建議 · 進 M1**
+> 🔨 **狀態：APPROVED v0.3（2026-07-21）· M1 SHIPPED（本地 · 待 prod）· 進 M2**
 >
 > Scope: **銜接 `line-ingest` webhook 收訊 → 存訊息 → 按時 batch → 送 `conversation-analysis` pipeline → 每日日報自動出**。不再靠人工上傳 LINE 匯出檔 · 讓工廠員工 LINE 使用習慣 100% 不變（CLAUDE.md §0 核心原則）· 系統背景自動出結果到戰情室 + 客戶簽核佇列。
 >
@@ -376,7 +376,7 @@ Input validation：所有 webhook payload 走 zod schema · reject unknown struc
 | 里程碑 | 內容 | 預估 | 狀態 |
 |---|---|---|---|
 | **M0** 設計 review | 本檔 → APPROVED（OQ-CAR-1..7 全裁）| 0.02 mo | ✅ 2026-07-21 |
-| **M1** 訊息 + 媒體落庫 | A1 + A2 · migration 0012/0013 · webhook 擴充 · 4 tests | 0.11 mo | ⏳ |
+| **M1** 訊息 + 媒體落庫 | A1 + A2 · migration 0011/0012 · webhook 擴充 · 4 tests | 0.11 mo | ✅ 2026-07-21 (本地 96edcfb · prod 待用戶手動跑 SQL + 設 R2 env) |
 | **M2** Batch pipeline 銜接 | A3 · migration 0014 · AnalysisBatchService · 4 tests | 0.04 mo | ⏳ |
 | **M3** 定時 + 手動觸發 UI | A4 + A6 · cron 或 event driven · aiproot「對話分析歷程」頁 | 0.06 mo | ⏳ |
 | **M4** 戰情室綁定 + docs | A5 + A7 · warroom per-day view · 更 docs · MODULES.md → ✅ | 0.06 mo | ⏳ |
@@ -389,7 +389,7 @@ Input validation：所有 webhook payload 走 zod schema · reject unknown struc
 | # | 議題 | 裁定 | 理由 |
 |---|---|:-:|---|
 | **OQ-CAR-1** | 落地策略 | **A** | 存全訊息 → 按天 batch 分析（原 CLI 路徑）· B（stream）成本 20×+ 且 context 破碎 · A 對齊 pilot pipeline · C 未來優化 |
-| **OQ-CAR-2** | 媒體 v1 儲存 | **B** | AWS S3 / Cloudflare R2 · 台灣福祉一年就吃掉 Render disk · S3 開發成本 0.5 天 · 長期無憂 |
+| **OQ-CAR-2** | 媒體 v1 儲存 | **B → R2 (改)** | 原裁 AWS S3 · 用戶 M1 落成後追問替代方案 · 改 **Cloudflare R2**：storage $0.015/GB · **egress 免**（S3 收 $0.09/GB）· 台灣福祉 3 tenant/年省 ~$430 · code 已相容 (`S3_ENDPOINT` env) |
 | **OQ-CAR-3** | LINE 訊息保留 | **A** | 保 3 年 · 對齊 ISO / SOC 慣例 · v2 再做 tenant 自訂 |
 | **OQ-CAR-4** | 媒體保留 | **A** | 保 1 年 · 訊息文字保 3 年綽綽有餘做稽核 · 媒體僅需 1 年做「近期回溯」 |
 | **OQ-CAR-5** | Batch 觸發時機 | **A** | 每天 08:00 掃昨日 · 對齊「早會看昨日」節奏 · 成本最低 · 想看今日 → 手動 trigger UI |
@@ -509,3 +509,4 @@ GROUP BY tenant_id;
 |---|---|---|---|
 | 2026-07-21 | v0.1 | 初版 DRAFT — 7 sub-task + OQ-CAR-1..7 + FMEA 骨架 | Claude Code |
 | 2026-07-21 | v0.2 | OQ-CAR-1..7 全採建議裁定 · DRAFT → APPROVED · 進 M1 | Claude Code + user |
+| 2026-07-21 | v0.3 | M1 SHIPPED (本地 commit 96edcfb) · OQ-CAR-2 改裁 Cloudflare R2（省 egress · code 已支援）| Claude Code + user |
