@@ -1,6 +1,8 @@
 # permission-engine.md — [P1] 權限細度分配設計文件
 
-> ✅ **狀態：APPROVED — OQ-PE-1..12 全採建議（2026-07-21）· tenant-provisioning M1-M4 完成後進本模組 M1**
+> ✅ **狀態：SHIPPED v1.0 — Phase 1 全落地（2026-07-21）· 待 push prod**
+>
+> 交付：migration 0010 permission_engine · 29 permissions 種子 · 4 built-in roles (aiproot 29 / consultant 14 / tenant_admin 12 / group_owner 7) · PermissionService 5min cache · @RequirePermission decorator + PermissionGuard 掛全域 · GET /me/permissions · GET /permissions · GET /roles · 前端 PermissionProvider + usePermissions + PermGate。@Roles 保留 backward-compat · 未做的：endpoint 全量 @Roles→@RequirePermission 遷移 (Phase 2)、Custom role UI (Phase 2)。
 >
 > 把「4 個 hardcoded role」升級成「RBAC extensible」·  4 個內建 role 保留為 template · 未來 tenant 可自訂 role · 每個 role 由 (resource, action) permission 組成 · 支援 fine-grained UI gating。
 >

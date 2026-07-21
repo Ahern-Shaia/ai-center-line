@@ -105,6 +105,8 @@ export function logout() {
   localStorage.removeItem(EMAIL_KEY);
   localStorage.removeItem(MUST_CHANGE_KEY);
   localStorage.removeItem(EXPIRES_AT_KEY);
+  localStorage.removeItem("acl.perms");
+  localStorage.removeItem("acl.perms_ts");
 }
 
 export class ApiError extends Error {
@@ -590,3 +592,28 @@ export const changePassword = (oldPassword: string, newPassword: string) =>
     method: "POST",
     body: JSON.stringify({ oldPassword, newPassword }),
   });
+
+// === Permission Engine ===
+
+export interface PermissionDto {
+  permissionId: string;
+  resource: string;
+  action: string;
+  description: string;
+  scope: string;
+}
+export interface RoleDto {
+  roleId: string;
+  roleKey: string;
+  roleName: string;
+  tenantId: string | null;
+  isSystem: boolean;
+  permissions: string[];
+}
+
+export const getMyPermissions = () =>
+  req<{ permissions: string[] }>("/me/permissions");
+export const listPermissions = () =>
+  req<{ permissions: PermissionDto[] }>("/permissions");
+export const listRoles = () =>
+  req<{ roles: RoleDto[] }>("/roles");

@@ -21,6 +21,8 @@ import { LlmModule } from "./llm/llm.module.js";
 import { LineIngestModule } from "./line-ingest/line-ingest.module.js";
 import { TenantAdminModule } from "./tenant-admin/tenant-admin.module.js";
 import { TenantProvisioningModule } from "./tenant-provisioning/tenant-provisioning.module.js";
+import { PermissionModule } from "./permission/permission.module.js";
+import { PermissionGuard } from "./permission/permission.guard.js";
 
 @Module({
   imports: [
@@ -36,6 +38,7 @@ import { TenantProvisioningModule } from "./tenant-provisioning/tenant-provision
     LineIngestModule,
     TenantAdminModule,
     TenantProvisioningModule,
+    PermissionModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [
@@ -45,9 +48,10 @@ import { TenantProvisioningModule } from "./tenant-provisioning/tenant-provision
     PasswordHistoryRepository,
     SignoffService,
     WarroomService,
-    // 全域三層：先驗 JWT（設 req.user）→ 再檢查角色 → interceptor 包租戶交易＋audit
+    // 全域四層：JWT → RolesGuard (backward compat) → PermissionGuard (@RequirePermission) → 包 tenant tx
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: PermissionGuard },
     { provide: APP_INTERCEPTOR, useClass: TenantTxInterceptor },
   ],
 })

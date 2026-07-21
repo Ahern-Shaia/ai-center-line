@@ -1,6 +1,8 @@
 # tenant-provisioning.md — [P1] 租戶開通與帳號安全政策設計文件
 
-> ✅ **狀態：APPROVED — OQ-TP-1..14 全採建議（2026-07-21）· 進 M1**
+> ✅ **狀態：SHIPPED v1.0 — M1-M4 本地驗過（2026-07-21）· 待 push prod**
+>
+> 交付：migration 0009 password_policy · PasswordPolicyService + PasswordHistoryRepository · Auth 擴 lock/expiry/change · POST /auth/change-password · POST /tenant-provisioning/{onboard,reset-password,unlock} · 前端 4-step wizard + FirstLoginChangePassword + ChangePasswordDialog + Shell 側欄「AIPROOT 管理」 · Smoke 7/7 pass。
 >
 > 把「新客戶上線」與「帳號安全 lifecycle」從 dev-grade 手 SQL 升級到 SaaS 商用級。
 > 目前狀態：手 SQL 建 tenant / user · 密碼最短 6 字 · 無過期 / 無鎖定 / 無首次改 · JWT 8h · 無 MFA · 客戶密碼 rotate 走不安全管道。

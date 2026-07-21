@@ -277,3 +277,30 @@ export const lineGroup = pgTable("line_group", {
   status: text("status").notNull().default("active").$type<"active" | "left">(),
   lastEventRaw: jsonb("last_event_raw").$type<Record<string, unknown> | null>(),
 });
+
+// ============================================================
+// Permission Engine (migration 0010 · permission-engine M1)
+// ============================================================
+export const permissions = pgTable("permissions", {
+  permissionId: text("permission_id").primaryKey(),
+  resource: text("resource").notNull(),
+  action: text("action").notNull(),
+  description: text("description").notNull(),
+  scope: text("scope").notNull().default("tenant").$type<"platform" | "tenant" | "department">(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const roles = pgTable("roles", {
+  roleId: uuid("role_id").primaryKey().defaultRandom(),
+  roleKey: text("role_key").notNull(),
+  roleName: text("role_name").notNull(),
+  tenantId: uuid("tenant_id").references(() => tenants.tenantId, { onDelete: "cascade" }),
+  isSystem: boolean("is_system").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const rolePermissions = pgTable("role_permissions", {
+  roleId: uuid("role_id").notNull().references(() => roles.roleId, { onDelete: "cascade" }),
+  permissionId: text("permission_id").notNull().references(() => permissions.permissionId, { onDelete: "cascade" }),
+});
