@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button as AriaButton,
   ListBox,
@@ -34,7 +34,9 @@ export function BotDetail({
   const [expanded, setExpanded] = useState(false);
   const { bot, groups } = detail;
 
-  const webhookUrl = `${window.location.origin.replace(/^http/, "https")}/api/line/webhook`;
+  // prod：VITE_API_BASE_URL 指向 backend · dev：走 Vite proxy 打 localhost:3000
+  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? window.location.origin;
+  const webhookUrl = `${apiBase}/line/webhook`;
   const verified = bot.webhookVerifiedAt != null;
 
   return (
@@ -165,13 +167,7 @@ function GroupRow({
   return (
     <tr className={isLeft ? "lbot-grp-left" : undefined}>
       <td>
-        {group.displayName ? (
-          <span>{group.displayName}</span>
-        ) : (
-          <button className="lbot-grp-probe" onClick={handleProbe} disabled={probing || isLeft}>
-            {probing ? "拉取中…" : "（未命名）"}
-          </button>
-        )}
+        <GroupNameCell group={group} disabled={!canEdit || isLeft} onSaved={onReload} />
         {isLeft && <span className="lbot-tag lbot-tag--muted">已離開</span>}
       </td>
       <td className="mono truncate" title={group.groupId}>{group.groupId}</td>
@@ -186,13 +182,63 @@ function GroupRow({
       <td className="num mono">{group.eventCount}</td>
       <td className="lbot-grp-time">{formatRelative(group.lastEventAt)}</td>
       <td className="lbot-grp-actions">
-        {group.displayName && !isLeft && (
-          <button className="btn btn-sm btn-ghost" onClick={handleProbe} disabled={probing} title="重新拉群名">
-            {probing ? "…" : "刷新名稱"}
+        {!isLeft && (
+          <button className="btn btn-sm btn-ghost" onClick={handleProbe} disabled={probing} title="從 LINE API 拉群名（可能失敗）">
+            {probing ? "…" : "從 LINE 拉"}
           </button>
         )}
       </td>
     </tr>
+  );
+}
+
+// 群名 inline 編輯 · 手動輸入為主 · 從 LINE 拉為輔（行動列另有按鈕）
+function GroupNameCell({
+  group, disabled, onSaved,
+}: {
+  group: LineGroupRow;
+  disabled: boolean;
+  onSaved: () => Promise<void>;
+}) {
+  const toast = useToast();
+  const original = group.displayName ?? "";
+  const [value, setValue] = useState(original);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { setValue(group.displayName ?? ""); }, [group.displayName]);
+
+  async function commit() {
+    const v = value.trim();
+    if (v === original) return;
+    if (!v) { setValue(original); return; }
+    setSaving(true);
+    try {
+      await patchLineGroup(group.groupRegistryId, { displayName: v });
+      toast.show(`群名已更新：${v}`, "ok");
+      await onSaved();
+    } catch (err) {
+      toast.show(err instanceof ApiError ? err.message : "更新失敗", "danger");
+      setValue(original);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <input
+      type="text"
+      className="lbot-grp-name-input"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); }
+        else if (e.key === "Escape") { setValue(original); (e.currentTarget as HTMLInputElement).blur(); }
+      }}
+      disabled={disabled || saving}
+      placeholder="點擊輸入群名"
+      spellCheck={false}
+    />
   );
 }
 

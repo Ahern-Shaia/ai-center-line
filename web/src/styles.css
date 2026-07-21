@@ -1318,3 +1318,19 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .btn-danger:hover:not(:disabled) { background:#B91C1C; border-color:#B91C1C; }
 .btn-ghost { background:none; border:1px solid var(--line); color:var(--ink-2); }
 .btn-ghost:hover:not(:disabled) { background:var(--well); color:var(--ink); }
+
+/* Group name inline edit · manual first · LINE probe secondary */
+.lbot-grp-name-input {
+  width:100%; background:transparent; border:1px solid transparent;
+  padding:5px 8px; border-radius:var(--r-sm);
+  font-size:12.5px; color:var(--ink); font-family:inherit;
+  outline:none;
+  transition:border-color .12s var(--ease), background .12s var(--ease), box-shadow .12s var(--ease);
+}
+.lbot-grp-name-input::placeholder { color:var(--ink-3); font-style:italic; }
+.lbot-grp-name-input:hover:not(:disabled):not(:focus) { border-color:var(--line); background:var(--well); }
+.lbot-grp-name-input:focus:not(:disabled) {
+  border-color:var(--primary); background:var(--surface);
+  box-shadow:0 0 0 3px var(--primary-tint);
+}
+.lbot-grp-name-input:disabled { opacity:.6; cursor:not-allowed; }
