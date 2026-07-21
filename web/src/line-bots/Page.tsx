@@ -158,6 +158,7 @@ export default function LineBots() {
       {drawer?.kind === "edit" && botDetail && (
         <EditBotDrawer
           bot={botDetail.bot}
+          tenants={refs.tenants}
           onClose={() => setDrawer(null)}
           onSaved={() => {
             setDrawer(null);

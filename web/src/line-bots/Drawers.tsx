@@ -102,9 +102,10 @@ export function NewBotDrawer({
 
 // 編輯 Bot Drawer (aiproot_admin only)
 export function EditBotDrawer({
-  bot, onClose, onSaved,
+  bot, tenants, onClose, onSaved,
 }: {
   bot: LineBotDto;
+  tenants: Array<{ tenantId: string; tenantName: string }>;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -112,38 +113,65 @@ export function EditBotDrawer({
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState(bot.name);
   const [channelId, setChannelId] = useState(bot.channelId ?? "");
+  const [tenantId, setTenantId] = useState(bot.tenantId);
   const [rotateSecret, setRotateSecret] = useState(false);
   const [rotateToken, setRotateToken] = useState(false);
   const [newSecret, setNewSecret] = useState("");
   const [newToken, setNewToken] = useState("");
+  const [showTenantMoveConfirm, setShowTenantMoveConfirm] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const tenantChanged = tenantId !== bot.tenantId;
+
+  async function doSubmit() {
     setSaving(true);
     try {
       const patch: Parameters<typeof updateLineBot>[1] = {
         name: name.trim() !== bot.name ? name.trim() : undefined,
         channelId: channelId !== (bot.channelId ?? "") ? (channelId.trim() || null) : undefined,
+        tenantId: tenantChanged ? tenantId : undefined,
       };
       if (rotateSecret && newSecret.trim()) patch.channelSecret = newSecret.trim();
       if (rotateToken && newToken.trim()) patch.channelAccessToken = newToken.trim();
 
       await updateLineBot(bot.botId, patch);
-      toast.show("機器人已更新", "ok");
+      toast.show(tenantChanged ? "已遷移至新租戶 · 各群部門已清空 · 請重新分派" : "機器人已更新", "ok");
       onSaved();
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "更新失敗", "danger");
     } finally {
       setSaving(false);
+      setShowTenantMoveConfirm(false);
+    }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (tenantChanged) {
+      setShowTenantMoveConfirm(true);           // 需二次確認
+    } else {
+      doSubmit();
     }
   }
 
   return (
+    <>
     <Drawer open onClose={onClose} title="編輯機器人" subtitle={bot.name}>
       <form onSubmit={handleSubmit} className="llm-form">
         <div className="field">
           <label>機器人名稱</label>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} disabled={saving} />
+        </div>
+
+        <div className="field">
+          <label>隸屬租戶</label>
+          <select value={tenantId} onChange={(e) => setTenantId(e.target.value)} disabled={saving}>
+            {tenants.map((t) => <option key={t.tenantId} value={t.tenantId}>{t.tenantName}</option>)}
+          </select>
+          {tenantChanged && (
+            <div className="llm-hint" style={{ color: "var(--warn)" }}>
+              ⚠️ 遷移到新租戶 · 該 bot 底下所有群的「分派部門」將自動清空（舊 tenant 的 dept 對新 tenant 無意義）· 需重新分派
+            </div>
+          )}
         </div>
 
         <div className="field">
@@ -190,13 +218,38 @@ export function EditBotDrawer({
         </div>
 
         <div className="llm-form-actions">
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? "儲存中…" : "儲存變更"}
+          <button type="submit" className={`btn ${tenantChanged ? "btn-danger" : "btn-primary"}`} disabled={saving}>
+            {saving ? "儲存中…" : tenantChanged ? "確認並遷移租戶…" : "儲存變更"}
           </button>
           <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>取消</button>
         </div>
       </form>
     </Drawer>
+    {showTenantMoveConfirm && (
+      <Drawer open onClose={() => setShowTenantMoveConfirm(false)} title="確認遷移租戶" width={480}>
+        <div className="lbot-confirm">
+          <p>
+            即將把 <b>{bot.name}</b> 從<br />
+            <b>{tenants.find((t) => t.tenantId === bot.tenantId)?.tenantName ?? "舊租戶"}</b><br />
+            遷移到<br />
+            <b>{tenants.find((t) => t.tenantId === tenantId)?.tenantName ?? "新租戶"}</b>
+          </p>
+          <ul>
+            <li>該 bot 底下所有 groups 的「分派部門」將自動清空</li>
+            <li>Groups 本身保留 · 只是需要重新分派到新 tenant 的部門</li>
+            <li>webhook / secret / access token 不變 · LINE 端無影響</li>
+            <li>此操作可透過再次遷移還原</li>
+          </ul>
+          <div className="llm-form-actions">
+            <button type="button" className="btn btn-danger" onClick={doSubmit} disabled={saving}>
+              {saving ? "遷移中…" : "確認遷移"}
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => setShowTenantMoveConfirm(false)} disabled={saving}>取消</button>
+          </div>
+        </div>
+      </Drawer>
+    )}
+    </>
   );
 }
 

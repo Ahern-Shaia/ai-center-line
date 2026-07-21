@@ -435,8 +435,9 @@ export const updateLineBot = (botId: string, patch: {
   channelSecret?: string;
   channelAccessToken?: string;
   status?: "active" | "disabled";
+  tenantId?: string;
 }) =>
-  req<{ bot: LineBotDto }>(`/line-bots/${botId}`, {
+  req<{ bot: LineBotDto; movedTenant?: boolean; clearedGroupDepartments?: number }>(`/line-bots/${botId}`, {
     method: "PATCH",
     body: JSON.stringify(patch),
   });

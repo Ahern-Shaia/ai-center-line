@@ -81,6 +81,7 @@ export class LineBotRepository {
     channelSecret?: string;
     channelAccessToken?: string;
     status?: "active" | "disabled";
+    tenantId?: string;
   }): Promise<void> {
     const key = this.encKey();
     await tx.execute(sql`
@@ -92,9 +93,20 @@ export class LineBotRepository {
         channel_access_token_enc = CASE WHEN ${patch.channelAccessToken ?? null}::text IS NULL
           THEN channel_access_token_enc ELSE pgp_sym_encrypt(${patch.channelAccessToken ?? null}, ${key}) END,
         status = COALESCE(${patch.status ?? null}, status),
+        tenant_id = COALESCE(${patch.tenantId ?? null}, tenant_id),
         updated_at = now()
       WHERE bot_id = ${botId}
     `);
+  }
+
+  // 遷移 tenant 時 · 該 bot 底下所有 groups 的 department_id 全 null · 因為舊 tenant 的 dept 對新 tenant 無意義
+  async clearGroupDepartments(tx: Db, botId: string): Promise<number> {
+    const res = await tx.execute<{ group_registry_id: string }>(sql`
+      UPDATE line_group SET department_id = NULL
+      WHERE bot_id = ${botId} AND department_id IS NOT NULL
+      RETURNING group_registry_id
+    `);
+    return res.rows.length;
   }
 
   async markWebhookVerified(tx: Db, botId: string): Promise<void> {

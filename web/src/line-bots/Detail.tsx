@@ -70,6 +70,7 @@ export function BotDetail({
 
         {expanded && (
           <div className="lbot-info-body">
+            <InfoRow label="隸屬租戶" value={refs.tenants.find((t) => t.tenantId === bot.tenantId)?.tenantName ?? bot.tenantId} hint="編輯機器人可遷移到其他租戶" />
             <InfoRow label="Bot User ID" value={bot.botUserId} mono copy />
             <InfoRow label="Channel ID" value={bot.channelId ?? "—"} mono />
             <InfoRow label="Channel Secret" value={bot.channelSecretMasked} mono hint="由 aiproot 管" />

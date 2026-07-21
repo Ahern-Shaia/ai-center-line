@@ -99,9 +99,9 @@ export class LineBotService {
     channelSecret?: string;
     channelAccessToken?: string;
     status?: "active" | "disabled";
-  }): Promise<LineBotDto> {
+    tenantId?: string;
+  }): Promise<LineBotDto & { movedTenant?: boolean; clearedGroupDepartments?: number }> {
     const tx = currentTx();
-    // 若動 access_token · 重新驗一次 · 更新 bot_user_id?（不做 · 若換 token 但同 channel botUserId 不變）
     if (patch.channelAccessToken) {
       try {
         await this.lineApi.getBotInfo(patch.channelAccessToken);
@@ -113,8 +113,26 @@ export class LineBotService {
         });
       }
     }
+
+    // 遷移 tenant 時 · 檢查現況 · 若真的變 · 額外清 group department（跨 tenant dept 無意義）
+    let movedTenant = false;
+    let clearedGroupDepartments = 0;
+    if (patch.tenantId) {
+      const existing = await this.botRepo.getById(tx, botId);
+      if (!existing) throw new NotFoundException("找不到 bot");
+      if (existing.tenantId !== patch.tenantId) {
+        movedTenant = true;
+      }
+    }
+
     await this.botRepo.update(tx, botId, patch);
-    return this.getBot(botId);
+
+    if (movedTenant) {
+      clearedGroupDepartments = await this.botRepo.clearGroupDepartments(tx, botId);
+    }
+
+    const bot = await this.getBot(botId);
+    return { ...bot, movedTenant, clearedGroupDepartments };
   }
 
   async disableBot(botId: string): Promise<void> {

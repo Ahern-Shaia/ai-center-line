@@ -16,6 +16,7 @@ export const LineBotUpdateSchema = z.object({
   channelSecret: z.string().trim().min(1).max(200).optional(),
   channelAccessToken: z.string().trim().min(10).max(500).optional(),
   status: z.enum(["active", "disabled"]).optional(),
+  tenantId: z.string().regex(uuidRegex).optional(),                      // 遷移 bot 到新租戶
 });
 
 export const LineGroupPatchSchema = z.object({
