@@ -113,6 +113,8 @@ export default function App() {
       || key === "depts" || key === "config" || key === "audit") {
       setRoute({ page: key });
     } else if (key === "convo-list" || key === "convo-upload" || key === "llm-settings") {
+      // AI 對話分析 per-tenant · aiproot_admin 沒 tenant scope 擋下
+      if (session.role === "aiproot_admin") return;
       setRoute({ page: key });
     } else if (key === "line-bots") {
       // 通訊接頭層屬 aiproot 平台方管理 · 非 aiproot_admin / consultant 擋下

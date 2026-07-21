@@ -29,6 +29,7 @@ const NAV: Array<{
   },
   {
     group: "AI 對話分析",
+    roles: ["tenant_admin", "consultant"],    // 資料 per-tenant · aiproot_admin 沒 tenant scope
     items: [
       { key: "convo-list", label: "分析列表", ic: iconChat, done: true },
       { key: "convo-upload", label: "上傳新對話", ic: iconMedia, done: true },
