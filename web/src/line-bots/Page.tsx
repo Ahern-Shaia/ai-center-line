@@ -9,11 +9,11 @@ import {
   type LineBotDto,
   type LineGroupRow,
   type LineRefsDto,
-} from "./api";
-import { useToast } from "./Toast";
-import { BotList, BotDetailEmpty } from "./LineBotList";
-import { BotDetail } from "./LineBotDetail";
-import { NewBotDrawer, EditBotDrawer, DisableConfirmModal } from "./LineBotDrawers";
+} from "../api";
+import { useToast } from "../Toast";
+import { BotList, BotDetailEmpty } from "./List";
+import { BotDetail } from "./Detail";
+import { NewBotDrawer, EditBotDrawer, DisableConfirmModal } from "./Drawers";
 
 type DrawerState = null | { kind: "new" } | { kind: "edit"; botId: string };
 

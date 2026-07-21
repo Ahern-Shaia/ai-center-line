@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { CUSTOMERS, type Customer } from "./mockdata/customers";
+import { CUSTOMERS, type Customer } from "../mockdata/customers";
 
 function fmtDate(iso: string): string {
   const d = new Date(iso);

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { createConvoUpload, ApiError } from "./api";
-import { useToast } from "./Toast";
+import { createConvoUpload, ApiError } from "../api";
+import { useToast } from "../Toast";
 
 interface Props {
   onUploaded: (id: number) => void;

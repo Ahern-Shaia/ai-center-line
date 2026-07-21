@@ -1,5 +1,5 @@
-import type { LineBotDto } from "./api";
-import { formatRelative } from "./lineBotUtils";
+import type { LineBotDto } from "../api";
+import { formatRelative } from "./utils";
 
 // 左 pane · Bot 列表
 export function BotList({

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listConvoUploads, type ConvoUpload, ApiError } from "./api";
-import { useToast } from "./Toast";
+import { listConvoUploads, type ConvoUpload, ApiError } from "../api";
+import { useToast } from "../Toast";
 
 interface Props {
   onOpen: (id: number) => void;

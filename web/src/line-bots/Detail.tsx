@@ -14,9 +14,9 @@ import {
   type LineBotDto,
   type LineGroupRow,
   type LineRefsDto,
-} from "./api";
-import { useToast } from "./Toast";
-import { formatRelative } from "./lineBotUtils";
+} from "../api";
+import { useToast } from "../Toast";
+import { formatRelative } from "./utils";
 
 type Department = { departmentId: string; departmentName: string };
 

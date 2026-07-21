@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, confirmSignoff, getWarroom, type Warroom, type WarroomGroup, type WarroomTicket } from "./api";
-import { useToast } from "./Toast";
+import { ApiError, confirmSignoff, getWarroom, type Warroom, type WarroomGroup, type WarroomTicket } from "../api";
+import { useToast } from "../Toast";
 import SourceDrawer from "./SourceDrawer";
-import { InfoTip } from "./InfoTip";
-import Gauge from "./Gauge";
-import { findExcerpt } from "./mockdata/lineExcerpts";
+import { InfoTip } from "../shared/InfoTip";
+import Gauge from "../shared/Gauge";
+import { findExcerpt } from "../mockdata/lineExcerpts";
 
 interface Props {
   onRegister: (fns: { refresh: () => Promise<void>; asOf: () => string | undefined }) => void;

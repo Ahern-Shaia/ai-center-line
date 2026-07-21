@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { RAG_QA, type Citation, type RagQA } from "./mockdata/ragQA";
-import { useToast } from "./Toast";
+import { RAG_QA, type Citation, type RagQA } from "../mockdata/ragQA";
+import { useToast } from "../Toast";
 
 interface Msg {
   role: "user" | "ai";

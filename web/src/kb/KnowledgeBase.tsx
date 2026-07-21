@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { KM_CARDS, type KnowledgeCard } from "./mockdata/knowledgeCards";
+import { KM_CARDS, type KnowledgeCard } from "../mockdata/knowledgeCards";
 
 function fmtDate(iso: string): string {
   const d = new Date(iso);

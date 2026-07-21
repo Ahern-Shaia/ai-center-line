@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { MEDIA_FILES, type MediaKind } from "./mockdata/mediaFiles";
+import { MEDIA_FILES, type MediaKind } from "../mockdata/mediaFiles";
 
 const KIND_LABEL: Record<MediaKind, string> = { image: "圖片", video: "影片", document: "文件", spreadsheet: "試算表", audio: "語音" };
 const KIND_ICON: Record<MediaKind, string> = { image: "▩", video: "▶", document: "▤", spreadsheet: "◫", audio: "◉" };

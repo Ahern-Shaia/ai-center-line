@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AUDIT_LOG, type AuditAction } from "./mockdata/auditLog";
+import { AUDIT_LOG, type AuditAction } from "../mockdata/auditLog";
 
 const ACTION_OPTIONS: (AuditAction | "all")[] = ["all", "登入", "查看", "簽核", "駁回", "代簽核", "檢索", "匯出", "變更設定"];
 const ACTION_LABEL: Record<string, string> = { all: "全部動作" };

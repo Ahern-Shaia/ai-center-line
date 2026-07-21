@@ -15,8 +15,8 @@ import {
   type LlmConfigMasked,
   type LlmProviderName,
   ApiError,
-} from "./api";
-import { useToast } from "./Toast";
+} from "../api";
+import { useToast } from "../Toast";
 
 interface ProviderDef {
   name: LlmProviderName;

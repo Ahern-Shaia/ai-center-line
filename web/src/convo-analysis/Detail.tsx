@@ -8,8 +8,8 @@ import {
   type ConvoLabel,
   type ConvoMessage,
   ApiError,
-} from "./api";
-import { useToast } from "./Toast";
+} from "../api";
+import { useToast } from "../Toast";
 
 interface Props {
   uploadId: number;

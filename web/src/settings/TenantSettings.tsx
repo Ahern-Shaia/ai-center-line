@@ -1,4 +1,4 @@
-import { TENANT_SETTINGS } from "./mockdata/tenantSettings";
+import { TENANT_SETTINGS } from "../mockdata/tenantSettings";
 
 export default function TenantSettings() {
   return (

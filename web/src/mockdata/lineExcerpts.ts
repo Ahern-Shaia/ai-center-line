@@ -17,11 +17,14 @@ export interface TicketExcerpt {
   ragicTarget: string;   // 簽核後同步至的記錄類型（客戶可懂的中文，非內部 schema）
 }
 
-// 用 summary 字首（前 12 字）當查表 key，因為 DB 內 ticket_id 為 UUID（seed 時 generated），
-// 但 summary 內容穩定；EXCERPTS_BY_SUMMARY 提供 O(1) 查詢。
+// 用 summary 字首當查表 key（各 entry 可用長度不一的字首）
+// 因為 DB 內 ticket_id 為 UUID（seed 時 generated），但 summary 穩定。
+// 找 EXCERPTS_BY_SUMMARY 裡任一「summary.startsWith(key)」的 key，避免固定字數導致對不上。
 export function findExcerpt(summary: string): TicketExcerpt | undefined {
-  const key = summary.slice(0, 12);
-  return EXCERPTS_BY_SUMMARY[key];
+  for (const key of Object.keys(EXCERPTS_BY_SUMMARY)) {
+    if (summary.startsWith(key)) return EXCERPTS_BY_SUMMARY[key];
+  }
+  return undefined;
 }
 
 export const EXCERPTS: Record<string, TicketExcerpt> = {

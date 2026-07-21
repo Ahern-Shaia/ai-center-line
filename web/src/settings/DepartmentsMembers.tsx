@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { DEPT_ROWS, MEMBERS } from "./mockdata/departments";
+import { DEPT_ROWS, MEMBERS } from "../mockdata/departments";
 
 function fmtDateTime(iso: string): string {
   const d = new Date(iso);

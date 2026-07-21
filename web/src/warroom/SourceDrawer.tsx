@@ -1,5 +1,5 @@
-import Drawer from "./Drawer";
-import { findExcerpt, type LineMessage } from "./mockdata/lineExcerpts";
+import Drawer from "../shared/Drawer";
+import { findExcerpt, type LineMessage } from "../mockdata/lineExcerpts";
 
 interface Props {
   open: boolean;
