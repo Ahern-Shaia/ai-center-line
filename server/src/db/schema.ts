@@ -230,3 +230,36 @@ export const dataSyncWritebackQueue = pgTable("data_sync_writeback_queue", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   syncedAt: timestamp("synced_at", { withTimezone: true }),
 });
+
+// ============================================================
+// LINE Bot / Group Registry（line-ingest module · migration 0008）
+// 對應 docs/modules/line-ingest.md v0.1 §3
+// ============================================================
+
+export const lineBot = pgTable("line_bot", {
+  botId: uuid("bot_id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  botUserId: text("bot_user_id").notNull(),                    // webhook destination lookup (Uxxx)
+  channelId: text("channel_id"),                                // LINE Console numeric id · optional
+  // channel_secret_enc / channel_access_token_enc 為 bytea · Drizzle 不直接處理 · 走 raw sql
+  status: text("status").notNull().default("active").$type<"active" | "disabled">(),
+  webhookVerifiedAt: timestamp("webhook_verified_at", { withTimezone: true }),
+  createdBy: uuid("created_by").references(() => users.userId),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const lineGroup = pgTable("line_group", {
+  groupRegistryId: uuid("group_registry_id").primaryKey().defaultRandom(),
+  botId: uuid("bot_id").notNull().references(() => lineBot.botId, { onDelete: "cascade" }),
+  groupId: text("group_id").notNull(),                          // LINE Cxxx...
+  displayName: text("display_name"),
+  departmentId: uuid("department_id").references(() => departments.departmentId, { onDelete: "set null" }),
+  analyzeEnabled: boolean("analyze_enabled").notNull().default(false),
+  firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  lastEventAt: timestamp("last_event_at", { withTimezone: true }).notNull().defaultNow(),
+  eventCount: integer("event_count").notNull().default(0),
+  status: text("status").notNull().default("active").$type<"active" | "left">(),
+  lastEventRaw: jsonb("last_event_raw").$type<Record<string, unknown> | null>(),
+});

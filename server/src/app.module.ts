@@ -16,6 +16,7 @@ import { NotifyModule } from "./notify/notify.module.js";
 import { ConversationAnalysisModule } from "./conversation-analysis/conversation-analysis.module.js";
 import { DataSyncLayerModule } from "./data-sync-layer/data-sync-layer.module.js";
 import { LlmModule } from "./llm/llm.module.js";
+import { LineIngestModule } from "./line-ingest/line-ingest.module.js";
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { LlmModule } from "./llm/llm.module.js";
     LlmModule,
     ConversationAnalysisModule,
     DataSyncLayerModule,
+    LineIngestModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [

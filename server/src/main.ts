@@ -4,7 +4,11 @@ import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fa
 import { AppModule } from "./app.module.js";
 
 const port = Number(process.env.PORT ?? 3000);
-const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
+// LINE webhook 需 raw body 做 HMAC 驗簽 · Nest 內建 rawBody:true 選項保留 req.rawBody
+// (對其他路由無影響 · 只是額外保留原文於 Nest request object)
+const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), {
+  rawBody: true,
+});
 
 // CORS：dev 同源不需要，prod 前後端不同 subdomain 必開。
 // 用 Fastify 原生 onRequest hook 手寫，避免拉 @fastify/cors 或 @fastify/middie（0 新 dep）。

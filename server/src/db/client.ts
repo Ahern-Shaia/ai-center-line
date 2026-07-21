@@ -54,6 +54,19 @@ export async function withAuthLookup<T>(fn: (tx: Db) => Promise<T>): Promise<T> 
   });
 }
 
+/**
+ * 系統路徑（webhook / cron）專用：不掛任何 tenant · RLS policy 需支援 `current_setting=''` 為 permit-all。
+ * 適用於 line-ingest webhook · 靠 HMAC 簽章而非 JWT 驗證身份 · 事件本身即多租戶。
+ */
+export async function withSystemTx<T>(fn: (tx: Db) => Promise<T>): Promise<T> {
+  return db.transaction(async (tx) => {
+    // 明確清空 tenant · role 走系統 · 避免上一次 pool connection 殘留
+    await tx.execute(sql`SELECT set_config('app.current_tenant', '', true)`);
+    await tx.execute(sql`SELECT set_config('app.actor_role', 'system', true)`);
+    return fn(tx as unknown as Db);
+  });
+}
+
 export async function closeDb(): Promise<void> {
   await pool.end();
 }
