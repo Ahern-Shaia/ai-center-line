@@ -885,6 +885,11 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .llm-form-actions { display:flex; gap:12px; align-items:center; margin-top:8px; }
 .llm-form-actions .llm-hint { margin-top:0; }
 
+/* LLM Settings page · horizontal center via grid */
+.pane-center { display:grid; justify-content:center; }
+.llm-page { width:720px; max-width:100%; }
+
+
 /* === LLM Select · custom react-aria dropdown（取代原生 select AI 感） === */
 .llm-select { display:flex; flex-direction:column; gap:0; }
 .llm-select-btn {

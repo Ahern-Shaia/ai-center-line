@@ -154,13 +154,14 @@ export default function LlmSettings() {
   }
 
   if (loading) {
-    return <div className="pane"><div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>載入中…</div></div>;
+    return <div className="pane pane-center"><div className="llm-page" style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>載入中…</div></div>;
   }
 
   return (
-    <div className="pane">
+    <div className="pane pane-center">
+      <div className="llm-page">
       <h1>語言模型設定</h1>
-      <p style={{ color: "var(--ink-3)", marginTop: 4, marginBottom: 20, fontSize: 13, maxWidth: 720 }}>
+      <p style={{ color: "var(--ink-3)", marginTop: 4, marginBottom: 20, fontSize: 13 }}>
         設定 AI 對話分析使用的模型 · 支援 5 家供應商。API 金鑰以 AES-256 加密後存入資料庫 · 僅分析時解密 · 介面僅顯示遮罩內容。
       </p>
 
@@ -258,14 +259,6 @@ export default function LlmSettings() {
           {current && <span className="llm-hint">下次上傳的對話分析採用新設定 · 已完成的分析結果不受影響</span>}
         </div>
       </form>
-
-      <div className="llm-tip">
-        <strong>設計原則</strong>
-        <ul>
-          <li>溫度值（0.1）與最大 Token 數（16000）由系統固定 · 分析類任務需求一致性並避免輸出被截斷</li>
-          <li>各家供應商費用由客戶自行帳號支付 · 我方不代收 Token 費用</li>
-          <li>Ollama 本機部署適合敏感資料不出網路 · 大型模型（&gt;13B）需 GPU 支援</li>
-        </ul>
       </div>
     </div>
   );
