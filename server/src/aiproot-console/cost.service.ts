@@ -1,6 +1,6 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { sql } from "drizzle-orm";
-import { withAuthLookup } from "../db/client.js";
+import { currentTx } from "../db/client.js";
 import { PRICING, computeCost, lookupPricing } from "./llm-pricing.js";
 
 // AI 成本管理 · 依對話分析 analysis_upload.usage_stats 聚合
@@ -38,15 +38,22 @@ type UsageRow = {
 
 @Injectable()
 export class CostService {
+  private readonly logger = new Logger(CostService.name);
+
   async getSummary(): Promise<CostSummaryDto> {
-    // 拉 analysis_upload · 只要有 usage_stats 的 · JOIN tenant 顯示名
-    // withAuthLookup 繞 tenant RLS (aiproot 需跨所有 tenant)
-    const rows = await withAuthLookup((tx) => tx.execute<UsageRow>(sql`
-      SELECT a.id AS upload_id, a.tenant_id, t.tenant_name, a.uploaded_at::text, a.usage_stats
+    // 拉 analysis_upload · 只要有 usage_stats 的 · JOIN tenants 顯示名
+    // 用 currentTx() 繼承 TenantTxInterceptor 已 set 的 actor_role='aiproot_admin'
+    // 讓 tenants RLS bypass (該表 OR actor_role='aiproot_admin')
+    const tx = currentTx();
+    const rows = await tx.execute<UsageRow>(sql`
+      SELECT a.id::text AS upload_id, a.tenant_id::text AS tenant_id,
+             t.tenant_name,
+             to_char(a.uploaded_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS uploaded_at,
+             a.usage_stats
       FROM analysis_upload a
       LEFT JOIN tenants t ON t.tenant_id = a.tenant_id
       WHERE a.usage_stats IS NOT NULL
-    `));
+    `);
 
     // Normalize 每筆
     interface Enriched {
@@ -60,23 +67,34 @@ export class CostService {
       calls: number;
     }
     const enriched: Enriched[] = rows.rows.map((r) => {
-      const stats = r.usage_stats ?? {};
-      const inputTokens = stats.inputTokens ?? 0;
-      const outputTokens = stats.outputTokens ?? 0;
-      const cacheReadTokens = stats.cacheReadTokens ?? 0;
-      const cacheWriteTokens = stats.cacheWriteTokens ?? 0;
-      const calls = stats.calls ?? 1;
-      const provider = stats.provider ?? "anthropic";
-      const model = stats.model ?? "claude-opus-4-7";
+      // pg jsonb 有可能回 string · 需再 parse
+      let stats: NonNullable<UsageRow["usage_stats"]> = {};
+      if (r.usage_stats && typeof r.usage_stats === "object") {
+        stats = r.usage_stats;
+      } else if (typeof r.usage_stats === "string") {
+        try { stats = JSON.parse(r.usage_stats); } catch { stats = {}; }
+      }
+      const inputTokens = Number(stats.inputTokens ?? 0) || 0;
+      const outputTokens = Number(stats.outputTokens ?? 0) || 0;
+      const cacheReadTokens = Number(stats.cacheReadTokens ?? 0) || 0;
+      const cacheWriteTokens = Number(stats.cacheWriteTokens ?? 0) || 0;
+      const calls = Number(stats.calls ?? 1) || 1;
+      const provider = typeof stats.provider === "string" ? stats.provider : "anthropic";
+      const model = typeof stats.model === "string" ? stats.model : "claude-opus-4-7";
       const pricing = lookupPricing(provider, model);
       const cost = computeCost({ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }, pricing);
       const tokens = inputTokens + outputTokens + cacheReadTokens + cacheWriteTokens;
+      let uploadedAt: Date;
+      try {
+        uploadedAt = new Date(r.uploaded_at);
+        if (isNaN(uploadedAt.getTime())) uploadedAt = new Date();
+      } catch { uploadedAt = new Date(); }
       return {
         tenantId: r.tenant_id,
         tenantName: r.tenant_name ?? "（未指派租戶）",
         provider,
         model,
-        uploadedAt: new Date(r.uploaded_at),
+        uploadedAt,
         cost,
         tokens,
         calls,
