@@ -1,6 +1,6 @@
 # convo-analysis-realtime.md — [Priority-1] LINE 即時對話分析 · webhook driven
 
-> 🔨 **狀態：APPROVED v0.3（2026-07-21）· M1 SHIPPED（本地 · 待 prod）· 進 M2**
+> 🔨 **狀態：APPROVED v0.4（2026-07-22）· M1+M2+M3 SHIPPED（本地）· M4 部分完成 · 待 prod deploy**
 >
 > Scope: **銜接 `line-ingest` webhook 收訊 → 存訊息 → 按時 batch → 送 `conversation-analysis` pipeline → 每日日報自動出**。不再靠人工上傳 LINE 匯出檔 · 讓工廠員工 LINE 使用習慣 100% 不變（CLAUDE.md §0 核心原則）· 系統背景自動出結果到戰情室 + 客戶簽核佇列。
 >
@@ -377,10 +377,10 @@ Input validation：所有 webhook payload 走 zod schema · reject unknown struc
 |---|---|---|---|
 | **M0** 設計 review | 本檔 → APPROVED（OQ-CAR-1..7 全裁）| 0.02 mo | ✅ 2026-07-21 |
 | **M1** 訊息 + 媒體落庫 | A1 + A2 · migration 0011/0012 · webhook 擴充 · 4 tests | 0.11 mo | ✅ 2026-07-21 (本地 96edcfb · prod 待用戶手動跑 SQL + 設 R2 env) |
-| **M2** Batch pipeline 銜接 | A3 · migration 0014 · AnalysisBatchService · 4 tests | 0.04 mo | ⏳ |
-| **M3** 定時 + 手動觸發 UI | A4 + A6 · cron 或 event driven · aiproot「對話分析歷程」頁 | 0.06 mo | ⏳ |
-| **M4** 戰情室綁定 + docs | A5 + A7 · warroom per-day view · 更 docs · MODULES.md → ✅ | 0.06 mo | ⏳ |
-| **M5** FMEA 收尾 | 填 §12 · P0 全清才上 prod | 0.02 mo | ⏳ |
+| **M2** Batch pipeline 銜接 | A3 · migration 0013 · AnalysisBatchService · 4 tests | 0.04 mo | ✅ 2026-07-22 (本地 0991328) |
+| **M3** 定時 + 手動觸發 UI | A4 + A6 · @Cron 台北 08:00 · aiproot「對話分析歷程」頁 | 0.06 mo | ✅ 2026-07-22 (本地 6f15e13) |
+| **M4** 戰情室綁定 + docs | A5 + A7 · warroom per-day view (⚠️ 需 records→tickets 材料化 · 另開 ticket) · 更 docs · MODULES.md → 🔨 | 0.06 mo | 🔨 部分 · docs + MODULES 已更 · warroom view 延後 |
+| **M5** FMEA 收尾 | 填 §12 · P0 全清才上 prod | 0.02 mo | 🔨 §12 已填實 · P0 待 prod 驗 (S3 alarm + audit) |
 
 ---
 
@@ -451,55 +451,68 @@ GROUP BY tenant_id;
 
 | # | 場景 | 行為 | 狀態 | Sev |
 |---|---|---|---|---|
-| W1 | LINE 重送同一 event（retry） | messageId PK 冪等 · 二次 insert 走 ON CONFLICT DO NOTHING | ⏳ | P1 |
-| W2 | Group 尚未綁 tenant · 訊息落 or 丟 | 丟（groupRef.tenantId null · continue）· 未來綁 tenant 後**歷史訊息不 backfill** | ⏳ | P1 |
-| W3 | Group 綁 tenant 但無 department | 落庫但 department_id = null · 後補分派時歷史訊息不 backfill | ⏳ | P2 |
-| W4 | 訊息內容含 emoji / 特殊 Unicode | Postgres text 已 UTF-8 · 應 OK | ⏳ | P2 |
-| W5 | 訊息 > 5000 char（LINE 上限） | 應不會發生 · 但 length check + truncate 保底 | ⏳ | P2 |
+| W1 | LINE 重送同一 event（retry） | messageId PK 冪等 · 二次 insert 走 ON CONFLICT DO NOTHING | ✅ M1 test #1 涵蓋 | P1 |
+| W2 | Group 尚未綁 tenant · 訊息落 or 丟 | 丟（groupRef.tenantId null · continue）· 未來綁 tenant 後**歷史訊息不 backfill** | ✅ webhook 邏輯 + M1 test #2 涵蓋 | P1 |
+| W3 | Group 綁 tenant 但無 department | 落庫但 department_id = null · 後補分派時歷史訊息不 backfill | ✅ 實作即 snapshot at ingest · 已知殘留（設計如此）| P2 |
+| W4 | 訊息內容含 emoji / 特殊 Unicode | Postgres text 已 UTF-8 · 應 OK | ✅ Postgres 內建 · 無特殊處理 | P2 |
+| W5 | 訊息 > 5000 char（LINE 上限） | webhook truncate(text, 5000) 保底 | ✅ line-webhook.service `truncate()` helper | P2 |
 
 ### 12.2 媒體下載路徑
 
 | # | 場景 | 行為 | 狀態 | Sev |
 |---|---|---|---|---|
-| M1 | LINE content URL 24hr 過期後才觸發下載 | HTTP 410 · 記 download_error · 不 crash | ⏳ | P1 |
-| M2 | 媒體 > 100MB（LINE 上限） | S3 put 應 OK · 但 memory footprint 需 stream 處理 | ⏳ | P1 |
-| M3 | S3 credentials 失效 | put 失敗 · download_error 記 · alarm 觸發 | ⏳ | P0 · **要有 alarm** |
-| M4 | 同 messageId 兩次觸發下載 | S3 覆寫 · sha256 dedup 檢查 · 不炸 | ⏳ | P2 |
-| M5 | 併發 100 個媒體下載 | p-queue 限併發 5 · 排隊 · 不打死 process | ⏳ | P1 |
+| M1 | LINE content URL 24hr 過期後才觸發下載 | HTTP 4xx · recordFailure 記 download_error · 不 crash | ✅ media-download `!res.ok` 分支 | P1 |
+| M2 | 媒體 > 100MB（LINE 上限） | 目前 buffer to memory · v2 才 stream | ⚠️ 殘留 · 100MB buffer 對 Render 512MB pod 尚可 · v2 改 stream | P1 |
+| M3 | S3 credentials 失效 | put 失敗 · recordFailure 記 · **alarm 未建** | ⚠️ 殘留 P0 · 需 M4 加 metric + alarm 才能上 prod | **P0** · 未清 |
+| M4 | 同 messageId 兩次觸發下載 | line_media UNIQUE(message_id) DO UPDATE · 不炸 | ✅ line-media.repository INSERT ... DO UPDATE | P2 |
+| M5 | 併發 100 個媒體下載 | p-queue 限併發 5 · 排隊 · 不打死 process | ✅ media-download.service PQueue({concurrency: 5}) | P1 |
 
 ### 12.3 Batch 分析路徑
 
 | # | 場景 | 行為 | 狀態 | Sev |
 |---|---|---|---|---|
-| B1 | Anthropic API 500 全 batch fail | batch status = failed · 明天 cron 掃到同 (tenant, group, date) UNIQUE 已存 · 需 aiproot 手動重跑 | ⏳ | P1 |
-| B2 | 當天群無訊息 · batch 跑 | listByGroupDay 回 [] · 早退 · status = empty · 不寫 analysis_upload | ⏳ | P2 |
-| B3 | 冪等：同 (tenant, group, date) 手動重跑 | analysis_batch ON CONFLICT DO UPDATE · analysis_upload 新增新 row（source=webhook_manual · 附 replay_of） | ⏳ | P1 |
-| B4 | 訊息 blob > Anthropic context 上限（200k token） | 一個群一天不應超 · 但需 pre-check length · 超則分段 | ⏳ | P1 |
-| B5 | Batch 分析中 · group 換部門 | 已 snapshot department_id at ingest · 不受影響 | ⏳ | P2 |
+| B1 | Anthropic API 500 全 batch fail | batch status = failed · aiproot 「對話分析歷程」頁重跑 | ✅ M3-3 UI + AnalysisBatchService try/catch | P1 |
+| B2 | 當天群無訊息 · batch 跑 | listByGroupDay 回 [] · 早退 · status = empty · 不寫 analysis_upload | ✅ AnalysisBatchService §runBatch early return · M2 test #4 涵蓋 | P2 |
+| B3 | 冪等：同 (tenant, group, date) 手動重跑 | analysis_batch ON CONFLICT DO UPDATE · analysis_upload 新增新 row（source=webhook_manual）· **舊 upload row 不刪** | ⚠️ 殘留 · P2 · v2 加 replay_of 欄位追溯 or 定期 dedup 舊 row | P2 |
+| B4 | 訊息 blob > Anthropic context 上限（200k token） | 目前不 check · 交 API 500 · batch = failed | ⚠️ 殘留 P1 · v2 加 pre-check length + 分段策略 | P1 |
+| B5 | Batch 分析中 · group 換部門 | 已 snapshot department_id at ingest · 不受影響 | ✅ 設計即 snapshot · line-message.repository `departmentId` FROM ref at insert | P2 |
 
 ### 12.4 Cross-tenant 隔離
 
 | # | 場景 | 行為 | 狀態 | Sev |
 |---|---|---|---|---|
-| X1 | tenant_admin 誤登他 tenant 帳號 · 看到 line_message | RLS `tenant_id = current_setting` 擋 · SELECT 0 rows | ⏳ | P0 · **要有 RLS test** |
-| X2 | aiproot_admin 誤讀 tenant 訊息內容 | RLS bypass 但需 audit log 記 · 且 UI 只在 aiproot 明確路由才 render | ⏳ | P0 · **要有 audit** |
-| X3 | Storage key 撞（跨 tenant） | S3 key `<tenant_id>/<messageId>` · UUID collision 幾率 0 | ⏳ | P0 |
+| X1 | tenant_admin 誤登他 tenant 帳號 · 看到 line_message | RLS `tenant_id = current_setting` 擋 · SELECT 0 rows | ✅ M1 test #3 涵蓋 (RLS P0 test) | **P0** · 已清 |
+| X2 | aiproot_admin 誤讀 tenant 訊息內容 | RLS bypass · 但目前 aiproot「對話分析歷程」頁**只顯 batch metadata · 不顯訊息內文** · audit log **未建** | ⚠️ 殘留 P0 · 現無 UI 顯訊息 · risk 低但需 M4 加 audit log 才算真清 | **P0** · 未清 |
+| X3 | Storage key 撞（跨 tenant） | S3 key `<tenant_id>/<messageId>` · UUID collision 幾率 0 · messageId 由 LINE 全域唯一 | ✅ media-storage `makeKey(tenantId, messageId)` | P0 · 已清 |
 
 ### 12.5 部署順序
 
 | # | 場景 | 風險 | 緩解 |
 |---|---|---|---|
-| D1 | Migration 0012 未跑 · code 已推 | webhook insert line_message 500 · 訊息漏收 | migration 必先（R10 人工跑）· CI 檢查欄位存在 |
-| D2 | Cron 早於 M2/M3 · 但 line_message 表空 | 掃 0 rows · 全 batch = empty · 不 harm | 可先 rollout |
-| D3 | S3 bucket 未建 · media 全 fail | download_error 累積 · alarm 觸發 | env `MEDIA_STORAGE_BACKEND` default 'none' · 建 bucket 後才切 's3' |
+| D1 | Migration 0011/0012/0013 未跑 · code 已推 | webhook insert line_message 500 · 訊息漏收 | migration 必先（R10 人工跑）· 上 prod 前 checklist 必含 |
+| D2 | Cron 早於訊息累積 · line_message 表空 | 掃 0 rows · 全 batch = empty · 不 harm | 可先 rollout · empty 狀態無 side effect |
+| D3 | R2 bucket 未建 · media 全 fail | recordFailure 記 download_error · MediaStorageService.enabled=false 走 fallback | ✅ media-storage `!bucket → enabled=false + warn log` · env 未設 code 自 gate |
+| D4 | ScheduleModule 引兩次（data-sync-layer + convo-analysis-realtime）| Nest allows multi `.forRoot()` · cron 註冊獨立 · 冪等 | ✅ 兩 module 各引 · 無衝突 · 測試證實 boot 綠 |
 
 ### 12.6 不在本 module scope 修的既存問題
 
 - **PII 匿名化 / GDPR erasure**：v1 只落庫 · v2 才做 script（新 ticket [CAR-followup-1]）
 - **媒體 OCR / 影片語音辨識**：v2 · 需接 Google Vision / OpenAI Whisper（新 ticket [CAR-followup-2]）
 - **per-user 消息追蹤**：隱私 + 法規爭議 · 待客戶明確授權（新 ticket [CAR-followup-3]）
+- **warroom per-day view**：本 module 只跑到 analysis_upload · warroom 現有 aggregate 讀 `tickets` · 需 records → tickets 材料化（新 ticket [CAR-followup-4]）
+- **B3 dedup**：手動重跑會累積舊 upload · 需定期 dedup job or 加 replay_of 欄位（新 ticket [CAR-followup-5]）
+- **B4 blob length pre-check**：Anthropic 200k token 上限 · v2 分段策略（新 ticket [CAR-followup-6]）
 
-> **檢查點**：M5 收尾時所有 P0 是否都 ✅？否 → 回去修，不得標 SHIPPED。
+### 12.7 上 prod 前必清（P0 gate）
+
+| # | 項目 | 狀態 | 阻擋動作 |
+|---|---|---|---|
+| P0-1 | M3 · S3/R2 credentials 失效 alarm | ⚠️ 未建 | **加 metric `line_media_download_errors_total` + alert threshold 5% for 1hr** |
+| P0-2 | X2 · aiproot 讀 tenant 訊息內容 audit log | ⚠️ 未建（但目前 UI 無此路徑 · 風險低）| **未來加 audit log · 或明文文件說「aiproot 若加 raw 訊息 UI 必先 audit log」** |
+| P0-3 | X1 · RLS 跨租戶 line_message 阻擋 | ✅ M1 test #3 通 | — |
+| P0-4 | X3 · Storage key 前綴 tenant | ✅ | — |
+
+> **當前 P0 未清 2 條**：P0-1 (alarm) 屬阻擋；P0-2 目前 UI 無此路徑 · 只是文件警告 · 待未來動 aiproot 訊息內文 UI 前必加。**M1-M3 本地 SHIPPED · 上 prod 前需先建 R2 bucket + alarm · 或口頭同意接受殘留**。
 
 ---
 
@@ -510,3 +523,4 @@ GROUP BY tenant_id;
 | 2026-07-21 | v0.1 | 初版 DRAFT — 7 sub-task + OQ-CAR-1..7 + FMEA 骨架 | Claude Code |
 | 2026-07-21 | v0.2 | OQ-CAR-1..7 全採建議裁定 · DRAFT → APPROVED · 進 M1 | Claude Code + user |
 | 2026-07-21 | v0.3 | M1 SHIPPED (本地 commit 96edcfb) · OQ-CAR-2 改裁 Cloudflare R2（省 egress · code 已支援）| Claude Code + user |
+| 2026-07-22 | v0.4 | M2 (0991328) + M3 (6f15e13) SHIPPED 本地 · §12 FMEA 填實 · P0-1/P0-2 標未清（阻擋上 prod）· M4 warroom per-day view 延後（另開 CAR-followup-4）| Claude Code + user |
