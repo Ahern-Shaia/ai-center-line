@@ -115,6 +115,8 @@ export default function App() {
     } else if (key === "convo-list" || key === "convo-upload" || key === "llm-settings") {
       setRoute({ page: key });
     } else if (key === "line-bots") {
+      // 通訊接頭層屬 aiproot 平台方管理 · 非 aiproot_admin / consultant 擋下
+      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
       setRoute({ page: "line-bots" });
     }
   };

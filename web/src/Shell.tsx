@@ -1,11 +1,16 @@
 import type { ReactNode } from "react";
 import { Button as AriaButton, Header as AriaHeader, Menu, MenuItem, MenuTrigger, Popover, Separator } from "react-aria-components";
-import type { Session } from "./api";
+import type { Role, Session } from "./api";
 import { useToast } from "./Toast";
 
 // 對照 docs/台灣福祉_系統設計文件_開發用.md §1-C C3 tenant_admin 8 module 全景。
 // 全部走 mock 資料頁面（demo 錄影用）；正式版逐步接後端。
-const NAV = [
+// 通訊接頭層等平台方項目透過 roles 過濾 · 不歸客戶 tenant_admin 管
+const NAV: Array<{
+  group: string;
+  roles?: Role[];              // 未設 = 全角色可見
+  items: Array<{ key: string; label: string; ic: () => ReactNode; done: boolean }>;
+}> = [
   {
     group: "戰情室",
     items: [
@@ -32,6 +37,7 @@ const NAV = [
   },
   {
     group: "通訊接頭層",
+    roles: ["aiproot_admin", "consultant"],   // 我方平台管理項 · 客戶方看不到
     items: [
       { key: "line-bots", label: "LINE 機器人", ic: iconChat, done: true },
     ],
@@ -87,7 +93,7 @@ export default function Shell({ session, active, onNav, onLogout, onRefresh, onH
           </div>
         </div>
         <nav className="sb-nav">
-          {NAV.map((g) => (
+          {NAV.filter((g) => !g.roles || g.roles.includes(session.role)).map((g) => (
             <div key={g.group}>
               <div className="sb-group">{g.group}</div>
               {g.items.map((it) => (
