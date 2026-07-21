@@ -122,19 +122,35 @@ export class LineBotService {
     await this.botRepo.update(tx, botId, { status: "disabled" });
   }
 
-  // Refs 給 UI 下拉：aiproot_admin 新增 bot 挑 tenant · tenant_admin 分派 group 到 department
-  // 依 RLS · tenant_admin 只看 own tenant · aiproot_admin 看全
-  async getRefs(): Promise<RefsDto> {
+  // Refs 給 UI 下拉：
+  // - tenants: aiproot 用（看誰可選 · 新增 bot / 部門管理切換）
+  // - departments: 依傳入 tenantId scope · 這是 bot detail 頁分派部門下拉需要
+  //   若無 tenantId 且 caller 是 aiproot · 回空 array (避免混合多 tenant 部門)
+  async getRefs(tenantId?: string): Promise<RefsDto> {
     const tx = currentTx();
     const tenants = await tx.execute<{ tenant_id: string; tenant_name: string }>(sql`
       SELECT tenant_id, tenant_name FROM tenants ORDER BY tenant_name
     `);
-    const departments = await tx.execute<{ department_id: string; department_name: string }>(sql`
-      SELECT department_id, department_name FROM departments ORDER BY department_name
-    `);
+    let departments: Array<{ departmentId: string; departmentName: string }> = [];
+    if (tenantId) {
+      // 明確 scope 到指定 tenant · aiproot 也能看到（SET current_tenant 讓 RLS 通）
+      await tx.execute(sql`SELECT set_config('app.current_tenant', ${tenantId}, true)`);
+      const res = await tx.execute<{ department_id: string; department_name: string }>(sql`
+        SELECT department_id, department_name FROM departments
+        WHERE tenant_id = ${tenantId}
+        ORDER BY department_name
+      `);
+      departments = res.rows.map((r) => ({ departmentId: r.department_id, departmentName: r.department_name }));
+    } else {
+      // 沒帶 tenantId · tenant_admin 走 RLS 拿 own tenant departments
+      const res = await tx.execute<{ department_id: string; department_name: string }>(sql`
+        SELECT department_id, department_name FROM departments ORDER BY department_name
+      `);
+      departments = res.rows.map((r) => ({ departmentId: r.department_id, departmentName: r.department_name }));
+    }
     return {
       tenants: tenants.rows.map((r) => ({ tenantId: r.tenant_id, tenantName: r.tenant_name })),
-      departments: departments.rows.map((r) => ({ departmentId: r.department_id, departmentName: r.department_name })),
+      departments,
     };
   }
 

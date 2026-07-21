@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { Roles } from "../auth/roles.decorator.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
@@ -14,10 +14,11 @@ export class LineBotController {
   ) {}
 
   // Refs 給 UI 下拉（tenants + departments）· 放最前避免被 :id 路由吃掉
+  // tenantId 選填 · 傳了才 scope departments · aiproot 於 bot detail 頁必傳
   @Get("refs")
   @Roles("aiproot_admin", "consultant")
-  async refs() {
-    return this.botSvc.getRefs();
+  async refs(@Query("tenantId") tenantId?: string) {
+    return this.botSvc.getRefs(tenantId);
   }
 
   // 列表 · tenant_admin 看 own · aiproot_admin / consultant 看全（透過 RLS · 前者 tenant_id 過濾 · 後者 tenant 空看全）

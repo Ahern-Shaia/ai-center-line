@@ -414,8 +414,8 @@ export const listLineBots = () =>
 export const getLineBot = (botId: string) =>
   req<{ bot: LineBotDto; groups: LineGroupRow[] }>(`/line-bots/${botId}`);
 
-export const getLineRefs = () =>
-  req<LineRefsDto>("/line-bots/refs");
+export const getLineRefs = (tenantId?: string) =>
+  req<LineRefsDto>(`/line-bots/refs${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
 
 export const createLineBot = (payload: {
   tenantId: string;

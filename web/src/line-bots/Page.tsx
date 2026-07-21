@@ -73,17 +73,25 @@ export default function LineBots() {
     return () => window.removeEventListener("hashchange", readHash);
   }, []);
 
-  // 選中變更 · 拉 detail + 更新 URL hash
+  // 選中變更 · 拉 detail + 更新 URL hash + 拉該 tenant 的 departments 給下拉用
   useEffect(() => {
     if (!selectedBotId) {
       setBotDetail(null);
+      setRefs((r) => ({ ...r, departments: [] }));
       if (window.location.hash.startsWith("#/line-bots/")) {
         window.location.hash = "#/line-bots";
       }
       return;
     }
     getLineBot(selectedBotId)
-      .then((res) => setBotDetail(res))
+      .then(async (res) => {
+        setBotDetail(res);
+        // 重拉 refs · 依 bot 的 tenantId scope departments
+        try {
+          const scopedRefs = await getLineRefs(res.bot.tenantId);
+          setRefs(scopedRefs);
+        } catch { /* 忽略 · UI 保留舊 refs */ }
+      })
       .catch((err) => {
         setSelectedBotId(null);
         toast.show(err instanceof ApiError ? err.message : "找不到機器人", "danger");
