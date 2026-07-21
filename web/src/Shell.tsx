@@ -70,13 +70,29 @@ const ROLE_LABEL: Record<string, string> = {
   group_owner: "群組負責人",
 };
 
+// TODO(iam-followup): JWT 應內含 tenant_name · 目前 hard-code 補
+// 現在有 2 個 tenant · 未來 wizard 加更多會沒 match → fallback 顯 tenant slug
 const TENANT_NAME: Record<string, string> = {
   "77777777-0000-0000-0000-000000000001": "aiproot",
+  "4d97eced-64c5-4a38-952b-dfce9588ab7c": "台灣福祉",
 };
+
+// 方向 A · role-aware sidebar brand
+function brandFor(session: Session): { mark: string; name: string; sub: string } {
+  if (session.role === "aiproot_admin") {
+    return { mark: "A", name: "AIPROOT", sub: "平台後台" };
+  }
+  if (session.role === "consultant") {
+    return { mark: "A", name: "AIPROOT", sub: "顧問視角" };
+  }
+  const tenantName = TENANT_NAME[session.tenantId] ?? "客戶方";
+  return { mark: tenantName.slice(0, 1), name: tenantName, sub: "戰情室" };
+}
 
 interface Props {
   session: Session;
   active: string;
+  pageTitle?: string;                              // 頂 topbar breadcrumb 的當前頁名稱
   onNav: (key: string) => void;
   onLogout: () => void;
   onRefresh: () => void;
@@ -87,21 +103,21 @@ interface Props {
   children: ReactNode;
 }
 
-export default function Shell({ session, active, onNav, onLogout, onRefresh, onHelp, refreshing, asOf, crumb, children }: Props) {
-  const tenantName = TENANT_NAME[session.tenantId] ?? "租戶";
+export default function Shell({ session, active, pageTitle, onNav, onLogout, onRefresh, onHelp, refreshing, asOf, crumb, children }: Props) {
+  const tenantName = TENANT_NAME[session.tenantId] ?? "客戶方";
+  const brand = brandFor(session);
   const toast = useToast();
-  const tenantMark = tenantName.slice(0, 1);
   const initials = session.email.slice(0, 2).toUpperCase();
   const [changePwOpen, setChangePwOpen] = useState(false);
 
   return (
     <div className="app">
       <aside className="sidebar">
-        <div className="sb-brand" title={tenantName}>
-          <span className="sb-brand-mark" aria-hidden>{tenantMark}</span>
+        <div className="sb-brand" title={brand.name}>
+          <span className="sb-brand-mark" aria-hidden>{brand.mark}</span>
           <div className="sb-brand-text">
-            <div className="sb-brand-name">{tenantName}</div>
-            <div className="sb-brand-sub">戰情室</div>
+            <div className="sb-brand-name">{brand.name}</div>
+            <div className="sb-brand-sub">{brand.sub}</div>
           </div>
         </div>
         <nav className="sb-nav">
@@ -133,7 +149,8 @@ export default function Shell({ session, active, onNav, onLogout, onRefresh, onH
         <div className="topbar">
           <div className="topbar-inner">
           <div className="crumb">
-            <span className="cur">{crumb ?? "總覽"}</span>
+            {crumb && <><b>{crumb}</b><span className="sep" aria-hidden>›</span></>}
+            <span className="cur">{pageTitle ?? crumb ?? "總覽"}</span>
           </div>
           <div className="topbar-spacer" />
           {asOf && (

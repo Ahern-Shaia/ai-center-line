@@ -76,10 +76,11 @@ button { cursor:pointer; }
 .main { display:flex; flex-direction:column; min-width:0; }
 .topbar { height:var(--topbar-h); background:var(--surface); border-bottom:1px solid var(--line); flex-shrink:0; }
 .topbar-inner { max-width:1280px; margin:0 auto; padding:0 24px; height:100%; width:100%; display:flex; align-items:center; gap:14px; }
-/* Crumb 顯示上層分類（非當前頁名）— 淺色小字，讓 pane h1 主導視覺焦點 */
-.crumb { font-size:12px; color:var(--ink-3); display:flex; align-items:center; gap:6px; }
-.crumb .sep { color:var(--line); }
-.crumb .cur { color:var(--ink-3); font-weight:500; }
+/* Crumb 顯示 breadcrumb (parent 分組 › current 頁名) · 方向 A · pane h1 仍是主焦點 */
+.crumb { font-size:12.5px; color:var(--ink-3); display:flex; align-items:center; gap:6px; }
+.crumb b { color:var(--ink-2); font-weight:500; }
+.crumb .sep { color:var(--line); font-family:var(--mono); margin:0 2px; font-size:14px; }
+.crumb .cur { color:var(--ink); font-weight:600; }
 .topbar-spacer { flex:1; }
 .as-of { font-size:12px; color:var(--ink-3); display:flex; align-items:center; gap:6px; }
 .as-of .dot { width:6px; height:6px; border-radius:50%; background:var(--ok); }

@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Topbar + Sidebar Brand · 3 方向 mockup</title>
+<style>
+  :root {
+    --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6;
+    --line:#E5E7EB; --line-2:#F0F2F5;
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --primary:#4F46E5; --primary-2:#4338CA; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5;
+    --warn:#D97706; --warn-tint:#FFFBEB;
+    --r:6px; --r-sm:4px;
+    --sans: 'Inter', 'Noto Sans TC', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+    --sidebar-w:236px; --topbar-h:52px;
+  }
+  body { margin:0; padding:20px 24px; background:var(--canvas); color:var(--ink); font-family:var(--sans); font-size:14px; line-height:1.5; }
+  h1 { font-size:20px; font-weight:700; margin:0 0 8px; }
+  .sub { color:var(--ink-3); font-size:13px; margin-bottom:20px; }
+  .row { display:grid; grid-template-columns:1fr; gap:32px; max-width:1200px; }
+  .direction {
+    background:var(--surface); border:1px solid var(--line); border-radius:8px; overflow:hidden;
+    box-shadow:0 1px 2px rgba(17,24,39,.03);
+  }
+  .direction-hdr {
+    padding:14px 20px; border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:baseline;
+  }
+  .direction-title { font-size:15px; font-weight:600; }
+  .direction-note { color:var(--ink-3); font-size:12px; }
+
+  /* Simulated app frame */
+  .app-frame {
+    display:grid; grid-template-columns:var(--sidebar-w) 1fr;
+    min-height:400px; background:var(--canvas);
+  }
+  .sidebar {
+    background:var(--surface); border-right:1px solid var(--line);
+    display:flex; flex-direction:column;
+  }
+  .sb-brand {
+    height:var(--topbar-h); padding:0 16px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:10px;
+  }
+  .sb-brand-mark {
+    width:28px; height:28px; border-radius:var(--r); background:#0F172A; color:#fff;
+    display:grid; place-items:center; font-size:13px; font-weight:700; letter-spacing:-.02em;
+  }
+  .sb-brand-text { display:flex; flex-direction:column; line-height:1.2; }
+  .sb-brand-name { font-size:13px; font-weight:600; color:var(--ink); }
+  .sb-brand-sub { font-size:11px; color:var(--ink-3); }
+  .sb-nav { padding:12px 8px; font-size:11px; color:var(--ink-3); }
+  .sb-group { padding:8px 8px 4px; font-size:11px; color:var(--ink-3); font-weight:600; letter-spacing:.03em; text-transform:uppercase; }
+  .sb-link { padding:6px 10px; color:var(--ink-2); font-size:12.5px; border-radius:var(--r-sm); cursor:default; }
+  .sb-link.active { background:var(--primary-tint); color:var(--primary-2); font-weight:500; }
+
+  .main { display:flex; flex-direction:column; min-width:0; }
+  .topbar {
+    height:var(--topbar-h); background:var(--surface); border-bottom:1px solid var(--line);
+    display:flex; align-items:center; padding:0 24px; gap:14px;
+  }
+  .crumb {
+    font-size:12.5px; color:var(--ink-3);
+  }
+  .crumb b { color:var(--ink-2); font-weight:500; }
+  .crumb .sep { margin:0 6px; color:var(--line); font-family:var(--mono); }
+  .crumb .cur { color:var(--ink); font-weight:500; }
+  .topbar-spacer { flex:1; }
+  .icon-btn {
+    width:32px; height:32px; border-radius:var(--r); border:1px solid var(--line);
+    background:var(--surface); color:var(--ink-2); display:grid; place-items:center; cursor:pointer;
+  }
+  .user-btn {
+    display:flex; align-items:center; gap:8px; padding:4px 8px 4px 4px;
+    background:var(--surface); border:1px solid var(--line); border-radius:20px; cursor:pointer;
+  }
+  .user-avatar {
+    width:26px; height:26px; border-radius:50%; background:var(--primary-tint); color:var(--primary-2);
+    font-size:10.5px; font-weight:700; display:grid; place-items:center;
+  }
+  .user-meta { display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; }
+  .user-name { font-size:12px; color:var(--ink); font-weight:500; }
+  .user-role { font-size:10px; color:var(--ink-3); }
+
+  .tenant-switch {
+    display:flex; align-items:center; gap:8px; padding:4px 10px 4px 12px;
+    background:var(--primary-tint); border:1px solid var(--primary);
+    border-radius:16px; font-size:12px; color:var(--primary-2); font-weight:500;
+    cursor:pointer;
+  }
+
+  .pane {
+    flex:1; padding:20px 24px; background:var(--canvas);
+  }
+  .pane h2 { font-size:18px; font-weight:700; margin:0 0 4px; color:var(--ink); }
+  .pane .sub { color:var(--ink-3); font-size:12.5px; }
+  .pane-hint {
+    margin-top:14px; padding:14px 16px; background:var(--well); border-radius:var(--r);
+    font-size:12px; color:var(--ink-3); border-left:3px solid var(--line);
+  }
+  .pane-hint code { font-family:var(--mono); background:var(--surface); padding:1px 5px; border-radius:3px; font-size:11px; color:var(--ink-2); }
+
+  .compare { padding:14px 20px; background:var(--well); font-size:12px; color:var(--ink-2); line-height:1.7; border-top:1px solid var(--line); }
+  .compare b { color:var(--ink); }
+
+  .roleblock { margin-top:14px; padding:12px 14px; background:var(--surface); border:1px solid var(--line-2); border-radius:var(--r); font-size:12px; }
+  .roleblock-title { color:var(--ink-3); font-size:11px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; margin-bottom:8px; }
+  .roleblock-item { display:flex; gap:8px; margin-bottom:4px; align-items:baseline; }
+  .roleblock-item b { color:var(--ink); min-width:120px; }
+  .roleblock-item span { color:var(--ink-2); font-family:var(--mono); font-size:11.5px; }
+</style>
+</head>
+<body>
+  <h1>Topbar / Sidebar Brand · 3 方向對比</h1>
+  <div class="sub">用 aiproot admin 角度預覽 · 每個方向下方標示 tenant_admin 登入時會怎麼變</div>
+
+  <div class="row">
+    <!-- ==================== 方向 A ==================== -->
+    <div class="direction">
+      <div class="direction-hdr">
+        <div class="direction-title">方向 A · role-aware brand + breadcrumb topbar</div>
+        <div class="direction-note">推薦 · 資訊密度平衡</div>
+      </div>
+      <div class="app-frame">
+        <div class="sidebar">
+          <div class="sb-brand">
+            <div class="sb-brand-mark">A</div>
+            <div class="sb-brand-text">
+              <div class="sb-brand-name">AIPROOT</div>
+              <div class="sb-brand-sub">平台後台</div>
+            </div>
+          </div>
+          <div class="sb-nav">
+            <div class="sb-group">戰情室</div>
+            <div class="sb-link">總覽儀表</div>
+            <div class="sb-group">AI 對話分析</div>
+            <div class="sb-link">分析列表</div>
+            <div class="sb-link">語言模型設定</div>
+            <div class="sb-group">AIPROOT 管理</div>
+            <div class="sb-link">開通新租戶</div>
+            <div class="sb-link active">AI 成本管理</div>
+          </div>
+        </div>
+        <div class="main">
+          <div class="topbar">
+            <div class="crumb">
+              <b>AIPROOT 管理</b>
+              <span class="sep">›</span>
+              <span class="cur">AI 成本管理</span>
+            </div>
+            <div class="topbar-spacer"></div>
+            <div class="icon-btn">?</div>
+            <div class="icon-btn">↻</div>
+            <div class="user-btn">
+              <div class="user-avatar">AD</div>
+              <div class="user-meta">
+                <span class="user-name">admin</span>
+                <span class="user-role">AIPROOT 管理員</span>
+              </div>
+              <span style="color:var(--ink-3);font-size:9px;padding-right:2px;">▾</span>
+            </div>
+          </div>
+          <div class="pane">
+            <h2>AI 成本管理</h2>
+            <div class="sub">依對話分析 usage_stats 聚合 · pricing 依模型 official 公告</div>
+            <div class="pane-hint">頁面 h1 已明說當前頁 · topbar 補 <b>parent 分組</b> 讓使用者知道自己在哪個大範疇。左側 sidebar brand 對應 <code>role === "aiproot_admin"</code>：AIPROOT / 平台後台</div>
+          </div>
+        </div>
+      </div>
+      <div class="compare">
+        <b>Tenant admin 登入時（王總）</b>：<br>
+        · Sidebar brand → <b>台灣福祉 / 戰情室</b>（tenant_name + "戰情室"）<br>
+        · Topbar → <b>戰情室</b> › <b>總覽儀表</b>（同樣 breadcrumb 結構）<br>
+        · 「AIPROOT 管理」group 完全看不到 · 「AI 對話分析」也看不到（已是舊決策）
+      </div>
+    </div>
+
+    <!-- ==================== 方向 B ==================== -->
+    <div class="direction">
+      <div class="direction-hdr">
+        <div class="direction-title">方向 B · 側欄品牌 + topbar tenant switcher</div>
+        <div class="direction-note">適合 aiproot 頻繁切租戶 debug</div>
+      </div>
+      <div class="app-frame">
+        <div class="sidebar">
+          <div class="sb-brand">
+            <div class="sb-brand-mark">A</div>
+            <div class="sb-brand-text">
+              <div class="sb-brand-name">AIPROOT</div>
+              <div class="sb-brand-sub">ai-center-line</div>
+            </div>
+          </div>
+          <div class="sb-nav">
+            <div class="sb-group">戰情室</div>
+            <div class="sb-link">總覽儀表</div>
+            <div class="sb-group">AI 對話分析</div>
+            <div class="sb-link">分析列表</div>
+            <div class="sb-link">語言模型設定</div>
+            <div class="sb-group">AIPROOT 管理</div>
+            <div class="sb-link">開通新租戶</div>
+            <div class="sb-link active">AI 成本管理</div>
+          </div>
+        </div>
+        <div class="main">
+          <div class="topbar">
+            <div class="crumb">
+              <span class="cur">AI 成本管理</span>
+            </div>
+            <div class="topbar-spacer"></div>
+            <div class="tenant-switch">
+              <span>視角：台灣福祉</span>
+              <span style="font-size:9px;">▾</span>
+            </div>
+            <div class="icon-btn">?</div>
+            <div class="icon-btn">↻</div>
+            <div class="user-btn">
+              <div class="user-avatar">AD</div>
+              <div class="user-meta">
+                <span class="user-name">admin</span>
+                <span class="user-role">AIPROOT 管理員</span>
+              </div>
+              <span style="color:var(--ink-3);font-size:9px;padding-right:2px;">▾</span>
+            </div>
+          </div>
+          <div class="pane">
+            <h2>AI 成本管理</h2>
+            <div class="sub">依對話分析 usage_stats 聚合 · pricing 依模型 official 公告</div>
+            <div class="pane-hint">Sidebar 只顯品牌 <b>不管租戶</b> · Topbar 中間放 <b>tenant switcher</b>。aiproot 選一家 tenant → 該頁面即以「該租戶視角」呈現（Cost dashboard 自動 filter 該 tenant 資料）。這就是「aiproot impersonation」pattern。</div>
+          </div>
+        </div>
+      </div>
+      <div class="compare">
+        <b>Tenant admin 登入時</b>：<br>
+        · Sidebar brand → <b>台灣福祉 / 戰情室</b>（同 A）<br>
+        · Topbar → <b>沒有 tenant switcher</b>（他們只有一家 tenant · switcher 隱藏）<br>
+        · <b>缺點</b>：現階段每頁都要重寫「若 tenant 選了要 filter」邏輯 · scope 較大 · 對現有 module 侵入
+      </div>
+    </div>
+
+    <!-- ==================== 方向 C ==================== -->
+    <div class="direction">
+      <div class="direction-hdr">
+        <div class="direction-title">方向 C · role-aware brand · topbar 極簡</div>
+        <div class="direction-note">最乾淨 · 適合 pane h1 已很明顯的頁</div>
+      </div>
+      <div class="app-frame">
+        <div class="sidebar">
+          <div class="sb-brand">
+            <div class="sb-brand-mark">A</div>
+            <div class="sb-brand-text">
+              <div class="sb-brand-name">AIPROOT</div>
+              <div class="sb-brand-sub">平台後台</div>
+            </div>
+          </div>
+          <div class="sb-nav">
+            <div class="sb-group">戰情室</div>
+            <div class="sb-link">總覽儀表</div>
+            <div class="sb-group">AI 對話分析</div>
+            <div class="sb-link">分析列表</div>
+            <div class="sb-link">語言模型設定</div>
+            <div class="sb-group">AIPROOT 管理</div>
+            <div class="sb-link">開通新租戶</div>
+            <div class="sb-link active">AI 成本管理</div>
+          </div>
+        </div>
+        <div class="main">
+          <div class="topbar">
+            <div class="topbar-spacer"></div>
+            <div class="icon-btn">?</div>
+            <div class="icon-btn">↻</div>
+            <div class="user-btn">
+              <div class="user-avatar">AD</div>
+              <div class="user-meta">
+                <span class="user-name">admin</span>
+                <span class="user-role">AIPROOT 管理員</span>
+              </div>
+              <span style="color:var(--ink-3);font-size:9px;padding-right:2px;">▾</span>
+            </div>
+          </div>
+          <div class="pane">
+            <h2>AI 成本管理</h2>
+            <div class="sub">依對話分析 usage_stats 聚合 · pricing 依模型 official 公告</div>
+            <div class="pane-hint">Topbar 只留右側 <b>user 相關動作</b>。因為 pane h1「AI 成本管理」+ sidebar 已高亮該項 · 使用者已完全清楚自己在哪。Topbar 左側留白 · 視覺最乾淨。</div>
+          </div>
+        </div>
+      </div>
+      <div class="compare">
+        <b>Tenant admin 登入時</b>：<br>
+        · Sidebar brand → <b>台灣福祉 / 戰情室</b><br>
+        · Topbar → 同樣極簡 · 右邊 user + 動作<br>
+        · <b>缺點</b>：完全沒 breadcrumb 感 · deep-linked bookmark 使用者 hard refresh 一時分不清自己在哪個 group（但 sidebar active state 補回來）
+      </div>
+    </div>
+  </div>
+
+  <div class="roleblock">
+    <div class="roleblock-title">Role → Sidebar Brand 對照（3 方向都適用）</div>
+    <div class="roleblock-item"><b>aiproot_admin</b><span>AIPROOT · 平台後台</span></div>
+    <div class="roleblock-item"><b>consultant</b><span>AIPROOT · 顧問視角</span></div>
+    <div class="roleblock-item"><b>tenant_admin</b><span>{tenant_name} · 戰情室</span></div>
+    <div class="roleblock-item"><b>group_owner</b><span>{tenant_name} · 戰情室（同 tenant_admin · 顯示公司名）</span></div>
+  </div>
+
+  <div class="roleblock">
+    <div class="roleblock-title">實作成本粗估</div>
+    <div class="roleblock-item"><b>方向 A</b><span>Shell.tsx 改 30 行 · role-aware brand 邏輯 + breadcrumb 邏輯 · 半小時</span></div>
+    <div class="roleblock-item"><b>方向 B</b><span>Shell.tsx + tenant switcher context provider + 各 module 加 tenant filter · 3-4 小時（scope 大）</span></div>
+    <div class="roleblock-item"><b>方向 C</b><span>Shell.tsx 改 15 行 · 只改 brand · topbar 拿掉 crumb · 20 分鐘</span></div>
+  </div>
+</body>
+</html>

@@ -154,6 +154,7 @@ export default function App() {
         refreshing={refreshing}
         asOf={route.page === "warroom" ? asOf : undefined}
         crumb={crumb}
+        pageTitle={PAGE_TITLE[route.page]}
         onLogout={() => { logout(); setSession(null); }}
         onHelp={() => setRoute({ page: "onboarding" })}
       >
