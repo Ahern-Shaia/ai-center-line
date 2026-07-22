@@ -52,4 +52,30 @@ export class LineApiClient {
       return null;
     }
   }
+
+  // GET /v2/bot/group/{groupId}/member/{userId} · 拉群組成員 displayName + pictureUrl
+  // 條件：bot 在群中 · user 已在群發過訊息 (webhook 收過 · 才有 userId)
+  // 失敗回 { error } · 讓 caller 記 fetch_error (400=未 consent · 404=已退群 · 429=quota)
+  async getGroupMemberProfile(accessToken: string, groupId: string, userId: string): Promise<{
+    displayName: string;
+    userId: string;
+    pictureUrl?: string;
+  } | { error: string }> {
+    try {
+      const res = await fetch(
+        `${this.baseUrl}/v2/bot/group/${encodeURIComponent(groupId)}/member/${encodeURIComponent(userId)}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => "");
+        this.logger.warn(`LINE getGroupMemberProfile failed · groupId=${groupId} · userId=${userId.slice(-6)} · status=${res.status}`);
+        return { error: `HTTP ${res.status} ${errBody.slice(0, 100)}` };
+      }
+      return (await res.json()) as { displayName: string; userId: string; pictureUrl?: string };
+    } catch (err) {
+      const msg = (err as Error).message;
+      this.logger.warn(`LINE getGroupMemberProfile error · groupId=${groupId} · userId=${userId.slice(-6)} · ${msg}`);
+      return { error: `fetch: ${msg}` };
+    }
+  }
 }

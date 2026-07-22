@@ -5,6 +5,7 @@ import { LineBotRepository } from "./line-bot.repository.js";
 import { LineGroupRepository } from "./line-group.repository.js";
 import { LineMessageRepository } from "./line-message.repository.js";
 import { MediaDownloadService } from "./media-download.service.js";
+import { MemberFetchService } from "./member-fetch.service.js";
 
 // LINE webhook payload · 依 https://developers.line.biz/en/reference/messaging-api/#webhook-event-objects
 interface LineWebhookEvent {
@@ -45,6 +46,7 @@ export class LineWebhookService {
     private readonly groupRepo: LineGroupRepository,
     private readonly messageRepo: LineMessageRepository,
     private readonly mediaDownload: MediaDownloadService,
+    private readonly memberFetch: MemberFetchService,
   ) {}
 
   // 主入口 · rawBody 用於 HMAC 驗證 · payload 解析後可 access destination + events
@@ -73,6 +75,13 @@ export class LineWebhookService {
       mediaType: string;
       accessToken: string;
       originalFilename: string | null;
+    }> = [];
+    const memberTasks: Array<{
+      tenantId: string;
+      botId: string;
+      groupId: string;
+      userId: string;
+      accessToken: string;
     }> = [];
 
     await withSystemTx(async (tx) => {
@@ -158,6 +167,18 @@ export class LineWebhookService {
               originalFilename: typeof msg.fileName === "string" ? msg.fileName : null,
             });
           }
+
+          // 拉 member profile (displayName) · dedup by cache · webhook 每則都試 · 已有就 skip API call
+          const senderUid = event.source?.userId;
+          if (senderUid) {
+            memberTasks.push({
+              tenantId: ref.tenantId,
+              botId: bot.botId,
+              groupId,
+              userId: senderUid,
+              accessToken: bot.channelAccessToken,
+            });
+          }
         } catch (err) {
           this.logger.error(`落訊息失敗 · messageId=${msg.id} · ${(err as Error).message}`);
         }
@@ -167,6 +188,9 @@ export class LineWebhookService {
     // Tx 結束才 enqueue · 避免 in-flight tx 內做 fire-and-forget 邊界模糊
     for (const task of mediaTasks) {
       this.mediaDownload.enqueue(task);
+    }
+    for (const task of memberTasks) {
+      this.memberFetch.enqueue(task);
     }
   }
 }

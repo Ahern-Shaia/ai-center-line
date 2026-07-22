@@ -51,6 +51,7 @@ export class LineMessageRepository {
   /**
    * 拉某 tenant 某 group 某天訊息 · 時序排序
    * batchDate 格式: "YYYY-MM-DD" (客戶 UTC+8 一日)
+   * LEFT JOIN line_member 取 displayName · 未 fetch or 失敗則 null
    */
   async listByGroupDay(tx: Db, args: {
     tenantId: string;
@@ -59,34 +60,43 @@ export class LineMessageRepository {
   }): Promise<Array<{
     messageId: string;
     senderLineId: string | null;
+    senderDisplayName: string | null;
     messageType: string;
     textContent: string | null;
     stickerRef: { packageId?: string; stickerId?: string } | null;
     sentAt: Date;
   }>> {
-    // UTC+8 一日 = [batchDate 00:00+08, batchDate+1 00:00+08)
     const startLocal = `${args.batchDate} 00:00:00+08`;
     const endLocal = `${args.batchDate} 00:00:00+08`;
     const res = await tx.execute<{
       message_id: string;
       sender_line_id: string | null;
+      sender_display_name: string | null;
       message_type: string;
       text_content: string | null;
       sticker_ref: { packageId?: string; stickerId?: string } | null;
       sent_at: string;
     }>(sql`
-      SELECT message_id, sender_line_id, message_type, text_content, sticker_ref,
-             sent_at::text AS sent_at
-      FROM line_message
-      WHERE tenant_id = ${args.tenantId}::uuid
-        AND group_id = ${args.groupId}
-        AND sent_at >= ${startLocal}::timestamptz
-        AND sent_at < (${endLocal}::timestamptz + interval '1 day')
-      ORDER BY sent_at ASC
+      SELECT lm.message_id, lm.sender_line_id,
+             mem.display_name AS sender_display_name,
+             lm.message_type, lm.text_content, lm.sticker_ref,
+             lm.sent_at::text AS sent_at
+      FROM line_message lm
+      LEFT JOIN line_member mem
+        ON mem.bot_id = lm.bot_id
+       AND mem.group_id = lm.group_id
+       AND mem.user_id = lm.sender_line_id
+       AND mem.fetch_error IS NULL              -- fetch 失敗的 row · 顯 pseudonym 而非 placeholder
+      WHERE lm.tenant_id = ${args.tenantId}::uuid
+        AND lm.group_id = ${args.groupId}
+        AND lm.sent_at >= ${startLocal}::timestamptz
+        AND lm.sent_at < (${endLocal}::timestamptz + interval '1 day')
+      ORDER BY lm.sent_at ASC
     `);
     return res.rows.map((r) => ({
       messageId: r.message_id,
       senderLineId: r.sender_line_id,
+      senderDisplayName: r.sender_display_name,
       messageType: r.message_type,
       textContent: r.text_content,
       stickerRef: r.sticker_ref,

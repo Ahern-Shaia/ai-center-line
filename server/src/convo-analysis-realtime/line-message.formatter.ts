@@ -4,6 +4,7 @@
 export interface LineMessageRow {
   messageId: string;
   senderLineId: string | null;
+  senderDisplayName: string | null;      // 從 line_member cache · null 則 fallback pseudonym
   messageType: string;                   // 'text' | 'sticker' | 'image' | 'video' | 'audio' | 'file' | 'location'
   textContent: string | null;
   stickerRef: { packageId?: string; stickerId?: string } | null;
@@ -36,7 +37,8 @@ export function formatAsLineExport(
   const lines: string[] = [];
   for (const msg of messages) {
     const time = fmtAmPm(msg.sentAt);
-    const sender = pseudonymSender(msg.senderLineId);
+    // 優先用 displayName（LINE profile · PII · 客戶已授權）· 沒拉到才 pseudonym
+    const sender = msg.senderDisplayName ?? pseudonymSender(msg.senderLineId);
     const text = renderText(msg);
     lines.push(`${time}\t${sender}\t${text}`);
   }

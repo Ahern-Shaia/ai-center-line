@@ -76,6 +76,7 @@ test("formatAsLineExport · 拼出 parser 認得的 zh-TW 匯出格式", () => {
     {
       messageId: "m1",
       senderLineId: "Uabcdef123456",
+      senderDisplayName: null,
       messageType: "text",
       textContent: "早安",
       stickerRef: null,
@@ -84,6 +85,7 @@ test("formatAsLineExport · 拼出 parser 認得的 zh-TW 匯出格式", () => {
     {
       messageId: "m2",
       senderLineId: "Uabcdef123456",
+      senderDisplayName: null,
       messageType: "image",
       textContent: null,
       stickerRef: null,
@@ -92,6 +94,7 @@ test("formatAsLineExport · 拼出 parser 認得的 zh-TW 匯出格式", () => {
     {
       messageId: "m3",
       senderLineId: null,
+      senderDisplayName: null,
       messageType: "sticker",
       textContent: null,
       stickerRef: { packageId: "1", stickerId: "2" },
