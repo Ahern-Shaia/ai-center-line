@@ -267,6 +267,33 @@ export const getWarroomDailyReports = (opts: { from?: string; to?: string } = {}
   return req<WarroomDailyDays>(`/warroom/daily-reports${q ? `?${q}` : ""}`);
 };
 
+// === Category Registry · WTB-M5 ===
+
+export interface CategoryRegistryItem {
+  categoryId: string;
+  tenantId: string;
+  categoryName: string;
+  categorySlug: string;
+  description: string | null;
+  usageCount: number;
+  firstSeenAt: string;
+  lastUsedAt: string;
+  createdBy: string | null;
+  status: "active" | "archived" | "pending_review";
+}
+
+export const listCategories = (tenantId: string, status: "active" | "all" = "all") =>
+  req<{ categories: CategoryRegistryItem[] }>(`/categories?tenantId=${tenantId}&status=${status}`);
+
+export const renameCategory = (categoryId: string, name: string) =>
+  req<{ success: boolean }>(`/categories/${categoryId}/rename`, {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+
+export const archiveCategory = (categoryId: string) =>
+  req<{ success: boolean }>(`/categories/${categoryId}/archive`, { method: "POST" });
+
 // === 對話分析 · conversation-analysis pilot ===
 
 export interface ConvoUpload {

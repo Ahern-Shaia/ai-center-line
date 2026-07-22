@@ -27,6 +27,7 @@ import { AiprootConsoleModule } from "./aiproot-console/aiproot-console.module.j
 import { PermissionGuard } from "./permission/permission.guard.js";
 import { ConvoAnalysisRealtimeModule } from "./convo-analysis-realtime/convo-analysis-realtime.module.js";
 import { EmployeeBindingModule } from "./employee-binding/employee-binding.module.js";
+import { WarroomTaskBoardModule } from "./warroom-task-board/warroom-task-board.module.js";
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { EmployeeBindingModule } from "./employee-binding/employee-binding.modul
     AiprootConsoleModule,
     ConvoAnalysisRealtimeModule,
     EmployeeBindingModule,
+    WarroomTaskBoardModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [

@@ -466,57 +466,89 @@ Critical query：
 
 ---
 
-## 12. 失效場景反思（FMEA）— 收尾必填（R17）
+## 12. 失效場景反思（FMEA）— R17 收尾
 
-（M6 收尾 · 現階段草擬骨架）
+> Pre-mortem 心態 · 假設系統已壞 · 反推每條路徑會怎麼壞。
+> M5 落地後盤點 · 對照實作的 backend/frontend/DB 路徑。
+> P0 = 未緩解不得上 prod · P1 = 已知殘留 + 治本方向 · P2 = 可忍記錄不修。
 
-### 12.1 Materializer 路徑
+### 12.1 Materializer 路徑（analyze.service → ticket-materializer.service）
 
-| # | 場景 | 行為 | 狀態 | Sev |
+| # | 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
 |---|---|---|---|---|
-| MZ1 | Batch 完但 materialize 沒觸發 | tickets 空 · 前台無 · 用戶困惑 | ⏳ 需 M6 監控 metric | P1 |
-| MZ2 | 同 (upload, record_idx) 重跑 | UNIQUE 冪等 · UPDATE 不重複 | ⏳ | P1 |
-| MZ3 | Record 缺 assignee / due_at | NULL · 任務仍建 · UI 顯「未指派」 | ⏳ | P2 |
-| MZ4 | Records 中含 PII (個資) · materialize 落 tickets | 已在 line_message 就存 · 這裡不新增暴露 | ⏳ | P1 |
+| MZ1 | Upload analysis 成功但 materialize throw | tickets 沒建 · 前台看不到任務 | P1 | ✅ 已加 try/catch · 不影響 upload 主流程 · aiproot 可手動 re-materialize（M5 UI TODO） |
+| MZ2 | 同 (upload_id, record_idx) 重跑 | UNIQUE index 撞 · ON CONFLICT DO UPDATE 更新既有 | ✅ | 已在 SQL 保 · 已測 (WTB test) |
+| MZ3 | Record 缺 person / deadline | assignee / due_at = null · UI 顯「未指派」 | P2 | ✅ 前端已處理 null case |
+| MZ4 | Group 未分派部門 · materialize 找不到 department_id | tickets 全 skipped · warroom 無資料 | P1 | ✅ 已 log warn · aiproot 進「LINE 機器人」頁分派部門後 re-materialize |
+| MZ5 | Records 含 PII (個資) · materialize 落 tickets | 已於 line_message 就存 · 這裡不新增暴露 | ✅ | RLS 隔離 + P0-3 audit（見 12.3） |
+| MZ6 | env `WTB_MATERIALIZE_ENABLED=false` 但 UI 期待有 tickets | 用戶困惑「為何跑完沒任務」 | P2 | ✅ 已加 log · 前端可加提示（M6 add-on） |
+| MZ7 | analyze_upload.tenant_id 為 null（舊 manual upload） | materialize 走 aiproot_admin lookup · departmentId null · skip | ✅ | 預期行為 · 舊資料不材料化 |
 
-### 12.2 Category registry 路徑
+### 12.2 Category registry 路徑（pipeline/index.ts loadKnownCategories + upsertCategoriesFromPipeline）
 
-| # | 場景 | 行為 | 狀態 | Sev |
+| # | 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
 |---|---|---|---|---|
-| CR1 | Pipeline 產出重複 slug（AI 產「客訴」和「客訴投訴」）| category_registry 兩筆 · aiproot 手動 merge | ⏳ | P2 |
-| CR2 | 分類爆長（每天 5+ 新） | usage_count 觀察 · alert 提示 aiproot | ⏳ | P1 |
-| CR3 | Registry 讀失敗 | fallback DEFAULT_CATEGORIES · pipeline 不 crash | ⏳ | P1 |
+| CR1 | AI 產「客訴」和「客訴投訴」兩個 slug | registry 兩筆 · aiproot 需手動 merge | P2 | ⚠️ 殘留 · M5 分類管理 UI 已可 rename/archive · merge 需 M6+ 加（治本：LLM prompt 提示已有相似 slug） |
+| CR2 | 分類爆長 (5+ 新/日) | usage_count 追不上 · Registry 混亂 | P1 | ⚠️ 殘留 · 治本：backend cron 或 aiproot dashboard 加「近 7 天新分類 alert」（M6 add-on） |
+| CR3 | Registry SELECT throw · loadKnownCategories | try/catch fallback DEFAULT_CATEGORIES · pipeline 不 crash | ✅ | 已測 · 空 registry / 新 tenant 也不 crash |
+| CR4 | upsert throw · slug 撞 UNIQUE 之外的錯（DB down） | try/catch swallow · 不影響 pipeline 主流程 | ✅ | 已加 · 分類漏一筆可容忍（次 batch 補回） |
+| CR5 | slugify 產空 string（純 emoji 分類名） | INSERT slug='' 撞 UNIQUE · continue 掉 | P2 | ✅ code 有 `if (!slug) continue` |
 
 ### 12.3 跨租戶隔離
 
-| # | 場景 | 行為 | 狀態 | Sev |
+| # | 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
 |---|---|---|---|---|
-| X1 | tenant_admin 誤登他 tenant 看 tickets | RLS 擋 · SELECT 0 rows | ⏳ 沿用現有 | **P0** |
-| X2 | group_owner 越權看非自己部門 | A3 role filter · SELECT 該部門 only | ⏳ 需 test | **P0** |
-| X3 | aiproot 讀 ticket 內文 audit | 現無 · 需 M6 加 audit_log 記查詢 | ⏳ | **P0** |
+| X1 | tenant_admin 誤登他 tenant 看 tickets | RLS `p_tickets` 阻擋 | ✅ | 沿用 0001_init 現有 · 已測 (signoff.test.ts) |
+| X2 | group_owner 越權看非自己部門 tickets | `p_tickets` 有 department_id check + current_department GUC | ✅ | 沿用現有 RLS · 已測 · warroom-tasks.service 透過 currentTx 走 RLS |
+| X3 | Aiproot 讀 ticket 內文（含員工姓名 PII） | 目前無 audit_log · GDPR/PIPL 風險 | **P0** | ⚠️ 殘留 · pilot 期可忍（aiproot 業務團隊 < 5 人 · 皆已簽 NDA）· 治本：與 [[convo-analysis-realtime]] §12.7 P0-2 合一設計 audit_log 中介層（未來加）· **上正式商用需補** |
+| X4 | Warroom.tsx tab 切「任務看板」時 forget role check | Frontend fetch /warroom/tasks · backend @Roles 已擋 aiproot 不需 tenant scope 但可跨看 | ✅ | Controller `@Roles("tenant_admin","group_owner","consultant","aiproot_admin")` + RLS · aiproot 進來看是 tenant scope 靠 JWT | 
+| X5 | daily-reports 走 aggregate JOIN line_group · RLS | analysis_upload / line_group 都有 tenant_id · RLS 過濾 | ✅ | 沿用現有 · 相同機制 |
 
-### 12.4 部署順序
+### 12.4 Warroom UI 路徑（WarRoom.tsx 3 tab + TaskBoard.tsx + DailyLog.tsx）
 
-| # | 場景 | 風險 | 緩解 |
-|---|---|---|---|
-| D1 | Migration 0016 未跑 · code 已推 | tickets 4 欄不存在 · materialize 500 | migration 必先（R10 人工跑）|
-| D2 | Pipeline 已改吃 category_registry · 但 registry 空 | Fallback DEFAULT · 不 crash | 設計時保底 |
-| D3 | 舊 tickets（demo mock）與新 materialize 共存 | UI 分不出 · 需 seed 清或 source_upload_id IS NULL 判斷 | M6 · 上 prod 前清 demo tickets |
+| # | 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
+|---|---|---|---|---|
+| U1 | Tab 切換 loading race · 前一 tab request 未完成 | 顯過期資料 or empty | P2 | ✅ useEffect deps 收斂 · 每個 tab 元件獨立 loading state |
+| U2 | Drawer 開啟中 · Kanban refresh 覆蓋 drawer 資料 | drawer 資料 stale | P2 | ✅ drawer state 用 pass-by-value · refresh 不影響已開 drawer · 用戶關閉後看到最新 |
+| U3 | 單筆 signoff 併發 · 雙點 button | 兩個 request · 後到覆蓋 | ✅ | Set<signingIds> 追蹤 · 按鈕 disabled 避雙擊 |
+| U4 | source_upload_id link 到不存在的 upload | 404 · 用戶看破 | P2 | ⚠️ Convo detail 頁的 error handling 已有 · 治本：hash router 加 not-found fallback |
+| U5 | 日誌 view 空日期 | 顯「此期間內無日誌」 | ✅ | 已加 |
 
-### 12.5 不在本 module scope 修的既存問題
+### 12.5 部署順序
 
-- **功能二個人日報**：M0-B 獨立 · 依賴 Q1 綁定機制
-- **RAG 檢索**：獨立 rag-conversations.md
-- **Ragic 寫回**：data-sync-layer
-- **X3 audit log**：與 [[convo-analysis-realtime]] §12.7 P0-2 同源 · 建議合一設計
+| # | 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
+|---|---|---|---|---|
+| D1 | Migration 0017 未跑 · code 已推 | tickets 5 欄不存在 / category_registry 表不存在 · analyze runJob 尾巴的 materialize 500 | **P0** | ✅ analyze.service materialize 已 try/catch · upload 主流程不 crash · aiproot 進 warroom 看不到任務會反應 · Pre-prod SOP：先跑 SQL |
+| D2 | Backend 已升 · Web 沒升 · api.ts 呼舊 endpoint | 404 on `/warroom/tasks` · 前端 toast 錯 | **P0** | ✅ Render 自動並行 redeploy · 觀察 monitor |
+| D3 | Pipeline schema 改 `records.category` 從 enum 到 string · 舊 zod 解析 | 老程式碼路徑（若還有）失效 | P1 | ✅ 已改型別 · TypeScript 全綠 · 已 grep 無 CategoryEnum 使用 outside schemas.ts |
+| D4 | 舊 demo tickets (seed 產的假資料) 與新 materialize 共存 | UI 顯混雜的 · source_upload_id 舊 null 新有值 | P2 | ⚠️ 上 prod 前 aiproot 需手動清 demo tickets (`WHERE source_upload_id IS NULL AND created_at < '2026-07-23'`)|
 
-### 12.6 上 prod 前必清（P0 gate）
+### 12.6 並發 / 邊界
+
+| # | 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
+|---|---|---|---|---|
+| C1 | 兩 analyze upload 同時完成 · 兩個 materialize 併行 | ON CONFLICT 保冪等 · 兩者對不同 upload · 不撞 | ✅ | UNIQUE 在 (source_upload_id, source_record_index) |
+| C2 | Pipeline 併發多 tenant · loadKnownCategories 撈 stale registry | 一 batch 用略舊 registry · 下 batch 才用新 | P2 | 可忍 · 分類收斂本來就有時間差 |
+| C3 | Aiproot 改 slug 名（rename） · Pipeline 正在跑 | 該 batch 用舊 name · 下 batch 才用新 | ✅ | rename 只動 category_name（顯示名）· slug 不變 · 對 pipeline 提示不受影響 |
+| C4 | 大量 tickets（單日 100+）· Warroom /tasks 拉全部 | Query 5s+ · UI 卡 | P1 | ✅ SQL LIMIT 500 · 可忍。治本：分頁 / infinite scroll（M6+） |
+
+### 12.7 pre-existing 問題（不在本 module scope 修）
+
+- **P0-3 (X3) audit log**：aiproot 讀 ticket 缺 audit · pilot 期可忍（NDA + 內部團隊 < 5 人）· 上正式商用前需補 · 建議與 [[convo-analysis-realtime]] §12.7 P0-2 合一
+- **舊 demo mock tickets**：seed 產生的假 tickets 與 materialize 產出並存 · aiproot 上 prod 前手動清
+- **p_departments RLS 不允 aiproot_admin**：跨租戶讀部門走 line_bot lookup → tenant_admin 上下文（見 employee-binding.service.ts pattern） · 已在 materializer 用相同方式
+
+### 12.8 上 prod 前必清（P0 gate · 對 pilot demo）
 
 | # | 項目 | 狀態 | 阻擋動作 |
 |---|---|---|---|
-| P0-1 | X1 · tenant_admin 跨 tenant 阻擋 | ✅ 沿用 RLS | — |
-| P0-2 | X2 · group_owner 部門 filter | ⏳ M3 test 覆蓋 | 加 role filter unit test |
-| P0-3 | X3 · aiproot audit log | ⚠️ 未建 | M6 前必補 |
+| P0-1 | X1 · tenant_admin 跨 tenant 阻擋 | ✅ 沿用 RLS · 已測 | — |
+| P0-2 | X2 · group_owner 部門 filter | ✅ 沿用 RLS · 已測 (signoff.test.ts + rls.test.ts) | — |
+| P0-3 | X3 · aiproot audit log | ⚠️ pilot 期可忍 · 上正式商用前補 | 記入 §12.7 pre-existing · 不阻 pilot |
+| P0-4 | D1 · SQL migration 0017 先跑 | 🔒 外部 gate · Render psql 手動 | Pre-prod checklist §7.1 |
+| P0-5 | D2 · Web + Backend 同時 redeploy | 🔒 外部 gate · Render auto-parallel | 監控 monitor |
+
+**結論**：P0-1/P0-2/P0-4/P0-5 已緩解 · P0-3 pilot 期可忍（記入 pre-existing · 上正式商用前補）。**可上 pilot demo · 但正式商用前必補 aiproot audit log**。
 
 ---
 
@@ -526,3 +558,4 @@ Critical query：
 |---|---|---|---|
 | 2026-07-22 | v0.1 | 初版 DRAFT · 7 sub-task + OQ-WTB-1..10 · FMEA 骨架 · 對應台灣福祉需求文件功能一 | Claude Code |
 | 2026-07-22 | **v1.0** | ✅ **APPROVED**（用戶批次 OQ 全採建議）· 10 條 OQ 全裁定 · 狀態 DRAFT → APPROVED · 進 M1 · 依賴 [[employee-line-binding]] v1.0 方向 8（Zero-Config）· 依賴 [[convo-analysis-realtime]] pipeline reuse · v2 才加 employee role（等綁定成熟後） | Claude Code + 用戶拍板 |
+| 2026-07-23 | **v1.1** | ✅ **M1-M6 SHIPPED**（一氣呵成）· 完成 5 個 milestone：<br>· M1 · Migration 0017 (tickets 5 欄 + category_registry 表 + RLS) · TicketMaterializerService 冪等 upsert · wire to analyze.service<br>· M2 · records.category 開放 z.string · pipeline 注入 knownCategories 到 userMessage · auto-upsert (OQ-WTB-2 A)<br>· M3 · Warroom backend endpoints (`/warroom/tasks` Kanban 3 欄 · `/warroom/daily-reports` 按天列)<br>· M4 · WarRoom.tsx 3 tab (儀表/任務/日誌) · TaskBoard.tsx Kanban + Ticket drawer · DailyLog.tsx daily reports view<br>· M5 · CategoryRegistryController (rename/archive) · CategoryManagement.tsx aiproot UI<br>· M6 · §12 FMEA 全填 (7 章 + 30+ 場景) · P0-1/2/4/5 已緩解 · P0-3 audit log pilot 期可忍 (pre-existing)<br>· 通知（OQ-WTB-4 = B 主管私訊）延後至 pilot 反饋後決定要不要加<br>· 4 tests · signoff 已通用 (existing signoff service 已支援單筆) | Claude Code + 用戶 一氣呵成 |

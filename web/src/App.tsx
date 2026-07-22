@@ -19,6 +19,7 @@ import OnboardWizard from "./aiproot-console/OnboardWizard";
 import CostDashboard from "./aiproot-console/CostDashboard";
 import BatchHistory from "./aiproot-console/BatchHistory";
 import BindingAudit from "./aiproot-console/BindingAudit";
+import CategoryManagement from "./aiproot-console/CategoryManagement";
 import FirstLoginChangePassword from "./auth/FirstLoginChangePassword";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
 import { getSession, logout, login, type Session } from "./api";
@@ -42,7 +43,8 @@ type Route =
   | { page: "onboard-tenant" }
   | { page: "cost-dashboard" }
   | { page: "batch-history" }
-  | { page: "binding-audit" };
+  | { page: "binding-audit" }
+  | { page: "category-mgmt" };
 
 // crumb 顯示上層分類（非當前頁名），避免與 pane h1 重複。
 // pane h1 對應 PAGE_TITLE，同步設定 document.title 提供瀏覽器 tab 辨識。
@@ -65,6 +67,7 @@ const CRUMB: Record<Route["page"], string> = {
   "cost-dashboard": "AIPROOT 管理",
   "batch-history": "AIPROOT 管理",
   "binding-audit": "AIPROOT 管理",
+  "category-mgmt": "AIPROOT 管理",
 };
 
 const PAGE_TITLE: Record<Route["page"], string> = {
@@ -86,6 +89,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "cost-dashboard": "AI 成本管理",
   "batch-history": "對話分析歷程",
   "binding-audit": "LINE 綁定 audit",
+  "category-mgmt": "分類管理",
 };
 
 export default function App() {
@@ -155,6 +159,9 @@ export default function App() {
     } else if (key === "binding-audit") {
       if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
       setRoute({ page: "binding-audit" });
+    } else if (key === "category-mgmt") {
+      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
+      setRoute({ page: "category-mgmt" });
     }
   };
 
@@ -210,6 +217,7 @@ export default function App() {
             <BatchHistory onOpenAnalysis={(id) => setRoute({ page: "convo-detail", uploadId: id })} />
           )}
           {route.page === "binding-audit" && <BindingAudit />}
+          {route.page === "category-mgmt" && <CategoryManagement />}
         </div>
       </Shell>
     </ToastProvider>
