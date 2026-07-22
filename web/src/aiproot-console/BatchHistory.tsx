@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Button as AriaButton,
+  ListBox,
+  ListBoxItem,
+  Popover,
+  Select,
+  SelectValue,
+} from "react-aria-components";
+import {
   ApiError,
   listAnalysisBatches,
   listAiprootTenants,
@@ -120,23 +128,44 @@ export default function BatchHistory() {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <span style={{ fontSize: 13.5, color: "var(--ink-2)" }}>租戶</span>
-          <select
-            className="al-select"
-            value={selectedTenantId}
-            onChange={(e) => void onTenantChange(e.target.value)}
-            disabled={loading || busy}
-            /* 對齊 .btn: 8px 14px padding + 13.5px font · 高度一致 */
-            style={{ minWidth: 200, padding: "8px 14px", fontSize: 13.5, height: 36 }}
+          <Select
+            className="llm-select"
+            selectedKey={selectedTenantId || "__all__"}
+            onSelectionChange={(k) => void onTenantChange(k === "__all__" ? "" : String(k))}
+            aria-label="租戶"
+            isDisabled={loading || busy}
           >
-            <option value="">全部租戶（{rows.length} 筆）</option>
-            {tenants.map((t) => (
-              <option key={t.tenantId} value={t.tenantId}>
-                {t.tenantName}（{countByTenant.get(t.tenantId) ?? 0}）
-              </option>
-            ))}
-          </select>
-          <button className="btn" style={{ height: 36 }} onClick={() => void refresh()} disabled={loading || busy}>重新整理</button>
-          <button className="btn primary" style={{ height: 36 }} onClick={() => void onRunPending()} disabled={busy}>掃 pending 全跑</button>
+            <AriaButton className="llm-select-btn" style={{ minWidth: 220 }}>
+              <SelectValue className="llm-select-value">
+                {() => selectedTenantId
+                  ? `${tenantName(selectedTenantId)}（${countByTenant.get(selectedTenantId) ?? 0}）`
+                  : `全部租戶（${rows.length}）`}
+              </SelectValue>
+              <svg className="llm-select-chev" width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
+                <path d="M1 1l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </AriaButton>
+            <Popover className="llm-select-pop" offset={4}>
+              <ListBox
+                className="llm-select-list"
+                items={[{ id: "__all__", name: `全部租戶（${rows.length}）` }, ...tenants.map((t) => ({
+                  id: t.tenantId,
+                  name: `${t.tenantName}（${countByTenant.get(t.tenantId) ?? 0}）`,
+                }))]}
+              >
+                {(item) => (
+                  <ListBoxItem id={item.id} textValue={item.name} className="llm-select-item">
+                    <span>{item.name}</span>
+                    <svg className="llm-select-check" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                      <path d="m2 7 3 3 7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </ListBoxItem>
+                )}
+              </ListBox>
+            </Popover>
+          </Select>
+          <button className="btn" onClick={() => void refresh()} disabled={loading || busy}>重新整理</button>
+          <button className="btn primary" onClick={() => void onRunPending()} disabled={busy}>掃 pending 全跑</button>
         </div>
       </div>
 
