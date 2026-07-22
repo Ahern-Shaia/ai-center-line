@@ -25,6 +25,7 @@ import { PermissionModule } from "./permission/permission.module.js";
 import { AiprootConsoleModule } from "./aiproot-console/aiproot-console.module.js";
 import { PermissionGuard } from "./permission/permission.guard.js";
 import { ConvoAnalysisRealtimeModule } from "./convo-analysis-realtime/convo-analysis-realtime.module.js";
+import { EmployeeBindingModule } from "./employee-binding/employee-binding.module.js";
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { ConvoAnalysisRealtimeModule } from "./convo-analysis-realtime/convo-ana
     PermissionModule,
     AiprootConsoleModule,
     ConvoAnalysisRealtimeModule,
+    EmployeeBindingModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [

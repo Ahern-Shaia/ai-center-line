@@ -53,6 +53,23 @@ export class LineApiClient {
     }
   }
 
+  // POST /v2/bot/message/reply · 用 replyToken 回覆訊息 (免費 · 不占 push quota)
+  // 依 https://developers.line.biz/en/reference/messaging-api/#send-reply-message
+  async replyMessage(accessToken: string, replyToken: string, messages: unknown[]): Promise<void> {
+    const res = await fetch(`${this.baseUrl}/v2/bot/message/reply`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ replyToken, messages }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`LINE replyMessage failed · status=${res.status} · body=${body.slice(0, 200)}`);
+    }
+  }
+
   // GET /v2/bot/group/{groupId}/member/{userId} · 拉群組成員 displayName + pictureUrl
   // 條件：bot 在群中 · user 已在群發過訊息 (webhook 收過 · 才有 userId)
   // 失敗回 { error } · 讓 caller 記 fetch_error (400=未 consent · 404=已退群 · 429=quota)

@@ -309,3 +309,21 @@ export const rolePermissions = pgTable("role_permissions", {
   roleId: uuid("role_id").notNull().references(() => roles.roleId, { onDelete: "cascade" }),
   permissionId: text("permission_id").notNull().references(() => permissions.permissionId, { onDelete: "cascade" }),
 });
+
+// 0016 · employee-line-binding · 方向 8 LIFF Zero-Config
+export const userLineBinding = pgTable("user_line_binding", {
+  bindingId: uuid("binding_id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.userId, { onDelete: "cascade" }),
+  botId: uuid("bot_id").notNull().references(() => lineBot.botId, { onDelete: "cascade" }),
+  lineUserId: text("line_user_id").notNull(),                          // LINE UserId (Uxxx) · 對此 bot 唯一
+  boundAt: timestamp("bound_at", { withTimezone: true }).notNull().defaultNow(),
+  boundBy: uuid("bound_by").references(() => users.userId),
+  bindingMethod: text("binding_method").notNull()
+    .$type<"liff_self_service" | "aiproot_manual">(),
+  status: text("status").notNull().default("active")
+    .$type<"active" | "revoked">(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  revokedBy: uuid("revoked_by").references(() => users.userId),
+  revokedReason: text("revoked_reason"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+});

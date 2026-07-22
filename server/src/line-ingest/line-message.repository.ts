@@ -15,6 +15,8 @@ export class LineMessageRepository {
     groupId: string;
     departmentId: string | null;
     senderLineId: string | null;
+    senderUserId?: string | null;               // 0016 · 若 binding 已存在 · 落庫時對到 aiproot user
+    chatContext?: "group" | "personal";          // 0016 · default 'group'
     messageType: string;
     textContent: string | null;
     stickerRef: Record<string, unknown> | null;
@@ -22,15 +24,19 @@ export class LineMessageRepository {
     rawEvent: Record<string, unknown>;
   }): Promise<{ inserted: boolean }> {
     const sentAt = new Date(args.sentAtMs).toISOString();
+    const chatContext = args.chatContext ?? "group";
     // ON CONFLICT DO NOTHING · LINE retry 冪等 (messageId 是 LINE 全域唯一)
     const res = await tx.execute<{ inserted: boolean }>(sql`
       INSERT INTO line_message (
         message_id, tenant_id, bot_id, group_id, department_id,
-        sender_line_id, message_type, text_content, sticker_ref,
+        sender_line_id, sender_user_id, chat_context,
+        message_type, text_content, sticker_ref,
         sent_at, raw_event
       ) VALUES (
         ${args.messageId}, ${args.tenantId}::uuid, ${args.botId}::uuid, ${args.groupId},
-        ${args.departmentId ?? null}, ${args.senderLineId ?? null}, ${args.messageType},
+        ${args.departmentId ?? null}, ${args.senderLineId ?? null},
+        ${args.senderUserId ?? null}::uuid, ${chatContext},
+        ${args.messageType},
         ${args.textContent ?? null},
         ${args.stickerRef ? JSON.stringify(args.stickerRef) : null}::jsonb,
         ${sentAt}, ${JSON.stringify(args.rawEvent)}::jsonb
@@ -39,6 +45,93 @@ export class LineMessageRepository {
       RETURNING (xmax = 0) AS inserted
     `);
     return { inserted: res.rows.length > 0 };
+  }
+
+  /**
+   * 拉某 aiproot user 某天私訊 · 個人日報 pipeline 用
+   * batchDate 格式: "YYYY-MM-DD" (Asia/Taipei)
+   */
+  async listPersonalByUserDay(tx: Db, args: {
+    userId: string;
+    batchDate: string;
+  }): Promise<Array<{
+    messageId: string;
+    messageType: string;
+    textContent: string | null;
+    sentAt: Date;
+  }>> {
+    const res = await tx.execute<{
+      message_id: string;
+      message_type: string;
+      text_content: string | null;
+      sent_at: string;
+    }>(sql`
+      SELECT message_id, message_type, text_content, sent_at::text AS sent_at
+      FROM line_message
+      WHERE sender_user_id = ${args.userId}::uuid
+        AND chat_context = 'personal'
+        AND (sent_at AT TIME ZONE 'Asia/Taipei')::date = ${args.batchDate}::date
+      ORDER BY sent_at ASC
+    `);
+    return res.rows.map((r) => ({
+      messageId: r.message_id,
+      messageType: r.message_type,
+      textContent: r.text_content,
+      sentAt: new Date(r.sent_at),
+    }));
+  }
+
+  /**
+   * 找活躍但未綁定的 UserId · 提示 aiproot 追人綁定（方向 3 nudge）
+   * 定期 job 用
+   */
+  async findUnboundActiveUsers(tx: Db, tenantId: string, lookbackDays: number = 7): Promise<Array<{
+    senderLineId: string;
+    displayName: string | null;
+    messageCount: number;
+    lastActiveAt: string;
+    topGroupName: string | null;
+  }>> {
+    const res = await tx.execute<{
+      sender_line_id: string;
+      display_name: string | null;
+      message_count: string;
+      last_active_at: string;
+      top_group_name: string | null;
+    }>(sql`
+      WITH activity AS (
+        SELECT lm.sender_line_id,
+               count(*)::text AS message_count,
+               max(lm.sent_at)::text AS last_active_at,
+               mode() WITHIN GROUP (ORDER BY lg.display_name) AS top_group_name
+        FROM line_message lm
+        LEFT JOIN line_group lg ON lg.bot_id = lm.bot_id AND lg.group_id = lm.group_id
+        LEFT JOIN user_line_binding b
+          ON b.bot_id = lm.bot_id
+         AND b.line_user_id = lm.sender_line_id
+         AND b.status = 'active'
+        WHERE lm.tenant_id = ${tenantId}::uuid
+          AND lm.sent_at > (now() - (${lookbackDays} || ' days')::interval)
+          AND lm.sender_line_id IS NOT NULL
+          AND b.binding_id IS NULL                    -- 未綁定
+        GROUP BY lm.sender_line_id
+      )
+      SELECT a.sender_line_id, mem.display_name,
+             a.message_count, a.last_active_at, a.top_group_name
+      FROM activity a
+      LEFT JOIN line_member mem
+        ON mem.user_id = a.sender_line_id
+       AND mem.fetch_error IS NULL
+      ORDER BY a.message_count::int DESC
+      LIMIT 100
+    `);
+    return res.rows.map((r) => ({
+      senderLineId: r.sender_line_id,
+      displayName: r.display_name,
+      messageCount: parseInt(r.message_count, 10),
+      lastActiveAt: r.last_active_at,
+      topGroupName: r.top_group_name,
+    }));
   }
 
   async attachMedia(tx: Db, messageId: string, mediaId: string): Promise<void> {

@@ -1,0 +1,117 @@
+import { BadRequestException, Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import { Public } from "../auth/public.decorator.js";
+import { Roles } from "../auth/roles.decorator.js";
+import { CurrentUser } from "../auth/current-user.decorator.js";
+import type { JwtUser } from "../auth/jwt-user.js";
+import { withSystemTx } from "../db/client.js";
+import { EmployeeBindingService } from "./employee-binding.service.js";
+import { UserLineBindingRepository } from "./user-line-binding.repository.js";
+import { NudgeService } from "./nudge.service.js";
+
+/**
+ * Employee Binding Controller · 方向 8 LIFF Zero-Config
+ *
+ * LIFF endpoints (公開 · 由 LINE App 內開啟 · 用 lineUserId 驗證 · 無需 JWT)：
+ *   GET  /binding/liff/prefill · Alice 打開 LIFF 時撈 pre-fill 資料
+ *   POST /binding/liff/complete · Alice 確認綁定
+ *
+ * Aiproot admin endpoints:
+ *   GET  /binding/aiproot/list · 列全 tenant binding audit
+ *   POST /binding/aiproot/revoke/:bindingId · 撤銷某 binding
+ *
+ * Alice 個人 endpoint:
+ *   POST /binding/self/revoke · Alice 自撤銷
+ */
+@Controller("binding")
+export class EmployeeBindingController {
+  constructor(
+    private readonly svc: EmployeeBindingService,
+    private readonly bindingRepo: UserLineBindingRepository,
+    private readonly nudge: NudgeService,
+  ) {}
+
+  /**
+   * LIFF pre-fill · 公開 endpoint
+   * 由 LIFF WebView 打開後呼叫 · SDK 提供 lineUserId · botId 由 LIFF URL 帶入
+   * 安全 · lineUserId 從 LIFF SDK 拿 · 是 LINE 保證的技術認證
+   */
+  @Public()
+  @Get("liff/prefill")
+  async liffPrefill(@Query("botId") botId: string, @Query("lineUserId") lineUserId: string) {
+    if (!botId || !lineUserId) {
+      throw new BadRequestException("botId 和 lineUserId 必要");
+    }
+    return this.svc.getLiffPrefill(botId, lineUserId);
+  }
+
+  /**
+   * LIFF 完成綁定 · 公開 endpoint
+   * Body: { botId, lineUserId, displayName, primaryGroupId?, metadata? }
+   */
+  @Public()
+  @Post("liff/complete")
+  async liffComplete(@Body() body: {
+    botId?: string;
+    lineUserId?: string;
+    displayName?: string;
+    primaryGroupId?: string;
+    metadata?: Record<string, unknown>;
+  }) {
+    if (!body?.botId || !body?.lineUserId || !body?.displayName) {
+      throw new BadRequestException("botId, lineUserId, displayName 必要");
+    }
+    return this.svc.completeLiffBinding({
+      botId: body.botId,
+      lineUserId: body.lineUserId,
+      displayName: body.displayName,
+      primaryGroupId: body.primaryGroupId ?? null,
+      metadata: body.metadata ?? {},
+    });
+  }
+
+  /**
+   * Aiproot audit 頁 · 列 tenant 底下 binding (active + revoked)
+   */
+  @Get("aiproot/list")
+  @Roles("aiproot_admin", "consultant")
+  async aiprootList(@Query("tenantId") tenantId?: string, @Query("status") status?: "active" | "revoked") {
+    if (!tenantId) throw new BadRequestException("tenantId 必要");
+    const rows = await withSystemTx((tx) => this.bindingRepo.listByTenant(tx, tenantId, { status, limit: 500 }));
+    return { bindings: rows };
+  }
+
+  /**
+   * Aiproot revoke · 撤銷某 binding
+   */
+  @Post("aiproot/revoke/:bindingId")
+  @Roles("aiproot_admin")
+  async aiprootRevoke(
+    @Param("bindingId") bindingId: string,
+    @CurrentUser() user: JwtUser,
+    @Body() body: { reason?: string } = {},
+  ) {
+    await this.svc.revokeBinding(bindingId, user.user_id, "aiproot_revoke");
+    return { success: true };
+  }
+
+  /**
+   * Alice self-revoke · 需登入（但 tenant_admin/group_owner 都可撤自己的）
+   */
+  @Post("self/revoke")
+  @Roles("aiproot_admin", "consultant", "tenant_admin", "group_owner")
+  async selfRevoke(@CurrentUser() user: JwtUser) {
+    const binding = await withSystemTx((tx) => this.bindingRepo.getActiveByUserId(tx, user.user_id));
+    if (!binding) throw new BadRequestException("你沒有 active binding");
+    await this.svc.revokeBinding(binding.bindingId, user.user_id, "self_revoke");
+    return { success: true };
+  }
+
+  /**
+   * Aiproot 手動觸發 nudge 掃描 · 顯每 tenant 未綁定活躍者
+   */
+  @Get("aiproot/unbound-stats")
+  @Roles("aiproot_admin", "consultant")
+  async unboundStats() {
+    return { stats: await this.nudge.computeUnboundStats() };
+  }
+}

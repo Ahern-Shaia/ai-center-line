@@ -716,3 +716,31 @@ export const setTenantBatchEnabled = (tenantId: string, enabled: boolean) =>
     `/aiproot-console/tenants/${tenantId}/batch-enabled`,
     { method: "PATCH", body: JSON.stringify({ enabled }) },
   );
+
+// employee-line-binding · aiproot audit + nudge
+export interface BindingAuditRow {
+  bindingId: string;
+  userId: string;
+  userDisplayName: string | null;
+  userEmail: string | null;
+  lineUserId: string;
+  boundAt: string;
+  bindingMethod: string;
+  status: string;
+}
+export const listBindingAudit = (tenantId: string, status?: "active" | "revoked") => {
+  const params = new URLSearchParams({ tenantId });
+  if (status) params.set("status", status);
+  return req<{ bindings: BindingAuditRow[] }>(`/binding/aiproot/list?${params}`);
+};
+export const revokeBindingAiproot = (bindingId: string) =>
+  req<{ success: boolean }>(`/binding/aiproot/revoke/${bindingId}`, { method: "POST", body: "{}" });
+
+export interface UnboundStats {
+  tenantId: string;
+  tenantName: string;
+  unboundCount: number;
+  top: Array<{ senderLineId: string; displayName: string | null; messageCount: number; topGroupName: string | null }>;
+}
+export const getUnboundStats = () =>
+  req<{ stats: UnboundStats[] }>("/binding/aiproot/unbound-stats");

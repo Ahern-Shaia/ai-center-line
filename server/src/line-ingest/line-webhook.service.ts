@@ -1,16 +1,27 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { withSystemTx } from "../db/client.js";
+import { withSystemTx, type Db } from "../db/client.js";
 import { LineBotRepository } from "./line-bot.repository.js";
 import { LineGroupRepository } from "./line-group.repository.js";
 import { LineMessageRepository } from "./line-message.repository.js";
 import { MediaDownloadService } from "./media-download.service.js";
 import { MemberFetchService } from "./member-fetch.service.js";
+import { LineApiClient } from "./line-api.client.js";
+import { EmployeeBindingService } from "../employee-binding/employee-binding.service.js";
+
+interface BotWithSecret {
+  botId: string;
+  tenantId: string;
+  channelSecret: string;
+  channelAccessToken: string;
+  status: string;
+}
 
 // LINE webhook payload · 依 https://developers.line.biz/en/reference/messaging-api/#webhook-event-objects
 interface LineWebhookEvent {
-  type: string;                                    // "message" | "join" | "leave" | "memberJoined" | ...
+  type: string;                                    // "message" | "join" | "leave" | "memberJoined" | "follow" | "unfollow" | ...
   timestamp: number;                               // event 發生時間 (ms epoch)
+  replyToken?: string;                             // 0016 · reply token (message/follow event 才有)
   source?: {
     type: string;                                  // "user" | "group" | "room"
     groupId?: string;                              // Cxxx (group only)
@@ -26,7 +37,6 @@ interface LineWebhookEvent {
     stickerId?: string;
     [key: string]: unknown;
   };
-  [key: string]: unknown;
 }
 
 interface LineWebhookPayload {
@@ -47,6 +57,8 @@ export class LineWebhookService {
     private readonly messageRepo: LineMessageRepository,
     private readonly mediaDownload: MediaDownloadService,
     private readonly memberFetch: MemberFetchService,
+    private readonly bindingService: EmployeeBindingService,
+    private readonly lineApi: LineApiClient,
   ) {}
 
   // 主入口 · rawBody 用於 HMAC 驗證 · payload 解析後可 access destination + events
@@ -103,10 +115,15 @@ export class LineWebhookService {
       // 首次驗簽成功 · 標記 webhook_verified_at
       await this.botRepo.markWebhookVerified(tx, bot.botId);
 
-      // 處理 events · 只關心 group 事件
+      // 處理 events · 群組 + 1-on-1 都處理
       for (const event of payload.events!) {
         const groupId = event.source?.groupId;
-        if (!groupId) continue;                    // 1-1 chat 或 room · 本輪不處理
+
+        // 1-on-1 handling (0016 · employee-line-binding + personal-daily-report 需要)
+        if (!groupId) {
+          await this.handleDirectEvent(tx, bot, event);
+          continue;
+        }
 
         try {
           const upsert = await this.groupRepo.upsertOnEvent(tx, {
@@ -114,7 +131,7 @@ export class LineWebhookService {
             groupId,
             eventTimestampMs: event.timestamp,
             eventType: event.type,
-            rawEvent: event as Record<string, unknown>,
+            rawEvent: event as unknown as Record<string, unknown>,
           });
           if (upsert.isNew) {
             this.logger.log(`[line-webhook] 新群偵測 · botId=${bot.botId} · groupId=${groupId} · type=${event.type}`);
@@ -143,18 +160,26 @@ export class LineWebhookService {
             : null;
           const textContent = msg.type === "text" ? truncate(msg.text ?? "", 5000) : null;
 
+          // 0016 · 若 sender 已綁定 · 落庫時就對到 aiproot user (資料快照)
+          const senderUid = event.source?.userId;
+          const senderUserId = senderUid
+            ? await this.bindingService.resolveUserByLineUserId(bot.botId, senderUid)
+            : null;
+
           const { inserted } = await this.messageRepo.insertOnEvent(tx, {
             messageId: msg.id,
             tenantId: ref.tenantId,
             botId: bot.botId,
             groupId,
             departmentId: ref.departmentId,
-            senderLineId: event.source?.userId ?? null,
+            senderLineId: senderUid ?? null,
+            senderUserId,                                 // 0016 · null 若未綁定
+            chatContext: "group",
             messageType: msg.type,
             textContent,
             stickerRef,
             sentAtMs: event.timestamp,
-            rawEvent: event as Record<string, unknown>,
+            rawEvent: event as unknown as Record<string, unknown>,
           });
 
           if (inserted && MEDIA_MESSAGE_TYPES.has(msg.type)) {
@@ -169,7 +194,6 @@ export class LineWebhookService {
           }
 
           // 拉 member profile (displayName) · dedup by cache · webhook 每則都試 · 已有就 skip API call
-          const senderUid = event.source?.userId;
           if (senderUid) {
             memberTasks.push({
               tenantId: ref.tenantId,
@@ -191,6 +215,100 @@ export class LineWebhookService {
     }
     for (const task of memberTasks) {
       this.memberFetch.enqueue(task);
+    }
+  }
+
+  /**
+   * 1-on-1 事件處理 · 0016 · employee-line-binding + personal-daily-report
+   * · follow event · Alice 加 bot 好友 → bot 推 LIFF link (若 env 設 LIFF_URL)
+   * · message event · Alice 私訊 bot → 依 binding 對到 user · 落庫 chat_context='personal'
+   */
+  private async handleDirectEvent(tx: Db, bot: BotWithSecret, event: LineWebhookEvent): Promise<void> {
+    const userId = event.source?.userId;
+    if (!userId) return;
+
+    // follow event · Alice 加好友
+    if (event.type === "follow") {
+      const liffUrl = process.env.LIFF_URL;
+      if (liffUrl && event.replyToken) {
+        try {
+          const url = `${liffUrl}?botId=${bot.botId}`;
+          await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
+            { type: "text", text: "歡迎！點下方按鈕在 LINE 內完成綁定 · 全程 60 秒 · 免登入網頁" },
+            {
+              type: "template",
+              altText: "完成綁定",
+              template: {
+                type: "buttons",
+                text: "點按鈕開始綁定",
+                actions: [{ type: "uri", label: "開始綁定", uri: url }],
+              },
+            },
+          ]);
+          this.logger.log(`[line-webhook] follow · pushed LIFF · botId=${bot.botId} · userId=${userId.slice(-6)}`);
+        } catch (err) {
+          this.logger.error(`follow reply 失敗 · ${(err as Error).message}`);
+        }
+      }
+      return;
+    }
+
+    // 1-on-1 message · 個人日報素材
+    if (event.type === "message" && event.message?.type === "text") {
+      // 查 binding · 若未綁定 · bot reply「請先綁定」(OQ-PDR-8)
+      const senderUserId = await this.bindingService.resolveUserByLineUserId(bot.botId, userId);
+
+      if (!senderUserId) {
+        // 未綁定 · bot 提示
+        if (event.replyToken) {
+          try {
+            const liffUrl = process.env.LIFF_URL;
+            const hint = liffUrl
+              ? `請先完成綁定才能記錄個人日報\n${liffUrl}?botId=${bot.botId}`
+              : "請先完成綁定才能記錄個人日報 · 聯繫公司資訊窗口";
+            await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
+              { type: "text", text: hint },
+            ]);
+          } catch (err) {
+            this.logger.warn(`unbound reply 失敗 · ${(err as Error).message}`);
+          }
+        }
+        return;
+      }
+
+      // 已綁定 · 落庫 chat_context='personal'
+      const msg = event.message;
+      const textContent = typeof msg.text === "string" ? truncate(msg.text, 5000) : null;
+      try {
+        await this.messageRepo.insertOnEvent(tx, {
+          messageId: msg.id,
+          tenantId: bot.tenantId,
+          botId: bot.botId,
+          groupId: `__personal__${userId}`,              // 佔位 · 因 group_id NOT NULL · 用 __personal__ 前綴標記
+          departmentId: null,
+          senderLineId: userId,
+          senderUserId,
+          chatContext: "personal",
+          messageType: msg.type,
+          textContent,
+          stickerRef: null,
+          sentAtMs: event.timestamp,
+          rawEvent: event as unknown as Record<string, unknown>,
+        });
+
+        // bot 輕回應 · 讓 Alice 知道已收到
+        if (event.replyToken) {
+          try {
+            await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
+              { type: "text", text: "✓ 已記錄 · 下班前 17:30 自動整理成日報" },
+            ]);
+          } catch (err) {
+            this.logger.warn(`personal msg ack reply 失敗 · ${(err as Error).message}`);
+          }
+        }
+      } catch (err) {
+        this.logger.error(`落個人訊息失敗 · messageId=${msg.id} · ${(err as Error).message}`);
+      }
     }
   }
 }

@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { EmployeeBindingModule } from "../employee-binding/employee-binding.module.js";
 import { LineApiClient } from "./line-api.client.js";
 import { LineBotRepository } from "./line-bot.repository.js";
 import { LineGroupRepository } from "./line-group.repository.js";
@@ -16,6 +17,7 @@ import { LineGroupController } from "./line-group.controller.js";
 import { LineWebhookController } from "./line-webhook.controller.js";
 
 @Module({
+  imports: [EmployeeBindingModule],       // 0016 · webhook 用 EmployeeBindingService 對照 sender_user_id + 推 LIFF
   controllers: [LineBotController, LineGroupController, LineWebhookController],
   providers: [
     LineApiClient,

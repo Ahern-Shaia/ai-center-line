@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>LINE 綁定 · aiproot</title>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root {
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --line:#E5E7EB; --well:#F1F3F6; --surface:#FFFFFF;
+    --primary:#4F46E5; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5;
+    --warn:#D97706; --warn-tint:#FFFBEB;
+    --line-brand:#06C755;
+    --sans: 'Noto Sans TC', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; background:#fff; color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.55; }
+  .container { padding:20px 18px; max-width:480px; margin:0 auto; }
+  h1 { font-size:20px; font-weight:700; margin:0 0 6px; letter-spacing:-.01em; text-align:center; }
+  .sub { text-align:center; color:var(--ink-3); font-size:13px; margin:0 0 20px; }
+
+  .avatar-lg { width:64px; height:64px; border-radius:50%; background:var(--primary); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:600;
+    margin:0 auto 12px; overflow:hidden; }
+  .avatar-lg img { width:100%; height:100%; object-fit:cover; }
+
+  .card { background:var(--ok-tint); border:2px solid var(--ok); border-radius:12px; padding:16px 18px; margin-bottom:16px; }
+  .card .name { font-size:17px; font-weight:700; text-align:center; margin-bottom:4px; }
+  .card .note { font-family:var(--mono); font-size:11px; color:var(--ink-3); text-align:center; }
+  .card hr { border:none; border-top:1px solid rgba(0,0,0,.08); margin:10px 0; }
+  .card .groups { font-size:13px; color:var(--ink-2); }
+  .card .group-item { padding:6px 10px; margin:6px 0; background:var(--surface); border:1px solid var(--line); border-radius:8px; }
+  .card .group-item.primary { border-color:var(--ok); font-weight:600; }
+  .card .group-item .pct { font-size:11px; color:var(--ink-3); float:right; }
+
+  .btn { display:block; width:100%; padding:14px; border:none; border-radius:10px; font-size:16px; font-weight:600; cursor:pointer; margin-bottom:10px; font-family:inherit; }
+  .btn.primary { background:var(--line-brand); color:#fff; }
+  .btn.secondary { background:transparent; color:var(--ink-2); border:1px solid var(--line); }
+
+  .form-group { margin-bottom:14px; }
+  .form-lbl { font-size:13px; font-weight:500; color:var(--ink-2); display:block; margin-bottom:6px; }
+  .form-input, .form-select { width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:8px; font-size:15px; font-family:inherit; background:#fff; color:var(--ink); }
+  .form-input:focus, .form-select:focus { outline:none; border-color:var(--primary); }
+  .form-hint { font-size:11.5px; color:var(--ink-3); margin-top:4px; }
+
+  .alert { padding:12px 14px; border-radius:8px; font-size:13px; margin:12px 0; border:1px solid; }
+  .alert.info { background:var(--primary-tint); border-color:#C7D2FE; color:#3730A3; }
+  .alert.warn { background:var(--warn-tint); border-color:#F5D5A6; color:#7A4E1B; }
+  .alert.ok { background:var(--ok-tint); border-color:#A7F3D0; color:#065F46; }
+
+  .success-icon { width:64px; height:64px; background:var(--ok-tint); color:var(--ok); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:36px; margin:20px auto 12px; }
+
+  #loading, #err { text-align:center; padding:40px 20px; }
+  #loading .spin { display:inline-block; width:36px; height:36px; border:3px solid var(--line); border-top-color:var(--primary); border-radius:50%; animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div id="loading">
+    <div class="spin"></div>
+    <p style="color:var(--ink-3); margin-top:14px; font-size:13px;">正在讀取你的 LINE 資訊...</p>
+  </div>
+
+  <div id="err" style="display:none;">
+    <div style="font-size:36px; margin-bottom:12px;">⚠</div>
+    <p id="err-msg" style="color:var(--ink); font-weight:500;"></p>
+    <p style="color:var(--ink-3); font-size:12px; margin-top:12px;">請聯繫公司資訊窗口</p>
+  </div>
+
+  <!-- View: prefill confirm -->
+  <div id="view-prefill" style="display:none;">
+    <h1>歡迎 · 是你嗎？</h1>
+    <p class="sub">系統已從你的 LINE 資料 + 群組活動<br>推斷你的身分</p>
+
+    <div class="card">
+      <div class="avatar-lg" id="p-avatar"></div>
+      <div class="name" id="p-name"></div>
+      <div class="note" id="p-userid"></div>
+      <hr>
+      <div style="font-size:12px; color:var(--ink-3); margin-bottom:6px;"><b>常出現的群組：</b></div>
+      <div class="groups" id="p-groups"></div>
+    </div>
+
+    <button class="btn primary" onclick="confirmBinding()">✓ 是 · 我是 <span id="p-btn-name"></span></button>
+    <button class="btn secondary" onclick="showEdit()">修改姓名 / 主要群組</button>
+  </div>
+
+  <!-- View: edit -->
+  <div id="view-edit" style="display:none;">
+    <h1>修改個人資料</h1>
+    <p class="sub">若 LINE 顯示名不是你的真名 · 或主要群組推斷錯 · 請修改</p>
+
+    <div class="form-group">
+      <label class="form-lbl">姓名</label>
+      <input class="form-input" id="e-name" type="text">
+      <div class="form-hint" id="e-name-hint"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-lbl">主要群組（決定你屬哪個部門）</label>
+      <select class="form-select" id="e-group"></select>
+      <div class="form-hint">系統顯示你有參與的群組 · 選你「主要屬於」的那個</div>
+    </div>
+
+    <button class="btn primary" onclick="confirmBindingWithEdits()">儲存並綁定</button>
+    <button class="btn secondary" onclick="showPrefill()">回上一頁</button>
+  </div>
+
+  <!-- View: already bound -->
+  <div id="view-bound" style="display:none;">
+    <div class="success-icon">✓</div>
+    <h1>你已完成綁定</h1>
+    <p class="sub" id="b-info"></p>
+    <button class="btn primary" onclick="closeLiff()">完成 · 回聊天室</button>
+  </div>
+
+  <!-- View: success -->
+  <div id="view-success" style="display:none;">
+    <div class="success-icon">✓</div>
+    <h1>綁定完成</h1>
+    <p class="sub">你已成功綁定為 <b id="s-name"></b></p>
+
+    <div class="alert ok">
+      <b>接下來 · 你可以：</b>
+      <ul style="padding-left:18px; margin:8px 0 0; line-height:1.7;">
+        <li>私訊 bot 記錄工作</li>
+        <li>下班前 17:30 自動整理日報</li>
+        <li>進 aiproot 確認或微調</li>
+      </ul>
+    </div>
+
+    <button class="btn primary" onclick="closeLiff()">完成 · 回聊天室</button>
+  </div>
+
+</div>
+
+<script>
+  const BOT_ID = new URLSearchParams(location.search).get("botId");
+  const API_BASE = window.location.origin.replace(/\/liff\/.*/, "");  // 同 origin
+  let prefillData = null;
+  let lineUserId = null;
+  let lineDisplayName = null;
+
+  async function init() {
+    if (!BOT_ID) return showError("缺 botId 參數");
+    try {
+      // Init LIFF
+      const liffId = getLiffIdForBot(BOT_ID);
+      await liff.init({ liffId });
+      if (!liff.isLoggedIn()) { liff.login(); return; }
+
+      // Get userId from LIFF SDK
+      const profile = await liff.getProfile();
+      lineUserId = profile.userId;
+      lineDisplayName = profile.displayName;
+
+      // Fetch pretill
+      const res = await fetch(`${API_BASE}/binding/liff/prefill?botId=${BOT_ID}&lineUserId=${encodeURIComponent(lineUserId)}`);
+      if (!res.ok) throw new Error("讀取失敗 · " + res.status);
+      const data = await res.json();
+
+      hide("loading");
+      if (data.status === "already_bound") {
+        document.getElementById("b-info").innerHTML = `已綁定為 <b>${data.existing.userDisplayName}</b><br>綁定時間：${data.existing.boundAt.slice(0, 16)}`;
+        show("view-bound");
+      } else {
+        prefillData = data.prefill;
+        renderPrefill();
+        show("view-prefill");
+      }
+    } catch (e) {
+      showError(e.message || "初始化失敗");
+    }
+  }
+
+  function getLiffIdForBot(botId) {
+    // LIFF ID 由 env 決定 · 這裡簡化：LIFF_ID env 從 window 帶入
+    return window.__LIFF_ID__ || document.currentScript?.dataset?.liffId || "";
+  }
+
+  function renderPrefill() {
+    const name = prefillData.displayName || lineDisplayName || "（未知）";
+    document.getElementById("p-name").textContent = name;
+    document.getElementById("p-btn-name").textContent = name;
+    document.getElementById("p-userid").textContent = "LINE UserId: " + lineUserId.slice(-8);
+
+    const avatar = document.getElementById("p-avatar");
+    if (prefillData.pictureUrl) {
+      avatar.innerHTML = '<img src="' + prefillData.pictureUrl + '" alt="">';
+    } else {
+      avatar.textContent = name[0] || "?";
+    }
+
+    const groups = prefillData.candidateGroups || [];
+    if (groups.length === 0) {
+      document.getElementById("p-groups").innerHTML = "<div style='color:var(--ink-3); font-size:12px;'>尚未在任何群組發過訊息 · 請主管協助分派</div>";
+      return;
+    }
+    const total = groups.reduce((s, g) => s + g.messageCount, 0);
+    const html = groups.map((g, i) => {
+      const pct = Math.round((g.messageCount / total) * 100);
+      const primary = i === 0 ? ' primary' : '';
+      const label = g.displayName || g.groupId.slice(0, 12);
+      return `<div class="group-item${primary}">📱 ${label}<span class="pct">${pct}%</span></div>`;
+    }).join('');
+    document.getElementById("p-groups").innerHTML = html;
+  }
+
+  function showEdit() {
+    const name = prefillData.displayName || lineDisplayName || "";
+    document.getElementById("e-name").value = name;
+    document.getElementById("e-name-hint").textContent = "LINE 顯示為：" + name;
+
+    const sel = document.getElementById("e-group");
+    sel.innerHTML = "";
+    (prefillData.candidateGroups || []).forEach((g, i) => {
+      const opt = document.createElement("option");
+      opt.value = g.groupId;
+      opt.textContent = "📱 " + (g.displayName || g.groupId.slice(0, 12)) + (i === 0 ? "（推斷）" : "");
+      sel.appendChild(opt);
+    });
+    const noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "暫不指定";
+    sel.appendChild(noneOpt);
+
+    hide("view-prefill");
+    show("view-edit");
+  }
+
+  function showPrefill() {
+    hide("view-edit");
+    show("view-prefill");
+  }
+
+  async function confirmBinding() {
+    const primaryGroupId = (prefillData.candidateGroups[0] || {}).groupId || null;
+    const displayName = prefillData.displayName || lineDisplayName || "（未知）";
+    await doComplete(displayName, primaryGroupId);
+  }
+
+  async function confirmBindingWithEdits() {
+    const displayName = document.getElementById("e-name").value.trim();
+    const primaryGroupId = document.getElementById("e-group").value || null;
+    if (!displayName) return alert("請輸入姓名");
+    await doComplete(displayName, primaryGroupId);
+  }
+
+  async function doComplete(displayName, primaryGroupId) {
+    try {
+      const res = await fetch(`${API_BASE}/binding/liff/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          botId: BOT_ID,
+          lineUserId,
+          displayName,
+          primaryGroupId,
+          metadata: { lineDisplayName, candidateGroupsCount: (prefillData.candidateGroups || []).length },
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "綁定失敗" }));
+        throw new Error(err.message || "綁定失敗");
+      }
+      const data = await res.json();
+      document.getElementById("s-name").textContent = data.displayName + (data.departmentName ? " · " + data.departmentName : "");
+      hide("view-prefill"); hide("view-edit"); show("view-success");
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  function closeLiff() {
+    if (liff && liff.closeWindow) { liff.closeWindow(); }
+  }
+
+  function show(id) { document.getElementById(id).style.display = "block"; }
+  function hide(id) { document.getElementById(id).style.display = "none"; }
+  function showError(msg) {
+    document.getElementById("err-msg").textContent = msg;
+    hide("loading"); show("err");
+  }
+
+  init();
+</script>
+
+</body>
+</html>
