@@ -196,7 +196,9 @@ export default function App() {
           {route.page === "llm-settings" && <LlmSettings />}
           {route.page === "line-bots" && <LineBots />}
           {route.page === "onboard-tenant" && <OnboardWizard />}
-          {route.page === "cost-dashboard" && <CostDashboard />}
+          {route.page === "cost-dashboard" && (
+            <CostDashboard onOpenAnalysis={(id) => setRoute({ page: "convo-detail", uploadId: id })} />
+          )}
           {route.page === "batch-history" && (
             <BatchHistory onOpenAnalysis={(id) => setRoute({ page: "convo-detail", uploadId: id })} />
           )}

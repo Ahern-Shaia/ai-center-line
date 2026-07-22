@@ -13,10 +13,38 @@ export interface CostSummaryDto {
     month: { cost: number; tokens: number; calls: number };
     all:   { cost: number; tokens: number; calls: number };
   };
-  byTenant: Array<{ tenantId: string | null; tenantName: string; cost: number; tokens: number; calls: number; percent: number }>;
+  efficiency: {
+    // 全期間效率指標
+    totalMessages: number;
+    avgCostPerMessage: number;   // 平均每則訊息成本 $
+    cacheHitRate: number;        // cacheRead / (input + cacheRead)  · 越高越省
+    avgSegmentSize: number;      // messages / calls · 每段平均含幾則訊息
+  };
+  byTenant: Array<{ tenantId: string | null; tenantName: string; cost: number; tokens: number; calls: number; messages: number; percent: number }>;
   byProvider: Array<{ provider: string; model: string; cost: number; tokens: number; calls: number; percent: number }>;
+  byGroup: Array<{ groupId: string; tenantId: string | null; tenantName: string; batches: number; messages: number; cost: number; costPerMessage: number }>;
   trend30d: Array<{ date: string; cost: number; tokens: number }>;
   pricingTable: Array<{ provider: string; model: string; inputPer1M: number; outputPer1M: number; cacheReadPer1M: number; cacheWritePer1M: number }>;
+  recentUploads: Array<{
+    uploadId: number;
+    uploadedAt: string;
+    tenantId: string | null;
+    tenantName: string;
+    source: string;
+    groupId: string | null;
+    filename: string;
+    messageCount: number;
+    segmentCount: number;
+    inputTokens: number;
+    cacheReadTokens: number;
+    outputTokens: number;
+    tokens: number;
+    calls: number;
+    cost: number;
+    costPerMessage: number;
+    provider: string;
+    model: string;
+  }>;
 }
 
 type UsageRow = {
@@ -24,6 +52,11 @@ type UsageRow = {
   tenant_id: string | null;
   tenant_name: string | null;
   uploaded_at: string;
+  source: string;
+  group_id: string | null;
+  filename: string;
+  message_count: number | null;
+  segment_count: number | null;
   usage_stats: {
     inputTokens?: number;
     outputTokens?: number;
@@ -41,14 +74,17 @@ export class CostService {
   private readonly logger = new Logger(CostService.name);
 
   async getSummary(): Promise<CostSummaryDto> {
-    // 拉 analysis_upload · 只要有 usage_stats 的 · JOIN tenants 顯示名
-    // 用 currentTx() 繼承 TenantTxInterceptor 已 set 的 actor_role='aiproot_admin'
-    // 讓 tenants RLS bypass (該表 OR actor_role='aiproot_admin')
+    // 用 currentTx() 繼承 aiproot_admin actor_role · 讓 tenants JOIN bypass RLS
     const tx = currentTx();
     const rows = await tx.execute<UsageRow>(sql`
       SELECT a.id::text AS upload_id, a.tenant_id::text AS tenant_id,
              t.tenant_name,
              to_char(a.uploaded_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS uploaded_at,
+             COALESCE(a.source, 'manual') AS source,
+             a.group_id,
+             a.filename,
+             a.message_count,
+             a.segment_count,
              a.usage_stats
       FROM analysis_upload a
       LEFT JOIN tenants t ON t.tenant_id = a.tenant_id
@@ -57,17 +93,26 @@ export class CostService {
 
     // Normalize 每筆
     interface Enriched {
+      uploadId: number;
       tenantId: string | null;
       tenantName: string;
+      source: string;
+      groupId: string | null;
+      filename: string;
       provider: string;
       model: string;
       uploadedAt: Date;
+      messageCount: number;
+      segmentCount: number;
+      inputTokens: number;
+      cacheReadTokens: number;
+      cacheWriteTokens: number;
+      outputTokens: number;
       cost: number;
       tokens: number;
       calls: number;
     }
     const enriched: Enriched[] = rows.rows.map((r) => {
-      // pg jsonb 有可能回 string · 需再 parse
       let stats: NonNullable<UsageRow["usage_stats"]> = {};
       if (r.usage_stats && typeof r.usage_stats === "object") {
         stats = r.usage_stats;
@@ -90,11 +135,21 @@ export class CostService {
         if (isNaN(uploadedAt.getTime())) uploadedAt = new Date();
       } catch { uploadedAt = new Date(); }
       return {
+        uploadId: parseInt(r.upload_id, 10),
         tenantId: r.tenant_id,
         tenantName: r.tenant_name ?? "（未指派租戶）",
+        source: r.source ?? "manual",
+        groupId: r.group_id ?? null,
+        filename: r.filename ?? "",
         provider,
         model,
         uploadedAt,
+        messageCount: r.message_count ?? 0,
+        segmentCount: r.segment_count ?? 0,
+        inputTokens,
+        cacheReadTokens,
+        cacheWriteTokens,
+        outputTokens,
         cost,
         tokens,
         calls,
@@ -118,14 +173,29 @@ export class CostService {
       all: agg(enriched),
     };
 
-    // By tenant
-    const tenantMap = new Map<string, { tenantId: string | null; tenantName: string; cost: number; tokens: number; calls: number }>();
+    // Efficiency 指標（全期間）
+    const totalMessages = enriched.reduce((s, x) => s + x.messageCount, 0);
+    const totalCalls = enriched.reduce((s, x) => s + x.calls, 0);
+    const totalInput = enriched.reduce((s, x) => s + x.inputTokens, 0);
+    const totalCacheRead = enriched.reduce((s, x) => s + x.cacheReadTokens, 0);
+    const efficiency = {
+      totalMessages,
+      avgCostPerMessage: totalMessages > 0 ? round6(totals.all.cost / totalMessages) : 0,
+      cacheHitRate: totalInput + totalCacheRead > 0
+        ? round4(totalCacheRead / (totalInput + totalCacheRead))
+        : 0,
+      avgSegmentSize: totalCalls > 0 ? round2(totalMessages / totalCalls) : 0,
+    };
+
+    // By tenant · +messages
+    const tenantMap = new Map<string, {
+      tenantId: string | null; tenantName: string;
+      cost: number; tokens: number; calls: number; messages: number;
+    }>();
     for (const e of enriched) {
       const key = e.tenantId ?? "__null__";
-      const cur = tenantMap.get(key) ?? { tenantId: e.tenantId, tenantName: e.tenantName, cost: 0, tokens: 0, calls: 0 };
-      cur.cost += e.cost;
-      cur.tokens += e.tokens;
-      cur.calls += e.calls;
+      const cur = tenantMap.get(key) ?? { tenantId: e.tenantId, tenantName: e.tenantName, cost: 0, tokens: 0, calls: 0, messages: 0 };
+      cur.cost += e.cost; cur.tokens += e.tokens; cur.calls += e.calls; cur.messages += e.messageCount;
       tenantMap.set(key, cur);
     }
     const byTenant = Array.from(tenantMap.values())
@@ -146,6 +216,29 @@ export class CostService {
       .sort((a, b) => b.cost - a.cost)
       .map((r) => ({ ...r, percent: totals.all.cost > 0 ? Math.round((r.cost / totals.all.cost) * 100) : 0 }));
 
+    // By group (webhook batch 才有 group_id · manual = null skip)
+    const groupMap = new Map<string, {
+      groupId: string; tenantId: string | null; tenantName: string;
+      batches: number; messages: number; cost: number;
+    }>();
+    for (const e of enriched) {
+      if (!e.groupId) continue;
+      const key = `${e.tenantId ?? ""}::${e.groupId}`;
+      const cur = groupMap.get(key) ?? {
+        groupId: e.groupId, tenantId: e.tenantId, tenantName: e.tenantName,
+        batches: 0, messages: 0, cost: 0,
+      };
+      cur.batches += 1; cur.messages += e.messageCount; cur.cost += e.cost;
+      groupMap.set(key, cur);
+    }
+    const byGroup = Array.from(groupMap.values())
+      .map((r) => ({
+        ...r,
+        cost: round4(r.cost),
+        costPerMessage: r.messages > 0 ? round6(r.cost / r.messages) : 0,
+      }))
+      .sort((a, b) => b.cost - a.cost);
+
     // 30d trend · 依日 bucket
     const trendMap = new Map<string, { cost: number; tokens: number }>();
     const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - 29); cutoff.setHours(0, 0, 0, 0);
@@ -161,10 +254,38 @@ export class CostService {
     }
     const trend30d = Array.from(trendMap.entries()).map(([date, v]) => ({ date, cost: round4(v.cost), tokens: v.tokens }));
 
+    // Recent uploads · 依 uploadedAt desc · top 30
+    const recentUploads = enriched
+      .slice()
+      .sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime())
+      .slice(0, 30)
+      .map((e) => ({
+        uploadId: e.uploadId,
+        uploadedAt: e.uploadedAt.toISOString(),
+        tenantId: e.tenantId,
+        tenantName: e.tenantName,
+        source: e.source,
+        groupId: e.groupId,
+        filename: e.filename,
+        messageCount: e.messageCount,
+        segmentCount: e.segmentCount,
+        inputTokens: e.inputTokens,
+        cacheReadTokens: e.cacheReadTokens,
+        outputTokens: e.outputTokens,
+        tokens: e.tokens,
+        calls: e.calls,
+        cost: round4(e.cost),
+        costPerMessage: e.messageCount > 0 ? round6(e.cost / e.messageCount) : 0,
+        provider: e.provider,
+        model: e.model,
+      }));
+
     return {
       totals,
+      efficiency,
       byTenant,
       byProvider,
+      byGroup,
       trend30d,
       pricingTable: PRICING.map((p) => ({
         provider: p.provider,
@@ -174,11 +295,14 @@ export class CostService {
         cacheReadPer1M: p.cacheReadPer1M,
         cacheWritePer1M: p.cacheWritePer1M,
       })),
+      recentUploads,
     };
   }
 }
 
+function round2(n: number): number { return Math.round(n * 100) / 100; }
 function round4(n: number): number { return Math.round(n * 10000) / 10000; }
+function round6(n: number): number { return Math.round(n * 1000000) / 1000000; }
 function fmtDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }

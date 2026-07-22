@@ -634,10 +634,37 @@ export interface CostSummaryDto {
     month: { cost: number; tokens: number; calls: number };
     all:   { cost: number; tokens: number; calls: number };
   };
-  byTenant: Array<{ tenantId: string | null; tenantName: string; cost: number; tokens: number; calls: number; percent: number }>;
+  efficiency: {
+    totalMessages: number;
+    avgCostPerMessage: number;
+    cacheHitRate: number;
+    avgSegmentSize: number;
+  };
+  byTenant: Array<{ tenantId: string | null; tenantName: string; cost: number; tokens: number; calls: number; messages: number; percent: number }>;
   byProvider: Array<{ provider: string; model: string; cost: number; tokens: number; calls: number; percent: number }>;
+  byGroup: Array<{ groupId: string; tenantId: string | null; tenantName: string; batches: number; messages: number; cost: number; costPerMessage: number }>;
   trend30d: Array<{ date: string; cost: number; tokens: number }>;
   pricingTable: Array<{ provider: string; model: string; inputPer1M: number; outputPer1M: number; cacheReadPer1M: number; cacheWritePer1M: number }>;
+  recentUploads: Array<{
+    uploadId: number;
+    uploadedAt: string;
+    tenantId: string | null;
+    tenantName: string;
+    source: string;
+    groupId: string | null;
+    filename: string;
+    messageCount: number;
+    segmentCount: number;
+    inputTokens: number;
+    cacheReadTokens: number;
+    outputTokens: number;
+    tokens: number;
+    calls: number;
+    cost: number;
+    costPerMessage: number;
+    provider: string;
+    model: string;
+  }>;
 }
 
 export const getCostSummary = () =>

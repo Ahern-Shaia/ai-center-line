@@ -3,7 +3,10 @@ import { getCostSummary, ApiError, type CostSummaryDto } from "../api";
 import { useToast } from "../Toast";
 
 // AI 成本管理儀表 · aiproot 專屬 · 依 analysis_upload.usage_stats 聚合
-export default function CostDashboard() {
+interface Props {
+  onOpenAnalysis?: (uploadId: number) => void;
+}
+export default function CostDashboard({ onOpenAnalysis }: Props = {}) {
   const toast = useToast();
   const [data, setData] = useState<CostSummaryDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +49,31 @@ export default function CostDashboard() {
         <TotalCard label="累計" cost={data.totals.all.cost} tokens={data.totals.all.tokens} calls={data.totals.all.calls} />
       </div>
 
+      {/* 效率指標 tile (B) */}
+      <section className="cost-section">
+        <div className="cost-section-hdr">
+          <div className="cost-section-title">效率指標</div>
+          <div className="cost-section-mark">全期間 · {data.efficiency.totalMessages.toLocaleString()} 則訊息</div>
+        </div>
+        <div className="cost-totals">
+          <MetricCard
+            label="平均每則訊息成本"
+            value={`$${data.efficiency.avgCostPerMessage.toFixed(6)}`}
+            sub={`累計 ${data.efficiency.totalMessages.toLocaleString()} 則 ÷ $${data.totals.all.cost.toFixed(4)}`}
+          />
+          <MetricCard
+            label="快取命中率"
+            value={`${(data.efficiency.cacheHitRate * 100).toFixed(1)}%`}
+            sub={data.efficiency.cacheHitRate > 0.5 ? "省很兇 · 大部分是舊 prompt cache" : data.efficiency.cacheHitRate > 0.2 ? "還可以 · 尚有空間" : "低 · 每次幾乎全 fresh input"}
+          />
+          <MetricCard
+            label="平均段長"
+            value={`${data.efficiency.avgSegmentSize.toFixed(2)} 則`}
+            sub="每次 API call 平均含幾則訊息"
+          />
+        </div>
+      </section>
+
       {/* 30 天走勢 */}
       <section className="cost-section">
         <div className="cost-section-hdr">
@@ -79,6 +107,7 @@ export default function CostDashboard() {
                 <th>租戶</th>
                 <th className="num">花費 US$</th>
                 <th className="num">Tokens</th>
+                <th className="num">訊息數</th>
                 <th className="num">呼叫次數</th>
                 <th>占比</th>
               </tr>
@@ -89,6 +118,7 @@ export default function CostDashboard() {
                   <td>{r.tenantName}</td>
                   <td className="num mono">${r.cost.toFixed(4)}</td>
                   <td className="num mono">{r.tokens.toLocaleString()}</td>
+                  <td className="num mono">{r.messages.toLocaleString()}</td>
                   <td className="num mono">{r.calls.toLocaleString()}</td>
                   <td className="cost-pct-cell">
                     <div className="cost-pct-bar"><div className="cost-pct-fill" style={{ width: `${r.percent}%` }} /></div>
@@ -137,6 +167,98 @@ export default function CostDashboard() {
           </table>
         )}
       </section>
+
+      {/* 按群組 (C · 只 webhook batch) */}
+      {data.byGroup.length > 0 && (
+        <section className="cost-section">
+          <div className="cost-section-hdr">
+            <div className="cost-section-title">按 LINE 群組</div>
+            <div className="cost-section-mark">{data.byGroup.length} 個群 · 只含 webhook batch</div>
+          </div>
+          <table className="cost-tbl">
+            <thead>
+              <tr>
+                <th>租戶</th>
+                <th>Group</th>
+                <th className="num">Batch 數</th>
+                <th className="num">訊息數</th>
+                <th className="num">總花費</th>
+                <th className="num">每則 $</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.byGroup.slice(0, 30).map((r) => (
+                <tr key={`${r.tenantId}::${r.groupId}`}>
+                  <td>{r.tenantName}</td>
+                  <td className="mono" title={r.groupId}>{r.groupId.slice(0, 14)}…</td>
+                  <td className="num mono">{r.batches.toLocaleString()}</td>
+                  <td className="num mono">{r.messages.toLocaleString()}</td>
+                  <td className="num mono">${r.cost.toFixed(4)}</td>
+                  <td className="num mono">${r.costPerMessage.toFixed(6)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {/* 對話明細 (A · Top 30 recent uploads) */}
+      {data.recentUploads.length > 0 && (
+        <section className="cost-section">
+          <div className="cost-section-hdr">
+            <div className="cost-section-title">對話明細 · 近 30 筆</div>
+            <div className="cost-section-mark">點「查看」跳分析詳情</div>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table className="cost-tbl">
+              <thead>
+                <tr>
+                  <th>時間</th>
+                  <th>租戶</th>
+                  <th>來源</th>
+                  <th>檔名 / Group</th>
+                  <th className="num">訊息數</th>
+                  <th className="num">段數</th>
+                  <th className="num">Input</th>
+                  <th className="num">Cache</th>
+                  <th className="num">Output</th>
+                  <th className="num">$</th>
+                  <th className="num">每則 $</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recentUploads.map((r) => (
+                  <tr key={r.uploadId}>
+                    <td className="mono" style={{ whiteSpace: "nowrap" }}>
+                      {new Date(r.uploadedAt).toLocaleString("zh-TW", {
+                        hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
+                      })}
+                    </td>
+                    <td>{r.tenantName}</td>
+                    <td className="mono" style={{ fontSize: 11 }}>{r.source}</td>
+                    <td className="mono" title={r.filename}>
+                      {r.filename.length > 24 ? r.filename.slice(0, 24) + "…" : r.filename}
+                    </td>
+                    <td className="num mono">{r.messageCount.toLocaleString()}</td>
+                    <td className="num mono">{r.segmentCount.toLocaleString()}</td>
+                    <td className="num mono">{r.inputTokens.toLocaleString()}</td>
+                    <td className="num mono">{r.cacheReadTokens.toLocaleString()}</td>
+                    <td className="num mono">{r.outputTokens.toLocaleString()}</td>
+                    <td className="num mono">${r.cost.toFixed(4)}</td>
+                    <td className="num mono">${r.costPerMessage.toFixed(6)}</td>
+                    <td>
+                      {onOpenAnalysis && (
+                        <button className="btn small" onClick={() => onOpenAnalysis(r.uploadId)}>查看</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Pricing 參考表 */}
       <section className="cost-section">
@@ -189,6 +311,16 @@ function TotalCard({ label, cost, tokens, calls, accent }: {
         <span>·</span>
         <span>{calls.toLocaleString()} 呼叫</span>
       </div>
+    </div>
+  );
+}
+
+function MetricCard({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="cost-total-card">
+      <div className="cost-total-lbl">{label}</div>
+      <div className="cost-total-val" style={{ fontSize: 22 }}>{value}</div>
+      <div className="cost-total-sub" style={{ fontSize: 11, color: "var(--ink-3)" }}>{sub}</div>
     </div>
   );
 }
