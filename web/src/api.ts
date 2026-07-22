@@ -294,6 +294,58 @@ export const renameCategory = (categoryId: string, name: string) =>
 export const archiveCategory = (categoryId: string) =>
   req<{ success: boolean }>(`/categories/${categoryId}/archive`, { method: "POST" });
 
+// === Personal Daily Report · PDR-M4 ===
+
+export interface PersonalDailyReportItem {
+  time?: string;
+  title: string;
+  detail?: string;
+  followup?: string;
+}
+
+export interface PersonalDailyReportRow {
+  reportId: string;
+  tenantId: string;
+  userId: string;
+  reportDate: string;
+  uploadId: number | null;
+  aiItems: PersonalDailyReportItem[];
+  finalItems: PersonalDailyReportItem[] | null;
+  messageCount: number;
+  status: "draft" | "confirmed" | "sent" | "empty" | "failed";
+  aiGeneratedAt: string | null;
+  confirmedAt: string | null;
+  sentAt: string | null;
+  errorMessage: string | null;
+  userDisplayName?: string | null;
+  departmentName?: string | null;
+}
+
+export const getMyPersonalReport = (date?: string) => {
+  const q = date ? `?date=${date}` : "";
+  return req<{ report: PersonalDailyReportRow | null; requestedDate: string }>(`/personal-daily-report/mine${q}`);
+};
+
+export const savePersonalReport = (args: { date?: string; items: PersonalDailyReportItem[]; action: "save_draft" | "send" }) =>
+  req<{ success: boolean; action: string }>("/personal-daily-report/mine/save", {
+    method: "POST",
+    body: JSON.stringify(args),
+  });
+
+export const regeneratePersonalReport = (date?: string) =>
+  req<{ reportId: string | null; status: string; itemCount: number; errorMessage?: string }>("/personal-daily-report/mine/regenerate", {
+    method: "POST",
+    body: JSON.stringify({ date }),
+  });
+
+export const getTeamPersonalReports = (opts: { from?: string; to?: string } = {}) => {
+  const p = new URLSearchParams();
+  if (opts.from) p.set("from", opts.from);
+  if (opts.to) p.set("to", opts.to);
+  const q = p.toString();
+  return req<{ reports: PersonalDailyReportRow[]; from: string; to: string }>(`/personal-daily-report/team${q ? `?${q}` : ""}`);
+};
+
 // === 對話分析 · conversation-analysis pilot ===
 
 export interface ConvoUpload {

@@ -20,6 +20,7 @@ import CostDashboard from "./aiproot-console/CostDashboard";
 import BatchHistory from "./aiproot-console/BatchHistory";
 import BindingAudit from "./aiproot-console/BindingAudit";
 import CategoryManagement from "./aiproot-console/CategoryManagement";
+import MyDailyReport from "./personal-report/MyDailyReport";
 import FirstLoginChangePassword from "./auth/FirstLoginChangePassword";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
 import { getSession, logout, login, type Session } from "./api";
@@ -44,7 +45,8 @@ type Route =
   | { page: "cost-dashboard" }
   | { page: "batch-history" }
   | { page: "binding-audit" }
-  | { page: "category-mgmt" };
+  | { page: "category-mgmt" }
+  | { page: "my-daily-report" };
 
 // crumb 顯示上層分類（非當前頁名），避免與 pane h1 重複。
 // pane h1 對應 PAGE_TITLE，同步設定 document.title 提供瀏覽器 tab 辨識。
@@ -68,6 +70,7 @@ const CRUMB: Record<Route["page"], string> = {
   "batch-history": "AIPROOT 管理",
   "binding-audit": "AIPROOT 管理",
   "category-mgmt": "AIPROOT 管理",
+  "my-daily-report": "戰情室",
 };
 
 const PAGE_TITLE: Record<Route["page"], string> = {
@@ -90,6 +93,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "batch-history": "對話分析歷程",
   "binding-audit": "LINE 綁定 audit",
   "category-mgmt": "分類管理",
+  "my-daily-report": "我的日報",
 };
 
 export default function App() {
@@ -162,6 +166,8 @@ export default function App() {
     } else if (key === "category-mgmt") {
       if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
       setRoute({ page: "category-mgmt" });
+    } else if (key === "my-daily-report") {
+      setRoute({ page: "my-daily-report" });
     }
   };
 
@@ -218,6 +224,7 @@ export default function App() {
           )}
           {route.page === "binding-audit" && <BindingAudit />}
           {route.page === "category-mgmt" && <CategoryManagement />}
+          {route.page === "my-daily-report" && <MyDailyReport />}
         </div>
       </Shell>
     </ToastProvider>

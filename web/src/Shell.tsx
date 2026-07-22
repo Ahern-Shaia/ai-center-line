@@ -18,6 +18,7 @@ const NAV: Array<{
     items: [
       { key: "warroom", label: "總覽儀表", ic: iconGauge, done: true },
       { key: "signoff", label: "每日簽核", ic: iconCheck, done: true },
+      { key: "my-daily-report", label: "我的日報", ic: iconBook, done: true },
     ],
   },
   {

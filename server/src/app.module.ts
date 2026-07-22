@@ -28,6 +28,7 @@ import { PermissionGuard } from "./permission/permission.guard.js";
 import { ConvoAnalysisRealtimeModule } from "./convo-analysis-realtime/convo-analysis-realtime.module.js";
 import { EmployeeBindingModule } from "./employee-binding/employee-binding.module.js";
 import { WarroomTaskBoardModule } from "./warroom-task-board/warroom-task-board.module.js";
+import { PersonalDailyReportModule } from "./personal-daily-report/personal-daily-report.module.js";
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { WarroomTaskBoardModule } from "./warroom-task-board/warroom-task-board.
     ConvoAnalysisRealtimeModule,
     EmployeeBindingModule,
     WarroomTaskBoardModule,
+    PersonalDailyReportModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [

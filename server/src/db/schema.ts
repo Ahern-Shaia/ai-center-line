@@ -95,6 +95,26 @@ export const categoryRegistry = pgTable("category_registry", {
     .$type<"active" | "archived" | "pending_review">(),
 });
 
+// 0018 · personal-daily-report · 員工每日私訊 → AI 整理成日報
+export const personalDailyReport = pgTable("personal_daily_report", {
+  reportId: uuid("report_id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.userId, { onDelete: "cascade" }),
+  reportDate: date("report_date").notNull(),
+  uploadId: bigint("upload_id", { mode: "number" }),
+  aiItems: jsonb("ai_items").notNull().default([]),
+  finalItems: jsonb("final_items"),
+  messageCount: integer("message_count").notNull().default(0),
+  status: text("status").notNull().default("draft")
+    .$type<"draft" | "confirmed" | "sent" | "empty" | "failed">(),
+  aiGeneratedAt: timestamp("ai_generated_at", { withTimezone: true }),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const auditLog = pgTable("audit_log", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   actorUserId: uuid("actor_user_id"),
