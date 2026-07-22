@@ -140,6 +140,10 @@
 </div>
 
 <script>
+  // LIFF ID · aiproot 台灣福祉 LINE Login channel 綁定 LIFF app
+  // 建立日期 2026-07-22 · Provider: aiproot · Linked bot: 台灣福祉
+  const LIFF_ID = "2010801742-WBQkAv5t";
+
   const BOT_ID = new URLSearchParams(location.search).get("botId");
   const API_BASE = window.location.origin.replace(/\/liff\/.*/, "");  // 同 origin
   let prefillData = null;
@@ -147,11 +151,10 @@
   let lineDisplayName = null;
 
   async function init() {
-    if (!BOT_ID) return showError("缺 botId 參數");
+    if (!BOT_ID) return showError("缺 botId 參數 · 請透過 bot 私訊的按鈕開啟");
     try {
       // Init LIFF
-      const liffId = getLiffIdForBot(BOT_ID);
-      await liff.init({ liffId });
+      await liff.init({ liffId: LIFF_ID });
       if (!liff.isLoggedIn()) { liff.login(); return; }
 
       // Get userId from LIFF SDK
@@ -176,11 +179,6 @@
     } catch (e) {
       showError(e.message || "初始化失敗");
     }
-  }
-
-  function getLiffIdForBot(botId) {
-    // LIFF ID 由 env 決定 · 這裡簡化：LIFF_ID env 從 window 帶入
-    return window.__LIFF_ID__ || document.currentScript?.dataset?.liffId || "";
   }
 
   function renderPrefill() {
