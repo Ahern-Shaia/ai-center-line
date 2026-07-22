@@ -23,9 +23,11 @@ export interface PipelineResult {
 }
 
 // 目前 pilot 只支援 twh · M6 才擴 tenant registry
+// "batch" alias · convo-analysis-realtime webhook batch 用 (fallback twh master data)
+// TODO(M6): 依 analysis_upload.tenant_id 查 DB 拿該 tenant 自訂主檔
 export function resolveTenant(slug: string): Tenant {
-  if (slug === "twh") return TWH_TENANT;
-  throw new Error(`unknown tenant slug: ${slug}（pilot 階段只支援 twh · M6 才擴充）`);
+  if (slug === "twh" || slug === "batch") return TWH_TENANT;
+  throw new Error(`unknown tenant slug: ${slug}（pilot 階段只支援 twh / batch · M6 才擴充）`);
 }
 
 // Fallback provider · 若 tenant 沒 llm-config · 用 env ANTHROPIC_API_KEY
