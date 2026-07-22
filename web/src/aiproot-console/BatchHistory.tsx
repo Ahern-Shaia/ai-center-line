@@ -105,11 +105,15 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
         toast.show(`Batch ${res.status} · ${res.messageCount.toLocaleString()} 則訊息`,
           res.status === "failed" ? "danger" : "ok");
       } else {
-        // 依下拉決定 · 選了單一租戶就只跑該租戶 · 選「全部」才跨租戶
-        const scope = selectedTenantId ? tenantName(selectedTenantId) : "全部租戶";
+        // batch 永遠 tenant-scoped · 沒選租戶就不執行 (UI 按鈕已 disable · 這裡加保底)
+        if (!selectedTenantId) {
+          toast.show("請先選擇租戶", "danger");
+          return;
+        }
+        const scope = tenantName(selectedTenantId);
         const res = await runPendingBatches({
           lookbackDays: 2,
-          tenantId: selectedTenantId || undefined,
+          tenantId: selectedTenantId,
         });
         toast.show(
           `${scope} · 共 ${res.total.toLocaleString()} 個 · 完成 ${res.completed} · 空群 ${res.empty} · 失敗 ${res.failed}`,
@@ -142,8 +146,7 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
       ) : (
         <>
           即將掃過去 2 天所有未跑 batch：<br />
-          範圍 <b>{selectedTenantId ? tenantName(selectedTenantId) : "全部租戶"}</b><br />
-          {!selectedTenantId && <>（跨租戶跑 · 若只想跑單一租戶請先於上方下拉切換）<br /></>}
+          租戶 <b>{selectedTenantId ? tenantName(selectedTenantId) : ""}</b><br />
           併發 3 · 依訊息量決定耗時。
         </>
       )}
@@ -203,10 +206,17 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
             </Popover>
           </Select>
           <button className="btn" onClick={() => void refresh()} disabled={loading || busy}>重新整理</button>
-          <button className="btn primary" onClick={() => setConfirm({ type: "run-pending" })} disabled={busy}>
+          <button
+            className="btn primary"
+            onClick={() => setConfirm({ type: "run-pending" })}
+            disabled={busy || !selectedTenantId}
+            title={selectedTenantId
+              ? `掃「${tenantName(selectedTenantId)}」過去 2 天所有未跑 batch`
+              : "請先於上方下拉選擇租戶 · 對話分析只能按單一租戶執行"}
+          >
             {selectedTenantId
               ? `掃「${tenantName(selectedTenantId)}」pending`
-              : "掃全部租戶 pending"}
+              : "掃 pending（請先選租戶）"}
           </button>
         </div>
       </div>
