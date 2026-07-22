@@ -64,7 +64,7 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
       const res = await listAnalysisBatches(tenantId || undefined);
       setRows(res.batches);
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入 batch 歷程失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : "載入批次歷程失敗", "danger");
     } finally {
       setLoading(false);
     }
@@ -127,7 +127,8 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
           groupId: row.groupId,
           batchDate: row.batchDate,
         });
-        toast.show(`Batch ${res.status} · ${res.messageCount.toLocaleString()} 則訊息`,
+        const zh = res.status === "completed" ? "完成" : res.status === "empty" ? "空群" : res.status === "failed" ? "失敗" : res.status;
+        toast.show(`批次 ${zh} · ${res.messageCount.toLocaleString()} 則訊息`,
           res.status === "failed" ? "danger" : "ok");
       } else {
         // batch 永遠 tenant-scoped · 沒選租戶就不執行 (UI 按鈕已 disable · 這裡加保底)
@@ -265,9 +266,9 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
       ) : rows.length === 0 ? (
         <div className="dm-empty">
           {selectedTenantId
-            ? "該租戶目前無 batch 記錄 · 待訊息累積後由 cron / 手動觸發"
-            : "尚無 batch 記錄 · 待第一筆 webhook 訊息 + cron 觸發或手動掃"}
-          <div className="dm-empty-hint">Cron 排程：每日 08:00 (台北)</div>
+            ? "該租戶目前無批次記錄 · 待訊息累積後由排程 / 手動觸發"
+            : "尚無批次記錄 · 待第一筆訊息接入 + 排程觸發或手動掃"}
+          <div className="dm-empty-hint">排程時間：每日 08:00（台北）</div>
         </div>
       ) : (
         <div className="dm-table-wrap">

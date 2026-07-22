@@ -91,7 +91,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "onboard-tenant": "開通新租戶",
   "cost-dashboard": "AI 成本管理",
   "batch-history": "對話分析歷程",
-  "binding-audit": "LINE 綁定 audit",
+  "binding-audit": "LINE 綁定稽核",
   "category-mgmt": "分類管理",
   "my-daily-report": "我的日報",
 };

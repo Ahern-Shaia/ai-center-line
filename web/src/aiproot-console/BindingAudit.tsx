@@ -89,7 +89,7 @@ export default function BindingAudit() {
     <div className="pane">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 20 }}>LINE 綁定 audit</h1>
+          <h1 style={{ margin: 0, fontSize: 20 }}>LINE 綁定稽核</h1>
           <div style={{ fontSize: 13, color: "var(--ink-3)", marginTop: 4 }}>
             方向 8 · LIFF Zero-Config · 員工在 LINE 內完成綁定
           </div>
@@ -153,7 +153,7 @@ export default function BindingAudit() {
       ) : bindings.length === 0 ? (
         <div className="dm-empty">
           尚無綁定紀錄
-          <div className="dm-empty-hint">員工加 bot 好友並完成 LIFF 綁定後 · 這裡會列出</div>
+          <div className="dm-empty-hint">員工加 LINE 官方帳號好友並完成綁定後 · 這裡會列出</div>
         </div>
       ) : (
         <div className="dm-table-wrap">

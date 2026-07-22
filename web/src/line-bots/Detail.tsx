@@ -89,8 +89,8 @@ export function BotDetail({
 
       {groups.length === 0 ? (
         <div className="lbot-groups-empty">
-          <div>Bot 尚未加入任何群</div>
-          <div className="lbot-groups-empty-hint">加入後 groupId 會自動出現 · 通常群內任何訊息即觸發</div>
+          <div>此機器人尚未加入任何群</div>
+          <div className="lbot-groups-empty-hint">加入群組後 · 群內任何訊息即可觸發自動載入</div>
         </div>
       ) : (
         <table className="lbot-groups-tbl">
@@ -156,7 +156,7 @@ function GroupRow({
         toast.show(`已拉到群名：${res.displayName}`, "ok");
         await onReload();
       } else {
-        toast.show("拉不到群名 · bot 需已加入群且有 chat 權限", "warn");
+        toast.show("拉不到群名 · LINE 官方帳號需已加入群且有聊天權限", "warn");
       }
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "拉群名失敗", "danger");

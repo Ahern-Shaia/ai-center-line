@@ -61,7 +61,7 @@ const NAV: Array<{
       { key: "onboard-tenant", label: "開通新租戶", ic: iconTeam, done: true },
       { key: "cost-dashboard", label: "AI 成本管理", ic: iconGauge, done: true },
       { key: "batch-history", label: "對話分析歷程", ic: iconChat, done: true },
-      { key: "binding-audit", label: "LINE 綁定 audit", ic: iconTeam, done: true },
+      { key: "binding-audit", label: "LINE 綁定稽核", ic: iconTeam, done: true },
       { key: "category-mgmt", label: "分類管理", ic: iconBook, done: true },
     ],
   },

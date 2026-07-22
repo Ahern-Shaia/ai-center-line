@@ -57,7 +57,7 @@ export default function TaskBoard() {
       <div className="pane-hdr">
         <div>
           <h1>任務看板</h1>
-          <div className="sub">Kanban · 高信度 AI 抽取的任務 · 點卡片展開對話上下文 · 支援單筆簽核</div>
+          <div className="sub">看板 · 高信度 AI 抽取的任務 · 點卡片展開對話上下文 · 支援單筆簽核</div>
         </div>
         <button className="btn" onClick={() => void refresh()} disabled={loading}>重新整理</button>
       </div>

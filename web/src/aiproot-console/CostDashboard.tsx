@@ -64,7 +64,7 @@ export default function CostDashboard({ onOpenAnalysis }: Props = {}) {
           <MetricCard
             label="快取命中率"
             value={`${(data.efficiency.cacheHitRate * 100).toFixed(1)}%`}
-            sub={data.efficiency.cacheHitRate > 0.5 ? "省很兇 · 大部分是舊 prompt cache" : data.efficiency.cacheHitRate > 0.2 ? "還可以 · 尚有空間" : "低 · 每次幾乎全 fresh input"}
+            sub={data.efficiency.cacheHitRate > 0.5 ? "省很兇 · 大部分命中快取" : data.efficiency.cacheHitRate > 0.2 ? "還可以 · 尚有空間" : "低 · 每次幾乎全新輸入"}
           />
           <MetricCard
             label="平均段長"
@@ -179,8 +179,8 @@ export default function CostDashboard({ onOpenAnalysis }: Props = {}) {
             <thead>
               <tr>
                 <th>租戶</th>
-                <th>Group</th>
-                <th className="num">Batch 數</th>
+                <th>群組</th>
+                <th className="num">批次數</th>
                 <th className="num">訊息數</th>
                 <th className="num">總花費</th>
                 <th className="num">每則 $</th>
@@ -263,8 +263,8 @@ export default function CostDashboard({ onOpenAnalysis }: Props = {}) {
       {/* Pricing 參考表 */}
       <section className="cost-section">
         <div className="cost-section-hdr">
-          <div className="cost-section-title">Pricing 參考表</div>
-          <div className="cost-section-mark">USD / 1M tokens · 各家官方 2026-07 公告</div>
+          <div className="cost-section-title">定價參考表</div>
+          <div className="cost-section-mark">USD / 每百萬 tokens · 各家官方 2026-07 公告</div>
         </div>
         <table className="cost-tbl">
           <thead>

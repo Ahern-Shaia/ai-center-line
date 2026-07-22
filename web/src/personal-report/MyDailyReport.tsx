@@ -58,7 +58,7 @@ export default function MyDailyReport() {
     setRegenerating(true);
     try {
       const res = await regeneratePersonalReport(date);
-      if (res.status === "empty") toast.show("今日無私訊記錄 · 傳幾則給 bot 後再重新生成", "warn");
+      if (res.status === "empty") toast.show("今日無私訊記錄 · 傳幾則給 LINE 官方帳號後再重新生成", "warn");
       else if (res.status === "completed") toast.show(`AI 整理 ${res.itemCount} 項`, "ok");
       else toast.show(res.errorMessage ?? "生成失敗", "danger");
       void refresh();

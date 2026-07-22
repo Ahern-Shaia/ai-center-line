@@ -164,7 +164,7 @@ export default function CategoryManagement() {
           <>
             <div style={{ marginBottom: 8 }}>
               目前顯示名：<b>{renaming.categoryName}</b><br />
-              Slug（不變）：<code className="mono">{renaming.categorySlug}</code>
+              代號（不變）：<code className="mono">{renaming.categorySlug}</code>
             </div>
             <input
               type="text"
@@ -191,12 +191,12 @@ export default function CategoryManagement() {
         body={confirmArchive && (
           <>
             即將封存 <b>{confirmArchive.categoryName}</b><br />
-            Slug：<code className="mono">{confirmArchive.categorySlug}</code><br /><br />
+            代號：<code className="mono">{confirmArchive.categorySlug}</code><br /><br />
             封存後：
             <ul style={{ marginLeft: 20, marginTop: 6 }}>
               <li>此分類不再顯示在使用中列表</li>
-              <li>Pipeline 下次不會提示此分類（但 AI 仍可能產出相同 slug · 會自動復活）</li>
-              <li>已材料化的 tickets category 保留</li>
+              <li>AI 分析下次不會提示此分類（但仍可能產出相同代號 · 會自動復活）</li>
+              <li>已材料化為任務的分類名保留</li>
             </ul>
           </>
         )}
@@ -223,7 +223,7 @@ function CategoryTable({
         <thead>
           <tr>
             <th>顯示名</th>
-            <th>Slug</th>
+            <th>代號</th>
             <th style={{ textAlign: "right" }}>使用次數</th>
             <th>最後使用</th>
             <th>首次出現</th>
