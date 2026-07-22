@@ -70,8 +70,29 @@ export const tickets = pgTable("tickets", {
     .$type<"未同步" | "同步中" | "已同步" | "同步失敗">(),
   sourceMessageIds: uuid("source_message_ids").array(),
   messageCount: integer("message_count"),
+  // 0017 · warroom-task-board
+  assigneeDisplayName: text("assignee_display_name"),
+  dueAt: timestamp("due_at", { withTimezone: true }),
+  sourceUploadId: bigint("source_upload_id", { mode: "number" }),
+  sourceRecordIndex: integer("source_record_index"),
+  categoryId: uuid("category_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// 0017 · warroom-task-board · tenant-scoped 分類詞庫
+export const categoryRegistry = pgTable("category_registry", {
+  categoryId: uuid("category_id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  categoryName: text("category_name").notNull(),
+  categorySlug: text("category_slug").notNull(),
+  description: text("description"),
+  usageCount: integer("usage_count").notNull().default(0),
+  firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull().defaultNow(),
+  createdBy: uuid("created_by").references(() => users.userId),
+  status: text("status").notNull().default("active")
+    .$type<"active" | "archived" | "pending_review">(),
 });
 
 export const auditLog = pgTable("audit_log", {

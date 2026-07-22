@@ -2,6 +2,8 @@
 // ⚠️ Backend self-contained copy — keep in sync with ../../../../../src/schemas.ts
 import { z } from "zod";
 
+// WTB-M2 · category 從 enum 開放為 free string · 靠 category_registry 收斂
+// 舊 CategoryEnum 保留為 default 建議清單 · pipeline system prompt 提示 LLM 優先歸入已知
 export const CategoryEnum = z.enum([
   "daily_report",
   "attendance",
@@ -11,6 +13,7 @@ export const CategoryEnum = z.enum([
   "chitchat",
 ]);
 export type Category = z.infer<typeof CategoryEnum>;
+export const DEFAULT_CATEGORIES = CategoryEnum.options;
 
 const Confidence = z.enum(["high", "medium", "low"]);
 
@@ -18,7 +21,7 @@ export const AnalysisResult = z.object({
   classifications: z.array(
     z.object({
       id: z.number(),
-      category: CategoryEnum,
+      category: z.string().min(1).max(100),   // WTB-M2 · 開放 · 由 category_registry 收斂
       confidence: Confidence,
     }),
   ),
@@ -41,7 +44,7 @@ export const AnalysisResult = z.object({
   ),
   records: z.array(
     z.object({
-      category: CategoryEnum,
+      category: z.string().min(1).max(100),    // WTB-M2 · 開放
       title: z.string(),
       detail: z.string(),
       status: z.enum(["open", "in_progress", "resolved", "info"]).nullable(),

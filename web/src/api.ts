@@ -210,6 +210,63 @@ export const getPending = () => req<{ pending: PendingTicket[] }>("/signoff");
 export const confirmSignoff = (ticket_ids: string[]) =>
   req<ConfirmResult>("/signoff", { method: "POST", body: JSON.stringify({ ticket_ids }) });
 
+// === Warroom Task Board · WTB-M3 ===
+
+export interface WarroomKanbanTicket {
+  ticketId: string;
+  category: string | null;
+  categoryId: string | null;
+  summary: string;
+  confidence: "high" | "medium" | "low" | null;
+  confirmStatus: "待簽核" | "已簽核" | "逾時警示";
+  assigneeDisplayName: string | null;
+  dueAt: string | null;
+  sourceUploadId: number | null;
+  sourceRecordIndex: number | null;
+  createdAt: string;
+  departmentId: string;
+  departmentName: string | null;
+  confirmedByName: string | null;
+  confirmedAt: string | null;
+}
+
+export interface WarroomTaskBoard {
+  kanban: {
+    pending: WarroomKanbanTicket[];
+    signed: WarroomKanbanTicket[];
+    overdue: WarroomKanbanTicket[];
+  };
+  counts: { pending: number; signed: number; overdue: number };
+}
+
+export interface WarroomDailyReport {
+  uploadId: number;
+  groupId: string;
+  groupName: string | null;
+  departmentName: string | null;
+  batchDate: string;
+  dailyReports: Array<Record<string, unknown>>;
+  status: string;
+  uploadedAt: string;
+}
+
+export interface WarroomDailyDays {
+  days: Array<{ batchDate: string; uploads: WarroomDailyReport[] }>;
+}
+
+export const getWarroomTasks = (opts: { includeSigned?: boolean } = {}) => {
+  const q = opts.includeSigned === false ? "?signed=false" : "";
+  return req<WarroomTaskBoard>(`/warroom/tasks${q}`);
+};
+
+export const getWarroomDailyReports = (opts: { from?: string; to?: string } = {}) => {
+  const p = new URLSearchParams();
+  if (opts.from) p.set("from", opts.from);
+  if (opts.to) p.set("to", opts.to);
+  const q = p.toString();
+  return req<WarroomDailyDays>(`/warroom/daily-reports${q ? `?${q}` : ""}`);
+};
+
 // === 對話分析 · conversation-analysis pilot ===
 
 export interface ConvoUpload {

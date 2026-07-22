@@ -26,15 +26,20 @@ export async function analyzeSegment(
   groupName: string,
   segment: ChatMessage[],
   tenant: Tenant,
+  knownCategories?: Array<{ slug: string; name: string }>,     // WTB-M2 · 若有 · 注入 userMessage
 ): Promise<{ result: AnalysisResultT; usage: UsageStats }> {
   const body = segment
     .map((m) => `#${m.id} [${m.date} ${m.time}] ${m.sender}: ${m.text.replace(/\n/g, " ⏎ ")}`)
     .join("\n");
 
+  const categoryHint = knownCategories && knownCategories.length > 0
+    ? `\n# 已知分類（依使用頻率 · 優先歸入 · 全新性質才自行命名）\n${knownCategories.map((c) => `- ${c.slug} (${c.name})`).join("\n")}\n`
+    : "";
+
   const output = await provider.chat({
     systemPrompt: tenant.systemPrompt,
     cacheableContext: `# 工廠主檔資料（模擬 Ragic 主檔，供實體對應）\n${tenant.masterDataJson}`,
-    userMessage: `群組名稱：${groupName}\n\n請分析以下 ${segment.length} 則訊息：\n${body}`,
+    userMessage: `群組名稱：${groupName}${categoryHint}\n\n請分析以下 ${segment.length} 則訊息：\n${body}`,
     outputSchema: AnalysisResult,
   });
 

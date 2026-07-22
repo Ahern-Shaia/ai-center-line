@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Optional } from "@nestjs/common";
 import { eq, sql } from "drizzle-orm";
 import { currentTx, type Db } from "../db/client.js";
 import { analysisUpload, analysisResult } from "../db/schema.js";
@@ -7,6 +7,7 @@ import type { UploadCreatePayload } from "./dto/upload.dto.js";
 import { LlmConfigService } from "../llm/llm-config.service.js";
 import { createLLMProvider } from "../llm/provider.factory.js";
 import type { LLMProvider } from "../llm/provider.interface.js";
+import { TicketMaterializerService } from "../warroom-task-board/ticket-materializer.service.js";
 
 // LINE 對話分析 · async job 執行邏輯
 // 對應 docs/modules/conversation-analysis-pilot.md v0.3 §4.4
@@ -16,7 +17,10 @@ import type { LLMProvider } from "../llm/provider.interface.js";
 export class AnalyzeService {
   private readonly logger = new Logger(AnalyzeService.name);
 
-  constructor(private readonly llmConfig: LlmConfigService) {}
+  constructor(
+    private readonly llmConfig: LlmConfigService,
+    @Optional() private readonly materializer?: TicketMaterializerService,
+  ) {}
 
   async createUpload(
     payload: UploadCreatePayload,
@@ -119,7 +123,7 @@ export class AnalyzeService {
       if (!row) throw new Error(`upload ${uploadId} 不存在`);
 
       const provider = await this.resolveProvider(row.tenantId);
-      const result = await runPipeline(row.rawContent, row.tenantSlug, provider);
+      const result = await runPipeline(row.rawContent, row.tenantSlug, provider, row.tenantId ?? undefined);
 
       await db.insert(analysisResult).values({
         uploadId,
@@ -148,6 +152,17 @@ export class AnalyzeService {
       this.logger.log(
         `upload ${uploadId} done · msgs=${result.messageCount} segs=${result.segmentCount} tokens=${result.usage.outputTokens}`,
       );
+
+      // WTB-M1 · materialize records → tickets · env kill switch WTB_MATERIALIZE_ENABLED
+      if (process.env.WTB_MATERIALIZE_ENABLED !== "false" && this.materializer) {
+        try {
+          const mzResult = await this.materializer.materialize(uploadId);
+          this.logger.log(`materialize · upload=${uploadId} inserted=${mzResult.inserted} updated=${mzResult.updated}`);
+        } catch (mzErr) {
+          // 材料化失敗不影響 upload 主流程 · aiproot 可手動 re-materialize
+          this.logger.error(`materialize failed · upload=${uploadId} · ${String((mzErr as Error).message ?? mzErr)}`);
+        }
+      }
     } catch (e) {
       const errorMessage = String((e as Error).message ?? e);
       this.logger.error(`upload ${uploadId} failed: ${errorMessage}`);
