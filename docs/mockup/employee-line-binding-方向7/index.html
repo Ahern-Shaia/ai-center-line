@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>方向 7 · LINE Login OAuth · UI Flow Mockup</title>
+<style>
+  :root {
+    --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6;
+    --line:#E5E7EB; --line-2:#F0F2F5; --line-soft:#F5F6F8;
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --primary:#4F46E5; --primary-2:#4338CA; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5; --ok-600:#059669;
+    --warn:#D97706; --warn-tint:#FFFBEB;
+    --rose:#DC2626; --rose-tint:#FEF2F2; --rose-600:#DC2626;
+    --line-brand:#06C755;
+    --r:6px; --r-sm:4px; --r-lg:10px;
+    --sans: 'Inter', 'Noto Sans TC', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+    --sh-sm: 0 1px 2px rgba(17,24,39,.05);
+    --sh-md: 0 4px 12px rgba(17,24,39,.08);
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px 32px; background:var(--canvas); color:var(--ink); font-family:var(--sans); font-size:14px; line-height:1.55; }
+
+  /* Page header */
+  .page-hdr { max-width:1400px; margin:0 auto 24px; padding-bottom:16px; border-bottom:1px solid var(--line); }
+  .page-hdr h1 { font-size:22px; font-weight:700; margin:0 0 6px; letter-spacing:-0.01em; }
+  .page-hdr .sub { color:var(--ink-3); font-size:13.5px; margin:0; }
+  .toc { display:flex; gap:14px; margin-top:14px; flex-wrap:wrap; }
+  .toc a { color:var(--ink-2); text-decoration:none; font-size:12.5px; padding:4px 10px; border:1px solid var(--line); border-radius:999px; background:var(--surface); }
+  .toc a:hover { border-color:var(--primary); color:var(--primary); }
+
+  /* Stage */
+  .stage { max-width:1400px; margin:0 auto 48px; }
+  .stage-hdr { display:flex; align-items:baseline; gap:12px; margin-bottom:16px; padding:12px 16px; background:var(--primary-tint); border-radius:var(--r); }
+  .stage-num { font-family:var(--mono); font-size:13px; font-weight:700; color:var(--primary); }
+  .stage-title { font-size:15.5px; font-weight:700; letter-spacing:-.01em; }
+  .stage-sub { font-size:12.5px; color:var(--ink-3); }
+  .stage-actor { margin-left:auto; font-size:11.5px; color:var(--ink-3); background:var(--surface); padding:2px 10px; border:1px solid var(--line); border-radius:999px; }
+
+  /* Screen grid */
+  .screens { display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:24px; }
+
+  /* Screen frame */
+  .screen { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden; box-shadow:var(--sh-sm); display:flex; flex-direction:column; }
+  .screen-lbl { padding:10px 14px; border-bottom:1px solid var(--line); background:var(--well); font-size:12px; color:var(--ink-3); display:flex; justify-content:space-between; }
+  .screen-lbl b { color:var(--ink-2); font-weight:600; font-size:12px; }
+  .screen-body { padding:0; }
+
+  /* Fake browser chrome */
+  .browser { background:#EEF0F3; padding:8px 12px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; font-size:11.5px; }
+  .browser-dots { display:flex; gap:4px; }
+  .browser-dots span { width:10px; height:10px; border-radius:50%; }
+  .browser-dots span:nth-child(1) { background:#FF5F57; }
+  .browser-dots span:nth-child(2) { background:#FFBD2E; }
+  .browser-dots span:nth-child(3) { background:#28C940; }
+  .browser-url { flex:1; padding:3px 10px; background:#fff; border:1px solid #D5D8DC; border-radius:4px; font-family:var(--mono); font-size:11px; color:var(--ink-2); }
+
+  /* Aiproot shell mock (mini) */
+  .aiproot-shell { display:grid; grid-template-columns:120px 1fr; min-height:420px; background:#FBFCFD; }
+  .aiproot-sidebar { background:var(--surface); border-right:1px solid var(--line); padding:14px 10px; }
+  .aiproot-brand { font-weight:700; font-size:12.5px; color:var(--ink); margin-bottom:14px; padding:4px 6px; }
+  .aiproot-brand-mark { display:inline-block; width:20px; height:20px; background:var(--ink); color:#fff; text-align:center; line-height:20px; border-radius:4px; margin-right:6px; font-size:11px; }
+  .aiproot-nav-item { font-size:11.5px; color:var(--ink-3); padding:5px 6px; border-radius:4px; margin-bottom:2px; }
+  .aiproot-nav-item.active { background:var(--primary-tint); color:var(--primary); font-weight:500; }
+  .aiproot-topbar { border-bottom:1px solid var(--line); padding:8px 14px; background:var(--surface); font-size:11.5px; color:var(--ink-3); display:flex; justify-content:space-between; align-items:center; }
+  .aiproot-user { display:flex; align-items:center; gap:5px; }
+  .aiproot-user-avatar { width:22px; height:22px; background:var(--primary); color:#fff; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; }
+  .aiproot-main { padding:16px 20px; background:#FBFCFD; overflow:auto; }
+  .aiproot-title { font-size:14.5px; font-weight:700; margin:0 0 4px; }
+  .aiproot-sub { font-size:11px; color:var(--ink-3); margin-bottom:14px; }
+
+  /* Form components */
+  .form-group { margin-bottom:12px; }
+  .form-lbl { display:block; font-size:11.5px; font-weight:500; color:var(--ink-2); margin-bottom:4px; }
+  .form-input {
+    width:100%; padding:6px 10px; font-size:12.5px; font-family:inherit;
+    border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface); color:var(--ink);
+  }
+  .form-input:focus { outline:none; border-color:var(--primary); }
+  textarea.form-input { min-height:60px; font-family:var(--mono); font-size:11px; }
+
+  /* Buttons */
+  .btn {
+    display:inline-flex; align-items:center; justify-content:center; gap:5px;
+    padding:6px 12px; border-radius:var(--r-sm); font-size:12px; font-weight:500;
+    border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer;
+  }
+  .btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .btn.line-brand { background:var(--line-brand); color:#fff; border-color:var(--line-brand); font-size:13px; padding:10px 18px; font-weight:600; }
+  .btn.large { padding:9px 16px; font-size:13px; }
+  .btn.danger { color:var(--rose-600); border-color:var(--rose-tint); }
+
+  /* LINE logo pill */
+  .line-logo { width:22px; height:22px; background:var(--line-brand); color:#fff; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; margin-right:8px; }
+
+  /* Login page mock */
+  .login-center { display:flex; align-items:center; justify-content:center; padding:50px 20px; }
+  .login-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:28px 32px; width:100%; max-width:340px; box-shadow:var(--sh-md); }
+  .login-brand { text-align:center; margin-bottom:20px; }
+  .login-brand-mark { width:36px; height:36px; background:var(--ink); color:#fff; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; }
+  .login-brand-name { font-size:15px; font-weight:700; margin-top:8px; }
+
+  /* Table */
+  table.dm-table { width:100%; border-collapse:collapse; font-size:11.5px; margin-top:6px; }
+  .dm-table th, .dm-table td { padding:6px 10px; border-bottom:1px solid var(--line-2); text-align:left; }
+  .dm-table th { background:var(--well); color:var(--ink-3); font-weight:600; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; }
+  .dm-table tbody tr:last-child td { border-bottom:0; }
+  .badge { padding:1px 8px; font-size:10.5px; border-radius:999px; font-weight:500; display:inline-block; }
+  .badge.ok { background:var(--ok-tint); color:var(--ok-600); }
+  .badge.warn { background:var(--warn-tint); color:var(--warn); }
+  .badge.rose { background:var(--rose-tint); color:var(--rose-600); }
+  .badge.muted { background:var(--well); color:var(--ink-3); }
+
+  /* Email mock */
+  .email { padding:14px 16px; }
+  .email-meta { font-size:11px; color:var(--ink-3); margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--line-2); }
+  .email-meta div { margin-bottom:2px; }
+  .email-meta b { color:var(--ink-2); font-weight:600; }
+  .email-body { font-size:12px; line-height:1.75; }
+  .email-body p { margin:0 0 10px; }
+  .email-key { background:var(--well); padding:8px 10px; border-radius:4px; font-family:var(--mono); font-size:11.5px; }
+
+  /* LINE OAuth mock */
+  .oauth-card { padding:24px; text-align:center; }
+  .oauth-logo { font-size:22px; font-weight:700; color:var(--line-brand); margin-bottom:16px; }
+  .oauth-app-card { background:var(--well); border:1px solid var(--line); border-radius:var(--r); padding:18px; margin:16px 0; text-align:left; }
+  .oauth-app-name { font-size:13.5px; font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:8px; }
+  .oauth-verified { font-size:10px; color:var(--primary); background:var(--primary-tint); padding:2px 6px; border-radius:4px; }
+  .oauth-scope { font-size:11.5px; color:var(--ink-2); margin:6px 0; }
+  .oauth-scope-item { padding:2px 0; }
+  .oauth-scope-item.check::before { content:'✓ '; color:var(--ok-600); font-weight:700; }
+  .oauth-scope-item.no::before { content:'✗ '; color:var(--rose-600); font-weight:700; }
+  .oauth-actions { display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+
+  /* Phone mock (LINE chat) */
+  .phone { max-width:280px; margin:0 auto; padding:14px; }
+  .phone-hdr { background:#f7f7f7; padding:8px 10px; border-radius:8px 8px 0 0; font-size:12.5px; font-weight:600; margin-bottom:0; border:1px solid var(--line); border-bottom:0; }
+  .phone-body { background:#EDEEF0; border:1px solid var(--line); border-radius:0 0 8px 8px; padding:12px 10px; min-height:180px; display:flex; flex-direction:column; gap:8px; }
+  .msg-in, .msg-out { max-width:75%; padding:8px 10px; font-size:12px; border-radius:12px; position:relative; }
+  .msg-in { align-self:flex-end; background:#8DE356; color:#000; border-top-right-radius:2px; }
+  .msg-out { align-self:flex-start; background:#fff; border-top-left-radius:2px; }
+  .msg-out.card { border:1px solid var(--line); padding:10px 12px; max-width:80%; }
+  .msg-out.card h4 { margin:0 0 4px; font-size:12.5px; font-weight:700; }
+  .msg-out.card small { color:var(--ink-3); font-size:10.5px; }
+  .msg-time { font-size:9.5px; color:var(--ink-3); text-align:center; margin:2px 0; }
+
+  /* Success screen */
+  .success-hero { padding:24px; text-align:center; }
+  .success-icon { width:48px; height:48px; background:var(--ok-tint); color:var(--ok-600); border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:10px; }
+  .success-title { font-size:16px; font-weight:700; margin-bottom:6px; }
+  .success-user-card { background:var(--well); border:1px solid var(--line); border-radius:var(--r); padding:14px; margin:16px auto; max-width:260px; }
+  .avatar-lg { width:56px; height:56px; background:var(--primary); color:#fff; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:20px; font-weight:600; margin-bottom:6px; }
+
+  /* Info list */
+  .info-list { text-align:left; font-size:12px; line-height:1.8; padding:0 18px; }
+  .info-list li { margin-bottom:4px; }
+
+  /* Diagram */
+  .flow-diagram { max-width:900px; margin:0 auto 32px; padding:20px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); font-family:var(--mono); font-size:12px; white-space:pre; overflow-x:auto; }
+
+  /* Alert box */
+  .alert { padding:10px 12px; border-radius:var(--r-sm); font-size:11.5px; margin:10px 0; border:1px solid; }
+  .alert.warn { background:var(--warn-tint); border-color:#F5D5A6; color:#7A4E1B; }
+  .alert.info { background:var(--primary-tint); border-color:#C7D2FE; color:#3730A3; }
+  .alert.rose { background:var(--rose-tint); border-color:#FECACA; color:#991B1B; }
+
+  /* Foot */
+  .decision { max-width:900px; margin:32px auto 0; padding:20px 24px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); }
+  .decision h3 { margin:0 0 12px; font-size:14.5px; }
+  .decision-opts { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; }
+  .decision-opt { padding:12px 14px; background:var(--well); border-radius:var(--r); font-size:12.5px; border:1px solid var(--line); }
+  .decision-opt b { display:block; font-size:13px; margin-bottom:4px; }
+</style>
+</head>
+<body>
+
+<div class="page-hdr">
+  <h1>方向 7 · LINE Login OAuth · UI Flow Mockup</h1>
+  <p class="sub">員工綁定機制設計研究 · 完整操作流 · 用戶決策前 review 用 · 對齊 observability-light 美學</p>
+  <div class="toc">
+    <a href="#stage-1">階段 1 · Aiproot 業助前置</a>
+    <a href="#stage-2">階段 2 · Alice 首次登入</a>
+    <a href="#stage-3">階段 3 · 綁定 LINE</a>
+    <a href="#stage-4">階段 4 · 日常使用</a>
+    <a href="#stage-5">階段 5 · 撤銷 / audit</a>
+    <a href="#edge">Edge cases</a>
+    <a href="#decision">你的決策點</a>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- Flow diagram overview -->
+<div class="flow-diagram">                 ┌────────────────────────────┐
+                 │  0. 前置（Aiproot 業助 1 次） │
+                 │  · 建員工 users              │
+                 │  · 產一次性密碼寄 email      │
+                 └─────────────┬──────────────┘
+                               ▼
+       ┌─────────────────────────────────────────────────┐
+       │            Alice 首次綁定（< 5 分鐘）             │
+       │                                                 │
+       │  1. Alice 收 email  →  2. Alice 登 aiproot 改密   │
+       │                                    ▼            │
+       │  3. Alice 點「用 LINE 登入」 → 4. LINE OAuth 授權 │
+       │                                    ▼            │
+       │  5. 綁定成功頁 + 6. Bot 私訊 + 7. Email 通知     │
+       └─────────────────────────────────────────────────┘
+                               ▼
+              ┌─────────────────────────────┐
+              │  日常使用（每天）             │
+              │  · 私訊 bot → 個人日報 pipeline│
+              │  · 進 aiproot 看日報 · 確認   │
+              └─────────────────────────────┘</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="stage" id="stage-1">
+  <div class="stage-hdr">
+    <span class="stage-num">STAGE 1</span>
+    <div>
+      <div class="stage-title">Aiproot 業助前置</div>
+      <div class="stage-sub">每 tenant 1 次 · 批次匯入員工 · 產一次性密碼 · 分發指引</div>
+    </div>
+    <span class="stage-actor">Aiproot 業助（王小華）</span>
+  </div>
+
+  <div class="screens">
+    <!-- Screen 1-A -->
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 1-A</b><span>批次匯入員工</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">ai-center-line.onrender.com/aiproot/onboard/twh/employees</div>
+      </div>
+      <div class="aiproot-shell">
+        <div class="aiproot-sidebar">
+          <div class="aiproot-brand"><span class="aiproot-brand-mark">A</span>AIPROOT</div>
+          <div class="aiproot-nav-item">戰情室</div>
+          <div class="aiproot-nav-item">AI 對話分析</div>
+          <div class="aiproot-nav-item">通訊接頭層</div>
+          <div class="aiproot-nav-item active">AIPROOT 管理</div>
+          <div class="aiproot-nav-item">設定</div>
+        </div>
+        <div>
+          <div class="aiproot-topbar">
+            <span>AIPROOT 管理 › 開通新租戶 › 台灣福祉 › 步驟 3/4</span>
+            <span class="aiproot-user"><span class="aiproot-user-avatar">王</span>王小華</span>
+          </div>
+          <div class="aiproot-main">
+            <h1 class="aiproot-title">批次匯入員工</h1>
+            <div class="aiproot-sub">貼 CSV · 每行一員工 · 系統將自動產一次性密碼寄到 email</div>
+
+            <div class="form-group">
+              <label class="form-lbl">CSV 內容（email,姓名,部門,職稱）</label>
+              <textarea class="form-input">email,姓名,部門,職稱
+alice@twhomecare.com.tw,王愛麗絲,品保部,品保專員
+eric@twhomecare.com.tw,陳艾瑞克,業務二部,業務主任
+mei@twhomecare.com.tw,林小美,人資總務,人資專員
+david@twhomecare.com.tw,張大偉,技術工程,工程師</textarea>
+            </div>
+
+            <div style="display:flex; gap:8px; margin:12px 0;">
+              <button class="btn">檢查格式</button>
+              <button class="btn primary">匯入並產密碼</button>
+            </div>
+
+            <div class="alert info" style="margin-top:14px;">
+              <b>匯入預覽</b>：100 筆合法 · 0 筆重複 · Eric 部門「業務二部」尚未建立 · 系統將自動建
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 1-B -->
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 1-B</b><span>分發指引 · 進度追蹤</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">ai-center-line.onrender.com/aiproot/onboard/twh/complete</div>
+      </div>
+      <div class="aiproot-shell">
+        <div class="aiproot-sidebar">
+          <div class="aiproot-brand"><span class="aiproot-brand-mark">A</span>AIPROOT</div>
+          <div class="aiproot-nav-item">戰情室</div>
+          <div class="aiproot-nav-item">AI 對話分析</div>
+          <div class="aiproot-nav-item">通訊接頭層</div>
+          <div class="aiproot-nav-item active">AIPROOT 管理</div>
+          <div class="aiproot-nav-item">設定</div>
+        </div>
+        <div>
+          <div class="aiproot-topbar">
+            <span>AIPROOT 管理 › 開通新租戶 › 完成</span>
+            <span class="aiproot-user"><span class="aiproot-user-avatar">王</span>王小華</span>
+          </div>
+          <div class="aiproot-main">
+            <h1 class="aiproot-title">✓ 100 位員工已建立 · 密碼已寄出</h1>
+            <div class="aiproot-sub">請將以下指引提供給台灣福祉 HR · 讓員工 7 天內完成綁定</div>
+
+            <div style="background:var(--well); border-radius:var(--r); padding:12px 14px; font-size:11.5px; line-height:1.7; margin:12px 0;">
+              <b>【 aiproot 戰情室帳號開通通知 】</b><br>
+              請於 7 天內完成綁定：<br>
+              1. 收公司信箱 · 收 aiproot 一次性密碼信<br>
+              2. 到 https://ai-center-line.onrender.com 登入<br>
+              3. 首次登入需強改密碼<br>
+              4. 點「用 LINE 登入完成綁定」按鈕<br>
+              5. LINE 授權後即完成綁定
+            </div>
+
+            <div style="display:flex; gap:8px;">
+              <button class="btn">複製訊息</button>
+              <button class="btn">下載 PDF</button>
+            </div>
+
+            <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--line);">
+              <div class="form-lbl">綁定進度追蹤</div>
+              <div style="display:flex; gap:16px; align-items:center; font-size:12.5px;">
+                <span><b style="font-size:16px;">0</b> / 100 完成</span>
+                <div style="flex:1; height:6px; background:var(--well); border-radius:999px; overflow:hidden;">
+                  <div style="width:0%; height:100%; background:var(--primary);"></div>
+                </div>
+                <button class="btn">見未綁定列表</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 1-C -->
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 1-C</b><span>員工收信 · 一次性密碼</span></div>
+      <div class="email">
+        <div class="email-meta">
+          <div><b>From:</b> aiproot 通知 &lt;noreply@aiproot.io&gt;</div>
+          <div><b>To:</b> alice@twhomecare.com.tw</div>
+          <div><b>Subject:</b> 【 台灣福祉 】aiproot 戰情室帳號開通</div>
+        </div>
+        <div class="email-body">
+          <p>Hi 王愛麗絲，</p>
+          <p>你的 aiproot 戰情室帳號已由公司開通。<br>請於 7 天內首次登入 · 逾期需重新申請。</p>
+          <div class="email-key">
+            網址：<b>https://ai-center-line.onrender.com</b><br>
+            帳號：<b>alice@twhomecare.com.tw</b><br>
+            密碼：<b>A9x2Kp4M7BwQ</b><br>
+            <small>（首次登入需強改密碼）</small>
+          </div>
+          <p style="margin-top:14px;">完成登入 + 綁定後 · 你可以：</p>
+          <ul class="info-list">
+            <li>在戰情室看部門任務進度</li>
+            <li>私訊 LINE bot「AI-TWBRAUN」記錄工作</li>
+            <li>每天下班前 5:30 自動生成個人日報</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="stage" id="stage-2">
+  <div class="stage-hdr">
+    <span class="stage-num">STAGE 2</span>
+    <div>
+      <div class="stage-title">Alice 首次登入 aiproot</div>
+      <div class="stage-sub">用一次性密碼登入 · 強改新密碼</div>
+    </div>
+    <span class="stage-actor">Alice · 王愛麗絲</span>
+  </div>
+
+  <div class="screens">
+    <!-- Screen 2-A · Login -->
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 2-A</b><span>登入頁</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">ai-center-line.onrender.com/login</div>
+      </div>
+      <div class="login-center" style="background:#F7F8FA; min-height:380px;">
+        <div class="login-card">
+          <div class="login-brand">
+            <span class="login-brand-mark">A</span>
+            <div class="login-brand-name">aiproot 戰情室</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-lbl">帳號</label>
+            <input class="form-input" value="alice@twhomecare.com.tw">
+          </div>
+          <div class="form-group">
+            <label class="form-lbl">密碼</label>
+            <input class="form-input" type="password" value="A9x2Kp4M7BwQ">
+          </div>
+          <button class="btn primary large" style="width:100%; margin-top:8px;">登入</button>
+          <div style="text-align:center; font-size:11px; color:var(--ink-3); margin-top:16px;">
+            忘記密碼？聯繫公司窗口
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 2-B · Change password -->
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 2-B</b><span>首次強改密碼</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">ai-center-line.onrender.com/first-login</div>
+      </div>
+      <div class="login-center" style="background:#F7F8FA; min-height:380px;">
+        <div class="login-card">
+          <h2 style="margin:0 0 6px; font-size:16px; text-align:center;">首次登入 · 請設定新密碼</h2>
+          <p style="font-size:11.5px; color:var(--ink-3); text-align:center; margin-bottom:16px;">
+            密碼需 12 字以上 · 含大寫、小寫、數字、符號 至少 3 類
+          </p>
+          <div class="form-group">
+            <label class="form-lbl">新密碼</label>
+            <input class="form-input" type="password" value="MyNewSecure2026!">
+            <div style="margin-top:4px; font-size:10.5px;">
+              強度：<span style="color:var(--ok-600); font-weight:600;">●●●● 良好</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-lbl">確認新密碼</label>
+            <input class="form-input" type="password" value="MyNewSecure2026!">
+          </div>
+          <button class="btn primary large" style="width:100%; margin-top:8px;">儲存並繼續</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="stage" id="stage-3">
+  <div class="stage-hdr">
+    <span class="stage-num">STAGE 3 · 核心</span>
+    <div>
+      <div class="stage-title">Alice 綁定 LINE OAuth</div>
+      <div class="stage-sub">這是方向 7 的關鍵 · 點按鈕 → LINE 授權 → 自動綁定</div>
+    </div>
+    <span class="stage-actor">Alice · 王愛麗絲</span>
+  </div>
+
+  <div class="screens">
+    <!-- Screen 3-A · Binding guide -->
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 3-A</b><span>綁定引導頁（方向 7 關鍵頁）</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">ai-center-line.onrender.com/binding/setup</div>
+      </div>
+      <div style="background:#F7F8FA; padding:24px 20px; min-height:420px;">
+        <h2 style="margin:0 0 4px; font-size:17px; text-align:center;">歡迎 · 王愛麗絲</h2>
+        <p style="text-align:center; color:var(--ink-3); font-size:12.5px; margin:0 0 20px;">
+          最後一步 · 綁定你的 LINE
+        </p>
+
+        <div style="max-width:340px; margin:0 auto;">
+          <button class="btn line-brand" style="width:100%; padding:14px;">
+            <span style="width:24px; height:24px; background:#fff; color:var(--line-brand); border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; margin-right:8px;">L</span>
+            用 LINE 登入完成綁定
+          </button>
+
+          <div style="margin-top:20px; padding:14px 16px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); font-size:12px; line-height:1.7;">
+            <div style="font-weight:600; color:var(--ink-2); margin-bottom:6px;">綁定後可以做什麼？</div>
+            <ul class="info-list" style="padding-left:14px;">
+              <li>私訊 bot 記錄工作 · 自動整理成日報</li>
+              <li>在戰情室看部門任務</li>
+              <li>主管交辦事項自動出現在你的看板</li>
+            </ul>
+
+            <div style="font-weight:600; color:var(--ink-2); margin:12px 0 6px;">我們會拿到什麼？</div>
+            <ul class="info-list" style="padding-left:14px;">
+              <li>你的 LINE 顯示名字 + 頭貼</li>
+              <li><b style="color:var(--rose-600);">不會拿到好友、聊天記錄</b></li>
+            </ul>
+          </div>
+
+          <div style="text-align:center; margin-top:14px;">
+            <a href="#" style="color:var(--ink-3); font-size:11px; text-decoration:none;">稍後再說（不推薦）</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 3-B · LINE OAuth -->
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 3-B</b><span>LINE 官方 OAuth 授權頁（我方無法客製）</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">access.line.me/oauth2/v2.1/authorize?...</div>
+      </div>
+      <div style="background:#fff; min-height:420px;">
+        <div class="oauth-card">
+          <div class="oauth-logo">LINE</div>
+          <p style="font-size:13px; margin:20px 0;">aiproot 想要存取你的資料</p>
+
+          <div class="oauth-app-card">
+            <div class="oauth-app-name">
+              <span style="width:32px; height:32px; background:var(--ink); color:#fff; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;">A</span>
+              aiproot
+              <span class="oauth-verified">✓ 認證</span>
+            </div>
+            <div style="font-size:11px; color:var(--ink-3); margin-bottom:8px;">要求存取：</div>
+            <div class="oauth-scope">
+              <div class="oauth-scope-item check">個人資料（顯示名稱、大頭貼、UserID）</div>
+            </div>
+
+            <div style="font-size:11px; color:var(--ink-3); margin-top:12px; margin-bottom:4px;">aiproot 將能：</div>
+            <div class="oauth-scope">
+              <div class="oauth-scope-item check">讀取你的公開個人資料</div>
+            </div>
+
+            <div style="font-size:11px; color:var(--ink-3); margin-top:12px; margin-bottom:4px;">aiproot 無法：</div>
+            <div class="oauth-scope">
+              <div class="oauth-scope-item no">查看你的好友、聊天記錄</div>
+              <div class="oauth-scope-item no">代你發送訊息</div>
+            </div>
+          </div>
+
+          <div class="oauth-actions">
+            <button class="btn line-brand" style="width:100%;">同意並前進</button>
+            <button class="btn" style="width:100%; background:transparent; border-color:transparent; color:var(--ink-3);">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 3-C · Binding success -->
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 3-C</b><span>綁定成功頁</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">ai-center-line.onrender.com/binding/success</div>
+      </div>
+      <div style="background:#F7F8FA; padding:30px 20px; min-height:420px;">
+        <div style="max-width:320px; margin:0 auto; text-align:center;">
+          <div class="success-icon">✓</div>
+          <div class="success-title">綁定成功</div>
+
+          <div class="success-user-card">
+            <div class="avatar-lg">王</div>
+            <div style="font-weight:600; font-size:14px;">王愛麗絲</div>
+            <div style="font-family:var(--mono); font-size:10.5px; color:var(--ink-3); margin-top:2px;">Uabc...def123</div>
+            <div style="font-size:10.5px; color:var(--ink-3); margin-top:4px;">2026/7/22 14:30</div>
+          </div>
+
+          <div style="text-align:left; font-size:11.5px; line-height:1.8; padding:0 8px;">
+            <b>下一步：</b>
+            <ol style="padding-left:16px; margin:6px 0;">
+              <li>加公司 bot「AI-TWBRAUN」為好友
+                <div><a href="#" style="color:var(--primary); font-size:10.5px;">用手機掃 QR</a></div>
+              </li>
+              <li>私訊 bot 記錄工作</li>
+              <li>5:30 自動整理成日報</li>
+            </ol>
+          </div>
+
+          <button class="btn primary large" style="width:100%; margin-top:12px;">進入戰情室</button>
+          <button class="btn danger" style="width:100%; margin-top:6px; background:transparent; border:1px solid var(--rose-tint);">撤銷此綁定（若非本人）</button>
+
+          <div class="alert warn" style="margin-top:12px; text-align:left;">
+            系統已 email 通知你「綁定完成」· 若沒申請卻收到 · 立刻撤銷
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 3-D · Bot LINE message -->
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 3-D</b><span>Bot 私訊確認（手機 LINE 內）</span></div>
+      <div style="background:#EDEEF0; padding:24px 12px; min-height:420px;">
+        <div class="phone">
+          <div class="phone-hdr">◀ AI-TWBRAUN</div>
+          <div class="phone-body">
+            <div class="msg-time">2026/7/22 14:30</div>
+            <div class="msg-out card">
+              <h4>綁定成功 ✓</h4>
+              你是 <b>王愛麗絲</b><br>
+              部門：<b>品保部</b>
+              <div style="border-top:1px solid var(--line); margin:8px -4px; padding-top:6px; font-size:11px;">
+                之後私訊我記錄工作 · 下班前 5:30 自動整理成個人日報 · 你只需確認 or 微調。
+              </div>
+              <div style="margin-top:6px;">
+                <small>若非本人請立即撤銷：<br>https://ai-c...</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 3-E · Email notification -->
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 3-E</b><span>Email 通知（防冒名關鍵）</span></div>
+      <div class="email">
+        <div class="email-meta">
+          <div><b>From:</b> aiproot 通知 &lt;noreply@aiproot.io&gt;</div>
+          <div><b>To:</b> alice@twhomecare.com.tw</div>
+          <div><b>Subject:</b> 【 台灣福祉 】你的 LINE 帳號已完成綁定</div>
+        </div>
+        <div class="email-body">
+          <p>Hi 王愛麗絲，</p>
+          <p>你的 LINE 帳號已於 <b>2026/7/22 14:30</b> 完成綁定：</p>
+          <div class="email-key">
+            LINE 顯示名：王愛麗絲<br>
+            LINE UserID：Uabcdef123456789<br>
+            綁定 IP：xxx.xxx.xxx.xxx
+          </div>
+          <p style="margin-top:14px;">若這是你本人 · 不需回應。</p>
+          <div class="alert rose">
+            <b>若你沒申請</b> · 可能是他人冒用你的帳號：<br>
+            ▸ 立刻點此撤銷：https://...<br>
+            ▸ 或聯繫公司資訊窗口
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="stage" id="stage-4">
+  <div class="stage-hdr">
+    <span class="stage-num">STAGE 4</span>
+    <div>
+      <div class="stage-title">Alice 日常使用</div>
+      <div class="stage-sub">每天私訊 bot 記錄工作 · 下班前確認個人日報</div>
+    </div>
+    <span class="stage-actor">Alice · 王愛麗絲</span>
+  </div>
+
+  <div class="screens">
+    <!-- Screen 4-A -->
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 4-A</b><span>Alice 隨時私訊 bot（LINE 內）</span></div>
+      <div style="background:#EDEEF0; padding:24px 12px; min-height:420px;">
+        <div class="phone">
+          <div class="phone-hdr">◀ AI-TWBRAUN</div>
+          <div class="phone-body">
+            <div class="msg-in">早上跟 A 客戶開會 · 8:30-10:00 · 討論到 Q3 交期 · 客戶要求提早 15 天 · 我要跟品保確認能否配合</div>
+            <div class="msg-time">09:15</div>
+            <div class="msg-out card"><small>✓ 已記錄 · 下班前 5:30 自動整理</small></div>
+            <div class="msg-time">14:20</div>
+            <div class="msg-in">中午跟品保開會 · 品保回應可以配合 · 但需增加 2 名檢驗人力</div>
+            <div class="msg-out card"><small>✓ 已記錄</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 4-B -->
+    <div class="screen" style="grid-column:span 2;">
+      <div class="screen-lbl"><b>畫面 4-B</b><span>Alice 下班前進 aiproot 看個人日報</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">ai-center-line.onrender.com/my/daily-report</div>
+      </div>
+      <div class="aiproot-shell">
+        <div class="aiproot-sidebar">
+          <div class="aiproot-brand"><span class="aiproot-brand-mark">台</span>台灣福祉</div>
+          <div class="aiproot-nav-item active">我的日報</div>
+          <div class="aiproot-nav-item">戰情室</div>
+          <div class="aiproot-nav-item">設定</div>
+        </div>
+        <div>
+          <div class="aiproot-topbar">
+            <span>戰情室 › 我的日報</span>
+            <span class="aiproot-user"><span class="aiproot-user-avatar">王</span>王愛麗絲</span>
+          </div>
+          <div class="aiproot-main">
+            <h1 class="aiproot-title">2026/7/22（週三）· 王愛麗絲 · 品保部</h1>
+            <div class="alert info" style="margin-bottom:12px;">
+              ✨ AI 已為你整理今日工作 · 請確認或微調
+            </div>
+
+            <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; margin-bottom:10px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                <b style="font-size:13.5px;">1. 客戶會議 · A 客戶 Q3 交期討論</b>
+                <div>
+                  <button class="btn" style="font-size:11px; padding:3px 8px;">編輯</button>
+                  <button class="btn danger" style="font-size:11px; padding:3px 8px;">刪除</button>
+                </div>
+              </div>
+              <div style="font-size:12px; line-height:1.7; color:var(--ink-2);">
+                時間：8:30 - 10:00<br>
+                結論：客戶要求提早 15 天 · 品保確認可配合<br>
+                需人力：增加 2 名檢驗員<br>
+                <b style="color:var(--warn);">追蹤：跟人資申請人力（明日 09:00）</b>
+              </div>
+            </div>
+
+            <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                <b style="font-size:13.5px;">2. 內部確認會議 · 品保配合</b>
+                <div>
+                  <button class="btn" style="font-size:11px; padding:3px 8px;">編輯</button>
+                  <button class="btn danger" style="font-size:11px; padding:3px 8px;">刪除</button>
+                </div>
+              </div>
+              <div style="font-size:12px; line-height:1.7; color:var(--ink-2);">
+                時間：12:30 - 12:45<br>
+                結論：品保部主管口頭 OK · 需書面確認
+              </div>
+            </div>
+
+            <div style="margin-top:14px; display:flex; gap:8px;">
+              <button class="btn">+ 手動加一項</button>
+              <div style="flex:1;"></div>
+              <button class="btn">儲存草稿</button>
+              <button class="btn primary">送出日報（傳給主管）</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="stage" id="stage-5">
+  <div class="stage-hdr">
+    <span class="stage-num">STAGE 5</span>
+    <div>
+      <div class="stage-title">撤銷 / audit</div>
+      <div class="stage-sub">Alice 自撤銷 + Aiproot 業助 audit</div>
+    </div>
+    <span class="stage-actor">Alice + Aiproot 業助</span>
+  </div>
+
+  <div class="screens">
+    <!-- Screen 5-A -->
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 5-A</b><span>Alice 自撤銷（個人設定）</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">ai-center-line.onrender.com/my/settings/binding</div>
+      </div>
+      <div class="aiproot-shell">
+        <div class="aiproot-sidebar">
+          <div class="aiproot-brand"><span class="aiproot-brand-mark">台</span>台灣福祉</div>
+          <div class="aiproot-nav-item">我的日報</div>
+          <div class="aiproot-nav-item">戰情室</div>
+          <div class="aiproot-nav-item active">設定</div>
+        </div>
+        <div>
+          <div class="aiproot-topbar">
+            <span>個人設定 › LINE 綁定管理</span>
+            <span class="aiproot-user"><span class="aiproot-user-avatar">王</span>王愛麗絲</span>
+          </div>
+          <div class="aiproot-main">
+            <h1 class="aiproot-title">你的 LINE 綁定狀態</h1>
+            <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:16px; margin-top:12px;">
+              <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+                <span class="badge ok">● 已綁定</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:14px;">
+                <div class="avatar-lg" style="margin:0;">王</div>
+                <div>
+                  <div style="font-weight:600; font-size:13.5px;">王愛麗絲</div>
+                  <div style="font-family:var(--mono); font-size:11px; color:var(--ink-3);">Uabc...def123</div>
+                  <div style="font-size:11px; color:var(--ink-3); margin-top:2px;">綁定於 2026/7/22 14:30</div>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:8px; margin-top:16px;">
+                <button class="btn">更換 LINE 帳號</button>
+                <button class="btn danger">解除綁定</button>
+              </div>
+            </div>
+
+            <div class="alert warn" style="margin-top:14px;">
+              解除綁定後 · 個人日報功能會停用 · 需重新走綁定流程才能恢復
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 5-B -->
+    <div class="screen" style="grid-column:span 2;">
+      <div class="screen-lbl"><b>畫面 5-B</b><span>Aiproot 業助 · 綁定 audit 管理頁</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">ai-center-line.onrender.com/aiproot/binding-audit</div>
+      </div>
+      <div class="aiproot-shell">
+        <div class="aiproot-sidebar">
+          <div class="aiproot-brand"><span class="aiproot-brand-mark">A</span>AIPROOT</div>
+          <div class="aiproot-nav-item">戰情室</div>
+          <div class="aiproot-nav-item">AI 對話分析</div>
+          <div class="aiproot-nav-item active">AIPROOT 管理</div>
+          <div class="aiproot-nav-item">設定</div>
+        </div>
+        <div>
+          <div class="aiproot-topbar">
+            <span>AIPROOT 管理 › LINE 綁定 audit</span>
+            <span class="aiproot-user"><span class="aiproot-user-avatar">王</span>王小華</span>
+          </div>
+          <div class="aiproot-main">
+            <h1 class="aiproot-title">LINE 綁定 audit</h1>
+            <div style="display:flex; gap:8px; align-items:center; margin:10px 0 14px;">
+              <select class="form-input" style="width:auto;">
+                <option>租戶：台灣福祉</option>
+              </select>
+              <select class="form-input" style="width:auto;">
+                <option>狀態：全部</option>
+                <option>有效</option>
+                <option>需 revalidate</option>
+                <option>未綁</option>
+              </select>
+              <select class="form-input" style="width:auto;">
+                <option>排序：最近</option>
+              </select>
+              <div style="flex:1;"></div>
+              <button class="btn primary">未綁定送提醒</button>
+            </div>
+
+            <table class="dm-table">
+              <thead>
+                <tr>
+                  <th>員工</th>
+                  <th>LINE 顯示名</th>
+                  <th>UserID</th>
+                  <th>狀態</th>
+                  <th>綁定時間</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>王愛麗絲</b><br><small style="color:var(--ink-3);">品保部</small></td>
+                  <td>王愛麗絲</td>
+                  <td class="mono" style="font-family:var(--mono); font-size:11px;">Uabc...123</td>
+                  <td><span class="badge ok">● 有效</span></td>
+                  <td class="mono" style="font-family:var(--mono); font-size:11px;">7/22 14:30</td>
+                  <td><button class="btn" style="font-size:11px; padding:3px 8px;">詳情</button></td>
+                </tr>
+                <tr>
+                  <td><b>陳艾瑞克</b><br><small style="color:var(--ink-3);">業務二部</small></td>
+                  <td>Eric.Chen</td>
+                  <td class="mono" style="font-family:var(--mono); font-size:11px;">Udef...456</td>
+                  <td><span class="badge ok">● 有效</span></td>
+                  <td class="mono" style="font-family:var(--mono); font-size:11px;">7/22 15:12</td>
+                  <td><button class="btn" style="font-size:11px; padding:3px 8px;">詳情</button></td>
+                </tr>
+                <tr>
+                  <td><b>林小美</b><br><small style="color:var(--ink-3);">人資總務</small></td>
+                  <td>mei_1990</td>
+                  <td class="mono" style="font-family:var(--mono); font-size:11px;">Uabc...def7</td>
+                  <td><span class="badge warn">⚠ 60 日 revalidate</span></td>
+                  <td class="mono" style="font-family:var(--mono); font-size:11px;">6/22 10:03</td>
+                  <td><button class="btn" style="font-size:11px; padding:3px 8px;">觸發 revalidate</button></td>
+                </tr>
+                <tr>
+                  <td><b>張大偉</b><br><small style="color:var(--ink-3);">技術工程</small></td>
+                  <td style="color:var(--ink-3);">—</td>
+                  <td style="color:var(--ink-3);">—</td>
+                  <td><span class="badge muted">○ 未綁</span></td>
+                  <td style="color:var(--ink-3);">—</td>
+                  <td><button class="btn primary" style="font-size:11px; padding:3px 8px;">重發密碼</button></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div style="margin-top:14px; padding:10px 12px; background:var(--well); border-radius:var(--r); font-size:12px; display:flex; gap:20px;">
+              <span>100 位員工</span>
+              <span>已綁 <b style="color:var(--ok-600);">45</b></span>
+              <span>未綁 <b style="color:var(--ink-3);">55</b></span>
+              <span>需 revalidate <b style="color:var(--warn);">3</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="stage" id="edge">
+  <div class="stage-hdr">
+    <span class="stage-num">EDGE CASES</span>
+    <div>
+      <div class="stage-title">異常流程</div>
+      <div class="stage-sub">員工取消授權 · 密碼過期 · 冒名綁定防禦</div>
+    </div>
+  </div>
+
+  <div class="screens">
+    <div class="screen">
+      <div class="screen-lbl"><b>Edge 1</b><span>員工取消 LINE 授權</span></div>
+      <div style="background:#F7F8FA; padding:40px 20px; text-align:center; min-height:280px;">
+        <div style="font-size:32px; color:var(--warn); margin-bottom:12px;">⚠</div>
+        <div style="font-size:15px; font-weight:600; margin-bottom:6px;">你取消了 LINE 授權</div>
+        <div style="font-size:12px; color:var(--ink-3); margin-bottom:20px;">你必須完成綁定才能使用個人日報功能</div>
+        <button class="btn primary">重新綁定</button>
+        <button class="btn" style="margin-left:8px;">稍後再試</button>
+      </div>
+    </div>
+
+    <div class="screen">
+      <div class="screen-lbl"><b>Edge 2</b><span>一次性密碼過期</span></div>
+      <div style="background:#F7F8FA; padding:40px 20px; text-align:center; min-height:280px;">
+        <div style="font-size:32px; color:var(--rose-600); margin-bottom:12px;">⚠</div>
+        <div style="font-size:15px; font-weight:600; margin-bottom:6px;">密碼已過期</div>
+        <div style="font-size:12px; color:var(--ink-3); margin-bottom:20px;">你的一次性密碼已於 2026/7/19 過期<br>請聯繫公司資訊窗口重發</div>
+        <div class="alert info" style="text-align:left; max-width:300px; margin:0 auto;">
+          客服：support@twhomecare.com.tw
+        </div>
+      </div>
+    </div>
+
+    <div class="screen">
+      <div class="screen-lbl"><b>Edge 3</b><span>被冒名 · Alice 收 email</span></div>
+      <div style="padding:20px;">
+        <div class="alert rose">
+          <b>⚠ 你沒申請卻收到「綁定完成」通知？</b><br>
+          可能有人拿到你的 email + 密碼冒名綁定。
+        </div>
+        <ol style="font-size:12px; line-height:1.8; padding-left:16px; margin-top:14px;">
+          <li>立即點 email 內「撤銷此綁定」連結</li>
+          <li>撤銷後 · aiproot 業助收 audit 通知</li>
+          <li>業助聯繫你確認</li>
+          <li>停用該帳號 · 重新申請 + 通知客戶方安全事件</li>
+        </ol>
+        <div class="alert info" style="margin-top:14px;">
+          <b>3 道防線</b>：綁定成功頁「若非本人請撤銷」+ Bot 私訊即時通知 + Email 通知含 IP · 冒名一定被抓
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="decision" id="decision">
+  <h3>你的決策點</h3>
+  <div class="decision-opts">
+    <div class="decision-opt" style="border-color:var(--ok-600); background:var(--ok-tint);">
+      <b>✅ 可以 · 進 M0-B</b>
+      我 draft 個人日報功能 doc · 假設方向 7
+    </div>
+    <div class="decision-opt">
+      <b>❓ 有畫面想改</b>
+      說「哪頁改什麼」我調整
+    </div>
+    <div class="decision-opt">
+      <b>⚠️ 員工還是太陌生</b>
+      我改 draft 方向 6 UI flow（全在 LINE）
+    </div>
+    <div class="decision-opt">
+      <b>🔄 想換方向 5</b>
+      我 draft 方向 5 UI flow（主管 approve）
+    </div>
+  </div>
+
+  <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-2);">
+    <b>Alice 總動作時間</b>：&lt; 5 分鐘（收信 + 登入 + 改密 + 點按鈕 + 授權 + 加 bot）<br>
+    <b>Aiproot 業助時間</b>：&lt; 40 分鐘 / 100 員工（比方向 2 少 88%）<br>
+    <b>客戶方 HR 時間</b>：&lt; 2 小時 / 100 員工（交名單 + 內部發指引 + 追未綁）
+  </div>
+</div>
+
+</body>
+</html>

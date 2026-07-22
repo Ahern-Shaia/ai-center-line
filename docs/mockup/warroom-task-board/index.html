@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>M0-A · Warroom 任務看板 · UI Flow Mockup</title>
+<style>
+  :root {
+    --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6;
+    --line:#E5E7EB; --line-2:#F0F2F5; --line-soft:#F5F6F8;
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --primary:#4F46E5; --primary-2:#4338CA; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5; --ok-600:#059669;
+    --warn:#D97706; --warn-tint:#FFFBEB; --warn-600:#D97706;
+    --rose:#DC2626; --rose-tint:#FEF2F2; --rose-600:#DC2626;
+    --amber:#F59E0B; --amber-tint:#FFFBEB;
+    --line-brand:#06C755;
+    --r:6px; --r-sm:4px; --r-lg:10px;
+    --sans: 'Inter', 'Noto Sans TC', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+    --sh-sm: 0 1px 2px rgba(17,24,39,.05);
+    --sh-md: 0 4px 12px rgba(17,24,39,.08);
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px 32px; background:var(--canvas); color:var(--ink); font-family:var(--sans); font-size:14px; line-height:1.55; }
+
+  .page-hdr { max-width:1400px; margin:0 auto 24px; padding-bottom:16px; border-bottom:1px solid var(--line); }
+  .page-hdr h1 { font-size:22px; font-weight:700; margin:0 0 6px; letter-spacing:-0.01em; }
+  .page-hdr .sub { color:var(--ink-3); font-size:13.5px; margin:0; }
+  .toc { display:flex; gap:14px; margin-top:14px; flex-wrap:wrap; }
+  .toc a { color:var(--ink-2); text-decoration:none; font-size:12.5px; padding:4px 10px; border:1px solid var(--line); border-radius:999px; background:var(--surface); }
+
+  .stage { max-width:1400px; margin:0 auto 48px; }
+  .stage-hdr { display:flex; align-items:baseline; gap:12px; margin-bottom:16px; padding:12px 16px; background:var(--primary-tint); border-radius:var(--r); }
+  .stage-num { font-family:var(--mono); font-size:13px; font-weight:700; color:var(--primary); }
+  .stage-title { font-size:15.5px; font-weight:700; letter-spacing:-.01em; }
+  .stage-sub { font-size:12.5px; color:var(--ink-3); }
+  .stage-actor { margin-left:auto; font-size:11.5px; color:var(--ink-3); background:var(--surface); padding:2px 10px; border:1px solid var(--line); border-radius:999px; }
+
+  .screens { display:grid; grid-template-columns:1fr; gap:24px; }
+  .screens.two { grid-template-columns:1fr 1fr; }
+  .screens.three { grid-template-columns:1fr 1fr 1fr; }
+
+  .screen { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden; box-shadow:var(--sh-sm); display:flex; flex-direction:column; }
+  .screen-lbl { padding:10px 14px; border-bottom:1px solid var(--line); background:var(--well); font-size:12px; color:var(--ink-3); display:flex; justify-content:space-between; }
+  .screen-lbl b { color:var(--ink-2); font-weight:600; font-size:12px; }
+
+  .browser { background:#EEF0F3; padding:8px 12px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; font-size:11.5px; }
+  .browser-dots { display:flex; gap:4px; }
+  .browser-dots span { width:10px; height:10px; border-radius:50%; }
+  .browser-dots span:nth-child(1) { background:#FF5F57; }
+  .browser-dots span:nth-child(2) { background:#FFBD2E; }
+  .browser-dots span:nth-child(3) { background:#28C940; }
+  .browser-url { flex:1; padding:3px 10px; background:#fff; border:1px solid #D5D8DC; border-radius:4px; font-family:var(--mono); font-size:11px; color:var(--ink-2); }
+
+  /* Aiproot shell (full) */
+  .aiproot-shell { display:grid; grid-template-columns:180px 1fr; min-height:640px; background:#FBFCFD; }
+  .aiproot-sidebar { background:var(--surface); border-right:1px solid var(--line); padding:14px 12px; font-size:12.5px; }
+  .aiproot-brand { font-weight:700; font-size:13px; color:var(--ink); margin-bottom:12px; padding:6px 8px; display:flex; align-items:center; gap:6px; }
+  .aiproot-brand-mark { display:inline-block; width:22px; height:22px; background:var(--ink); color:#fff; text-align:center; line-height:22px; border-radius:5px; font-size:11px; font-weight:700; }
+  .aiproot-nav-group { font-size:10.5px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.05em; padding:8px 6px 4px; }
+  .aiproot-nav-item { font-size:12px; color:var(--ink-2); padding:6px 8px; border-radius:4px; margin-bottom:1px; display:flex; align-items:center; gap:6px; }
+  .aiproot-nav-item.active { background:var(--primary-tint); color:var(--primary); font-weight:500; }
+  .aiproot-topbar { border-bottom:1px solid var(--line); padding:10px 16px; background:var(--surface); font-size:12px; color:var(--ink-3); display:flex; justify-content:space-between; align-items:center; }
+  .crumb b { color:var(--ink-2); font-weight:500; }
+  .crumb .sep { margin:0 6px; color:var(--line); }
+  .crumb .cur { color:var(--ink); font-weight:600; }
+  .aiproot-user { display:flex; align-items:center; gap:6px; padding:3px 8px; border:1px solid var(--line); border-radius:6px; }
+  .aiproot-user-avatar { width:22px; height:22px; background:var(--primary); color:#fff; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; }
+  .aiproot-user-meta { display:flex; flex-direction:column; }
+  .aiproot-user-name { font-size:11.5px; color:var(--ink); font-weight:500; }
+  .aiproot-user-role { font-size:10px; color:var(--ink-3); }
+  .aiproot-main { padding:18px 22px; background:#FBFCFD; overflow:auto; }
+  .aiproot-title { font-size:16px; font-weight:700; margin:0 0 4px; }
+  .aiproot-sub { font-size:12px; color:var(--ink-3); margin-bottom:14px; }
+
+  /* Tabs */
+  .tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); margin-bottom:16px; }
+  .tab {
+    padding:8px 16px; font-size:13px; color:var(--ink-3);
+    border-bottom:2px solid transparent; cursor:pointer;
+    display:flex; align-items:center; gap:6px;
+  }
+  .tab.active { color:var(--ink); border-bottom-color:var(--primary); font-weight:600; }
+  .tab-count {
+    background:var(--well); padding:1px 7px; border-radius:999px;
+    font-size:11px; color:var(--ink-3); font-weight:500;
+  }
+  .tab.active .tab-count { background:var(--primary-tint); color:var(--primary); }
+
+  /* Gauge dashboard */
+  .gauges { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:20px; }
+  .gauge {
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+    padding:16px 18px; text-align:center;
+  }
+  .gauge-title { font-size:11px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px; }
+  .gauge-ring {
+    width:80px; height:80px; margin:0 auto 8px; position:relative;
+    background:conic-gradient(var(--primary) 0deg 240deg, var(--well) 240deg 360deg);
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+  }
+  .gauge-ring::before {
+    content:''; position:absolute; inset:8px; background:var(--surface); border-radius:50%;
+  }
+  .gauge-val { position:relative; font-size:18px; font-weight:700; }
+  .gauge-sub { font-size:11px; color:var(--ink-3); }
+
+  /* Kanban */
+  .kanban { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; }
+  .kanban-col {
+    background:var(--well); border-radius:var(--r); padding:12px 12px;
+    min-height:400px; display:flex; flex-direction:column; gap:8px;
+  }
+  .kanban-col-hdr {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:6px; font-size:12px; font-weight:600;
+  }
+  .kanban-col-count { color:var(--ink-3); font-weight:500; }
+  .kanban-col.pending { border-top:3px solid var(--ink-3); }
+  .kanban-col.running { border-top:3px solid var(--primary); }
+  .kanban-col.done { border-top:3px solid var(--ok-600); }
+  .kanban-col.overdue { border-top:3px solid var(--rose-600); }
+
+  .task-card {
+    background:var(--surface); border:1px solid var(--line); border-radius:6px;
+    padding:10px 12px; box-shadow:var(--sh-sm); cursor:pointer;
+    font-size:12px;
+  }
+  .task-card:hover { border-color:var(--primary); }
+  .task-summary { font-weight:500; margin-bottom:4px; color:var(--ink); font-size:12.5px; line-height:1.45; }
+  .task-meta { display:flex; align-items:center; gap:6px; font-size:10.5px; color:var(--ink-3); }
+  .task-avatar {
+    width:18px; height:18px; border-radius:50%;
+    background:var(--primary); color:#fff;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:9px; font-weight:600;
+  }
+  .task-cat {
+    background:var(--primary-tint); color:var(--primary);
+    padding:1px 6px; border-radius:3px; font-size:10px; font-weight:500;
+  }
+  .task-cat.warn { background:var(--warn-tint); color:var(--warn-600); }
+  .task-cat.rose { background:var(--rose-tint); color:var(--rose-600); }
+  .task-due {
+    display:inline-flex; align-items:center; gap:2px; font-family:var(--mono);
+    padding:1px 5px; border-radius:3px;
+  }
+  .task-due.warn { color:var(--warn-600); background:var(--warn-tint); }
+  .task-due.rose { color:var(--rose-600); background:var(--rose-tint); }
+  .task-confidence {
+    width:6px; height:6px; border-radius:50%; display:inline-block;
+    background:var(--ok-600);
+  }
+
+  /* Drawer */
+  .drawer {
+    position:relative; background:var(--surface); border-left:1px solid var(--line);
+    height:100%; overflow-y:auto;
+  }
+  .drawer-hdr {
+    padding:14px 18px; border-bottom:1px solid var(--line); background:var(--well);
+    display:flex; justify-content:space-between; align-items:flex-start;
+  }
+  .drawer-title { font-size:14px; font-weight:700; margin:0; }
+  .drawer-sub { font-size:11px; color:var(--ink-3); margin-top:3px; }
+  .drawer-close { color:var(--ink-3); background:none; border:none; font-size:16px; cursor:pointer; }
+  .drawer-body { padding:14px 18px; display:flex; flex-direction:column; gap:14px; font-size:12.5px; }
+  .drawer-sec { border:1px solid var(--line); border-radius:6px; padding:12px 14px; }
+  .drawer-sec-title { font-size:11px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
+  .drawer-info-row { display:flex; padding:4px 0; }
+  .drawer-info-row b { min-width:70px; color:var(--ink-3); font-weight:500; font-size:11.5px; }
+
+  /* Chat context */
+  .chat-context { background:var(--well); border-radius:6px; padding:10px 12px; font-size:11.5px; }
+  .chat-msg { display:flex; gap:8px; padding:5px 0; }
+  .chat-msg-avatar {
+    width:20px; height:20px; border-radius:50%;
+    background:var(--primary); color:#fff;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:10px; font-weight:600; flex-shrink:0;
+  }
+  .chat-msg-body { flex:1; }
+  .chat-msg-sender { font-weight:600; font-size:11.5px; }
+  .chat-msg-time { color:var(--ink-3); font-size:10px; font-family:var(--mono); margin-left:6px; }
+  .chat-msg-text { color:var(--ink-2); line-height:1.5; }
+  .chat-msg.highlight .chat-msg-body { background:var(--warn-tint); padding:4px 8px; border-radius:4px; margin-left:-4px; }
+
+  /* Signoff actions */
+  .drawer-actions { display:flex; gap:8px; padding:14px 18px; border-top:1px solid var(--line); background:var(--surface); }
+  .btn {
+    display:inline-flex; align-items:center; justify-content:center; gap:5px;
+    padding:6px 12px; border-radius:5px; font-size:12px; font-weight:500;
+    border:1px solid var(--line); background:var(--surface); color:var(--ink);
+    cursor:pointer; font-family:inherit;
+  }
+  .btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .btn.ok { background:var(--ok-600); color:#fff; border-color:var(--ok-600); }
+  .btn.danger { color:var(--rose-600); border-color:var(--rose-tint); }
+  .btn.large { padding:8px 16px; font-size:13px; }
+  .btn.small { padding:3px 8px; font-size:11px; }
+
+  /* Daily log cards */
+  .day-cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; }
+  .day-card {
+    background:var(--surface); border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px;
+  }
+  .day-card-hdr {
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid var(--line-2);
+  }
+  .day-card-group { font-size:12.5px; font-weight:600; }
+  .day-card-count { font-size:11px; color:var(--ink-3); }
+  .day-report-item {
+    font-size:11.5px; color:var(--ink-2); line-height:1.5; padding:4px 0;
+    display:flex; gap:6px;
+  }
+  .day-report-item::before {
+    content:'•'; color:var(--primary); font-weight:700;
+  }
+
+  /* Category management */
+  .category-list { display:flex; flex-direction:column; gap:6px; }
+  .category-item {
+    display:grid; grid-template-columns:1fr auto auto auto;
+    gap:14px; align-items:center; padding:10px 12px;
+    background:var(--surface); border:1px solid var(--line); border-radius:6px;
+  }
+  .category-name { font-size:13px; font-weight:500; }
+  .category-usage { font-family:var(--mono); font-size:11px; color:var(--ink-3); }
+  .category-status { font-size:10.5px; padding:1px 8px; border-radius:999px; }
+  .category-status.active { background:var(--ok-tint); color:var(--ok-600); }
+  .category-status.pending { background:var(--warn-tint); color:var(--warn-600); }
+
+  /* Flow diagram */
+  .flow-diagram {
+    max-width:900px; margin:0 auto 32px; padding:20px;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
+    font-family:var(--mono); font-size:12px; white-space:pre; overflow-x:auto;
+  }
+
+  /* Role comparison */
+  .role-compare {
+    max-width:1200px; margin:0 auto 32px; background:var(--surface);
+    border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden;
+  }
+  .role-compare-hdr { padding:16px 20px; background:var(--well); border-bottom:1px solid var(--line); }
+  .role-compare-hdr h2 { margin:0 0 4px; font-size:16px; }
+  .role-compare-hdr p { margin:0; font-size:12px; color:var(--ink-3); }
+  table.compare { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .compare th, .compare td { padding:9px 14px; border-bottom:1px solid var(--line-2); text-align:left; }
+  .compare th { background:var(--well); font-weight:600; font-size:11px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.03em; }
+  .compare td:not(:first-child) { text-align:center; font-size:12px; }
+  .compare tr td:first-child { font-weight:500; }
+
+  .alert { padding:10px 12px; border-radius:6px; font-size:11.5px; margin:8px 0; border:1px solid; }
+  .alert.info { background:var(--primary-tint); border-color:#C7D2FE; color:#3730A3; }
+  .alert.warn { background:var(--warn-tint); border-color:#F5D5A6; color:#7A4E1B; }
+  .alert.ok { background:var(--ok-tint); border-color:#A7F3D0; color:#065F46; }
+
+  /* Notes strip */
+  .notes {
+    max-width:1400px; margin:0 auto 24px; padding:14px 20px;
+    background:var(--well); border-left:3px solid var(--primary); border-radius:0 6px 6px 0;
+    font-size:12.5px; color:var(--ink-2); line-height:1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-hdr">
+  <h1>M0-A · Warroom 任務看板 · UI Flow Mockup</h1>
+  <p class="sub">從 LINE 群組訊息 → AI 分析 → 自動材料化為任務 → 依角色分視角顯示 · 對應台灣福祉需求文件功能一</p>
+  <div class="toc">
+    <a href="#flow">整體流程</a>
+    <a href="#tab-warroom">戰情室 · 3 tab</a>
+    <a href="#kanban">任務看板 Kanban</a>
+    <a href="#drawer">任務詳情 drawer</a>
+    <a href="#daily-log">今日日誌</a>
+    <a href="#category">分類管理</a>
+    <a href="#roles">角色分視角</a>
+  </div>
+</div>
+
+<div class="notes">
+  💡 <b>本 mockup 假設方向 8 綁定已完成</b>：任務 assignee 直接對到真實員工（王愛麗絲、陳艾瑞克...）· 若綁定未完成 · assignee 顯字串 · 無法點入詳情。
+</div>
+
+<div class="flow-diagram" id="flow">                       ┌──────────────────────────────────────────┐
+                       │  LINE 群組（工廠員工日常對話）              │
+                       └──────────────────┬───────────────────────┘
+                                          ▼ webhook
+                       ┌──────────────────────────────────────────┐
+                       │  line_message · 落庫（已 SHIPPED）         │
+                       └──────────────────┬───────────────────────┘
+                                          ▼ 每日 08:00 cron batch
+                       ┌──────────────────────────────────────────┐
+                       │  AI Pipeline · classifications / records  │
+                       │  · 依 category_registry 分類（每 tenant） │
+                       │  · records confidence: high / med / low   │
+                       └──────────────────┬───────────────────────┘
+                                          ▼ 材料化（本 M0-A 新加）
+                       ┌──────────────────────────────────────────┐
+                       │  Materializer · 只 confidence=high 升任務  │
+                       │  · records → tickets                     │
+                       │  · assignee_user_id ← 綁定表對到           │
+                       │  · due_at ← AI 從對話抽                    │
+                       └──────────────────┬───────────────────────┘
+                                          ▼
+                       ┌──────────────────────────────────────────┐
+                       │  戰情室 · 三 tab（依角色分視角）             │
+                       │  · 總覽儀 · 任務看板 Kanban · 今日日誌      │
+                       └──────────────────────────────────────────┘</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="stage" id="tab-warroom">
+  <div class="stage-hdr">
+    <span class="stage-num">畫面 1</span>
+    <div>
+      <div class="stage-title">戰情室 · 三 tab 總覽（總經理視角）</div>
+      <div class="stage-sub">總覽儀 + 任務看板 + 今日日誌 · 一頁看完</div>
+    </div>
+    <span class="stage-actor">總經理 · 王總</span>
+  </div>
+
+  <div class="screens">
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 1-A</b><span>戰情室 · 總覽儀（tab 1）</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">ai-center-line.onrender.com/warroom</div>
+      </div>
+      <div class="aiproot-shell">
+        <div class="aiproot-sidebar">
+          <div class="aiproot-brand"><span class="aiproot-brand-mark">台</span><span>台灣福祉</span></div>
+          <div class="aiproot-nav-group">戰情室</div>
+          <div class="aiproot-nav-item active">📊 總覽儀</div>
+          <div class="aiproot-nav-item">📋 任務看板</div>
+          <div class="aiproot-nav-item">📅 今日日誌</div>
+          <div class="aiproot-nav-group">個人</div>
+          <div class="aiproot-nav-item">📝 我的日報</div>
+          <div class="aiproot-nav-item">⚙️ 個人設定</div>
+        </div>
+        <div>
+          <div class="aiproot-topbar">
+            <span class="crumb"><b>戰情室</b><span class="sep">›</span><span class="cur">總覽儀</span></span>
+            <div class="aiproot-user">
+              <span class="aiproot-user-avatar">王</span>
+              <span class="aiproot-user-meta">
+                <span class="aiproot-user-name">王總</span>
+                <span class="aiproot-user-role">總經理</span>
+              </span>
+            </div>
+          </div>
+          <div class="aiproot-main">
+            <div class="tabs">
+              <div class="tab active">📊 總覽儀</div>
+              <div class="tab">📋 任務看板 <span class="tab-count">45</span></div>
+              <div class="tab">📅 今日日誌 <span class="tab-count">9 群</span></div>
+            </div>
+
+            <h1 class="aiproot-title">2026/7/22（週三）· 全公司</h1>
+            <div class="aiproot-sub">資料截止 · 09:00（每日 08:00 cron 自動整理）</div>
+
+            <div class="gauges">
+              <div class="gauge">
+                <div class="gauge-title">今日新任務</div>
+                <div class="gauge-ring"><span class="gauge-val">45</span></div>
+                <div class="gauge-sub">high confidence · 已材料化</div>
+              </div>
+              <div class="gauge">
+                <div class="gauge-title">已簽核率</div>
+                <div class="gauge-ring" style="background:conic-gradient(var(--ok-600) 0deg 108deg, var(--well) 108deg 360deg);"><span class="gauge-val">30%</span></div>
+                <div class="gauge-sub">已簽 13 / 45 · 昨日 32%</div>
+              </div>
+              <div class="gauge">
+                <div class="gauge-title">逾時警示</div>
+                <div class="gauge-ring" style="background:conic-gradient(var(--rose-600) 0deg 40deg, var(--well) 40deg 360deg);"><span class="gauge-val">5</span></div>
+                <div class="gauge-sub">需追蹤 · 逾 due_at</div>
+              </div>
+            </div>
+
+            <div class="alert warn">
+              <b>⚠ 需你注意</b>：品保部 3 件 low confidence 標「需 review」· <a href="#" style="color:var(--primary);">見 signoff 列表</a>
+            </div>
+
+            <div style="background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:16px 18px; margin-top:14px;">
+              <h3 style="margin:0 0 10px; font-size:13.5px; font-weight:600;">按部門分佈</h3>
+              <table style="width:100%; font-size:12px; border-collapse:collapse;">
+                <thead>
+                  <tr style="border-bottom:1px solid var(--line);">
+                    <th style="text-align:left; padding:6px 8px; color:var(--ink-3); font-weight:500;">部門</th>
+                    <th style="text-align:right; padding:6px 8px; color:var(--ink-3); font-weight:500;">新任務</th>
+                    <th style="text-align:right; padding:6px 8px; color:var(--ink-3); font-weight:500;">已簽核</th>
+                    <th style="text-align:right; padding:6px 8px; color:var(--ink-3); font-weight:500;">逾時</th>
+                    <th style="text-align:left; padding:6px 8px; color:var(--ink-3); font-weight:500;">進度</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="padding:8px;">品保部</td>
+                    <td style="padding:8px; text-align:right; font-family:var(--mono);">11</td>
+                    <td style="padding:8px; text-align:right; font-family:var(--mono);">3</td>
+                    <td style="padding:8px; text-align:right; color:var(--rose-600); font-family:var(--mono); font-weight:600;">2</td>
+                    <td style="padding:8px;"><div style="height:6px; background:var(--well); border-radius:999px;"><div style="height:100%; width:27%; background:var(--primary); border-radius:999px;"></div></div></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px;">業務二部</td>
+                    <td style="padding:8px; text-align:right; font-family:var(--mono);">8</td>
+                    <td style="padding:8px; text-align:right; font-family:var(--mono);">5</td>
+                    <td style="padding:8px; text-align:right; font-family:var(--mono);">0</td>
+                    <td style="padding:8px;"><div style="height:6px; background:var(--well); border-radius:999px;"><div style="height:100%; width:62%; background:var(--primary); border-radius:999px;"></div></div></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px;">技術研發</td>
+                    <td style="padding:8px; text-align:right; font-family:var(--mono);">14</td>
+                    <td style="padding:8px; text-align:right; font-family:var(--mono);">4</td>
+                    <td style="padding:8px; text-align:right; color:var(--rose-600); font-family:var(--mono); font-weight:600;">3</td>
+                    <td style="padding:8px;"><div style="height:6px; background:var(--well); border-radius:999px;"><div style="height:100%; width:28%; background:var(--primary); border-radius:999px;"></div></div></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px;">人資總務</td>
+                    <td style="padding:8px; text-align:right; font-family:var(--mono);">4</td>
+                    <td style="padding:8px; text-align:right; font-family:var(--mono);">1</td>
+                    <td style="padding:8px; text-align:right; font-family:var(--mono);">0</td>
+                    <td style="padding:8px;"><div style="height:6px; background:var(--well); border-radius:999px;"><div style="height:100%; width:25%; background:var(--primary); border-radius:999px;"></div></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="stage" id="kanban">
+  <div class="stage-hdr">
+    <span class="stage-num">畫面 2 · 核心</span>
+    <div>
+      <div class="stage-title">任務看板 Kanban · 4 columns by status</div>
+      <div class="stage-sub">待簽核 → 執行中 → 已簽核 · 逾時獨立一列警示</div>
+    </div>
+    <span class="stage-actor">總經理 · 王總</span>
+  </div>
+
+  <div class="screens">
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 2</b><span>戰情室 · 任務看板（tab 2 · 主戰場）</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">ai-center-line.onrender.com/warroom/tasks</div>
+      </div>
+      <div class="aiproot-shell">
+        <div class="aiproot-sidebar">
+          <div class="aiproot-brand"><span class="aiproot-brand-mark">台</span><span>台灣福祉</span></div>
+          <div class="aiproot-nav-group">戰情室</div>
+          <div class="aiproot-nav-item">📊 總覽儀</div>
+          <div class="aiproot-nav-item active">📋 任務看板</div>
+          <div class="aiproot-nav-item">📅 今日日誌</div>
+        </div>
+        <div>
+          <div class="aiproot-topbar">
+            <span class="crumb"><b>戰情室</b><span class="sep">›</span><span class="cur">任務看板</span></span>
+            <div class="aiproot-user">
+              <span class="aiproot-user-avatar">王</span>
+              <span class="aiproot-user-meta">
+                <span class="aiproot-user-name">王總</span>
+                <span class="aiproot-user-role">總經理</span>
+              </span>
+            </div>
+          </div>
+          <div class="aiproot-main">
+            <div class="tabs">
+              <div class="tab">📊 總覽儀</div>
+              <div class="tab active">📋 任務看板 <span class="tab-count">45</span></div>
+              <div class="tab">📅 今日日誌 <span class="tab-count">9 群</span></div>
+            </div>
+
+            <div style="display:flex; gap:8px; margin-bottom:16px; align-items:center;">
+              <select class="btn" style="padding:5px 10px;"><option>全部部門</option><option>品保部</option><option>業務二部</option></select>
+              <select class="btn" style="padding:5px 10px;"><option>全部分類</option><option>維修工單</option><option>客訴</option><option>訂單追蹤</option></select>
+              <select class="btn" style="padding:5px 10px;"><option>近 7 天</option><option>今日</option><option>昨日</option><option>本月</option></select>
+              <input placeholder="🔍 搜尋任務..." style="flex:1; padding:5px 10px; border:1px solid var(--line); border-radius:5px; font-size:12px; font-family:inherit;">
+            </div>
+
+            <div class="kanban">
+              <div class="kanban-col pending">
+                <div class="kanban-col-hdr"><span>待簽核</span><span class="kanban-col-count">27</span></div>
+
+                <div class="task-card">
+                  <div class="task-summary">A 客戶 Q3 交期提早 15 天 · 需增加 2 名檢驗</div>
+                  <div class="task-meta">
+                    <span class="task-cat">維修工單</span>
+                    <span class="task-avatar" title="王愛麗絲">王</span>
+                    <span class="task-due warn">📅 07/25</span>
+                    <span class="task-confidence" title="high"></span>
+                  </div>
+                </div>
+
+                <div class="task-card">
+                  <div class="task-summary">B 產線震動異常 · 週五前排修</div>
+                  <div class="task-meta">
+                    <span class="task-cat warn">設備維護</span>
+                    <span class="task-avatar" title="陳艾瑞克">陳</span>
+                    <span class="task-due">📅 07/25</span>
+                    <span class="task-confidence"></span>
+                  </div>
+                </div>
+
+                <div class="task-card">
+                  <div class="task-summary">客訴 · 品質問題 · 業務主任回覆下週三提解決方案</div>
+                  <div class="task-meta">
+                    <span class="task-cat rose">客訴</span>
+                    <span class="task-avatar" title="林小美">林</span>
+                    <span class="task-due">📅 07/29</span>
+                    <span class="task-confidence"></span>
+                  </div>
+                </div>
+
+                <div class="task-card">
+                  <div class="task-summary">新產品試作報告 · 技術部週四給</div>
+                  <div class="task-meta">
+                    <span class="task-cat">研發追蹤</span>
+                    <span class="task-avatar" title="張大偉">張</span>
+                    <span class="task-due">📅 07/24</span>
+                    <span class="task-confidence"></span>
+                  </div>
+                </div>
+
+                <div style="text-align:center; padding:8px; font-size:11px; color:var(--ink-3);">+ 22 更多...</div>
+              </div>
+
+              <div class="kanban-col running">
+                <div class="kanban-col-hdr"><span>執行中</span><span class="kanban-col-count">8</span></div>
+
+                <div class="task-card">
+                  <div class="task-summary">機台 M-032 保養排程 · 週五完成</div>
+                  <div class="task-meta">
+                    <span class="task-cat">設備維護</span>
+                    <span class="task-avatar" title="陳艾瑞克">陳</span>
+                    <span class="task-due">📅 07/25</span>
+                    <span class="task-confidence"></span>
+                  </div>
+                </div>
+
+                <div class="task-card">
+                  <div class="task-summary">C 客戶議價 · 提報週會決議</div>
+                  <div class="task-meta">
+                    <span class="task-cat">訂單追蹤</span>
+                    <span class="task-avatar" title="王愛麗絲">王</span>
+                    <span class="task-due">📅 07/26</span>
+                    <span class="task-confidence"></span>
+                  </div>
+                </div>
+
+                <div style="text-align:center; padding:8px; font-size:11px; color:var(--ink-3);">+ 6 更多...</div>
+              </div>
+
+              <div class="kanban-col done">
+                <div class="kanban-col-hdr"><span>已簽核</span><span class="kanban-col-count">13</span></div>
+
+                <div class="task-card" style="opacity:.75;">
+                  <div class="task-summary">品保週報已完成 · 已上傳系統</div>
+                  <div class="task-meta">
+                    <span class="task-cat">日常追蹤</span>
+                    <span class="task-avatar" title="王愛麗絲">王</span>
+                    <span style="color:var(--ok-600); font-size:11px;">✓ 07/21 已簽核</span>
+                  </div>
+                </div>
+
+                <div class="task-card" style="opacity:.75;">
+                  <div class="task-summary">出貨檢驗 · 已通過</div>
+                  <div class="task-meta">
+                    <span class="task-cat">品質追蹤</span>
+                    <span class="task-avatar" title="林小美">林</span>
+                    <span style="color:var(--ok-600); font-size:11px;">✓ 07/22 已簽核</span>
+                  </div>
+                </div>
+
+                <div style="text-align:center; padding:8px; font-size:11px; color:var(--ink-3);">+ 11 更多...</div>
+              </div>
+
+              <div class="kanban-col overdue">
+                <div class="kanban-col-hdr"><span style="color:var(--rose-600);">逾時警示</span><span class="kanban-col-count">5</span></div>
+
+                <div class="task-card" style="border-color:var(--rose-tint);">
+                  <div class="task-summary">D 客戶回覆 · 已逾期 3 天</div>
+                  <div class="task-meta">
+                    <span class="task-cat rose">客訴</span>
+                    <span class="task-avatar" title="王愛麗絲">王</span>
+                    <span class="task-due rose">🔥 逾 3d</span>
+                    <span class="task-confidence"></span>
+                  </div>
+                </div>
+
+                <div class="task-card" style="border-color:var(--rose-tint);">
+                  <div class="task-summary">材料驗收記錄 · 週三前 · 已逾期</div>
+                  <div class="task-meta">
+                    <span class="task-cat rose">品質追蹤</span>
+                    <span class="task-avatar" title="張大偉">張</span>
+                    <span class="task-due rose">🔥 逾 1d</span>
+                    <span class="task-confidence"></span>
+                  </div>
+                </div>
+
+                <div style="text-align:center; padding:8px; font-size:11px; color:var(--ink-3);">+ 3 更多...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="stage" id="drawer">
+  <div class="stage-hdr">
+    <span class="stage-num">畫面 3</span>
+    <div>
+      <div class="stage-title">任務詳情 Drawer · 對話 context + 簽核 actions</div>
+      <div class="stage-sub">點 kanban card 打開右側 drawer · 見原始群組對話 + 分派 + 簽核</div>
+    </div>
+    <span class="stage-actor">總經理 · 王總</span>
+  </div>
+
+  <div class="screens">
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 3</b><span>Drawer · 顯 records 原始對話 + assignee + due + 簽核 actions</span></div>
+      <div style="display:grid; grid-template-columns:1fr 380px; min-height:600px;">
+        <div style="background:rgba(0,0,0,.4); padding:20px; overflow:hidden;">
+          <div style="opacity:0.4; pointer-events:none;">
+            <div class="kanban">
+              <div class="kanban-col pending"><div class="kanban-col-hdr"><span>待簽核</span></div><div class="task-card"><div class="task-summary">A 客戶 Q3 交期提早 15 天...</div></div></div>
+              <div class="kanban-col running"><div class="kanban-col-hdr"><span>執行中</span></div></div>
+              <div class="kanban-col done"><div class="kanban-col-hdr"><span>已簽核</span></div></div>
+              <div class="kanban-col overdue"><div class="kanban-col-hdr"><span style="color:var(--rose-600);">逾時警示</span></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer">
+          <div class="drawer-hdr">
+            <div>
+              <div class="drawer-title">A 客戶 Q3 交期提早 15 天</div>
+              <div class="drawer-sub">維修工單 · high confidence · 來源 · 福祉—品保部群 · 7/22 09:15</div>
+            </div>
+            <button class="drawer-close">✕</button>
+          </div>
+          <div class="drawer-body">
+            <div class="drawer-sec">
+              <div class="drawer-sec-title">任務資訊</div>
+              <div class="drawer-info-row">
+                <b>負責人</b>
+                <span style="display:flex; align-items:center; gap:6px;">
+                  <span class="task-avatar" title="王愛麗絲">王</span>
+                  <b>王愛麗絲</b>
+                  <span style="color:var(--ink-3); font-size:11px;">品保部 · 品保專員</span>
+                </span>
+              </div>
+              <div class="drawer-info-row">
+                <b>預計完成</b>
+                <span style="font-family:var(--mono);">2026/07/25</span>
+                <span class="task-due warn" style="margin-left:6px;">3 日內</span>
+              </div>
+              <div class="drawer-info-row">
+                <b>分類</b>
+                <span class="task-cat">維修工單</span>
+              </div>
+              <div class="drawer-info-row">
+                <b>來源</b>
+                <span>福祉—品保部 · <a href="#" style="color:var(--primary);">見完整對話</a></span>
+              </div>
+              <div class="drawer-info-row">
+                <b>建立於</b>
+                <span style="font-family:var(--mono);">2026/07/22 09:20</span>
+              </div>
+            </div>
+
+            <div class="drawer-sec">
+              <div class="drawer-sec-title">AI 抽取的關鍵行動</div>
+              <div style="font-size:12.5px; color:var(--ink-2); line-height:1.7;">
+                A 客戶要求 Q3 交期提早 <b>15 天</b> · 需增加 <b>2 名檢驗</b>。品保回應可配合但需人力支援。<br>
+                <b style="color:var(--warn-600);">追蹤：王愛麗絲跟人資申請 2 名檢驗人力 · 期限週五</b>
+              </div>
+            </div>
+
+            <div class="drawer-sec">
+              <div class="drawer-sec-title">原始對話（節錄）</div>
+              <div class="chat-context">
+                <div class="chat-msg">
+                  <span class="chat-msg-avatar" style="background:var(--warn-600);">總</span>
+                  <div class="chat-msg-body">
+                    <div><b class="chat-msg-sender">王總</b><span class="chat-msg-time">08:30</span></div>
+                    <div class="chat-msg-text">A 客戶今天早上要求 Q3 交期提早 15 天 · 品保能配合嗎？</div>
+                  </div>
+                </div>
+                <div class="chat-msg highlight">
+                  <span class="chat-msg-avatar">王</span>
+                  <div class="chat-msg-body">
+                    <div><b class="chat-msg-sender">王愛麗絲</b><span class="chat-msg-time">08:45</span></div>
+                    <div class="chat-msg-text">可以配合 · 但需要增加 2 名檢驗人力 · 我週五前跟人資申請</div>
+                  </div>
+                </div>
+                <div class="chat-msg">
+                  <span class="chat-msg-avatar" style="background:var(--warn-600);">總</span>
+                  <div class="chat-msg-body">
+                    <div><b class="chat-msg-sender">王總</b><span class="chat-msg-time">08:47</span></div>
+                    <div class="chat-msg-text">OK · 麻煩你了</div>
+                  </div>
+                </div>
+              </div>
+              <a href="#" style="font-size:11px; color:var(--primary); margin-top:8px; display:inline-block;">→ 見完整對話（分析詳情頁）</a>
+            </div>
+          </div>
+
+          <div class="drawer-actions">
+            <button class="btn ok">✓ 已簽核</button>
+            <button class="btn">重派給...</button>
+            <button class="btn danger">否認（AI 判斷錯）</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="stage" id="daily-log">
+  <div class="stage-hdr">
+    <span class="stage-num">畫面 4</span>
+    <div>
+      <div class="stage-title">今日日誌 · 每群一 card</div>
+      <div class="stage-sub">daily_reports 直接可讀 · 「總經理登入就能看昨日群裡發生什麼」</div>
+    </div>
+    <span class="stage-actor">總經理 · 王總</span>
+  </div>
+
+  <div class="screens">
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 4</b><span>戰情室 · 今日日誌（tab 3）</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">ai-center-line.onrender.com/warroom/daily</div>
+      </div>
+      <div class="aiproot-shell">
+        <div class="aiproot-sidebar">
+          <div class="aiproot-brand"><span class="aiproot-brand-mark">台</span><span>台灣福祉</span></div>
+          <div class="aiproot-nav-group">戰情室</div>
+          <div class="aiproot-nav-item">📊 總覽儀</div>
+          <div class="aiproot-nav-item">📋 任務看板</div>
+          <div class="aiproot-nav-item active">📅 今日日誌</div>
+        </div>
+        <div>
+          <div class="aiproot-topbar">
+            <span class="crumb"><b>戰情室</b><span class="sep">›</span><span class="cur">今日日誌</span></span>
+            <div class="aiproot-user">
+              <span class="aiproot-user-avatar">王</span>
+              <span class="aiproot-user-meta">
+                <span class="aiproot-user-name">王總</span>
+                <span class="aiproot-user-role">總經理</span>
+              </span>
+            </div>
+          </div>
+          <div class="aiproot-main">
+            <div class="tabs">
+              <div class="tab">📊 總覽儀</div>
+              <div class="tab">📋 任務看板 <span class="tab-count">45</span></div>
+              <div class="tab active">📅 今日日誌 <span class="tab-count">9 群</span></div>
+            </div>
+
+            <div style="display:flex; gap:8px; margin-bottom:16px; align-items:center;">
+              <input type="date" value="2026-07-22" class="btn" style="padding:5px 10px;">
+              <select class="btn" style="padding:5px 10px;"><option>全部部門</option></select>
+              <div style="flex:1;"></div>
+              <span style="font-size:11.5px; color:var(--ink-3);">來源：AI 從 9 群 · 543 則訊息整理</span>
+            </div>
+
+            <div class="day-cards">
+              <div class="day-card">
+                <div class="day-card-hdr">
+                  <span class="day-card-group">福祉—品保部</span>
+                  <span class="day-card-count">72 則 · 5 任務</span>
+                </div>
+                <div class="day-report-item">A 客戶 Q3 交期討論 · 王愛麗絲負責跟進</div>
+                <div class="day-report-item">出貨檢驗完成 · 3 批貨通過</div>
+                <div class="day-report-item">品管會議延到週五 · 週會取消</div>
+                <div class="day-report-item">機台 M-032 需保養 · 已排程</div>
+                <div class="day-report-item">內部教育訓練通知 · 週五 14:00</div>
+              </div>
+
+              <div class="day-card">
+                <div class="day-card-hdr">
+                  <span class="day-card-group">福祉集團-業務二部</span>
+                  <span class="day-card-count">89 則 · 8 任務</span>
+                </div>
+                <div class="day-report-item">B 客戶議價成功 · 訂單金額 120 萬</div>
+                <div class="day-report-item">C 客戶抱怨處理 · 業務主任週三回覆</div>
+                <div class="day-report-item">新客戶開發 3 家 · 業助追進度</div>
+                <div class="day-report-item">月會會議紀錄已上傳</div>
+              </div>
+
+              <div class="day-card">
+                <div class="day-card-hdr">
+                  <span class="day-card-group">技術工程部_技術開發組</span>
+                  <span class="day-card-count">45 則 · 4 任務</span>
+                </div>
+                <div class="day-report-item">新產品試作報告 · 週四給</div>
+                <div class="day-report-item">研發進度 30% · 符合計畫</div>
+                <div class="day-report-item">元件供應商換人 · 週五確認</div>
+              </div>
+
+              <div class="day-card">
+                <div class="day-card-hdr">
+                  <span class="day-card-group">福祉集團-人資總務群</span>
+                  <span class="day-card-count">28 則 · 2 任務</span>
+                </div>
+                <div class="day-report-item">品保 2 名檢驗人力申請已收到</div>
+                <div class="day-report-item">新人到職手續 · 週一啟動</div>
+              </div>
+            </div>
+
+            <div style="text-align:center; padding:14px; color:var(--ink-3); font-size:11.5px;">
+              + 5 群更多... <a href="#" style="color:var(--primary);">見全部</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="stage" id="category">
+  <div class="stage-hdr">
+    <span class="stage-num">畫面 5</span>
+    <div>
+      <div class="stage-title">分類管理（category_registry）</div>
+      <div class="stage-sub">tenant scoped · aiproot / 主管可 rename / merge / archive</div>
+    </div>
+    <span class="stage-actor">Aiproot 業助 · 王小華</span>
+  </div>
+
+  <div class="screens">
+    <div class="screen">
+      <div class="screen-lbl"><b>畫面 5</b><span>AIPROOT 管理 · 分類管理</span></div>
+      <div class="browser">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url">ai-center-line.onrender.com/aiproot/categories</div>
+      </div>
+      <div class="aiproot-shell">
+        <div class="aiproot-sidebar">
+          <div class="aiproot-brand"><span class="aiproot-brand-mark">A</span><span>AIPROOT</span></div>
+          <div class="aiproot-nav-group">AIPROOT 管理</div>
+          <div class="aiproot-nav-item">🏢 開通新租戶</div>
+          <div class="aiproot-nav-item">💰 AI 成本管理</div>
+          <div class="aiproot-nav-item">📊 對話分析歷程</div>
+          <div class="aiproot-nav-item active">🏷️ 分類管理</div>
+        </div>
+        <div>
+          <div class="aiproot-topbar">
+            <span class="crumb"><b>AIPROOT 管理</b><span class="sep">›</span><span class="cur">分類管理</span></span>
+            <div class="aiproot-user">
+              <span class="aiproot-user-avatar">王</span>
+              <span class="aiproot-user-meta">
+                <span class="aiproot-user-name">王小華</span>
+                <span class="aiproot-user-role">AIPROOT 業助</span>
+              </span>
+            </div>
+          </div>
+          <div class="aiproot-main">
+            <h1 class="aiproot-title">分類管理 · 台灣福祉</h1>
+            <div class="aiproot-sub">每 tenant 一份 · pipeline 分析時優先歸入已知分類 · 真新才 auto 新增</div>
+
+            <div style="display:flex; gap:8px; margin-bottom:14px;">
+              <select class="btn" style="padding:5px 10px;"><option>台灣福祉 ▾</option><option>鮮湧</option></select>
+              <select class="btn" style="padding:5px 10px;"><option>狀態：全部</option><option>Active</option><option>待 review</option><option>Archived</option></select>
+              <div style="flex:1;"></div>
+              <button class="btn">合併分類</button>
+              <button class="btn primary">+ 手動新增</button>
+            </div>
+
+            <div class="category-list">
+              <div class="category-item">
+                <div>
+                  <div class="category-name">維修工單</div>
+                  <div style="font-size:11px; color:var(--ink-3);">機台故障 / 保養 / 檢修相關</div>
+                </div>
+                <span class="category-usage">用 128 次</span>
+                <span class="category-status active">Active</span>
+                <div style="display:flex; gap:6px;">
+                  <button class="btn small">改名</button>
+                  <button class="btn small">合併</button>
+                  <button class="btn small">封存</button>
+                </div>
+              </div>
+
+              <div class="category-item">
+                <div>
+                  <div class="category-name">客訴</div>
+                  <div style="font-size:11px; color:var(--ink-3);">客戶抱怨 / 品質問題 / 退貨</div>
+                </div>
+                <span class="category-usage">用 45 次</span>
+                <span class="category-status active">Active</span>
+                <div style="display:flex; gap:6px;">
+                  <button class="btn small">改名</button>
+                  <button class="btn small">合併</button>
+                  <button class="btn small">封存</button>
+                </div>
+              </div>
+
+              <div class="category-item">
+                <div>
+                  <div class="category-name">訂單追蹤</div>
+                  <div style="font-size:11px; color:var(--ink-3);">交期 / 出貨 / 議價</div>
+                </div>
+                <span class="category-usage">用 87 次</span>
+                <span class="category-status active">Active</span>
+                <div style="display:flex; gap:6px;">
+                  <button class="btn small">改名</button>
+                  <button class="btn small">合併</button>
+                  <button class="btn small">封存</button>
+                </div>
+              </div>
+
+              <div class="category-item" style="border-color:var(--warn-tint); background:var(--warn-tint);">
+                <div>
+                  <div class="category-name">研發進度 <span style="color:var(--warn-600); font-size:11px;">✨ AI 新增</span></div>
+                  <div style="font-size:11px; color:var(--ink-3);">研發專案 / 試作 / 元件</div>
+                </div>
+                <span class="category-usage">用 12 次</span>
+                <span class="category-status pending">待 review</span>
+                <div style="display:flex; gap:6px;">
+                  <button class="btn small primary">通過</button>
+                  <button class="btn small">改名</button>
+                  <button class="btn small">封存</button>
+                </div>
+              </div>
+
+              <div class="category-item">
+                <div>
+                  <div class="category-name">設備維護</div>
+                  <div style="font-size:11px; color:var(--ink-3);">保養排程 / 檢查</div>
+                </div>
+                <span class="category-usage">用 32 次</span>
+                <span class="category-status active">Active</span>
+                <div style="display:flex; gap:6px;">
+                  <button class="btn small">改名</button>
+                  <button class="btn small">合併</button>
+                  <button class="btn small">封存</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="alert info" style="margin-top:16px;">
+              <b>用越久越有系統</b>：pipeline 已經知道要優先歸入這些分類 · 只有全新性質才會產生 pending review 分類（如「研發進度」是 AI 首次判別）
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="stage" id="roles">
+  <div class="stage-hdr">
+    <span class="stage-num">畫面 6</span>
+    <div>
+      <div class="stage-title">角色分視角 · 對照</div>
+      <div class="stage-sub">同一戰情室 · 依 role 顯示不同 scope · aiproot 見全平台 · 主管見自己部門</div>
+    </div>
+    <span class="stage-actor">3 種角色</span>
+  </div>
+
+  <div class="role-compare">
+    <div class="role-compare-hdr">
+      <h2>誰看到什麼 · 對照</h2>
+      <p>戰情室依 role scope · 資料庫層級 RLS + service filter 雙保險</p>
+    </div>
+    <table class="compare">
+      <thead>
+        <tr>
+          <th>戰情室項目</th>
+          <th>Aiproot 業助</th>
+          <th>總經理（tenant_admin）</th>
+          <th>部門主管（group_owner）</th>
+          <th>員工（v2 保留）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>總覽儀 · 三環儀</td>
+          <td>全平台聚合（tenant 下拉）</td>
+          <td>該租戶全部門</td>
+          <td>只自己部門</td>
+          <td>自己 assigned 任務</td>
+        </tr>
+        <tr>
+          <td>任務看板</td>
+          <td>全租戶（下拉切）</td>
+          <td>該租戶全公司</td>
+          <td>自己部門</td>
+          <td>自己被指派的</td>
+        </tr>
+        <tr>
+          <td>今日日誌</td>
+          <td>該租戶全群</td>
+          <td>該租戶全群</td>
+          <td>只自己部門的群</td>
+          <td>❌ 不顯</td>
+        </tr>
+        <tr>
+          <td>分類管理</td>
+          <td>✅ 全 CRUD</td>
+          <td>Read only（可申請改名）</td>
+          <td>Read only</td>
+          <td>❌ 不顯</td>
+        </tr>
+        <tr>
+          <td>簽核 action</td>
+          <td>✅（除該租戶內部流程）</td>
+          <td>✅ 全公司</td>
+          <td>自己部門</td>
+          <td>自己被指派的</td>
+        </tr>
+        <tr>
+          <td>看到員工真名</td>
+          <td>✅（有 audit log）</td>
+          <td>✅</td>
+          <td>只自己部門員工</td>
+          <td>只自己</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert warn" style="max-width:1200px; margin:16px auto;">
+    <b>v1 role 現況</b>：aiproot_admin / consultant / tenant_admin / group_owner 四種 · <b>v1 不加 employee role</b>（依賴綁定機制 · 走 M0-B）
+  </div>
+</div>
+
+<div style="max-width:1200px; margin:32px auto 0; padding:20px 24px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);">
+  <h3 style="margin:0 0 12px; font-size:14.5px;">你 review 這 mockup 時 · 特別留意</h3>
+  <ul style="font-size:12.5px; line-height:1.8; color:var(--ink-2); padding-left:18px; margin:0;">
+    <li><b>Kanban 4 columns 適合嗎？</b>（待簽核 / 執行中 / 已簽核 / 逾時）· 若想加「已否認」/「待重派」可提</li>
+    <li><b>任務詳情 drawer 資訊夠嗎？</b>· 現顯 assignee + due + 對話 context + 3 簽核 actions</li>
+    <li><b>今日日誌 · 每群一 card · 直接列 5-8 個要點</b> · 想不想加「群整體情緒」/「共識度」等指標？</li>
+    <li><b>分類管理</b> · 我建議 pending review 分類需 aiproot approve 才 active · 你若想全自動 approve 可提</li>
+    <li><b>員工 role v1 不加</b> · v2 依賴 employee-line-binding 完成後才做 · 你若想 v1 就加 · 我加</li>
+  </ul>
+</div>
+
+</body>
+</html>

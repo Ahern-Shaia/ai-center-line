@@ -56,7 +56,9 @@
     "Cxxx",
     "Uxxx",
     "dedup",
-    "trunc"
+    "trunc",
+    "quater",
+    "quinque"
   ],
   "cSpell.ignoreRegExpList": [
     "0x[0-9a-fA-F]+",
