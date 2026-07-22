@@ -201,11 +201,11 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
             aria-label="租戶"
             isDisabled={loading || busy}
           >
-            <AriaButton className="llm-select-btn" style={{ minWidth: 220 }}>
+            <AriaButton className="llm-select-btn" style={{ minWidth: 240 }}>
               <SelectValue className="llm-select-value">
                 {() => selectedTenantId
-                  ? `${tenantName(selectedTenantId)}（${countByTenant.get(selectedTenantId) ?? 0}）`
-                  : `全部租戶（${rows.length.toLocaleString()}）`}
+                  ? `${tenantName(selectedTenantId)} · ${countByTenant.get(selectedTenantId) ?? 0} 筆 batch`
+                  : `全部租戶 · 共 ${rows.length.toLocaleString()} 筆 batch`}
               </SelectValue>
               <svg className="llm-select-chev" width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
                 <path d="M1 1l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -214,9 +214,9 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
             <Popover className="llm-select-pop" offset={4}>
               <ListBox
                 className="llm-select-list"
-                items={[{ id: "__all__", name: `全部租戶（${rows.length.toLocaleString()}）` }, ...tenants.map((t) => ({
+                items={[{ id: "__all__", name: `全部租戶 · 共 ${rows.length.toLocaleString()} 筆 batch` }, ...tenants.map((t) => ({
                   id: t.tenantId,
-                  name: `${t.tenantName}（${countByTenant.get(t.tenantId) ?? 0}）`,
+                  name: `${t.tenantName} · ${countByTenant.get(t.tenantId) ?? 0} 筆 batch`,
                 }))]}
               >
                 {(item) => (
