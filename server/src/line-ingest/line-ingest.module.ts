@@ -17,7 +17,7 @@ import { LineGroupController } from "./line-group.controller.js";
 import { LineWebhookController } from "./line-webhook.controller.js";
 
 @Module({
-  imports: [EmployeeBindingModule],       // 0016 · webhook 用 EmployeeBindingService 對照 sender_user_id + 推 LIFF
+  imports: [EmployeeBindingModule],       // 0016 · webhook 用 EmployeeBindingService · NudgeService 用 raw SQL 不再環回
   controllers: [LineBotController, LineGroupController, LineWebhookController],
   providers: [
     LineApiClient,

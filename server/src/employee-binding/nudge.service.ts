@@ -2,7 +2,6 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import { sql } from "drizzle-orm";
 import { withSystemTx } from "../db/client.js";
-import { LineMessageRepository } from "../line-ingest/line-message.repository.js";
 
 /**
  * Nudge Service · 未綁定偵測工具 · 方向 3（不當綁定 · 只提示）
@@ -10,14 +9,12 @@ import { LineMessageRepository } from "../line-ingest/line-message.repository.js
  *
  * 定期掃活躍但未綁定的 LINE UserId · 提示 aiproot 業助追人綁定
  * · 每日 09:00 台北 (aiproot 業助上班時已算好)
+ *
+ * SQL inline · 不依賴 LineMessageRepository · 避免 LineIngestModule 環回
  */
 @Injectable()
 export class NudgeService {
   private readonly logger = new Logger(NudgeService.name);
-
-  constructor(
-    private readonly messageRepo: LineMessageRepository,
-  ) {}
 
   /**
    * 每日 09:00 台北 · 記 log · 前端 dashboard 觸發實際計算
@@ -53,7 +50,7 @@ export class NudgeService {
     }> = [];
 
     for (const t of tenantsRes.rows) {
-      const unbound = await withSystemTx((tx) => this.messageRepo.findUnboundActiveUsers(tx, t.tenant_id, 7));
+      const unbound = await withSystemTx((tx) => this.findUnboundActiveUsers(tx, t.tenant_id, 7));
       results.push({
         tenantId: t.tenant_id,
         tenantName: t.tenant_name,
@@ -67,5 +64,62 @@ export class NudgeService {
       });
     }
     return results;
+  }
+
+  /**
+   * 查未綁定活躍者 · inline SQL 避免依賴 LineMessageRepository
+   * 邏輯對照原 LineMessageRepository.findUnboundActiveUsers
+   */
+  private async findUnboundActiveUsers(
+    tx: Parameters<Parameters<typeof withSystemTx>[0]>[0],
+    tenantId: string,
+    lookbackDays: number,
+  ): Promise<Array<{
+    senderLineId: string;
+    displayName: string | null;
+    messageCount: number;
+    lastActiveAt: string;
+    topGroupName: string | null;
+  }>> {
+    const res = await tx.execute<{
+      sender_line_id: string;
+      display_name: string | null;
+      message_count: string;
+      last_active_at: string;
+      top_group_name: string | null;
+    }>(sql`
+      WITH activity AS (
+        SELECT lm.sender_line_id,
+               count(*)::text AS message_count,
+               max(lm.sent_at)::text AS last_active_at,
+               mode() WITHIN GROUP (ORDER BY lg.display_name) AS top_group_name
+        FROM line_message lm
+        LEFT JOIN line_group lg ON lg.bot_id = lm.bot_id AND lg.group_id = lm.group_id
+        LEFT JOIN user_line_binding b
+          ON b.bot_id = lm.bot_id
+         AND b.line_user_id = lm.sender_line_id
+         AND b.status = 'active'
+        WHERE lm.tenant_id = ${tenantId}::uuid
+          AND lm.sent_at > (now() - (${lookbackDays} || ' days')::interval)
+          AND lm.sender_line_id IS NOT NULL
+          AND b.binding_id IS NULL
+        GROUP BY lm.sender_line_id
+      )
+      SELECT a.sender_line_id, mem.display_name,
+             a.message_count, a.last_active_at, a.top_group_name
+      FROM activity a
+      LEFT JOIN line_member mem
+        ON mem.user_id = a.sender_line_id
+       AND mem.fetch_error IS NULL
+      ORDER BY a.message_count::int DESC
+      LIMIT 100
+    `);
+    return res.rows.map((r) => ({
+      senderLineId: r.sender_line_id,
+      displayName: r.display_name,
+      messageCount: parseInt(r.message_count, 10),
+      lastActiveAt: r.last_active_at,
+      topGroupName: r.top_group_name,
+    }));
   }
 }
