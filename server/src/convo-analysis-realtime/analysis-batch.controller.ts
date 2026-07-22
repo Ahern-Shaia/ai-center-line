@@ -49,10 +49,10 @@ export class AnalysisBatchController {
   @Post("run-pending")
   @Roles("aiproot_admin")
   async runPending(
-    @Body() body: { lookbackDays?: number },
+    @Body() body: { lookbackDays?: number; tenantId?: string },
     @CurrentUser() user: JwtUser,
   ) {
     const triggeredBy = `manual:${user.user_id}`;
-    return this.scheduler.runPending(triggeredBy, body.lookbackDays ?? 2);
+    return this.scheduler.runPending(triggeredBy, body.lookbackDays ?? 2, body.tenantId);
   }
 }

@@ -95,10 +95,11 @@ export class LineMessageRepository {
   }
 
   /**
-   * 掃「哪些 (tenant, group, batch_date) 有訊息但還沒 batch」 · cron 用
+   * 掃「哪些 (tenant, group, batch_date) 有訊息但還沒 batch」 · cron / 手動用
    * lookback: 近 N 天 · 通常 = 2 (昨日 + 前日 · 防上次 cron 漏)
+   * tenantId: optional · 傳則限單 tenant (前端下拉選了單一租戶時用)
    */
-  async findPendingBatches(tx: Db, lookbackDays: number = 2): Promise<Array<{
+  async findPendingBatches(tx: Db, lookbackDays: number = 2, tenantId?: string): Promise<Array<{
     tenantId: string;
     groupId: string;
     batchDate: string;
@@ -121,6 +122,7 @@ export class LineMessageRepository {
        AND ab.batch_date = (lm.sent_at AT TIME ZONE 'Asia/Taipei')::date
       WHERE lm.sent_at >= (now() AT TIME ZONE 'Asia/Taipei' - (${lookbackDays} || ' days')::interval)::timestamptz
         AND ab.batch_id IS NULL
+        AND (${tenantId ?? null}::uuid IS NULL OR lm.tenant_id = ${tenantId ?? null}::uuid)
       GROUP BY lm.tenant_id, lm.group_id, (lm.sent_at AT TIME ZONE 'Asia/Taipei')::date
     `);
     return res.rows.map((r) => ({

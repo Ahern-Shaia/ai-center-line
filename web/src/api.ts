@@ -661,10 +661,10 @@ export const rerunAnalysisBatch = (body: { tenantId: string; groupId: string; ba
     "/aiproot-console/batches/rerun", { method: "POST", body: JSON.stringify(body) },
   );
 
-export const runPendingBatches = (lookbackDays?: number) =>
+export const runPendingBatches = (opts?: { lookbackDays?: number; tenantId?: string }) =>
   req<{ total: number; completed: number; empty: number; failed: number }>(
     "/aiproot-console/batches/run-pending",
-    { method: "POST", body: JSON.stringify({ lookbackDays }) },
+    { method: "POST", body: JSON.stringify(opts ?? {}) },
   );
 
 // aiproot 通用 · 列所有租戶（下拉篩選用）

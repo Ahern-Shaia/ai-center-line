@@ -42,15 +42,16 @@ export class BatchSchedulerService {
   /**
    * 手動觸發 (aiproot UI) · 或 cron 呼叫
    * · lookback 天數可調 · default 2
+   * · tenantId: optional · 傳則限單 tenant (aiproot UI 下拉選單傳)
    */
-  async runPending(triggeredBy: string, lookbackDays = 2): Promise<{
+  async runPending(triggeredBy: string, lookbackDays = 2, tenantId?: string): Promise<{
     total: number;
     completed: number;
     empty: number;
     failed: number;
   }> {
-    const pending = await withSystemTx((tx) => this.messageRepo.findPendingBatches(tx, lookbackDays));
-    this.logger.log(`daily batch 掃到 ${pending.length} 個待跑 (lookback ${lookbackDays}d)`);
+    const pending = await withSystemTx((tx) => this.messageRepo.findPendingBatches(tx, lookbackDays, tenantId));
+    this.logger.log(`daily batch 掃到 ${pending.length} 個待跑 (lookback ${lookbackDays}d, tenant=${tenantId ?? "*"})`);
     if (pending.length === 0) return { total: 0, completed: 0, empty: 0, failed: 0 };
 
     const queue = new PQueue({ concurrency: 3 });

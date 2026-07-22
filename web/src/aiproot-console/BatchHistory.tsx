@@ -105,9 +105,14 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
         toast.show(`Batch ${res.status} · ${res.messageCount.toLocaleString()} 則訊息`,
           res.status === "failed" ? "danger" : "ok");
       } else {
-        const res = await runPendingBatches(2);
+        // 依下拉決定 · 選了單一租戶就只跑該租戶 · 選「全部」才跨租戶
+        const scope = selectedTenantId ? tenantName(selectedTenantId) : "全部租戶";
+        const res = await runPendingBatches({
+          lookbackDays: 2,
+          tenantId: selectedTenantId || undefined,
+        });
         toast.show(
-          `共 ${res.total.toLocaleString()} 個 · 完成 ${res.completed} · 空群 ${res.empty} · 失敗 ${res.failed}`,
+          `${scope} · 共 ${res.total.toLocaleString()} 個 · 完成 ${res.completed} · 空群 ${res.empty} · 失敗 ${res.failed}`,
           "ok",
         );
       }
@@ -135,9 +140,14 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
           日期 <b>{confirm.row.batchDate}</b>
         </>
       ) : (
-        <>掃過去 2 天所有未跑 batch · 併發 3 · 可能耗時 · 依訊息量決定。</>
+        <>
+          即將掃過去 2 天所有未跑 batch：<br />
+          範圍 <b>{selectedTenantId ? tenantName(selectedTenantId) : "全部租戶"}</b><br />
+          {!selectedTenantId && <>（跨租戶跑 · 若只想跑單一租戶請先於上方下拉切換）<br /></>}
+          併發 3 · 依訊息量決定耗時。
+        </>
       )}
-      confirmLabel={confirm.type === "rerun" ? "重跑" : "全跑"}
+      confirmLabel={confirm.type === "rerun" ? "重跑" : "開始"}
     />
   );
 
@@ -193,7 +203,11 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
             </Popover>
           </Select>
           <button className="btn" onClick={() => void refresh()} disabled={loading || busy}>重新整理</button>
-          <button className="btn primary" onClick={() => setConfirm({ type: "run-pending" })} disabled={busy}>掃 pending 全跑</button>
+          <button className="btn primary" onClick={() => setConfirm({ type: "run-pending" })} disabled={busy}>
+            {selectedTenantId
+              ? `掃「${tenantName(selectedTenantId)}」pending`
+              : "掃全部租戶 pending"}
+          </button>
         </div>
       </div>
 
