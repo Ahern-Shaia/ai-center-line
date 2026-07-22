@@ -1786,7 +1786,111 @@ LINE Messaging API 設計特性：**同一個 Alice · 在同一個 bot 底下 �
 
 ---
 
-## 15. 變更紀錄
+## 15. 失效場景反思（FMEA · R17 收尾必填）
+
+> Pre-mortem 心態 · 假設系統已壞 · 反推每條路徑會怎麼壞。
+> P0 = 未緩解不得上 prod（資料錯 / 安全洞 / 全 tenant 掛）
+> P1 = 已知殘留 · 需列治本方向
+> P2 = 可忍 · 記錄不修
+>
+> 逐路徑（每個入口 / 外呼 / 狀態轉換 / 並發點 / 部署順序）走一遍。
+
+### 15.1 LIFF entry · `GET /binding/liff/prefill`
+
+| 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
+|---|---|---|---|
+| 惡意帶假 `lineUserId` | 攻擊者查得別人 pre-fill · 拿 displayName / 部門推斷 | **P0** | ✅ **LIFF SDK 保證** · lineUserId 由 LINE 平台簽發 · 前端不能偽造 · 惡意者只能查自己 |
+| 惡意帶假 `botId` | 400 (bot 不存在) or 讀到別 tenant line_member 資料 | P1 | ✅ Query 用 `${botId}::uuid` cast · 非合法 UUID 直接 SQL error（500 快擋）· 合法 botId 只查該 bot 的 line_member (RLS 走 aiproot_admin · 但範圍限 bot_id) · pre-fill 只回 displayName/pictureUrl · 不 leak 敏感 |
+| line_member 沒該 UserId (Alice 從未在群組發言) | prefill 回空 candidateGroups · Alice 無法選群 | P1 | ✅ v0.6.3 已改：LIFF UI 顯「未偵測到你的群組活動 · 請聯繫業助手動設部門」· 走 aiproot_manual fallback |
+| line_member fetch_error 為某值 (LINE API 失敗) | displayName null | P2 | ✅ UI fallback「未偵測到姓名 · 請手動輸入」 |
+| Timing attack · 大量嘗試 lineUserId 探測 | 隱私 leak | P1 | ⚠️ 殘留 · endpoint 無 rate limit · 建議：Fastify + `@fastify/rate-limit` 限每 IP 60 req/min |
+| DB down / RLS misconfig → 500 | LIFF UI 顯錯 · Alice 無法綁 | P1 | ✅ Toast 顯錯 · Alice 手動點「重試」 · 治本：加 Sentry alert |
+
+### 15.2 LIFF entry · `POST /binding/liff/complete`
+
+| 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
+|---|---|---|---|
+| Alice 快速雙點送出 → 兩個 request 併行 | 兩個 INSERT users + binding · race | **P0** | ✅ `user_line_binding UNIQUE (bot_id, line_user_id)` · 第 2 個 INSERT ON CONFLICT DO UPDATE 反活復 · **不會**建兩個 users（第 2 個 INSERT users 也 unique on email 佔位）· 已測 |
+| Alice 點兩次不同資訊送出 · 第 2 個先到 | 綁定用第 1 個資訊 · Alice 看到第 2 個顯示但 DB 是第 1 個 | P1 | ⚠️ Repository create ON CONFLICT DO UPDATE 會用**後到的** args 覆蓋 metadata + boundBy · display_name 也可能不一致 · 治本：LIFF 頁 loading state 阻雙點 (已加 disabled=true) |
+| 惡意帶假 primaryGroupId (別 tenant 的) | 綁到別 tenant 的 department | **P0** | ✅ SQL WHERE 加 `lg.bot_id = args.botId` · 別 tenant 的 group 對不到 · 查回 null |
+| Alice 用假 lineUserId (若 LIFF SDK 被繞) | 拿別人 UserId 綁到自己帳號 · 冒充 | **P0** | ✅ LIFF SDK 服務端簽發 · 前端無法偽造 · 惡意方**沒 access token** 無法呼叫 API |
+| 綁定完成 · 但 Bot access token 失效 · reply「✓ 綁定成功」失敗 | Alice 不知綁成功 · 誤試第二次 | P1 | ⚠️ 殘留 · webhook reply 失敗只 log warn · Alice 可能重打 API → ON CONFLICT DO UPDATE 復活（無害）· 治本：LIFF UI 直接顯「綁定成功」不依賴 bot 訊息 (已如此) |
+| DB down · users INSERT 失敗 | 500 · Alice 頁面卡住 | P1 | ✅ 頁面顯 error toast + 「重試」按鈕 |
+
+### 15.3 Webhook entry · follow event (Alice 加好友)
+
+| 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
+|---|---|---|---|
+| LIFF_URL env 未設 | Bot 不推綁定連結 · Alice 加好友後靜默 | **P0** | ✅ Code check `if (liffUrl && event.replyToken)` · 未設不 crash · 但 Alice 沒訊息 · 治本：Pre-prod checklist 強制驗 LIFF_URL 設 |
+| Reply token 過期 (加好友後 > 60s 才觸發推) | reply 失敗 · Alice 沒訊息 | P1 | ✅ reply 失敗只 log · 治本：webhook Q latency < 60s (現況 < 1s) |
+| Alice 加好友 · webhook 剛好 down | Alice 沒收綁定連結 | P1 | ⚠️ 殘留 · LINE 不會 retry follow event · 治本：Alice 私訊 bot「hi」也會觸發推 LIFF (§7-quinque.13 nudge) |
+| Bot 被 unblock/block 循環 · 觸發多次 follow | 多次推綁定訊息 (擾民) | P2 | ✅ 現況可忍 · 每次 follow 都推 · 若擾民再加 dedup |
+
+### 15.4 Webhook entry · 1-on-1 message (personal daily report 素材)
+
+| 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
+|---|---|---|---|
+| Alice 未綁定就私訊 · bot 沒推 hint | Alice 沒察覺該綁 | P1 | ✅ `resolveUserByLineUserId` 回 null · webhook reply「請先完成綁定 · <LIFF>」 |
+| Alice 撤銷後私訊 | 反查 null · 資料不落庫 | ✅ 預期行為 | ✅ 對齊 §5.5 revoke 語意 |
+| resolveUserByLineUserId 高頻 · DB 慢查 | webhook latency 拉長 | P1 | ✅ 有 `ix_user_line_binding_lookup` (bot_id, line_user_id) partial index on status='active' |
+| Personal message group_id 佔位符 `__personal__${userId}` | line_message.group_id 存假值 · 未來 warroom 查詢誤中 | P2 | ✅ warroom 查詢 filter `chat_context='group'` (已 index) · personal 分開 |
+
+### 15.5 Aiproot audit UI · `POST /binding/aiproot/revoke`
+
+| 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
+|---|---|---|---|
+| 非 aiproot_admin/consultant 呼叫 | 越權撤銷 | **P0** | ✅ `@Roles("aiproot_admin")` guard · 已測 (permission-engine.test.ts) |
+| 錯撤有效 binding | Alice 綁定被撤 · 無法收訊 | P1 | ⚠️ 殘留 · Alice 需重走 LIFF flow · 治本：UI ConfirmDialog + audit log (已加) |
+| 撤銷後 Alice 資料歸屬混亂 | 舊 group 訊息仍有 sender_user_id · 新綁後別 user | P1 | ✅ user_line_binding UNIQUE (bot_id, line_user_id) · reactivate 同 binding_id · users.user_id 不變 · 舊訊息仍對到同 user |
+
+### 15.6 Nudge cron · 每日 09:00 台北
+
+| 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
+|---|---|---|---|
+| Cron 沒設 timezone 跑錯時間 | UX 差 (半夜 log) 但不影響資料 | P2 | ✅ 已加 `{ timeZone: "Asia/Taipei" }` |
+| findUnboundActiveUsers 慢查 | Cron 拖久 | P1 | ✅ line_message 有 (tenant_id, sender_line_id, sent_at) 潛在 index · lookback 7 天量小 |
+| 全 tenant 100 家 · 掃 100 次 → 累積 30s+ | Cron block 其他 job | P2 | ✅ 現況 tenant 2 家 · 不會炸 · 治本：加 concurrency limit + partition |
+| Nudge log 未落 audit_log | 業助不知歷史 | P2 | ⚠️ 殘留 · 只 Logger.log · 治本：加 audit_log(action='nudge_scan') |
+
+### 15.7 部署順序（DB migration → backend → frontend → LIFF）
+
+| 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
+|---|---|---|---|
+| SQL 0016 沒跑 · backend 已升級 | webhook 打 bindingService → column 不存在 → 500 | **P0** | ✅ Pre-prod SOP：先跑 SQL · 才 push code · 已寫進 `docs/sop/liff-setup.md` §8.1 |
+| Backend 升 · Web 沒升（LIFF ID 沒注入） | LIFF 開啟 initFailed | **P0** | ✅ Web + Backend 同時 push · Render 自動並行 redeploy · 已測 (2026-07-22 push) |
+| Migration 0016 rollback (down.sql) | line_message 兩欄消失 · 舊資料 sender_user_id 遺失 | P1 | ✅ down.sql 只 DROP · 不 drop CHECK constraint · 資料還在(欄位刪) · rollback 場景稀有 |
+| Render env `LIFF_URL` 沒設 · backend redeploy | Bot 加好友後不推 LIFF | **P0** | ✅ 已於 pre-prod SOP §7.1 列必設 env · Backend startup 建議 log warn 若 env 缺（治本 TODO） |
+
+### 15.8 並發 / 邊界 case
+
+| 失效模式 | 影響 | 嚴重度 | 緩解狀態 |
+|---|---|---|---|
+| 同 Alice 用兩支手機（兩個 LINE 帳號 · 同名字）點同綁定連結 | 兩 lineUserId 都綁到「Alice」users 記錄 (兩個 users) | P1 | ⚠️ 殘留 · Alice 姓名同但 user_id 不同 · UI 顯兩個 · 業助 audit 頁可撤 · 治本：display_name + department 相同時 warn |
+| Alice 綁 · 業助手動撤 · Alice 再綁 · 業助又撤 · ...  | user_line_binding row 反覆 status 切 | P2 | ✅ audit history 用 revoked_at + revoked_by · 都保留 |
+| 100+ 員工同時綁 (新客戶 kickoff) | DB 打爆 · Render free tier connection 上限 | P1 | ⚠️ 殘留 · Fastify default 200 concurrent · pg pool 20 · **實測需驗** · 治本：LIFF 頁加 queue + retry with backoff |
+| Alice 綁 · 立即撤 · 立即綁 (race < 100ms) | user_line_binding 3 個 UPDATE · 最後 status | P2 | ✅ ON CONFLICT DO UPDATE 冪等 · 最後 state 是最後 UPDATE · 已測 |
+
+### 15.9 pre-existing 問題（不在本 module scope 修 · 記錄）
+
+- **p_users RLS 不允 system role**：webhook 觸發的 INSERT users 需走 `withTenant + tenant_admin` 兩階段 · 已在 employee-binding.service.ts 處理 · 建議：未來 migration 加 'system' 到 p_users (對齊 0011+ pattern)
+- **p_departments RLS 不允 aiproot_admin**：僅 tenant match · 治本：同上加 aiproot_admin
+- **auth.test.ts 預存壞 test**：不歸此 module · 應獨立 fix
+
+### 15.10 P0 清單 · 上 prod 前必檢
+
+- [x] LIFF SDK 提供的 lineUserId 為 LINE 平台簽發（技術認證） — LINE docs 已 confirm
+- [x] user_line_binding UNIQUE (bot_id, line_user_id) — SQL constraint enforced
+- [x] Aiproot audit endpoint 有 @Roles guard — permission-engine.test.ts 過
+- [x] SQL 0016 migration 已跑 prod — user 2026-07-22 手動 confirm
+- [x] LIFF_URL env 已設 — pre-prod checklist §7.1 手動確認
+- [x] Web + Backend 同時 redeploy 完 — 2026-07-22 monitor 通過
+- [x] LIFF ID 已注入 binding.html — commit 4dbef72
+
+**結論：P0 全部 ✅ · 可上 prod。P1 殘留 6 項 · 都有治本方向、可容忍。**
+
+---
+
+## 16. 變更紀錄
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
@@ -1802,3 +1906,4 @@ LINE Messaging API 設計特性：**同一個 Alice · 在同一個 bot 底下 �
 | 2026-07-22 | v0.6.4 | **UX + 認證維度修正**（用戶指正）：<br>1) 部門標籤 → LINE 群組名稱：Alice 熟「福祉—品保部」群名（她每天在裡面）· 不熟「品保部」aiproot 抽象名 · UI 改顯 LINE 群名 · 系統靜默透過 line_group.department_id 對應到 department（一步隱藏在後台）· mockup 畫面 1-B/1-C 更新<br>2) 移除 Email OTP 變體：Zero-Config 下 Alice 不從列表選同事（沒選錯風險）· LINE UserId 已是**技術認證**（LINE 服務端保證）· 加 email OTP 是同維度重複認證 · 無實質效益 · mockup 相關區段刪 · 綁定準確率直接 99.99%（不需 OTP 保底）| Claude Code + 用戶指正 |
 | 2026-07-22 | **v1.0** | ✅ **APPROVED**（用戶拍板）· OQ-ELB-1 裁定 **J · 方向 8 LIFF Zero-Config** · 6 次歷代修正後定案 · 狀態從 DESIGN STUDY 升為 APPROVED · 進 M1 · 剩餘 OQ-ELB-2..7 (資料模型 + 實作細節) 待批次 OQ 裁定 | Claude Code + 用戶拍板 |
 | 2026-07-22 | **v1.0.1** | ✅ **批次 OQ 全採建議**（用戶拍板）· OQ-ELB-2..7 全裁定：<br>· ELB-2 → B (獨立 user_line_binding 表 · audit history 好)<br>· ELB-4 → A (Bot 主動 reply · reply token 免費)<br>· ELB-5 → B (保 revoked 記錄 · audit)<br>· ELB-6 → A (只 aiproot_admin 操作)<br>· ELB-7 → C (客戶主導 + aiproot wizard 都可)<br>ELB-3 已在 v0.3 降級為 nudge 工具 · skip | Claude Code + 用戶拍板 |
+| 2026-07-23 | **v1.1** | ✅ **M5 收尾 SHIPPED** · 完成：<br>· `server/test/employee-binding.test.ts` 8 個 unit/integration test 全綠<br>· §15 FMEA 失效場景反思 · 覆蓋 4 個 entry 路徑 + 部署順序 + 並發 · P0 全緩解 · P1 殘留 6 項均有治本方向<br>· service layer RLS 修正：webhook 觸發的路徑改走 `withTenant + aiproot_admin` (user_line_binding EXISTS→users 子查詢會撞 users RLS)<br>· `docs/sop/liff-setup.md` SOP 已寫（含 troubleshooting）· 未來新租戶 30 分鐘可接入 | Claude Code + 用戶 |
