@@ -34,6 +34,11 @@ export class LlmConfigService {
     return { ...rest, apiKeyMasked: this.repo.maskApiKey(apiKey) };
   }
 
+  async deleteConfig(tenantId: string): Promise<{ deleted: boolean }> {
+    const tx = currentTx();
+    return this.repo.delete(tx, tenantId);
+  }
+
   // 給 pipeline 用 · 讀明碼 apiKey · 走 raw db（sync job 在 request scope 外）
   async getForRuntime(tenantId: string): Promise<LlmConfigRow | null> {
     return this.repo.get(rawDb, tenantId);

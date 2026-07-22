@@ -356,9 +356,12 @@ export interface LlmConfigGetResponse {
   providerModels: Record<LlmProviderName, string[]>;
 }
 
-export const getLlmConfig = () => req<LlmConfigGetResponse>("/llm-config");
+// aiproot 統管 · 需帶 tenantId · 未帶或非 aiproot_admin 都會被 backend 擋
+export const getLlmConfig = (tenantId: string) =>
+  req<LlmConfigGetResponse>(`/llm-config?tenantId=${encodeURIComponent(tenantId)}`);
 
 export const putLlmConfig = (payload: {
+  tenantId: string;
   provider: LlmProviderName;
   model: string;
   apiKey: string;
@@ -370,6 +373,10 @@ export const putLlmConfig = (payload: {
     method: "PUT",
     body: JSON.stringify(payload),
   });
+
+// 清 tenant config · 讓 backend fallback 走 env ANTHROPIC_API_KEY (平台預設)
+export const deleteLlmConfig = (tenantId: string) =>
+  req<{ deleted: boolean }>(`/llm-config/${encodeURIComponent(tenantId)}`, { method: "DELETE" });
 
 // === LINE Bot / Group Registry (line-ingest module) ===
 

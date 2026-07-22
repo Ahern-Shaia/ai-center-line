@@ -12,11 +12,15 @@ import {
 import {
   getLlmConfig,
   putLlmConfig,
+  deleteLlmConfig,
+  listAiprootTenants,
   type LlmConfigMasked,
   type LlmProviderName,
+  type AiprootTenantOption,
   ApiError,
 } from "../api";
 import { useToast } from "../Toast";
+import ConfirmDialog from "../shared/ConfirmDialog";
 
 interface ProviderDef {
   name: LlmProviderName;
@@ -85,8 +89,12 @@ function ModelSelect({
 
 export default function LlmSettings() {
   const toast = useToast();
+  const [tenants, setTenants] = useState<AiprootTenantOption[]>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
   const [current, setCurrent] = useState<LlmConfigMasked | null>(null);
   const [providerModels, setProviderModels] = useState<Record<LlmProviderName, string[]>>({
     anthropic: [], openai: [], google: [], ollama: [], deepseek: [],
@@ -98,18 +106,26 @@ export default function LlmSettings() {
   const [baseUrl, setBaseUrl] = useState("");
 
   const providerCfg = PROVIDER_BY_NAME[provider];
+  const selectedTenant = tenants.find((t) => t.tenantId === selectedTenantId) ?? null;
 
-  const fetchConfig = useCallback(async () => {
+  const fetchConfig = useCallback(async (tenantId: string) => {
+    if (!tenantId) { setLoading(false); return; }
+    setLoading(true);
     try {
-      const res = await getLlmConfig();
+      const res = await getLlmConfig(tenantId);
       setProviderModels(res.providerModels);
       if (res.config) {
         setCurrent(res.config);
         setProvider(res.config.provider);
         setModel(res.config.model);
         setBaseUrl(res.config.baseUrl ?? "");
+        setApiKey("");
       } else {
+        setCurrent(null);
+        setProvider("anthropic");
         setModel(res.providerModels.anthropic[0] ?? "");
+        setBaseUrl("");
+        setApiKey("");
       }
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
@@ -118,7 +134,11 @@ export default function LlmSettings() {
     }
   }, [toast]);
 
-  useEffect(() => { fetchConfig(); }, [fetchConfig]);
+  useEffect(() => {
+    listAiprootTenants().then((res) => setTenants(res.tenants)).catch(() => undefined);
+  }, []);
+
+  useEffect(() => { void fetchConfig(selectedTenantId); }, [fetchConfig, selectedTenantId]);
 
   useEffect(() => {
     const models = providerModels[provider];
@@ -127,7 +147,11 @@ export default function LlmSettings() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (providerCfg.needsKey && !apiKey.trim()) {
+    if (!selectedTenantId) {
+      toast.show("請先於上方選擇租戶", "danger");
+      return;
+    }
+    if (providerCfg.needsKey && !apiKey.trim() && !current) {
       toast.show(`${providerCfg.label} 需要 API 金鑰`, "danger");
       return;
     }
@@ -138,14 +162,15 @@ export default function LlmSettings() {
     setSaving(true);
     try {
       await putLlmConfig({
+        tenantId: selectedTenantId,
         provider,
         model: model.trim(),
         apiKey: apiKey.trim() || "not-required",
         baseUrl: baseUrl.trim() || undefined,
       });
-      toast.show("設定已儲存 · 下次分析採用新設定", "ok");
+      toast.show(`${selectedTenant?.tenantName ?? "租戶"} · 設定已儲存 · 下次分析採用新設定`, "ok");
       setApiKey("");
-      await fetchConfig();
+      await fetchConfig(selectedTenantId);
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "儲存失敗", "danger");
     } finally {
@@ -153,8 +178,51 @@ export default function LlmSettings() {
     }
   }
 
+  async function handleReset() {
+    if (!selectedTenantId) return;
+    setResetting(true);
+    try {
+      await deleteLlmConfig(selectedTenantId);
+      toast.show(`${selectedTenant?.tenantName ?? "租戶"} · 已重設為平台預設`, "ok");
+      setConfirmReset(false);
+      await fetchConfig(selectedTenantId);
+    } catch (err) {
+      toast.show(err instanceof ApiError ? err.message : "重設失敗", "danger");
+    } finally {
+      setResetting(false);
+    }
+  }
+
+  // 沒選 tenant · 引導頁
+  if (!selectedTenantId) {
+    return (
+      <div className="pane pane-center">
+        <div className="llm-page">
+          <h1>語言模型設定</h1>
+          <p style={{ color: "var(--ink-3)", marginTop: 4, marginBottom: 24, fontSize: 13 }}>
+            由 aiproot 統一管理 · 為每個租戶設定 AI 對話分析採用的語言模型。<br />
+            未設定的租戶 · 自動使用平台預設 (env <code>ANTHROPIC_API_KEY</code>)。
+          </p>
+          <TenantPicker tenants={tenants} value={selectedTenantId} onChange={setSelectedTenantId} />
+          <div className="dm-empty" style={{ marginTop: 20 }}>
+            請先選擇租戶 · 才能查看 / 設定該租戶的模型配置
+            <div className="dm-empty-hint">未設定的租戶會 fallback 到平台預設 · 客戶端無感</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
-    return <div className="pane pane-center"><div className="llm-page" style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>載入中…</div></div>;
+    return (
+      <div className="pane pane-center">
+        <div className="llm-page">
+          <h1>語言模型設定</h1>
+          <TenantPicker tenants={tenants} value={selectedTenantId} onChange={setSelectedTenantId} />
+          <div className="dm-empty" style={{ marginTop: 20 }}>載入中…</div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -162,11 +230,13 @@ export default function LlmSettings() {
       <div className="llm-page">
       <h1>語言模型設定</h1>
       <p style={{ color: "var(--ink-3)", marginTop: 4, marginBottom: 20, fontSize: 13 }}>
-        設定 AI 對話分析使用的模型 · 支援 5 家供應商。API 金鑰以 AES-256 加密後存入資料庫 · 僅分析時解密 · 介面僅顯示遮罩內容。
+        由 aiproot 統一管理 · 為 <b>{selectedTenant?.tenantName ?? "當前租戶"}</b> 設定 AI 對話分析採用的模型。API 金鑰以 AES-256 加密存 DB · 僅分析時解密。
       </p>
 
-      {current && (
-        <div className="llm-current-chip">
+      <TenantPicker tenants={tenants} value={selectedTenantId} onChange={setSelectedTenantId} />
+
+      {current ? (
+        <div className="llm-current-chip" style={{ marginTop: 16 }}>
           <span className="dot" />
           目前
           <b>{PROVIDER_BY_NAME[current.provider]?.label ?? current.provider}</b>
@@ -174,6 +244,11 @@ export default function LlmSettings() {
           金鑰
           <code>{current.apiKeyMasked}</code>
           · 更新於 {new Date(current.updatedAt).toLocaleString("zh-TW", { hour12: false })}
+        </div>
+      ) : (
+        <div className="dm-empty" style={{ marginTop: 16 }}>
+          此租戶尚未設定 · <b>使用平台預設</b>（env <code>ANTHROPIC_API_KEY</code> · Anthropic Opus 4.7）
+          <div className="dm-empty-hint">如要為此租戶客製 provider / model · 於下方填表儲存</div>
         </div>
       )}
 
@@ -253,13 +328,88 @@ export default function LlmSettings() {
         )}
 
         <div className="llm-form-actions">
-          <button type="submit" className="btn btn-primary" disabled={saving}>
+          <button type="submit" className="btn primary" disabled={saving}>
             {saving ? "儲存中…" : "儲存設定"}
           </button>
+          {current && (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setConfirmReset(true)}
+              disabled={saving || resetting}
+              title="清除此租戶的自訂設定 · 讓後端 fallback 走 env ANTHROPIC_API_KEY"
+            >
+              重設為平台預設
+            </button>
+          )}
           {current && <span className="llm-hint">下次上傳的對話分析採用新設定 · 已完成的分析結果不受影響</span>}
         </div>
       </form>
       </div>
+
+      <ConfirmDialog
+        open={confirmReset}
+        onClose={() => !resetting && setConfirmReset(false)}
+        onConfirm={() => void handleReset()}
+        busy={resetting}
+        title="重設為平台預設"
+        body={<>
+          即將清除 <b>{selectedTenant?.tenantName ?? "此租戶"}</b> 的 LLM 設定 · 之後分析將 fallback 到 env <code>ANTHROPIC_API_KEY</code>。<br />
+          原 API 金鑰會被刪除 · 若之後需要客製 · 需重新填寫。
+        </>}
+        confirmLabel="重設"
+      />
+    </div>
+  );
+}
+
+function TenantPicker({
+  tenants,
+  value,
+  onChange,
+}: {
+  tenants: AiprootTenantOption[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <span style={{ fontSize: 13.5, color: "var(--ink-2)" }}>目前操作租戶</span>
+      <Select
+        className="llm-select"
+        selectedKey={value || "__none__"}
+        onSelectionChange={(k) => onChange(k === "__none__" ? "" : String(k))}
+        aria-label="租戶"
+      >
+        <AriaButton className="llm-select-btn" style={{ minWidth: 220 }}>
+          <SelectValue className="llm-select-value">
+            {() => value
+              ? (tenants.find((t) => t.tenantId === value)?.tenantName ?? value.slice(0, 8))
+              : "選擇租戶"}
+          </SelectValue>
+          <svg className="llm-select-chev" width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
+            <path d="M1 1l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </AriaButton>
+        <Popover className="llm-select-pop" offset={4}>
+          <ListBox
+            className="llm-select-list"
+            items={[{ id: "__none__", name: "— 請選擇 —" }, ...tenants.map((t) => ({
+              id: t.tenantId,
+              name: t.tenantName,
+            }))]}
+          >
+            {(item) => (
+              <ListBoxItem id={item.id} textValue={item.name} className="llm-select-item">
+                <span>{item.name}</span>
+                <svg className="llm-select-check" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                  <path d="m2 7 3 3 7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </ListBoxItem>
+            )}
+          </ListBox>
+        </Popover>
+      </Select>
     </div>
   );
 }

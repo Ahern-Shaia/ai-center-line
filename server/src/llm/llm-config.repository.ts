@@ -101,6 +101,13 @@ export class LlmConfigRepository {
     };
   }
 
+  async delete(tx: Db, tenantId: string): Promise<{ deleted: boolean }> {
+    const res = await tx.execute<{ tenant_id: string }>(sql`
+      DELETE FROM tenant_llm_config WHERE tenant_id = ${tenantId} RETURNING tenant_id
+    `);
+    return { deleted: res.rows.length > 0 };
+  }
+
   // 用於 API 回應 · mask apiKey（sk-***XXXX）避免明碼 return
   maskApiKey(apiKey: string): string {
     if (apiKey.length <= 10) return "***";
