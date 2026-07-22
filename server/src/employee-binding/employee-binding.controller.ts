@@ -41,6 +41,9 @@ export class EmployeeBindingController {
     if (!botId || !lineUserId) {
       throw new BadRequestException("botId 和 lineUserId 必要");
     }
+    if (!isValidUuid(botId)) {
+      throw new BadRequestException("botId 格式錯 · 需為 UUID");
+    }
     return this.svc.getLiffPrefill(botId, lineUserId);
   }
 
@@ -59,6 +62,9 @@ export class EmployeeBindingController {
   }) {
     if (!body?.botId || !body?.lineUserId || !body?.displayName) {
       throw new BadRequestException("botId, lineUserId, displayName 必要");
+    }
+    if (!isValidUuid(body.botId)) {
+      throw new BadRequestException("botId 格式錯 · 需為 UUID");
     }
     return this.svc.completeLiffBinding({
       botId: body.botId,
@@ -114,4 +120,9 @@ export class EmployeeBindingController {
   async unboundStats() {
     return { stats: await this.nudge.computeUnboundStats() };
   }
+}
+
+// UUID v4 pattern · 8-4-4-4-12 hex · defensive check 避免 SQL 22P02
+function isValidUuid(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 }
