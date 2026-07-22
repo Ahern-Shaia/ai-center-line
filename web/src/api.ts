@@ -666,3 +666,11 @@ export const runPendingBatches = (lookbackDays?: number) =>
     "/aiproot-console/batches/run-pending",
     { method: "POST", body: JSON.stringify({ lookbackDays }) },
   );
+
+// aiproot 通用 · 列所有租戶（下拉篩選用）
+export interface AiprootTenantOption {
+  tenantId: string;
+  tenantName: string;
+}
+export const listAiprootTenants = () =>
+  req<{ tenants: AiprootTenantOption[] }>("/aiproot-console/tenants");

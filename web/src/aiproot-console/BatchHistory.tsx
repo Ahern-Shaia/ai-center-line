@@ -1,9 +1,18 @@
-import { useEffect, useState } from "react";
-import { ApiError, listAnalysisBatches, rerunAnalysisBatch, runPendingBatches, type AnalysisBatchRow } from "../api";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ApiError,
+  listAnalysisBatches,
+  listAiprootTenants,
+  rerunAnalysisBatch,
+  runPendingBatches,
+  type AnalysisBatchRow,
+  type AiprootTenantOption,
+} from "../api";
 import { useToast } from "../Toast";
 
 // AIPROOT 管理 → 對話分析歷程 · 只 aiproot_admin / consultant 可見
 // 列所有 batch (tenant/group/day/status) · 手動 rerun · 手動掃 pending
+// M4-hotfix: 加租戶下拉篩選 · tenant name 顯示 · 每租戶收合顯示 batch 數
 
 const STATUS_LABEL: Record<AnalysisBatchRow["status"], string> = {
   pending: "待跑",
@@ -23,13 +32,15 @@ const STATUS_TONE: Record<AnalysisBatchRow["status"], string> = {
 export default function BatchHistory() {
   const toast = useToast();
   const [rows, setRows] = useState<AnalysisBatchRow[]>([]);
+  const [tenants, setTenants] = useState<AiprootTenantOption[]>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState<string>("");   // "" = 全租戶
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  async function refresh() {
+  async function refresh(tenantId: string = selectedTenantId) {
     setLoading(true);
     try {
-      const res = await listAnalysisBatches();
+      const res = await listAnalysisBatches(tenantId || undefined);
       setRows(res.batches);
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "載入 batch 歷程失敗", "danger");
@@ -38,11 +49,34 @@ export default function BatchHistory() {
     }
   }
 
-  useEffect(() => { void refresh(); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    // 首次載 tenant list + batch list
+    listAiprootTenants().then((res) => setTenants(res.tenants)).catch(() => undefined);
+    void refresh("");
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // tenantId → tenantName lookup（顯示用）
+  const tenantName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of tenants) map.set(t.tenantId, t.tenantName);
+    return (id: string) => map.get(id) ?? id.slice(0, 8);
+  }, [tenants]);
+
+  // 每租戶 batch count（下拉附註）
+  const countByTenant = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of rows) map.set(r.tenantId, (map.get(r.tenantId) ?? 0) + 1);
+    return map;
+  }, [rows]);
+
+  async function onTenantChange(id: string) {
+    setSelectedTenantId(id);
+    void refresh(id);
+  }
 
   async function onRerun(row: AnalysisBatchRow) {
     if (busy) return;
-    if (!window.confirm(`重跑 ${row.groupId} · ${row.batchDate}？`)) return;
+    if (!window.confirm(`重跑 ${tenantName(row.tenantId)} · ${row.groupId.slice(0, 12)}… · ${row.batchDate}？`)) return;
     setBusy(true);
     try {
       const res = await rerunAnalysisBatch({
@@ -50,7 +84,8 @@ export default function BatchHistory() {
         groupId: row.groupId,
         batchDate: row.batchDate,
       });
-      toast.show(`Batch ${res.status} · ${res.messageCount} 則訊息`, res.status === "failed" ? "danger" : "ok");
+      const tone = res.status === "failed" ? "danger" : "ok";
+      toast.show(`Batch ${res.status} · ${res.messageCount} 則訊息`, tone);
       void refresh();
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "重跑失敗", "danger");
@@ -83,7 +118,31 @@ export default function BatchHistory() {
             LINE 訊息 → 每日 08:00 (台北) 自動 batch → analysis_upload · 也可手動重跑
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--ink-2)" }}>
+            <span>租戶</span>
+            <select
+              value={selectedTenantId}
+              onChange={(e) => void onTenantChange(e.target.value)}
+              disabled={loading || busy}
+              style={{
+                padding: "6px 10px",
+                border: "1px solid var(--line)",
+                borderRadius: 6,
+                background: "var(--surface)",
+                color: "var(--ink)",
+                fontSize: 13,
+                minWidth: 180,
+              }}
+            >
+              <option value="">全部租戶（{rows.length} 筆）</option>
+              {tenants.map((t) => (
+                <option key={t.tenantId} value={t.tenantId}>
+                  {t.tenantName}（{countByTenant.get(t.tenantId) ?? 0}）
+                </option>
+              ))}
+            </select>
+          </label>
           <button className="btn" onClick={() => void refresh()} disabled={loading || busy}>重新整理</button>
           <button className="btn primary" onClick={() => void onRunPending()} disabled={busy}>掃 pending 全跑</button>
         </div>
@@ -93,7 +152,9 @@ export default function BatchHistory() {
         <div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>載入中…</div>
       ) : rows.length === 0 ? (
         <div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>
-          尚無 batch 記錄 · 待第一筆 webhook 訊息 + cron 觸發或手動掃
+          {selectedTenantId
+            ? `該租戶目前無 batch 記錄 · 待訊息累積後由 cron / 手動觸發`
+            : "尚無 batch 記錄 · 待第一筆 webhook 訊息 + cron 觸發或手動掃"}
         </div>
       ) : (
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
@@ -114,7 +175,7 @@ export default function BatchHistory() {
               {rows.map((r) => (
                 <tr key={r.batchId} style={{ borderBottom: "1px solid var(--line-soft)" }}>
                   <td style={cell}><span className="mono">{r.batchDate}</span></td>
-                  <td style={cell}><span className="mono" title={r.tenantId}>{r.tenantId.slice(0, 8)}</span></td>
+                  <td style={cell}>{tenantName(r.tenantId)}</td>
                   <td style={cell}><span className="mono" title={r.groupId}>{r.groupId.slice(0, 12)}…</span></td>
                   <td style={cell}>{r.messageCount}</td>
                   <td style={{ ...cell, color: STATUS_TONE[r.status], fontWeight: 500 }}>
