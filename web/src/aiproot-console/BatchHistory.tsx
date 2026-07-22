@@ -17,10 +17,12 @@ import {
   type AiprootTenantOption,
 } from "../api";
 import { useToast } from "../Toast";
+import ConfirmDialog from "../shared/ConfirmDialog";
 
 // AIPROOT 管理 → 對話分析歷程 · 只 aiproot_admin / consultant 可見
-// 列所有 batch (tenant/group/day/status) · 手動 rerun · 手動掃 pending
-// M4-hotfix: 加租戶下拉篩選 · tenant name 顯示 · 每租戶收合顯示 batch 數
+// 依 feedback_reuse_project_ui_conventions.md 走 6 大慣例：
+//   Dialog=ConfirmDialog · table=.dm-table · empty=.dm-empty
+//   date=.toLocaleString("zh-TW") · number=.toLocaleString() · 下拉=react-aria Select
 
 const STATUS_LABEL: Record<AnalysisBatchRow["status"], string> = {
   pending: "待跑",
@@ -31,19 +33,25 @@ const STATUS_LABEL: Record<AnalysisBatchRow["status"], string> = {
 };
 const STATUS_TONE: Record<AnalysisBatchRow["status"], string> = {
   pending: "var(--ink-3)",
-  running: "var(--brand-500)",
+  running: "var(--primary)",
   completed: "var(--ok-600)",
   failed: "var(--rose-600)",
   empty: "var(--ink-3)",
 };
 
+type PendingConfirm =
+  | { type: "rerun"; row: AnalysisBatchRow }
+  | { type: "run-pending" }
+  | null;
+
 export default function BatchHistory() {
   const toast = useToast();
   const [rows, setRows] = useState<AnalysisBatchRow[]>([]);
   const [tenants, setTenants] = useState<AiprootTenantOption[]>([]);
-  const [selectedTenantId, setSelectedTenantId] = useState<string>("");   // "" = 全租戶
+  const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState<PendingConfirm>(null);
 
   async function refresh(tenantId: string = selectedTenantId) {
     setLoading(true);
@@ -58,19 +66,16 @@ export default function BatchHistory() {
   }
 
   useEffect(() => {
-    // 首次載 tenant list + batch list
     listAiprootTenants().then((res) => setTenants(res.tenants)).catch(() => undefined);
     void refresh("");
   }, []);   // eslint-disable-line react-hooks/exhaustive-deps
 
-  // tenantId → tenantName lookup（顯示用）
   const tenantName = useMemo(() => {
     const map = new Map<string, string>();
     for (const t of tenants) map.set(t.tenantId, t.tenantName);
     return (id: string) => map.get(id) ?? id.slice(0, 8);
   }, [tenants]);
 
-  // 每租戶 batch count（下拉附註）
   const countByTenant = useMemo(() => {
     const map = new Map<string, number>();
     for (const r of rows) map.set(r.tenantId, (map.get(r.tenantId) ?? 0) + 1);
@@ -82,44 +87,63 @@ export default function BatchHistory() {
     void refresh(id);
   }
 
-  async function onRerun(row: AnalysisBatchRow) {
-    if (busy) return;
-    if (!window.confirm(`重跑 ${tenantName(row.tenantId)} · ${row.groupId.slice(0, 12)}… · ${row.batchDate}？`)) return;
+  async function executeConfirm() {
+    if (!confirm) return;
     setBusy(true);
     try {
-      const res = await rerunAnalysisBatch({
-        tenantId: row.tenantId,
-        groupId: row.groupId,
-        batchDate: row.batchDate,
-      });
-      const tone = res.status === "failed" ? "danger" : "ok";
-      toast.show(`Batch ${res.status} · ${res.messageCount} 則訊息`, tone);
+      if (confirm.type === "rerun") {
+        const row = confirm.row;
+        const res = await rerunAnalysisBatch({
+          tenantId: row.tenantId,
+          groupId: row.groupId,
+          batchDate: row.batchDate,
+        });
+        toast.show(`Batch ${res.status} · ${res.messageCount.toLocaleString()} 則訊息`,
+          res.status === "failed" ? "danger" : "ok");
+      } else {
+        const res = await runPendingBatches(2);
+        toast.show(
+          `共 ${res.total.toLocaleString()} 個 · 完成 ${res.completed} · 空群 ${res.empty} · 失敗 ${res.failed}`,
+          "ok",
+        );
+      }
+      setConfirm(null);
       void refresh();
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "重跑失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : "執行失敗", "danger");
     } finally {
       setBusy(false);
     }
   }
 
-  async function onRunPending() {
-    if (busy) return;
-    if (!window.confirm("掃過去 2 天所有未跑 batch · 併發 3 · 可能耗時 · 確定嗎？")) return;
-    setBusy(true);
-    try {
-      const res = await runPendingBatches(2);
-      toast.show(`共 ${res.total} 個 · 完成 ${res.completed} · 空群 ${res.empty} · 失敗 ${res.failed}`, "ok");
-      void refresh();
-    } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "掃 pending 失敗", "danger");
-    } finally {
-      setBusy(false);
-    }
-  }
+  const confirmDialog = confirm && (
+    <ConfirmDialog
+      open
+      onClose={() => !busy && setConfirm(null)}
+      onConfirm={() => void executeConfirm()}
+      busy={busy}
+      title={confirm.type === "rerun" ? "重跑 Batch" : "掃 pending 全跑"}
+      body={confirm.type === "rerun" ? (
+        <>
+          即將重跑：<br />
+          租戶 <b>{tenantName(confirm.row.tenantId)}</b><br />
+          群組 <code className="mono">{confirm.row.groupId.slice(0, 24)}…</code><br />
+          日期 <b>{confirm.row.batchDate}</b>
+        </>
+      ) : (
+        <>掃過去 2 天所有未跑 batch · 併發 3 · 可能耗時 · 依訊息量決定。</>
+      )}
+      confirmLabel={confirm.type === "rerun" ? "重跑" : "全跑"}
+    />
+  );
+
+  const dateFmt = (iso: string | null) => iso
+    ? new Date(iso).toLocaleString("zh-TW", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
+    : "—";
 
   return (
     <div className="pane">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 20 }}>對話分析歷程</h1>
           <div style={{ fontSize: 13, color: "var(--ink-3)", marginTop: 4 }}>
@@ -139,7 +163,7 @@ export default function BatchHistory() {
               <SelectValue className="llm-select-value">
                 {() => selectedTenantId
                   ? `${tenantName(selectedTenantId)}（${countByTenant.get(selectedTenantId) ?? 0}）`
-                  : `全部租戶（${rows.length}）`}
+                  : `全部租戶（${rows.length.toLocaleString()}）`}
               </SelectValue>
               <svg className="llm-select-chev" width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
                 <path d="M1 1l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -148,7 +172,7 @@ export default function BatchHistory() {
             <Popover className="llm-select-pop" offset={4}>
               <ListBox
                 className="llm-select-list"
-                items={[{ id: "__all__", name: `全部租戶（${rows.length}）` }, ...tenants.map((t) => ({
+                items={[{ id: "__all__", name: `全部租戶（${rows.length.toLocaleString()}）` }, ...tenants.map((t) => ({
                   id: t.tenantId,
                   name: `${t.tenantName}（${countByTenant.get(t.tenantId) ?? 0}）`,
                 }))]}
@@ -165,50 +189,53 @@ export default function BatchHistory() {
             </Popover>
           </Select>
           <button className="btn" onClick={() => void refresh()} disabled={loading || busy}>重新整理</button>
-          <button className="btn primary" onClick={() => void onRunPending()} disabled={busy}>掃 pending 全跑</button>
+          <button className="btn primary" onClick={() => setConfirm({ type: "run-pending" })} disabled={busy}>掃 pending 全跑</button>
         </div>
       </div>
 
       {loading ? (
-        <div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>載入中…</div>
+        <div className="dm-empty">載入中…</div>
       ) : rows.length === 0 ? (
-        <div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>
+        <div className="dm-empty">
           {selectedTenantId
-            ? `該租戶目前無 batch 記錄 · 待訊息累積後由 cron / 手動觸發`
+            ? "該租戶目前無 batch 記錄 · 待訊息累積後由 cron / 手動觸發"
             : "尚無 batch 記錄 · 待第一筆 webhook 訊息 + cron 觸發或手動掃"}
+          <div className="dm-empty-hint">Cron 排程：每日 08:00 (台北)</div>
         </div>
       ) : (
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          <table className="table" style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div className="dm-table-wrap">
+          <table className="dm-table">
             <thead>
-              <tr style={{ borderBottom: "1px solid var(--line)", background: "var(--surface-2)" }}>
-                <th style={cellHdr}>日期</th>
-                <th style={cellHdr}>租戶</th>
-                <th style={cellHdr}>Group</th>
-                <th style={cellHdr}>訊息數</th>
-                <th style={cellHdr}>狀態</th>
-                <th style={cellHdr}>觸發</th>
-                <th style={cellHdr}>完成時間</th>
-                <th style={cellHdr}></th>
+              <tr>
+                <th>日期</th>
+                <th>租戶</th>
+                <th>Group</th>
+                <th className="num">訊息數</th>
+                <th>狀態</th>
+                <th>觸發</th>
+                <th>完成時間</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.batchId} style={{ borderBottom: "1px solid var(--line-soft)" }}>
-                  <td style={cell}><span className="mono">{r.batchDate}</span></td>
-                  <td style={cell}>{tenantName(r.tenantId)}</td>
-                  <td style={cell}><span className="mono" title={r.groupId}>{r.groupId.slice(0, 12)}…</span></td>
-                  <td style={cell}>{r.messageCount}</td>
-                  <td style={{ ...cell, color: STATUS_TONE[r.status], fontWeight: 500 }}>
+                <tr key={r.batchId}>
+                  <td className="mono">{r.batchDate}</td>
+                  <td className="dm-td-name">{tenantName(r.tenantId)}</td>
+                  <td className="mono" title={r.groupId}>{r.groupId.slice(0, 12)}…</td>
+                  <td className="num">{r.messageCount.toLocaleString()}</td>
+                  <td style={{ color: STATUS_TONE[r.status], fontWeight: 500 }}>
                     {STATUS_LABEL[r.status]}
-                    {r.errorMessage && <div style={{ fontSize: 11, color: "var(--rose-600)", marginTop: 2 }} title={r.errorMessage}>
-                      {r.errorMessage.slice(0, 40)}…
-                    </div>}
+                    {r.errorMessage && (
+                      <div style={{ fontSize: 11, color: "var(--rose-600)", marginTop: 2 }} title={r.errorMessage}>
+                        {r.errorMessage.slice(0, 40)}…
+                      </div>
+                    )}
                   </td>
-                  <td style={cell}><span className="mono" style={{ fontSize: 11 }}>{r.triggeredBy}</span></td>
-                  <td style={cell}><span className="mono" style={{ fontSize: 11 }}>{r.completedAt?.slice(0, 16) ?? "—"}</span></td>
-                  <td style={cell}>
-                    <button className="btn small" onClick={() => void onRerun(r)} disabled={busy}>重跑</button>
+                  <td className="mono">{r.triggeredBy}</td>
+                  <td className="mono">{dateFmt(r.completedAt)}</td>
+                  <td>
+                    <button className="btn small" onClick={() => setConfirm({ type: "rerun", row: r })} disabled={busy}>重跑</button>
                   </td>
                 </tr>
               ))}
@@ -216,21 +243,8 @@ export default function BatchHistory() {
           </table>
         </div>
       )}
+
+      {confirmDialog}
     </div>
   );
 }
-
-const cellHdr: React.CSSProperties = {
-  padding: "10px 12px",
-  textAlign: "left",
-  fontSize: 12,
-  fontWeight: 500,
-  color: "var(--ink-2)",
-  textTransform: "uppercase",
-  letterSpacing: 0.5,
-};
-const cell: React.CSSProperties = {
-  padding: "10px 12px",
-  fontSize: 13,
-  color: "var(--ink)",
-};

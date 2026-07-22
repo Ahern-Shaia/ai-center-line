@@ -1496,3 +1496,22 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .cost-pct-txt { font-family:var(--mono); font-size:11.5px; color:var(--ink-2); min-width:38px; text-align:right; }
 
 .cost-empty { padding:24px; text-align:center; color:var(--ink-3); background:var(--surface); border:1px solid var(--line); border-radius:var(--r); font-size:12.5px; }
+
+/* ==================== CONFIRM DIALOG（React Aria Modal · 中央置中 · 取代 window.confirm）==================== */
+.cd-scrim {
+  position:fixed; inset:0; background:rgba(17,24,39,.35); z-index:120;
+  display:flex; align-items:center; justify-content:center; padding:16px;
+  animation:scrim-in .12s var(--ease);
+}
+.cd-scrim[data-exiting] { animation:scrim-out .12s var(--ease) forwards; }
+.cd-modal {
+  background:var(--surface); border-radius:var(--r-lg); box-shadow:0 10px 40px rgba(17,24,39,.16);
+  max-width:440px; width:100%; outline:none; animation:cd-in .18s var(--ease);
+}
+.cd-modal[data-exiting] { animation:cd-out .14s var(--ease) forwards; }
+@keyframes cd-in { from { transform:scale(.96); opacity:0; } to { transform:none; opacity:1; } }
+@keyframes cd-out { to { transform:scale(.96); opacity:0; } }
+.cd-dialog { padding:20px 22px; outline:none; display:flex; flex-direction:column; gap:12px; }
+.cd-title { font-size:15px; font-weight:700; letter-spacing:-.01em; margin:0; color:var(--ink); }
+.cd-body { font-size:13px; color:var(--ink-2); line-height:1.6; }
+.cd-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:4px; }
