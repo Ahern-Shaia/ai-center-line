@@ -1,6 +1,6 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from "@nestjs/common";
 import { sql } from "drizzle-orm";
-import { currentTx, withSystemTx, db as rawDb } from "../db/client.js";
+import { withTenant } from "../db/client.js";
 import { UserLineBindingRepository } from "./user-line-binding.repository.js";
 import { LiffPrefillService } from "./liff-prefill.service.js";
 
@@ -46,11 +46,10 @@ export class EmployeeBindingService {
       }>;
     };
   }> {
-    // 先檢查是否已綁定
-    const existing = await withSystemTx((tx) => this.bindingRepo.getActiveByLineUserId(tx, botId, lineUserId));
+    // 先檢查是否已綁定 · webhook 觸發 · 不知 tenant · 走 aiproot_admin 跨租戶讀
+    const existing = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.bindingRepo.getActiveByLineUserId(tx, botId, lineUserId));
     if (existing) {
-      // 查 user display_name
-      const userRes = await withSystemTx((tx) => tx.execute<{ display_name: string; email: string }>(sql`
+      const userRes = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{ display_name: string; email: string }>(sql`
         SELECT display_name, email FROM users WHERE user_id = ${existing.userId}::uuid
       `));
       const user = userRes.rows[0];
@@ -106,22 +105,23 @@ export class EmployeeBindingService {
     displayName: string;
     departmentName: string | null;
   }> {
-    // 檢查是否已綁定（防重）
-    const existing = await withSystemTx((tx) => this.bindingRepo.getActiveByLineUserId(tx, args.botId, args.lineUserId));
+    // 檢查是否已綁定（防重）· 跨租戶讀走 aiproot_admin (需通過 user_line_binding EXISTS→users 子查詢)
+    const existing = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.bindingRepo.getActiveByLineUserId(tx, args.botId, args.lineUserId));
     if (existing) {
       throw new BadRequestException("已綁定 · 若要更換請聯繫業助");
     }
 
-    return withSystemTx(async (tx) => {
-      // 從 bot 查 tenant_id
-      const botRes = await tx.execute<{ tenant_id: string }>(sql`
+    // Step 1 · 跨租戶查 bot tenant (line_bot 允 aiproot_admin)
+    const bot = await withTenant({ tenantId: null, role: "aiproot_admin" }, async (tx) => {
+      const r = await tx.execute<{ tenant_id: string }>(sql`
         SELECT tenant_id::text FROM line_bot WHERE bot_id = ${args.botId}::uuid LIMIT 1
       `);
-      const bot = botRes.rows[0];
-      if (!bot) throw new NotFoundException("bot 不存在");
-      const tenantId = bot.tenant_id;
+      return r.rows[0];
+    });
+    if (!bot) throw new NotFoundException("bot 不存在");
 
-      // 從 primaryGroupId 查 department_id (若有選 group)
+    // Step 2 · 拿到 tenant 後 · 走 tenant_admin 讀 departments + INSERT users/binding
+    return withTenant({ tenantId: bot.tenant_id, role: "tenant_admin" }, async (tx) => {
       let departmentId: string | null = null;
       let departmentName: string | null = null;
       if (args.primaryGroupId) {
@@ -136,15 +136,14 @@ export class EmployeeBindingService {
         departmentId = g?.department_id ?? null;
         departmentName = g?.department_name ?? null;
       }
-
-      // INSERT users · display_name 用 Alice 確認的（default 是 line_member 的 display_name）
-      // role='group_owner' 對齊 CLAUDE.md 現有 role 設計（v1 不加 employee role）
+      const tenantId = bot.tenant_id;
+      // INSERT users · role='group_owner' 對齊現有 role 設計（v1 不加 employee role）
       const userRes = await tx.execute<{ user_id: string }>(sql`
         INSERT INTO users
           (tenant_id, email, display_name, department_id, role, must_change_password)
         VALUES
           (${tenantId}::uuid,
-           ${args.lineUserId + "@line.local"},  -- LIFF 綁定沒 email · 用 line_user_id 佔位
+           ${args.lineUserId + "@line.local"},
            ${args.displayName},
            ${departmentId}::uuid,
            'group_owner',
@@ -153,12 +152,11 @@ export class EmployeeBindingService {
       `);
       const newUserId = userRes.rows[0].user_id;
 
-      // INSERT binding
       const { bindingId } = await this.bindingRepo.create(tx, {
         userId: newUserId,
         botId: args.botId,
         lineUserId: args.lineUserId,
-        boundBy: newUserId,                                     // self-service · 綁定者是自己
+        boundBy: newUserId,
         bindingMethod: "liff_self_service",
         metadata: args.metadata,
       });
@@ -176,18 +174,19 @@ export class EmployeeBindingService {
 
   /**
    * 依 lineUserId 反查 aiproot user · pipeline / warroom / personal report 都要用
-   * 高頻呼叫 · 走 rawDb（不需 request context）
+   * 高頻呼叫 · user_line_binding USING 子查詢會撞 users RLS · 用 aiproot_admin 跨租戶讀
    */
   async resolveUserByLineUserId(botId: string, lineUserId: string): Promise<string | null> {
-    const binding = await this.bindingRepo.getActiveByLineUserId(rawDb, botId, lineUserId);
+    const binding = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.bindingRepo.getActiveByLineUserId(tx, botId, lineUserId));
     return binding?.userId ?? null;
   }
 
   /**
    * Alice 自撤銷 · 或 aiproot admin 撤銷
+   * 跨租戶 revoke 需 aiproot_admin (bindingId 已知 · RLS 檢 users 子查詢)
    */
   async revokeBinding(bindingId: string, revokedBy: string, reason: "self_revoke" | "aiproot_revoke" | "user_deleted"): Promise<void> {
-    await withSystemTx((tx) => this.bindingRepo.revoke(tx, bindingId, { revokedBy, reason }));
+    await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.bindingRepo.revoke(tx, bindingId, { revokedBy, reason }));
     this.logger.log(`Binding revoked · bindingId=${bindingId} · reason=${reason}`);
   }
 }

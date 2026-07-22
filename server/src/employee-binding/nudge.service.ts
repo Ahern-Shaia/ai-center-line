@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import { sql } from "drizzle-orm";
-import { withSystemTx } from "../db/client.js";
+import { withTenant } from "../db/client.js";
 
 /**
  * Nudge Service · 未綁定偵測工具 · 方向 3（不當綁定 · 只提示）
@@ -40,7 +40,8 @@ export class NudgeService {
     unboundCount: number;
     top: Array<{ senderLineId: string; displayName: string | null; messageCount: number; topGroupName: string | null }>;
   }>> {
-    const tenantsRes = await withSystemTx((tx) => tx.execute<{ tenant_id: string; tenant_name: string }>(sql`
+    // tenants + line_message RLS 需 aiproot_admin 角色跨租戶讀 · withTenant tenantId=null + role=aiproot_admin
+    const tenantsRes = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{ tenant_id: string; tenant_name: string }>(sql`
       SELECT tenant_id::text, tenant_name FROM tenants
     `));
 
@@ -50,7 +51,7 @@ export class NudgeService {
     }> = [];
 
     for (const t of tenantsRes.rows) {
-      const unbound = await withSystemTx((tx) => this.findUnboundActiveUsers(tx, t.tenant_id, 7));
+      const unbound = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.findUnboundActiveUsers(tx, t.tenant_id, 7));
       results.push({
         tenantId: t.tenant_id,
         tenantName: t.tenant_name,
@@ -71,7 +72,7 @@ export class NudgeService {
    * 邏輯對照原 LineMessageRepository.findUnboundActiveUsers
    */
   private async findUnboundActiveUsers(
-    tx: Parameters<Parameters<typeof withSystemTx>[0]>[0],
+    tx: Parameters<Parameters<typeof withTenant>[1]>[0],
     tenantId: string,
     lookbackDays: number,
   ): Promise<Array<{
