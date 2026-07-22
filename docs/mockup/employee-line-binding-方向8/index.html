@@ -184,31 +184,36 @@
     <a href="#compare">✨ 方向 8 vs 7 vs 6 對比</a>
     <a href="#stage-0">階段 0 · 業助前置</a>
     <a href="#stage-1">階段 1 · Alice 綁定（全在 LINE 內）</a>
+    <a href="#unified-userid" style="border-color:var(--ok-600); color:var(--ok-600); font-weight:600;">⭐ 一次綁定 · 兩處識別</a>
     <a href="#stage-2">階段 2 · Alice 日常</a>
-    <a href="#variant">變體 · 加 Email OTP</a>
   </div>
 </div>
 
 <!-- Flow diagram -->
 <div class="flow-diagram">     ┌────────────────────────────────────┐
-     │  0. 前置（業助 · 1 次）             │
-     │  · 建 users（姓名 + 部門 + email）  │
-     │  · 分發 bot QR 給客戶方              │
+     │  0. 前置（Aiproot · 一次性設定）        │
+     │  · 開通租戶 (tenant + admin)          │
+     │  · 建部門 + 分派 group_owner (5-10 人) │
+     │  · 配 LINE bot 到群組                  │
+     │  · ★ NO CSV 員工匯入 · NO 分發密碼     │
      └───────────────┬────────────────────┘
-                     ▼
+                     ▼ 群組收訊 · line_member 自動落
     ┌───────────────────────────────────────┐
-    │      Alice 綁定（全在 LINE 內 · 90 秒）  │
+    │      Alice 綁定（Zero-Config · 60 秒）  │
     │                                       │
     │  1. Alice 加 bot 好友（掃 QR / 搜尋）    │
     │        ↓                              │
     │  2. Bot 私訊：「點下方按鈕綁定」+ LIFF   │
     │        ↓                              │
-    │  3. 點 LIFF · 在 LINE 內開網頁          │
-    │     · SDK 自動取得 UserId (技術認證)    │
+    │  3. LIFF 開啟 · SDK 取 UserId=Uabc123   │
+    │     Backend 查 line_member ·           │
+    │     撈 display_name + 常出現的群 →部門  │
     │        ↓                              │
-    │  4. 網頁顯員工列表 · Alice 選自己        │
+    │  4. LIFF 顯：「你是 王愛麗絲 · 品保部    │
+    │            對嗎?」                    │
     │        ↓                              │
-    │  5. 確認頁「你是王愛麗絲嗎？」→ 確認     │
+    │  5. Alice 點確認 →                     │
+    │     INSERT users · INSERT binding     │
     │        ↓                              │
     │  6. Bot 私訊「綁定成功」                │
     └───────────────────────────────────────┘</div>
@@ -237,8 +242,9 @@
       <tr><td>Alice 需手動打字</td><td>密碼 × 2</td><td>編號 + email</td><td class="highlight-col">無（選項）</td></tr>
       <tr><td>Alice 藍領摩擦</td><td><b>中-高</b></td><td>低</td><td class="highlight-col"><b>極低</b></td></tr>
       <tr><td>業助 per-employee approve</td><td>❌</td><td>✅（每人 30 秒）</td><td class="highlight-col">❌</td></tr>
-      <tr><td>業助工作量（100 員工）</td><td>7-8 小時</td><td>6-7 小時</td><td class="highlight-col"><b>3-4 小時</b></td></tr>
-      <tr><td>綁定準確性</td><td>99.99%</td><td>99.9%</td><td class="highlight-col">99.95%（或 99.99% 含 OTP）</td></tr>
+      <tr><td>業助工作量（100 員工）</td><td>7-8 小時</td><td>6-7 小時</td><td class="highlight-col"><b>&lt; 1 小時（Zero-Config · v0.6.3）</b></td></tr>
+      <tr><td>需 CSV 匯入員工</td><td>✅ 需</td><td>✅ 需</td><td class="highlight-col">❌ <b>不需</b>（自動從 line_member）</td></tr>
+      <tr><td>綁定準確性</td><td>99.99%</td><td>99.9%</td><td class="highlight-col">99.99%（LINE UserId 技術認證 · Zero-Config 無誤選風險）</td></tr>
       <tr><td>認證方式</td><td>OAuth 技術</td><td>業助人肉 + 雙欄位</td><td class="highlight-col">LIFF 技術 + Alice 二次確認</td></tr>
       <tr><td>需 LINE 產品</td><td>Messaging API + Login channel</td><td>Messaging API</td><td class="highlight-col">Messaging API + LIFF channel</td></tr>
       <tr><td>開發工時</td><td>9-12 天</td><td>12-14 天</td><td class="highlight-col">10-13 天</td></tr>
@@ -249,98 +255,78 @@
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div class="stage" id="stage-0">
-  <div class="stage-hdr">
-    <span class="stage-num">STAGE 0</span>
+  <div class="stage-hdr" style="background:linear-gradient(90deg, var(--ok-tint), var(--well));">
+    <span class="stage-num" style="color:var(--ok-600);">STAGE 0 · Zero-Config</span>
     <div>
-      <div class="stage-title">Aiproot 業助前置（每 tenant 1 次 · 極簡）</div>
-      <div class="stage-sub">相比方向 7 · 這裡不需分發密碼給員工</div>
+      <div class="stage-title">前置 · 不需批次建員工（v0.6.3 修正 · 用戶指正）</div>
+      <div class="stage-sub">line_member 已由 webhook 自動收集 · 員工訊息一進來就有 UserId + display_name · 無需 CSV 匯入</div>
     </div>
-    <span class="stage-actor">Aiproot 業助（王小華）</span>
+    <span class="stage-actor">Aiproot · 一次性設定</span>
   </div>
 
-  <div class="screens">
-    <div class="screen">
-      <div class="screen-lbl"><b>畫面 0-A</b><span>建 users（比方向 7 少）</span></div>
-      <div class="aiproot-shell">
-        <div class="aiproot-sidebar">
-          <div class="aiproot-brand"><span class="aiproot-brand-mark">A</span>AIPROOT</div>
-          <div class="aiproot-nav-item">戰情室</div>
-          <div class="aiproot-nav-item">AI 對話分析</div>
-          <div class="aiproot-nav-item">通訊接頭層</div>
-          <div class="aiproot-nav-item active">AIPROOT 管理</div>
-        </div>
-        <div>
-          <div class="aiproot-topbar">
-            <span>AIPROOT 管理 › 台灣福祉 › 員工名單</span>
-            <span class="aiproot-user"><span class="aiproot-user-avatar">王</span>王小華</span>
+  <div style="max-width:1400px; margin:0 auto;">
+    <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:22px 28px;">
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:20px;">
+
+        <!-- Precondition 1 · Tenant -->
+        <div style="text-align:center;">
+          <div style="width:60px; height:60px; margin:0 auto 12px; background:var(--primary-tint); color:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700;">1</div>
+          <div style="font-size:13.5px; font-weight:600; margin-bottom:6px;">開通租戶</div>
+          <div style="font-size:11.5px; color:var(--ink-3); line-height:1.6;">
+            tenant-provisioning wizard<br>
+            建 tenant + tenant_admin<br>
+            (只 1 個關鍵人物 · 5 分)
           </div>
-          <div class="aiproot-main">
-            <h1 class="aiproot-title">員工名單（LIFF 綁定模式）</h1>
-            <div class="aiproot-sub">CSV 匯入 · 只需 姓名 / email / 部門</div>
+        </div>
 
-            <div style="background:var(--surface); border:1px solid var(--line); padding:10px 12px; border-radius:6px; font-family:var(--mono); font-size:11px; margin:10px 0;">
-              email,姓名,部門<br>
-              alice@twhomecare.com.tw,王愛麗絲,品保部<br>
-              eric@twhomecare.com.tw,陳艾瑞克,業務二部<br>
-              mei@twhomecare.com.tw,林小美,人資總務<br>
-              ...
-            </div>
+        <!-- Precondition 2 · Departments -->
+        <div style="text-align:center;">
+          <div style="width:60px; height:60px; margin:0 auto 12px; background:var(--primary-tint); color:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700;">2</div>
+          <div style="font-size:13.5px; font-weight:600; margin-bottom:6px;">建部門</div>
+          <div style="font-size:11.5px; color:var(--ink-3); line-height:1.6;">
+            tenant-admin 頁<br>
+            建 5-8 部門 + 分派 group_owner<br>
+            (5-10 個關鍵人物 · 15 分)
+          </div>
+        </div>
 
-            <div style="display:flex; gap:8px;">
-              <button class="btn primary">匯入 100 位員工</button>
-            </div>
-
-            <div class="alert ok" style="margin-top:14px;">
-              ✓ <b>方向 8 好處</b>：無需產一次性密碼 · 無需分發密碼給員工<br>
-              員工只要加 bot 好友 · 就能在 LINE 內完成綁定
-            </div>
+        <!-- Precondition 3 · Bot + Groups -->
+        <div style="text-align:center;">
+          <div style="width:60px; height:60px; margin:0 auto 12px; background:var(--primary-tint); color:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700;">3</div>
+          <div style="font-size:13.5px; font-weight:600; margin-bottom:6px;">配 LINE bot + 群組</div>
+          <div style="font-size:11.5px; color:var(--ink-3); line-height:1.6;">
+            line-ingest 已 SHIPPED<br>
+            Bot 加入群組 · 收訊<br>
+            line_member 自動落 (webhook)
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="screen">
-      <div class="screen-lbl"><b>畫面 0-B</b><span>客戶方分發指引（極簡）</span></div>
-      <div class="aiproot-shell">
-        <div class="aiproot-sidebar">
-          <div class="aiproot-brand"><span class="aiproot-brand-mark">A</span>AIPROOT</div>
-          <div class="aiproot-nav-item active">AIPROOT 管理</div>
-        </div>
-        <div>
-          <div class="aiproot-topbar">
-            <span>員工綁定指引（LIFF 版）</span>
+      <div style="text-align:center; margin:20px 0 12px; font-size:20px; color:var(--ok-600);">▼</div>
+
+      <div class="alert ok" style="margin:0;">
+        <b>✓ 完成後 · line_member 已有所有活躍員工的 UserId + display_name</b><br>
+        Alice 未來綁定時 · LIFF 從 line_member 直接撈 Alice 的 LINE 名字 + 推斷部門 · Alice 只需點「確認」<br>
+        <b>業助不需 CSV 匯入 100 員工 · 不需分發密碼 · 不需 per-employee approve</b>
+      </div>
+
+      <!-- What removed -->
+      <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--line);">
+        <div style="font-size:12.5px; color:var(--ink-2); margin-bottom:10px;"><b>對比 · 前版本設計（已淘汰）</b></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <div style="background:var(--rose-tint); padding:12px 14px; border-radius:6px; text-decoration:line-through; color:#7A2222;">
+            <b style="text-decoration:none; display:block; margin-bottom:4px;">前版本 · v0.6</b>
+            · CSV 匯入 100 員工<br>
+            · 分發一次性密碼 email<br>
+            · Alice 記密碼 + 登網頁<br>
+            · 業助時間 3-4h / 100 員工
           </div>
-          <div class="aiproot-main">
-            <h1 class="aiproot-title">分發指引（比方向 7 短很多）</h1>
-
-            <div style="background:var(--well); border-radius:6px; padding:12px 14px; font-size:12px; line-height:1.8; margin:10px 0;">
-              <b>【 aiproot 戰情室綁定通知 】</b><br>
-              請掃 QR 加公司 LINE bot 為好友<br>
-              加好友後 · bot 會私訊指引<br>
-              全程在 LINE 內完成 · 免登入網頁 · 免記密碼<br>
-              <br>
-              [ Bot QR 圖片 ]
-            </div>
-
-            <div style="display:flex; gap:8px;">
-              <button class="btn">複製訊息</button>
-              <button class="btn">下載 QR + 指引 PDF</button>
-            </div>
-
-            <div class="alert info" style="margin-top:14px;">
-              <b>員工端指引極簡</b>：不需說明「怎麼登入 aiproot」<br>
-              客戶方 HR 幾乎不用做員工訓練
-            </div>
-
-            <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--line);">
-              <div style="font-size:12px; color:var(--ink-3); margin-bottom:6px;">綁定進度追蹤</div>
-              <div style="display:flex; gap:16px; align-items:center; font-size:12px;">
-                <span><b style="font-size:14px;">45</b> / 100</span>
-                <div style="flex:1; height:6px; background:var(--well); border-radius:999px; overflow:hidden;">
-                  <div style="width:45%; height:100%; background:var(--ok-600);"></div>
-                </div>
-              </div>
-            </div>
+          <div style="background:var(--ok-tint); padding:12px 14px; border-radius:6px; color:#065F46;">
+            <b style="display:block; margin-bottom:4px;">新版本 · v0.6.3 · Zero-Config</b>
+            ✓ 只建 tenant_admin + 主管 (5-10 人)<br>
+            ✓ 其他員工全自服務 (LIFF)<br>
+            ✓ 無需密碼 · 無需 email 分發<br>
+            ✓ 業助時間 &lt; 1h / 100 員工
           </div>
         </div>
       </div>
@@ -388,9 +374,9 @@
       </div>
     </div>
 
-    <!-- Screen 1-B · LIFF opens · Employee list -->
+    <!-- Screen 1-B · LIFF opens · Auto pre-fill from line_member -->
     <div class="screen">
-      <div class="screen-lbl"><b>畫面 1-B</b><span>LIFF 網頁在 LINE App 內開 · 員工列表</span></div>
+      <div class="screen-lbl"><b>畫面 1-B</b><span>LIFF 開啟 · 自動 pre-fill（Zero-Config）</span></div>
       <div class="line-phone">
         <div class="line-phone-body">
           <div class="liff-view">
@@ -398,49 +384,41 @@
               <span>LIFF · aiproot.io</span>
               <span class="liff-close">✕</span>
             </div>
-            <h2 class="liff-title">請選擇你是誰</h2>
-            <p class="liff-sub">從下方選擇你的姓名<br>系統已透過 LINE 認證你的身分</p>
+            <h2 class="liff-title">歡迎 · 是你嗎？</h2>
+            <p class="liff-sub">系統已從你的 LINE 資料 + 群組活動<br>推斷你的身分 · 請確認</p>
 
-            <input class="liff-search" placeholder="🔍 輸入姓氏過濾（例：王）">
-
-            <div class="emp-list">
-              <div class="emp-item selected">
-                <div class="emp-avatar">王</div>
-                <div class="emp-info">
-                  <div class="emp-name">王愛麗絲</div>
-                  <div class="emp-dept">品保部 · 品保專員</div>
+            <div class="confirm-card" style="text-align:left; padding:16px; background:var(--ok-tint); border:2px solid var(--ok-600);">
+              <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
+                <div class="confirm-avatar" style="margin:0; width:54px; height:54px;">王</div>
+                <div>
+                  <div class="confirm-name" style="font-size:15px;">王愛麗絲</div>
+                  <div style="font-family:var(--mono); font-size:10px; color:var(--ink-3); margin-top:2px;">從 LINE 名字自動取</div>
                 </div>
-                <span class="emp-arrow">▶</span>
               </div>
-              <div class="emp-item">
-                <div class="emp-avatar">王</div>
-                <div class="emp-info">
-                  <div class="emp-name">王小明</div>
-                  <div class="emp-dept">品保部 · 檢驗員</div>
+              <div style="border-top:1px solid rgba(0,0,0,0.1); padding-top:10px; font-size:11.5px; color:var(--ink-2); line-height:1.7;">
+                <div><b>常出現的群組：</b></div>
+                <div style="margin-top:4px; padding:6px 10px; background:var(--surface); border-radius:6px; border:1px solid var(--line);">
+                  <div>📱 <b>福祉—品保部</b> <span style="font-size:10px; color:var(--ink-3);">· 80% 訊息</span></div>
+                  <div style="margin-top:4px;">📱 福祉業務助理小組 <span style="font-size:10px; color:var(--ink-3);">· 20% 訊息</span></div>
                 </div>
-                <span class="emp-arrow">▶</span>
-              </div>
-              <div class="emp-item">
-                <div class="emp-avatar">王</div>
-                <div class="emp-info">
-                  <div class="emp-name">王大偉</div>
-                  <div class="emp-dept">技術工程 · 工程師</div>
-                </div>
-                <span class="emp-arrow">▶</span>
+                <div style="margin-top:6px; font-size:10.5px; color:var(--ink-3);">系統將以「福祉—品保部」作為你的主要群組（對應「品保部」部門）</div>
               </div>
             </div>
 
-            <div style="text-align:center; margin-top:14px; font-size:11px; color:var(--ink-3);">
-              找不到你的名字？<a href="#" style="color:var(--primary);">聯繫公司</a>
+            <button class="liff-btn">✓ 是 · 我是王愛麗絲</button>
+            <button class="liff-btn secondary">修改姓名 / 主要群組</button>
+
+            <div style="text-align:center; margin-top:14px; font-size:10.5px; color:var(--ink-3);">
+              系統資料來源：<a href="#" style="color:var(--primary);">line_member 表</a> · webhook 自動收集
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Screen 1-C · Confirm -->
+    <!-- Screen 1-C · Edit (edge case) -->
     <div class="screen">
-      <div class="screen-lbl"><b>畫面 1-C</b><span>二次確認 · 防選錯</span></div>
+      <div class="screen-lbl"><b>畫面 1-C</b><span>Edge · Alice 想改姓名 / 部門</span></div>
       <div class="line-phone">
         <div class="line-phone-body">
           <div class="liff-view">
@@ -448,21 +426,30 @@
               <span>LIFF · aiproot.io</span>
               <span class="liff-close">✕</span>
             </div>
-            <h2 class="liff-title">確認你的身分</h2>
-            <p class="liff-sub">請確認以下資訊正確</p>
+            <h2 class="liff-title">修改個人資料</h2>
+            <p class="liff-sub">若 LINE 顯示名不是你的真名 · 或主要群組推斷錯 · 請修改</p>
 
-            <div class="confirm-card">
-              <div class="confirm-avatar">王</div>
-              <div class="confirm-name">王愛麗絲</div>
-              <div class="confirm-detail">
-                <b>部門：</b>品保部<br>
-                <b>職稱：</b>品保專員<br>
-                <b>Email：</b>alice@twhomecare.com.tw
-              </div>
+            <div style="margin-bottom:14px;">
+              <label style="font-size:11.5px; color:var(--ink-2); font-weight:500; display:block; margin-bottom:4px;">姓名</label>
+              <input class="liff-search" value="王愛麗絲" style="margin:0;">
+              <div style="font-size:10.5px; color:var(--ink-3); margin-top:4px;">LINE 顯示為：王愛麗絲</div>
             </div>
 
-            <button class="liff-btn">是的 · 我是王愛麗絲</button>
-            <button class="liff-btn secondary">不是 · 重新選擇</button>
+            <div style="margin-bottom:14px;">
+              <label style="font-size:11.5px; color:var(--ink-2); font-weight:500; display:block; margin-bottom:4px;">主要群組（決定你屬哪個部門）</label>
+              <select class="liff-search" style="margin:0;">
+                <option>📱 福祉—品保部（推斷 · 80% 訊息）</option>
+                <option>📱 福祉業務助理小組</option>
+                <option>📱 福祉集團-業務二部(含售服)</option>
+                <option>📱 技術工程部_技術開發組</option>
+                <option>📱 福祉集團-人資總務群</option>
+                <option>暫不指定</option>
+              </select>
+              <div style="font-size:10.5px; color:var(--ink-3); margin-top:4px;">系統顯示你有參與的所有群組 · 選你「主要屬於」的那個</div>
+            </div>
+
+            <button class="liff-btn">儲存並綁定</button>
+            <button class="liff-btn secondary">回上一頁</button>
 
             <div class="alert warn" style="margin-top:12px; font-size:10.5px;">
               確認後 · 綁定將立即生效<br>
@@ -544,84 +531,158 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<div class="stage" id="variant">
-  <div class="stage-hdr">
-    <span class="stage-num">變體</span>
+<div class="stage" id="unified-userid">
+  <div class="stage-hdr" style="background:linear-gradient(90deg, var(--ok-tint), var(--primary-tint));">
+    <span class="stage-num" style="color:var(--ok-600);">★ 關鍵機制</span>
     <div>
-      <div class="stage-title">高保證版 · 加 Email OTP（99.99%）</div>
-      <div class="stage-sub">若擔心 Alice 選錯同事 · 加一層 email 6 位數驗證</div>
+      <div class="stage-title">一次綁定 · 兩處識別（Alice 綁完後 · 全 bot 涵蓋自動生效）</div>
+      <div class="stage-sub">LINE Messaging API 保證：同一 Alice · 對同一 bot · 群組發訊 / 私訊 / 別群組發訊 · UserId 全部一致</div>
     </div>
-    <span class="stage-actor">選用</span>
+    <span class="stage-actor">技術機制解說</span>
   </div>
 
-  <div class="screens">
-    <div class="screen">
-      <div class="screen-lbl"><b>畫面 V-A</b><span>選員工後 · 觸發 email OTP</span></div>
-      <div class="line-phone">
-        <div class="line-phone-body">
-          <div class="liff-view">
-            <div class="liff-hdr">
-              <span>LIFF · aiproot.io</span>
-              <span class="liff-close">✕</span>
+  <div style="max-width:1400px; margin:0 auto;">
+    <!-- Diagram: single binding, three usage contexts -->
+    <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:24px 28px;">
+      <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:24px; align-items:center;">
+        <!-- Left: Alice's LINE -->
+        <div style="text-align:center;">
+          <div style="width:80px; height:80px; margin:0 auto 12px; background:var(--line-brand); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:700;">王</div>
+          <div style="font-size:14px; font-weight:600;">Alice · 王愛麗絲</div>
+          <div style="font-family:var(--mono); font-size:11px; color:var(--ink-3); margin-top:4px; padding:3px 8px; background:var(--well); border-radius:4px; display:inline-block;">UserId: Uabc123</div>
+          <div style="font-size:11px; color:var(--ink-3); margin-top:10px;">LINE 對此 bot<br>UserId 全域唯一</div>
+        </div>
+
+        <!-- Middle: Arrow -->
+        <div style="text-align:center;">
+          <div style="font-size:24px; color:var(--ok-600);">▶</div>
+          <div style="font-size:11px; color:var(--ink-3); margin-top:4px;">綁一次<br>LIFF 選姓名</div>
+        </div>
+
+        <!-- Right: Binding record -->
+        <div style="background:var(--ok-tint); border:2px solid var(--ok-600); border-radius:8px; padding:14px 16px;">
+          <div style="font-size:11px; color:var(--ok-600); text-transform:uppercase; letter-spacing:.05em; font-weight:700; margin-bottom:8px;">✓ user_line_binding</div>
+          <table style="width:100%; font-size:12px; font-family:var(--mono);">
+            <tr><td style="color:var(--ink-3); padding:2px 0;">line_user_id</td><td style="text-align:right;">Uabc123</td></tr>
+            <tr><td style="color:var(--ink-3); padding:2px 0;">↕</td><td style="text-align:right;"></td></tr>
+            <tr><td style="color:var(--ink-3); padding:2px 0;">user_id (aiproot)</td><td style="text-align:right;">uuid-王愛麗絲</td></tr>
+            <tr><td style="color:var(--ink-3); padding:2px 0;">method</td><td style="text-align:right;">liff_self_service</td></tr>
+            <tr><td style="color:var(--ink-3); padding:2px 0;">bound_at</td><td style="text-align:right;">7/22 14:22</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Arrows down -->
+      <div style="text-align:center; margin:24px 0 16px; font-size:20px; color:var(--primary);">▼</div>
+
+      <!-- Bottom: Three usage contexts all map back -->
+      <div style="text-align:center; font-size:13px; color:var(--ink-2); margin-bottom:16px;">
+        <b>綁定完成後 · 系統對這 3 種情境都自動識別為「王愛麗絲」</b>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
+        <!-- Scenario A: Group A message -->
+        <div style="border:1px solid var(--line); border-radius:8px; padding:16px; background:#FBFCFD;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+            <div style="width:32px; height:32px; background:var(--line-brand); color:#fff; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">品</div>
+            <div>
+              <div style="font-size:12.5px; font-weight:600;">情境 A</div>
+              <div style="font-size:11px; color:var(--ink-3);">Alice 在「品保部群」發訊</div>
             </div>
-            <h2 class="liff-title">輸入驗證碼</h2>
-            <p class="liff-sub">已發送到 <b>alice@twhomecare.com.tw</b><br>請查收公司 email · 輸入 6 位數字碼</p>
-
-            <input class="liff-search" style="text-align:center; font-size:22px; font-family:var(--mono); letter-spacing:8px; font-weight:700; padding:14px;" placeholder="_ _ _ _ _ _">
-
-            <button class="liff-btn">確認</button>
-            <button class="liff-btn secondary">重新寄送</button>
-
-            <div style="text-align:center; margin-top:10px; font-size:10.5px; color:var(--ink-3);">
-              10 分鐘內有效 · 剩 8:32
+          </div>
+          <div style="background:var(--well); padding:10px 12px; border-radius:6px; font-size:11.5px; line-height:1.6;">
+            <div style="color:var(--ink-3); font-size:10.5px; margin-bottom:4px;">Webhook payload:</div>
+            <div style="font-family:var(--mono); color:var(--ink-2);">
+              type: <b>message</b><br>
+              source.type: <b>group</b><br>
+              source.groupId: C123..品保<br>
+              source.userId: <b style="color:var(--ok-600);">Uabc123</b>
             </div>
+          </div>
+          <div style="margin-top:10px; font-size:11.5px;">
+            <span style="color:var(--ok-600);">→</span> line_message.sender_line_id = Uabc123<br>
+            <span style="color:var(--ok-600);">→</span> 查 binding · <b>= 王愛麗絲</b><br>
+            <span style="color:var(--ok-600);">→</span> AI 分析出的 ticket · assignee = 王愛麗絲
+          </div>
+        </div>
+
+        <!-- Scenario B: Private message -->
+        <div style="border:1px solid var(--line); border-radius:8px; padding:16px; background:#FBFCFD;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+            <div style="width:32px; height:32px; background:var(--primary); color:#fff; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">Ai</div>
+            <div>
+              <div style="font-size:12.5px; font-weight:600;">情境 B</div>
+              <div style="font-size:11px; color:var(--ink-3);">Alice 私訊 bot (1-on-1)</div>
+            </div>
+          </div>
+          <div style="background:var(--well); padding:10px 12px; border-radius:6px; font-size:11.5px; line-height:1.6;">
+            <div style="color:var(--ink-3); font-size:10.5px; margin-bottom:4px;">Webhook payload:</div>
+            <div style="font-family:var(--mono); color:var(--ink-2);">
+              type: <b>message</b><br>
+              source.type: <b>user</b><br>
+              (無 groupId)<br>
+              source.userId: <b style="color:var(--ok-600);">Uabc123</b>
+            </div>
+          </div>
+          <div style="margin-top:10px; font-size:11.5px;">
+            <span style="color:var(--ok-600);">→</span> 查 binding · <b>= 王愛麗絲</b><br>
+            <span style="color:var(--ok-600);">→</span> 走個人日報 pipeline<br>
+            <span style="color:var(--ok-600);">→</span> 累到「王愛麗絲今日日報」
+          </div>
+        </div>
+
+        <!-- Scenario C: Different group -->
+        <div style="border:1px solid var(--line); border-radius:8px; padding:16px; background:#FBFCFD;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+            <div style="width:32px; height:32px; background:var(--warn-600); color:#fff; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">業</div>
+            <div>
+              <div style="font-size:12.5px; font-weight:600;">情境 C</div>
+              <div style="font-size:11px; color:var(--ink-3);">Alice 在「業務助理群」也發訊</div>
+            </div>
+          </div>
+          <div style="background:var(--well); padding:10px 12px; border-radius:6px; font-size:11.5px; line-height:1.6;">
+            <div style="color:var(--ink-3); font-size:10.5px; margin-bottom:4px;">Webhook payload:</div>
+            <div style="font-family:var(--mono); color:var(--ink-2);">
+              type: <b>message</b><br>
+              source.type: <b>group</b><br>
+              source.groupId: C456..業務<br>
+              source.userId: <b style="color:var(--ok-600);">Uabc123</b>
+            </div>
+          </div>
+          <div style="margin-top:10px; font-size:11.5px;">
+            <span style="color:var(--ok-600);">→</span> 同一 UserId · 同一 binding<br>
+            <span style="color:var(--ok-600);">→</span> 仍識別 <b>= 王愛麗絲</b><br>
+            <span style="color:var(--ok-600);">→</span> ticket 掛「業務部」但 assignee 仍是 Alice
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="screen">
-      <div class="screen-lbl"><b>畫面 V-B</b><span>Alice 的公司 email 收信</span></div>
-      <div style="padding:14px 16px; font-size:12px; min-height:340px;">
-        <div style="font-size:10.5px; color:var(--ink-3); margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--line-2);">
-          <div><b>From:</b> aiproot 通知 &lt;noreply@aiproot.io&gt;</div>
-          <div><b>To:</b> alice@twhomecare.com.tw</div>
-          <div><b>Subject:</b> 【 綁定驗證碼 】</div>
-        </div>
-        <p>Hi 王愛麗絲，</p>
-        <p>你的 LINE 綁定驗證碼：</p>
-        <div style="background:var(--well); padding:16px; text-align:center; font-family:var(--mono); font-size:26px; letter-spacing:6px; font-weight:700; border-radius:6px; margin:12px 0;">
-          834192
-        </div>
-        <p style="font-size:11.5px; color:var(--ink-2);">請於 10 分鐘內輸入 LIFF 網頁 · 完成綁定。</p>
-        <div class="alert warn" style="margin-top:14px;">
-          若這不是你申請的 · 請忽略此信 · 你的帳號很安全
-        </div>
+      <div class="alert ok" style="margin-top:20px;">
+        <b>⭐ 這正是方向 8 的核心優勢</b>：Alice 只需在 LINE 內做**一次** LIFF 綁定 · 系統就能識別她在**所有**場合的訊息（群組 A、群組 B、私訊、@被 mention · 全部自動對到 users.王愛麗絲）· 不需為每個群做重複綁定 · 也不需 per-group 認證。
       </div>
-    </div>
 
-    <div class="screen">
-      <div class="screen-lbl"><b>解說</b><span>OTP 變體的價值</span></div>
-      <div style="padding:20px 16px;">
-        <h3 style="margin:0 0 10px; font-size:14.5px;">加 OTP · 準確性 99.95% → 99.99%</h3>
-        <p style="font-size:12.5px; color:var(--ink-2); line-height:1.7;">
-          <b>不加 OTP 的情境</b>：Alice 誤點同事「王小明」→ 綁到王小明 aiproot user · 需事後撤銷。
-        </p>
-        <p style="font-size:12.5px; color:var(--ink-2); line-height:1.7;">
-          <b>加 OTP 的情境</b>：Alice 誤點「王小明」→ OTP 寄到 wang@twhomecare（不是 alice@）· Alice 收不到 · 無法完成 · 自動阻擋錯誤。
-        </p>
-        <div class="alert ok">
-          <b>Trade-off</b>：Alice 多 2 動作（收信 + 打 6 位數）· 但準確 99.99%
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;">
+        <div style="background:var(--ok-tint); padding:14px 16px; border-radius:8px;">
+          <div style="font-size:12px; font-weight:700; color:var(--ok-600); margin-bottom:6px;">✓ 沒綁的員工怎麼辦？</div>
+          <div style="font-size:11.5px; color:var(--ink-2); line-height:1.6;">
+            系統仍記錄他在群組發訊（line_message.sender_line_id）· 但**無法對到 aiproot user**。<br>
+            AI 抽出「Uabc..999 交辦某事」· 主管看板顯**未綁定** · 提示追人綁定（方向 3 nudge 工具）。
+          </div>
         </div>
-        <div class="alert info" style="margin-top:8px;">
-          <b>我的建議</b>：<br>
-          · 部門有 5-10 人 · 誤選率低 · 不需 OTP · Alice 只 3 動作<br>
-          · 部門有 50+ 人 · 誤選率高 · 加 OTP 保底 · Alice 5 動作
+        <div style="background:var(--warn-tint); padding:14px 16px; border-radius:8px;">
+          <div style="font-size:12px; font-weight:700; color:var(--warn-600); margin-bottom:6px;">⚠ 為什麼「一租戶一 bot」很重要</div>
+          <div style="font-size:11.5px; color:var(--ink-2); line-height:1.6;">
+            LINE UserId 是**對每個 bot 唯一** · 跨 bot 就變不同 UserId。<br>
+            **一家租戶配一個 bot** · Alice 只需綁一次 · 就涵蓋該租戶所有群組 · 沒 multi-binding 需求。
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- ⚠ OTP 變體區段已於 v0.6.4 移除（用戶指正：Zero-Config 下無效益 · LINE UserId 已技術認證 · 加 email 是重複認證維度） -->
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div class="stage" id="stage-2">
@@ -706,12 +767,12 @@
       藍領 case 首選 · Alice 全在 LINE 內 · 進 M0-B
     </div>
     <div class="decision-opt">
-      <b>❓ 想看變體</b>
-      加 OTP or 不加？依部門大小定
+      <b>✅ Zero-Config</b>
+      無需 CSV 匯入 · 無需 OTP · 從 line_member 自動 pre-fill
     </div>
     <div class="decision-opt">
-      <b>⚠️ 隱私顧慮</b>
-      Alice 看到同事名單 → 限自己部門 or 加 search 過濾
+      <b>✅ 一次綁定 · 兩處識別</b>
+      綁一次 · 之後群組 + 私訊全自動對到王愛麗絲
     </div>
     <div class="decision-opt">
       <b>🔄 回頭看方向 7 / 6</b>

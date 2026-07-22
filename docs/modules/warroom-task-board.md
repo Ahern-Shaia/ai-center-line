@@ -1,6 +1,18 @@
 # warroom-task-board.md — [Priority-2] Warroom 任務看板 · 群組日誌與任務追蹤
 
-> 🚧 **狀態：DRAFT — 待用戶裁定 OQ-WTB-1..10（2026-07-22）**
+> ✅ **狀態：APPROVED v1.0（2026-07-22）· OQ-WTB-1..10 全採建議 · 進 M1**
+>
+> **裁定摘要**（用戶批次 OQ 全採建議）：
+> - WTB-1 → B · 擴 record schema · pipeline prompt 加抽 assignee + due_at
+> - WTB-2 → A · 新分類自動 active（pilot 期低摩擦 · v2 收緊）
+> - WTB-3 → B · v1 不加 employee role（依賴 employee-line-binding v1.0 綁定完成後 v2 加）
+> - WTB-4 → B · 高信度任務 push 主管私訊（非群 · 保群靜默）
+> - WTB-5 → A · confidence 降級 · 標「已撤銷」不刪
+> - WTB-6 → A + C · 有 due_at 用 due · 無用 7 天保底
+> - WTB-7 → B · 否認 = confirm=否認 + 自動 label 反饋 pipeline
+> - WTB-8 → A · aiproot 進戰情室下拉選 tenant
+> - WTB-9 → B · Kanban assignee JOIN line_member.display_name
+> - WTB-10 → B · 分類 slug 用 pipeline · display_name 分離
 >
 > Scope: **實現台灣福祉需求文件「功能一 · LINE 群組日誌與任務看板」** — 從 `analysis_result` 現有 `daily_reports` / `records` 產出 · 抽 high-confidence 「需追蹤」項升為 `tickets`；建 tenant-scoped `category_registry` 讓分類越用越有系統；戰情室看板依角色分視角（aiproot / 總經理 / 部門主管）。
 >
@@ -513,3 +525,4 @@ Critical query：
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
 | 2026-07-22 | v0.1 | 初版 DRAFT · 7 sub-task + OQ-WTB-1..10 · FMEA 骨架 · 對應台灣福祉需求文件功能一 | Claude Code |
+| 2026-07-22 | **v1.0** | ✅ **APPROVED**（用戶批次 OQ 全採建議）· 10 條 OQ 全裁定 · 狀態 DRAFT → APPROVED · 進 M1 · 依賴 [[employee-line-binding]] v1.0 方向 8（Zero-Config）· 依賴 [[convo-analysis-realtime]] pipeline reuse · v2 才加 employee role（等綁定成熟後） | Claude Code + 用戶拍板 |

@@ -1,6 +1,18 @@
-# employee-line-binding.md — [Priority-1] 員工 LINE 身分綁定機制 · 4 方向設計研究
+# employee-line-binding.md — [Priority-1] 員工 LINE 身分綁定機制
 
-> 🚧 **狀態：DESIGN STUDY DRAFT — 待批次 OQ 裁定（2026-07-22）**
+> ✅ **狀態：APPROVED · 方向 8 · LIFF Zero-Config（2026-07-22 用戶拍板）**
+>
+> **拍板決定**：方向 8 · LIFF + 員工列表選擇（v0.6 新增 · v0.6.4 定案）
+> - Alice 全程在 LINE 內完成（不需登入網頁 · 不需記密碼 · 不需打員工編號）
+> - Zero-Config：無需 CSV 匯入 · line_member 自動 pre-fill
+> - 一次綁定 · 兩處識別：LINE UserId 對同 bot 唯一 · 群組 + 私訊都自動對到王愛麗絲
+> - 業助最少工作量（< 1h/100 員工）
+> - 準確性 99.99%（LINE UserId 技術認證）
+> - LINE 群組名為 UI label（Alice 熟）· 系統靜默對應 department_id
+>
+> **待批次 OQ 裁定**：OQ-ELB-2 (資料模型) / 3-7 (實作細節)
+>
+> 版本歷程：v0.1 (4 方向) → v0.5 (framing 修正) → v0.6 (加方向 6/7) → v0.6.1-4 (層層釐清) → **v1.0 · 方向 8 APPROVED**
 >
 > Scope: **完整規劃「員工 LINE UserId ↔ aiproot 系統身分」的綁定機制** — 4 方向徹底分析 · 各方向的資料模型 / UI 流程 / edge case / 風險 / 遷移路徑；本 doc 不 lock 方向 · 提供批次 OQ 時全景資訊。
 >
@@ -1764,7 +1776,7 @@ LINE Messaging API 設計特性：**同一個 Alice · 在同一個 bot 底下 �
 
 | # | 議題 | 選項 | 建議 |
 |---|---|---|---|
-| **OQ-ELB-1** | 選哪個方向？ | A. 方向 1（自服務）<br>B. 方向 2（手動）<br>~~C. 方向 3（推導）~~ ⚠️ 降級（見 §6）<br>D. 方向 4 phase A only<br>E. 方向 4 phase A + B<br>F. 方向 4 全套<br>G. 方向 5（層層驗證高保證）<br>H. 方向 6（Bot-Native + 業助覆核）<br>I. 方向 7（LINE Login OAuth）<br>**J. 方向 8（LIFF 全在 LINE 內）**<br>+ 可疊加 方向 3 nudge 工具（§6.9）| 依 §12 · 藍領傳產 **J** · 白領網頁熟 **I** · 醫療金融 audit **G** · 傳產有員工編號 **H** |
+| **OQ-ELB-1** | 選哪個方向？ | A. 方向 1（自服務）<br>B. 方向 2（手動）<br>~~C. 方向 3（推導）~~ ⚠️ 降級（見 §6）<br>D. 方向 4 phase A only<br>E. 方向 4 phase A + B<br>F. 方向 4 全套<br>G. 方向 5（層層驗證高保證）<br>H. 方向 6（Bot-Native + 業助覆核）<br>I. 方向 7（LINE Login OAuth）<br>**J. 方向 8（LIFF Zero-Config）** ✅ **已裁定**<br>+ 可疊加 方向 3 nudge 工具（§6.9）| ✅ **裁定：J**（2026-07-22 用戶拍板）· 藍領傳產首選 · Zero-Config 業助最少 · 一次綁定兩處識別 |
 | **OQ-ELB-2** | Users 表擴欄 vs 獨立 binding 表 | A. Users +2 欄（line_user_id, bound_at）· 簡單直接<br>B. 獨立 user_line_binding 表 · 支援 audit history | **B** — audit history 值得（誰綁誰、method、時間、revoke 歷史）· A/B 資料量差異不大 · 但 A 也可（一 tenant 一 bot · 沒 multi-binding 需求）· 二選一都合理 |
 | **OQ-ELB-3** | 若走方向 3 · Match confidence 閾值 | A. 只 high 自動 approve · medium/low review<br>B. High + medium 自動<br>C. 全部人工 review | **A** — 保守 · 但可調 |
 | **OQ-ELB-4** | 綁定失敗（token 過期 / bot 回覆） · Bot 是否主動回訊息 | A. Bot 一律 reply（reply token · 免費）<br>B. Bot 不 reply · aiproot UI 顯錯給員工<br>C. Bot 只在成功時 reply · 失敗靜默 | **A** — reply token 免費 · UX 順 · 不占 push quota |
@@ -1786,3 +1798,7 @@ LINE Messaging API 設計特性：**同一個 Alice · 在同一個 bot 底下 �
 | 2026-07-22 | v0.6 | **方向 7 過度樂觀修正 + 方向 8 LIFF 補入**（用戶再次指正）：v0.5 說方向 7 Alice 只 2 動作是**誤簡化**（實際 6 · 含網頁登入 + 首次改密）· 業助時間也漏算（實際 7-8h 含維護 · 我算 40min）· 加方向 8「LIFF + 員工列表選擇」（Alice 全在 LINE 內 · 3-5 動作 · 業助不需 per-employee approve · 準確 99.95% or 99.99% 含 OTP · 工時 10-13 天）· 修正排名：**方向 8 = 藍領傳產首選** · 方向 7 = 白領 · 方向 6 = 有員工編號的傳產 · 感謝用戶識別 Alice 真實摩擦 | Claude Code + 用戶指正 |
 | 2026-07-22 | v0.6.1 | 用戶提問揭露關鍵釐清：「平台訊息透過群組獲取 · 員工如何綁到自己身份」· 補 §7-quinque.12「一次綁定 · 兩處識別」機制（LINE UserId 對同 bot 唯一 · 綁定完成後 · 群組訊息也自動識別 · 3 種情境：群組 A / 私訊 / 群組 B 都對到 users.王愛麗絲）· 補 §7-quinque.13「未加 bot 好友員工處理」（方向 3 nudge + 方向 2 fallback · 5-20% 員工可能不加 · 推廣 3 步驟 SOP）· 感謝用戶識別此關鍵前提 | Claude Code + 用戶提問 |
 | 2026-07-22 | v0.6.2 | 用戶指正「跨 tenant UserId 不同」的過度工程：**一家租戶只配一個 LINE bot** · Alice 只在一家公司當員工 · 沒有 multi-binding 需求 · OQ-ELB-2 從「B 明顯優」放寬為「A/B 都合理」· 移除跨顧問等 edge case 假設 · design 保持簡單（audit history 仍值得 · 但別為想像的 multi-tenant 需求增複雜度）| Claude Code + 用戶指正 |
+| 2026-07-22 | v0.6.3 | **Zero-Config 修正**（用戶指正）：方向 8 STAGE 0「CSV 批次匯入 100 員工」是過度工程 · line_member 已由 webhook 自動收集所有活躍員工 UserId + display_name · LIFF 可直接 pre-fill · 業助不需 CSV 匯入 · 不需分發密碼 · **業助時間從 3-4h/100 員工降到 < 1h**（只前置 tenant + 部門 + group_owner 5-10 人 · 其他員工全自服務）· Alice 動作從 3-5 降到 2（加好友 + 點確認）· 需求文件的「員工在群發訊時系統就記」是這個機制 · mockup 已更新（畫面 1-B 從「選員工列表」改為「自動 pre-fill 確認」）| Claude Code + 用戶指正 |
+| 2026-07-22 | v0.6.4 | **UX + 認證維度修正**（用戶指正）：<br>1) 部門標籤 → LINE 群組名稱：Alice 熟「福祉—品保部」群名（她每天在裡面）· 不熟「品保部」aiproot 抽象名 · UI 改顯 LINE 群名 · 系統靜默透過 line_group.department_id 對應到 department（一步隱藏在後台）· mockup 畫面 1-B/1-C 更新<br>2) 移除 Email OTP 變體：Zero-Config 下 Alice 不從列表選同事（沒選錯風險）· LINE UserId 已是**技術認證**（LINE 服務端保證）· 加 email OTP 是同維度重複認證 · 無實質效益 · mockup 相關區段刪 · 綁定準確率直接 99.99%（不需 OTP 保底）| Claude Code + 用戶指正 |
+| 2026-07-22 | **v1.0** | ✅ **APPROVED**（用戶拍板）· OQ-ELB-1 裁定 **J · 方向 8 LIFF Zero-Config** · 6 次歷代修正後定案 · 狀態從 DESIGN STUDY 升為 APPROVED · 進 M1 · 剩餘 OQ-ELB-2..7 (資料模型 + 實作細節) 待批次 OQ 裁定 | Claude Code + 用戶拍板 |
+| 2026-07-22 | **v1.0.1** | ✅ **批次 OQ 全採建議**（用戶拍板）· OQ-ELB-2..7 全裁定：<br>· ELB-2 → B (獨立 user_line_binding 表 · audit history 好)<br>· ELB-4 → A (Bot 主動 reply · reply token 免費)<br>· ELB-5 → B (保 revoked 記錄 · audit)<br>· ELB-6 → A (只 aiproot_admin 操作)<br>· ELB-7 → C (客戶主導 + aiproot wizard 都可)<br>ELB-3 已在 v0.3 降級為 nudge 工具 · skip | Claude Code + 用戶拍板 |

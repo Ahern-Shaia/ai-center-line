@@ -58,7 +58,9 @@
     "dedup",
     "trunc",
     "quater",
-    "quinque"
+    "quinque",
+    "Materializer",
+    "materializer"
   ],
   "cSpell.ignoreRegExpList": [
     "0x[0-9a-fA-F]+",
