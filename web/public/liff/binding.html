@@ -144,18 +144,23 @@
   // 建立日期 2026-07-22 · Provider: aiproot · Linked bot: 台灣福祉
   const LIFF_ID = "2010801742-WBQkAv5t";
 
-  const BOT_ID = new URLSearchParams(location.search).get("botId");
+  // LIFF SDK 會把原始 URL 的 query 打包成 ?liff.state=<url-encoded>
+  // liff.init() 完成後 · SDK 會 rewrite URL 展開回原本的 query · 所以要在 init 後才讀
   const API_BASE = window.location.origin.replace(/\/liff\/.*/, "");  // 同 origin
+  let BOT_ID = null;
   let prefillData = null;
   let lineUserId = null;
   let lineDisplayName = null;
 
   async function init() {
-    if (!BOT_ID) return showError("缺 botId 參數 · 請透過 bot 私訊的按鈕開啟");
     try {
-      // Init LIFF
+      // Init LIFF (SDK 會處理 liff.state → 原 query 展開)
       await liff.init({ liffId: LIFF_ID });
       if (!liff.isLoggedIn()) { liff.login(); return; }
+
+      // Init 完 · 讀 botId · 三種來源都試 (直接帶 / liff.state / rewrite 後 URL)
+      BOT_ID = resolveBotId();
+      if (!BOT_ID) return showError("缺 botId 參數 · 請透過 bot 私訊的按鈕開啟");
 
       // Get userId from LIFF SDK
       const profile = await liff.getProfile();
@@ -179,6 +184,33 @@
     } catch (e) {
       showError(e.message || "初始化失敗");
     }
+  }
+
+  // LIFF 3 種 botId 來源都試（依 LINE 官方行為 · 不同版本 SDK / 開啟方式會差）
+  // 1. 直接讀 (若 SDK 已 rewrite 或本來就有)
+  // 2. liff.state 未展開 · 手動解 (url-encoded ?botId=xxx 或 botId=xxx)
+  // 3. hash 也試（極少見 · 保底）
+  function resolveBotId() {
+    const q = new URLSearchParams(location.search);
+    let id = q.get("botId");
+    if (id) return id;
+
+    const liffState = q.get("liff.state");
+    if (liffState) {
+      // liff.state 可能是 "?botId=xxx&yyy=zzz" or 直接 "botId=xxx"
+      const stateStr = liffState.startsWith("?") ? liffState.slice(1) : liffState;
+      const stateQ = new URLSearchParams(stateStr);
+      id = stateQ.get("botId");
+      if (id) return id;
+    }
+
+    const hash = location.hash.replace(/^#/, "");
+    if (hash) {
+      const hashQ = new URLSearchParams(hash);
+      id = hashQ.get("botId");
+      if (id) return id;
+    }
+    return null;
   }
 
   function renderPrefill() {
