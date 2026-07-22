@@ -44,7 +44,11 @@ type PendingConfirm =
   | { type: "run-pending" }
   | null;
 
-export default function BatchHistory() {
+interface Props {
+  onOpenAnalysis?: (uploadId: number) => void;
+}
+
+export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
   const toast = useToast();
   const [rows, setRows] = useState<AnalysisBatchRow[]>([]);
   const [tenants, setTenants] = useState<AiprootTenantOption[]>([]);
@@ -234,7 +238,14 @@ export default function BatchHistory() {
                   </td>
                   <td className="mono">{r.triggeredBy}</td>
                   <td className="mono">{dateFmt(r.completedAt)}</td>
-                  <td>
+                  <td style={{ display: "flex", gap: 6 }}>
+                    {r.uploadId != null && onOpenAnalysis && (
+                      <button
+                        className="btn small"
+                        onClick={() => onOpenAnalysis(r.uploadId!)}
+                        title="查看分析內容 (classifications / daily_reports / records)"
+                      >查看</button>
+                    )}
                     <button className="btn small" onClick={() => setConfirm({ type: "rerun", row: r })} disabled={busy}>重跑</button>
                   </td>
                 </tr>

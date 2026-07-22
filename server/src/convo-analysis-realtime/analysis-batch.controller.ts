@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Post, Query, Req } from "@nestjs/common";
-import type { FastifyRequest } from "fastify";
+import { Body, Controller, Get, Post, Query } from "@nestjs/common";
 import { Roles } from "../auth/roles.decorator.js";
+import { CurrentUser } from "../auth/current-user.decorator.js";
+import type { JwtUser } from "../auth/jwt-user.js";
 import { withSystemTx } from "../db/client.js";
 import { AnalysisBatchRepository } from "./analysis-batch.repository.js";
 import { AnalysisBatchService } from "./analysis-batch.service.js";
@@ -33,10 +34,9 @@ export class AnalysisBatchController {
   @Roles("aiproot_admin")
   async rerun(
     @Body() body: { tenantId: string; groupId: string; batchDate: string },
-    @Req() req: FastifyRequest,
+    @CurrentUser() user: JwtUser,
   ) {
-    const user = (req as unknown as { user?: { sub?: string } }).user;
-    const triggeredBy = `manual:${user?.sub ?? "unknown"}`;
+    const triggeredBy = `manual:${user.user_id}`;
     const result = await this.batchService.runBatch({
       tenantId: body.tenantId,
       groupId: body.groupId,
@@ -50,10 +50,9 @@ export class AnalysisBatchController {
   @Roles("aiproot_admin")
   async runPending(
     @Body() body: { lookbackDays?: number },
-    @Req() req: FastifyRequest,
+    @CurrentUser() user: JwtUser,
   ) {
-    const user = (req as unknown as { user?: { sub?: string } }).user;
-    const triggeredBy = `manual:${user?.sub ?? "unknown"}`;
+    const triggeredBy = `manual:${user.user_id}`;
     return this.scheduler.runPending(triggeredBy, body.lookbackDays ?? 2);
   }
 }

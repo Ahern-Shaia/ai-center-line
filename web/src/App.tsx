@@ -197,7 +197,9 @@ export default function App() {
           {route.page === "line-bots" && <LineBots />}
           {route.page === "onboard-tenant" && <OnboardWizard />}
           {route.page === "cost-dashboard" && <CostDashboard />}
-          {route.page === "batch-history" && <BatchHistory />}
+          {route.page === "batch-history" && (
+            <BatchHistory onOpenAnalysis={(id) => setRoute({ page: "convo-detail", uploadId: id })} />
+          )}
         </div>
       </Shell>
     </ToastProvider>
