@@ -119,30 +119,21 @@ export default function BatchHistory() {
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--ink-2)" }}>
-            <span>租戶</span>
-            <select
-              value={selectedTenantId}
-              onChange={(e) => void onTenantChange(e.target.value)}
-              disabled={loading || busy}
-              style={{
-                padding: "6px 10px",
-                border: "1px solid var(--line)",
-                borderRadius: 6,
-                background: "var(--surface)",
-                color: "var(--ink)",
-                fontSize: 13,
-                minWidth: 180,
-              }}
-            >
-              <option value="">全部租戶（{rows.length} 筆）</option>
-              {tenants.map((t) => (
-                <option key={t.tenantId} value={t.tenantId}>
-                  {t.tenantName}（{countByTenant.get(t.tenantId) ?? 0}）
-                </option>
-              ))}
-            </select>
-          </label>
+          <span style={{ fontSize: 13, color: "var(--ink-2)" }}>租戶</span>
+          <select
+            className="al-select"
+            value={selectedTenantId}
+            onChange={(e) => void onTenantChange(e.target.value)}
+            disabled={loading || busy}
+            style={{ minWidth: 200 }}
+          >
+            <option value="">全部租戶（{rows.length} 筆）</option>
+            {tenants.map((t) => (
+              <option key={t.tenantId} value={t.tenantId}>
+                {t.tenantName}（{countByTenant.get(t.tenantId) ?? 0}）
+              </option>
+            ))}
+          </select>
           <button className="btn" onClick={() => void refresh()} disabled={loading || busy}>重新整理</button>
           <button className="btn primary" onClick={() => void onRunPending()} disabled={busy}>掃 pending 全跑</button>
         </div>
