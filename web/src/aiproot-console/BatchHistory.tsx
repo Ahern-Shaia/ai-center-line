@@ -119,13 +119,14 @@ export default function BatchHistory() {
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span style={{ fontSize: 13, color: "var(--ink-2)" }}>租戶</span>
+          <span style={{ fontSize: 13.5, color: "var(--ink-2)" }}>租戶</span>
           <select
             className="al-select"
             value={selectedTenantId}
             onChange={(e) => void onTenantChange(e.target.value)}
             disabled={loading || busy}
-            style={{ minWidth: 200 }}
+            /* 對齊 .btn: 8px 14px padding + 13.5px font · 高度一致 */
+            style={{ minWidth: 200, padding: "8px 14px", fontSize: 13.5, height: 36 }}
           >
             <option value="">全部租戶（{rows.length} 筆）</option>
             {tenants.map((t) => (
@@ -134,8 +135,8 @@ export default function BatchHistory() {
               </option>
             ))}
           </select>
-          <button className="btn" onClick={() => void refresh()} disabled={loading || busy}>重新整理</button>
-          <button className="btn primary" onClick={() => void onRunPending()} disabled={busy}>掃 pending 全跑</button>
+          <button className="btn" style={{ height: 36 }} onClick={() => void refresh()} disabled={loading || busy}>重新整理</button>
+          <button className="btn primary" style={{ height: 36 }} onClick={() => void onRunPending()} disabled={busy}>掃 pending 全跑</button>
         </div>
       </div>
 
