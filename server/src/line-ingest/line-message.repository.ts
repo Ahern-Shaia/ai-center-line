@@ -123,6 +123,12 @@ export class LineMessageRepository {
       WHERE lm.sent_at >= (now() AT TIME ZONE 'Asia/Taipei' - (${lookbackDays} || ' days')::interval)::timestamptz
         AND ab.batch_id IS NULL
         AND (${tenantId ?? null}::uuid IS NULL OR lm.tenant_id = ${tenantId ?? null}::uuid)
+        -- 手動 (tenantId 有值) 忽略 batch_enabled · 走 UI 使用者意志
+        -- cron (tenantId=null) 強制 join tenants filter batch_enabled=true
+        AND (${tenantId ?? null}::uuid IS NOT NULL OR EXISTS (
+          SELECT 1 FROM tenants t
+          WHERE t.tenant_id = lm.tenant_id AND t.batch_enabled = true
+        ))
       GROUP BY lm.tenant_id, lm.group_id, (lm.sent_at AT TIME ZONE 'Asia/Taipei')::date
     `);
     return res.rows.map((r) => ({

@@ -12,6 +12,7 @@ export const tenants = pgTable("tenants", {
   industry: text("industry"),
   onboardStatus: text("onboard_status").notNull().default("洽談中")
     .$type<"洽談中" | "測試中" | "正式上線" | "暫停">(),
+  batchEnabled: boolean("batch_enabled").notNull().default(true),   // 0014 加 · cron 是否掃該 tenant
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

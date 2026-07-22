@@ -671,6 +671,14 @@ export const runPendingBatches = (opts?: { lookbackDays?: number; tenantId?: str
 export interface AiprootTenantOption {
   tenantId: string;
   tenantName: string;
+  batchEnabled: boolean;
 }
 export const listAiprootTenants = () =>
   req<{ tenants: AiprootTenantOption[] }>("/aiproot-console/tenants");
+
+// convo-analysis-realtime · aiproot 切 tenant 是否啟用 cron batch
+export const setTenantBatchEnabled = (tenantId: string, enabled: boolean) =>
+  req<{ tenantId: string; batchEnabled: boolean }>(
+    `/aiproot-console/tenants/${tenantId}/batch-enabled`,
+    { method: "PATCH", body: JSON.stringify({ enabled }) },
+  );

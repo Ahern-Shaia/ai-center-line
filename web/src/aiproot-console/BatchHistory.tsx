@@ -13,6 +13,7 @@ import {
   listAiprootTenants,
   rerunAnalysisBatch,
   runPendingBatches,
+  setTenantBatchEnabled,
   type AnalysisBatchRow,
   type AiprootTenantOption,
 } from "../api";
@@ -79,6 +80,30 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
     for (const t of tenants) map.set(t.tenantId, t.tenantName);
     return (id: string) => map.get(id) ?? id.slice(0, 8);
   }, [tenants]);
+
+  const selectedTenant = useMemo(
+    () => tenants.find((t) => t.tenantId === selectedTenantId),
+    [tenants, selectedTenantId],
+  );
+
+  async function onToggleBatchEnabled() {
+    if (!selectedTenant || busy) return;
+    setBusy(true);
+    try {
+      const next = !selectedTenant.batchEnabled;
+      const res = await setTenantBatchEnabled(selectedTenant.tenantId, next);
+      setTenants((prev) => prev.map((t) =>
+        t.tenantId === res.tenantId ? { ...t, batchEnabled: res.batchEnabled } : t));
+      toast.show(
+        `${selectedTenant.tenantName} · 每日 batch 已${res.batchEnabled ? "啟用" : "停用"}`,
+        "ok",
+      );
+    } catch (err) {
+      toast.show(err instanceof ApiError ? err.message : "切換失敗", "danger");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const countByTenant = useMemo(() => {
     const map = new Map<string, number>();
@@ -205,6 +230,20 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
               </ListBox>
             </Popover>
           </Select>
+          {selectedTenant && (
+            <button
+              className="btn"
+              onClick={() => void onToggleBatchEnabled()}
+              disabled={busy}
+              title={selectedTenant.batchEnabled
+                ? "點擊 · 停用每日 08:00 cron 對此租戶（手動仍可觸發）"
+                : "點擊 · 恢復每日 08:00 cron 對此租戶"}
+            >
+              每日 batch · <b style={{ color: selectedTenant.batchEnabled ? "var(--ok-600)" : "var(--rose-600)" }}>
+                {selectedTenant.batchEnabled ? "啟用中" : "已停用"}
+              </b>
+            </button>
+          )}
           <button className="btn" onClick={() => void refresh()} disabled={loading || busy}>重新整理</button>
           <button
             className="btn primary"
