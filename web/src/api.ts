@@ -950,6 +950,16 @@ export interface UnboundStats {
 export const getUnboundStats = () =>
   req<{ stats: UnboundStats[] }>("/binding/aiproot/unbound-stats");
 
+// employee-line-binding · tenant_admin 自租戶自治（tenantId 由 backend 自 JWT 取 · 前端不傳）
+export const listTenantBindingAudit = (status?: "active" | "revoked") => {
+  const qs = status ? `?status=${status}` : "";
+  return req<{ bindings: BindingAuditRow[] }>(`/binding/tenant/list${qs}`);
+};
+export const revokeBindingTenant = (bindingId: string) =>
+  req<{ success: boolean }>(`/binding/tenant/revoke/${bindingId}`, { method: "POST", body: "{}" });
+export const getTenantUnboundStats = () =>
+  req<{ stats: UnboundStats }>("/binding/tenant/unbound-stats");
+
 // ============================================================
 // scheduler-config · 平台化定時任務
 // ============================================================

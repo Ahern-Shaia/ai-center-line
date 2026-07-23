@@ -12,6 +12,7 @@ import TenantSettings from "./settings/TenantSettings";
 import AuditLog from "./settings/AuditLog";
 import SchedulerConfigPage from "./settings/scheduler-config/Page";
 import LineGroupsPage from "./settings/line-groups/Page";
+import TenantBindingAudit from "./settings/TenantBindingAudit";
 import ConversationAnalysisUpload from "./convo-analysis/Upload";
 import ConversationAnalysisList from "./convo-analysis/List";
 import ConversationAnalysisDetail from "./convo-analysis/Detail";
@@ -41,6 +42,7 @@ type Route =
   | { page: "audit" }
   | { page: "scheduler-config" }
   | { page: "line-groups" }
+  | { page: "tenant-binding" }
   | { page: "convo-list" }
   | { page: "convo-upload" }
   | { page: "convo-detail"; uploadId: number }
@@ -68,6 +70,7 @@ const CRUMB: Record<Route["page"], string> = {
   audit: "設定",
   "scheduler-config": "設定",
   "line-groups": "設定",
+  "tenant-binding": "設定",
   "convo-list": "AI 對話分析",
   "convo-upload": "AI 對話分析",
   "convo-detail": "AI 對話分析",
@@ -94,6 +97,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   audit: "稽核記錄",
   "scheduler-config": "定時任務",
   "line-groups": "LINE 群組",
+  "tenant-binding": "員工 LINE 綁定",
   "convo-list": "分析列表",
   "convo-upload": "上傳新對話",
   "convo-detail": "分析詳情",
@@ -126,6 +130,7 @@ const AIPROOT_ONLY_PAGES = new Set([
 
 function isPageAllowedForRole(page: string, role: string): boolean {
   if (AIPROOT_ONLY_PAGES.has(page) && role !== "aiproot_admin" && role !== "consultant") return false;
+  if (page === "tenant-binding" && role !== "tenant_admin") return false;   // 客戶方自治頁 · 僅 tenant_admin
   if (page === "warroom" && role === "employee") return false;
   return true;
 }
@@ -198,6 +203,10 @@ export default function App() {
     else if (key === "rag" || key === "media" || key === "km" || key === "map"
       || key === "depts" || key === "config" || key === "audit" || key === "scheduler-config" || key === "line-groups") {
       setRoute({ page: key });
+    } else if (key === "tenant-binding") {
+      // 客戶方自治 · 僅 tenant_admin（自租戶 LINE 綁定管理）
+      if (session.role !== "tenant_admin") return;
+      setRoute({ page: "tenant-binding" });
     } else if (key === "convo-list" || key === "convo-upload" || key === "llm-settings") {
       // AI 對話分析設定屬 aiproot 側維護 · tenant 只在戰情室看結果
       if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
@@ -256,6 +265,7 @@ export default function App() {
           {route.page === "audit" && <AuditLog />}
           {route.page === "scheduler-config" && <SchedulerConfigPage />}
           {route.page === "line-groups" && <LineGroupsPage />}
+          {route.page === "tenant-binding" && <TenantBindingAudit />}
           {route.page === "convo-list" && (
             <ConversationAnalysisList
               onOpen={(id) => setRoute({ page: "convo-detail", uploadId: id })}

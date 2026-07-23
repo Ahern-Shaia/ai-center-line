@@ -19,6 +19,7 @@ const NAV: Array<{
     done: boolean;
     perm?: string;              // 有這 perm 才顯示 (可選 · 沒設 = 全顯)
     permAny?: string[];         // 任一 perm 有就顯
+    roles?: Role[];             // item 級角色限定 (可選 · 沒設 = 依 group / perm)
   }>;
 }> = [
   {
@@ -64,6 +65,8 @@ const NAV: Array<{
       // v2 · 部門/成員 開放給 tenant_admin (自 tenant) + aiproot
       { key: "depts", label: "部門/成員", ic: iconTeam, done: true, permAny: ["departments:view", "users:view"] },
       { key: "line-groups", label: "LINE 群組", ic: iconChat, done: true, perm: "line-groups:view" },
+      // 客戶方自治 · 僅 tenant_admin 看得到 (aiproot 有自己的跨租戶版在 AIPROOT 管理)
+      { key: "tenant-binding", label: "員工 LINE 綁定", ic: iconTeam, done: true, roles: ["tenant_admin"] },
       { key: "config", label: "租戶設定", ic: iconCog, done: true, perm: "tenant-config:view" },
       { key: "scheduler-config", label: "定時任務", ic: iconCog, done: true, perm: "scheduler-config:view" },
       { key: "audit", label: "稽核記錄", ic: iconShield, done: true, perm: "audit:view" },
@@ -132,8 +135,9 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
   const [changePwOpen, setChangePwOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const perms = usePermissions();
-  // 若 item 有 perm / permAny · 依 usePermissions 過濾 · 沒設就顯
-  const itemVisible = (it: { perm?: string; permAny?: string[] }) => {
+  // 若 item 有 roles / perm / permAny · 依序過濾 · 沒設就顯
+  const itemVisible = (it: { perm?: string; permAny?: string[]; roles?: Role[] }) => {
+    if (it.roles && !it.roles.includes(session.role)) return false;
     if (it.perm) return perms.has(it.perm);
     if (it.permAny) return perms.hasAny(...it.permAny);
     return true;
