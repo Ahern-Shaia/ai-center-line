@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.10" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="aiproot 交付團隊" />
+  <meta name="dcterms.date" content="2026-07-23" />
+  <title>台灣福祉 · 階段一驗收操作手冊</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.min.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">台灣福祉 · 階段一驗收操作手冊</h1>
+<p class="author">aiproot 交付團隊</p>
+<p class="date">2026-07-23</p>
+</header>
+<h1 id="台灣福祉--階段一驗收操作手冊">台灣福祉 · 階段一驗收操作手冊</h1>
+<blockquote>
+<p><strong>給誰看</strong>：台灣福祉總經理室 / 部門主管 / 資訊窗口 /
+一般員工</p>
+<p><strong>目的</strong>：一步步驗收兩個新功能 · 確認可以用了才簽收</p>
+<p><strong>版本</strong>：v1.0（2026-07-23）｜對應：階段一開發（2026-07）｜aiproot
+交付</p>
+</blockquote>
+<hr />
+<h2 id="這份文件是什麼">這份文件是什麼</h2>
+<p>台灣福祉委託 aiproot 開發的<strong>兩個 LINE 智能功能</strong>
+已經完工 · 這份文件帶您<strong>一步步驗收</strong>：</p>
+<ul>
+<li><strong>功能一</strong>：LINE 群組日誌與任務看板</li>
+<li><strong>功能二</strong>：LINE 個人日報回報</li>
+</ul>
+<p><strong>看這份文件的原則</strong>：</p>
+<ul>
+<li>一次做一個步驟 · 每步都有「應該看到什麼」的檢查點</li>
+<li>看到 ✅ 就打勾繼續</li>
+<li>看到 ❌ 或畫面對不上 · <strong>不要繼續猜</strong> · 直接聯繫
+aiproot 業助</li>
+<li>全部驗完 · 在最後的 checklist 打勾 · 兩邊簽名交付</li>
+</ul>
+<hr />
+<h1 id="第一部分--驗收前準備">第一部分 · 驗收前準備</h1>
+<h2 id="您需要拿到-3-樣東西">您需要拿到 3 樣東西</h2>
+<p>由 aiproot 業助交付：</p>
+<ol type="1">
+<li><strong>系統網址</strong>（例：<code>https://ai-center-line-demo.onrender.com</code>）</li>
+<li><strong>您的登入帳號</strong>（email + 首次密碼 · 通常是總經理陳先生
+/ 陳小姐的信箱）</li>
+<li><strong>公司 LINE 官方帳號
+ID</strong>（例：<code>@twh-factory</code>）· 加為 LINE 好友</li>
+</ol>
+<h2 id="準備一台電腦--一支手機">準備一台<strong>電腦</strong> +
+一支<strong>手機</strong></h2>
+<ul>
+<li>電腦：登入系統看戰情室</li>
+<li>手機：測試 LINE 綁定 / 私訊 bot / 收通知</li>
+</ul>
+<h2 id="找幾位協助測試的員工">找幾位協助測試的員工</h2>
+<ul>
+<li>至少 1 位總經理室（測驗系統管理）</li>
+<li>至少 1 位部門主管（測驗部門權限）</li>
+<li>至少 2 位一般員工（測驗綁定 + 個人日報）</li>
+</ul>
+<h2 id="應該看到">應該看到</h2>
+<ul>
+<li>✅ 電腦瀏覽器打開網址 · 看到登入頁</li>
+<li>✅ LINE App 加公司 bot 好友後 · bot
+立即傳「歡迎！請完成綁定」訊息</li>
+<li>✅ 有拿到您和幾位測試員工的登入帳號</li>
+</ul>
+<p><strong>若上述任一項看不到</strong> · 請聯繫 aiproot 業助 ·
+不要繼續往下。</p>
+<hr />
+<h1 id="第二部分--功能一驗收--群組日誌與任務看板">第二部分 · 功能一驗收
+· 群組日誌與任務看板</h1>
+<h2 id="這個功能做什麼">這個功能做什麼</h2>
+<ul>
+<li><strong>AI 讀您公司內部所有 LINE 工作群</strong> ·
+自動整理成當天的日誌</li>
+<li><strong>AI 判斷哪些對話是「需要追蹤的任務」</strong> ·
+自動歸類（維修 / 客訴 / 進度追蹤等）</li>
+<li><strong>總經理室 + 部門主管登入系統</strong> · 一目瞭然看到任務進度
+· 不用回頭翻群組</li>
+</ul>
+<h2 id="步驟-1--系統管理員登入">步驟 1 · 系統管理員登入</h2>
+<p><strong>操作</strong>：</p>
+<ol type="1">
+<li>打開系統網址（例：<code>https://ai-center-line-demo.onrender.com</code>）</li>
+<li>輸入您的 email 帳號 + 密碼</li>
+<li><strong>首次登入會強制您改一個新密碼</strong> · 設一個好記的</li>
+<li>進入系統</li>
+</ol>
+<p><strong>應該看到</strong>：</p>
+<ul>
+<li>✅ 登入後跳到「<strong>戰情室</strong>」總覽頁</li>
+<li>✅ <strong>左側側欄</strong>有這幾個項目：
+<ul>
+<li>戰情室（總覽儀表 / 每日簽核 / 我的日報）</li>
+<li>資料 · 知識</li>
+<li>設定（部門/成員 / 租戶設定 / 稽核記錄）</li>
+</ul></li>
+<li>✅ <strong>右上角</strong>顯示您的名字 + 角色「總經理室」</li>
+<li>✅ 儀表區顯示三個大圓環（本日簽核率 / 群組健康度 / AI
+高信心比例）</li>
+</ul>
+<p><strong>若看到</strong>：</p>
+<ul>
+<li>❌ 「帳號或密碼錯誤」→ 請確認帳號 email · 或請 aiproot 重寄</li>
+<li>❌ 登入後畫面白屏 or 錯誤訊息 → 截圖聯繫 aiproot</li>
+</ul>
+<hr />
+<h2 id="步驟-2--建立部門若已建則跳過">步驟 2 ·
+建立部門（若已建則跳過）</h2>
+<p><strong>操作</strong>：</p>
+<ol type="1">
+<li>側欄點「<strong>設定 → 部門/成員</strong>」</li>
+<li>頁面預設在「<strong>部門配置</strong>」tab</li>
+<li>點「<strong>+ 新增部門</strong>」</li>
+<li>填部門名（例：<code>品保部</code>）· 送出</li>
+<li>重複 · 建齊貴公司實際部門（5-10 個）</li>
+</ol>
+<p><strong>應該看到</strong>：</p>
+<ul>
+<li>✅ 部門列表出現新建的部門</li>
+<li>✅
+每個部門後有「<strong>編輯</strong>」「<strong>刪除</strong>」按鈕</li>
+</ul>
+<p><strong>技巧</strong>：</p>
+<ul>
+<li>部門名建議跟 LINE 群組名對應（例：LINE 群叫「福祉—品保部」→
+部門叫「品保部」）</li>
+<li>這樣後續分派群 → 部門時容易對照</li>
+</ul>
+<hr />
+<h2 id="步驟-3--建立部門主管帳號">步驟 3 · 建立部門主管帳號</h2>
+<p><strong>操作</strong>：</p>
+<ol type="1">
+<li>側欄「設定 → 部門/成員」→ 切「<strong>成員</strong>」tab</li>
+<li>點「<strong>+ 新增成員</strong>」</li>
+<li>填：
+<ul>
+<li>Email（該主管的登入信箱）</li>
+<li>顯示名（例：王主管）</li>
+<li><strong>角色</strong>（下拉選「<strong>群組負責人</strong>」·
+這是部門主管級）</li>
+<li>所屬部門（選對應部門）</li>
+<li>初始密碼（6 字元以上）</li>
+</ul></li>
+<li>送出</li>
+</ol>
+<p><strong>應該看到</strong>：</p>
+<ul>
+<li>✅ 新成員出現在成員列表</li>
+<li>✅ <strong>角色下拉選單只有「群組負責人」可選</strong> ·
+不會有其他選項</li>
+<li>✅ 若您想建其他總經理室級主管 → 需請 aiproot 建 · 這個頁擋掉</li>
+</ul>
+<p><strong>為什麼「總經理室」不能自己建</strong>：避免內部政治鬥爭 · 由
+aiproot 統一管客戶方頂層帳號（有 audit 記錄）。要新增總管級 · 打電話給
+aiproot 業助 3 分鐘就開好。</p>
+<hr />
+<h2 id="步驟-4--確認-line-bot-已加入群組">步驟 4 · 確認 LINE Bot
+已加入群組</h2>
+<p>Aiproot 已幫您把公司 LINE 官方帳號加入至少 1
+個工作群（例：「福祉—品保部」）。</p>
+<p><strong>驗證</strong>：</p>
+<ol type="1">
+<li>打開該 LINE 群</li>
+<li>點右上「≡」→ 「成員」</li>
+<li>應該看到公司 bot 顯示在成員名單</li>
+</ol>
+<p><strong>若沒看到</strong>：</p>
+<ul>
+<li>Bot 未加入 · 請聯繫 aiproot 業助</li>
+<li>或該群內某位成員需手動邀 bot 加入（bot ID <code>@xxx</code>）</li>
+</ul>
+<hr />
+<h2 id="步驟-5--分派-line-群--部門">步驟 5 · 分派 LINE 群 → 部門</h2>
+<p><strong>操作</strong>：</p>
+<ol type="1">
+<li>側欄「<strong>通訊接頭層 → LINE 機器人</strong>」</li>
+<li>找到公司 bot · 點展開</li>
+<li>底下列出該 bot 加入的所有群</li>
+<li>每群右邊有「<strong>分派部門</strong>」下拉 · 選對應部門
+<ul>
+<li>例：LINE 群「福祉—品保部」→ 分派到「品保部」</li>
+</ul></li>
+</ol>
+<p><strong>應該看到</strong>：</p>
+<ul>
+<li>✅ 每個群顯對應的部門名</li>
+<li>✅ 未分派的群會標「未分派」（AI 分析出來的任務會歸類到部門 ·
+若沒分派 · 任務會 skip）</li>
+</ul>
+<p><strong>技巧</strong>：一開始可能有些群不重要（例：閒聊群）·
+不用全分派 · 只分你要 AI 分析的工作群。</p>
+<hr />
+<h2 id="步驟-6--觸發群內活動給-ai-材料">步驟 6 · 觸發群內活動（給 AI
+材料）</h2>
+<p><strong>操作</strong>：</p>
+<ol type="1">
+<li>打開某已分派部門的 LINE 群（例：福祉—品保部）</li>
+<li><strong>請 3-5 位群內成員輪流發 5-10 則工作訊息</strong></li>
+<li>訊息要包含<strong>明確的工作項目</strong>：
+<ul>
+<li>✅「XX 你負責處理明天客戶那批貨」</li>
+<li>✅「今天 3 台機台停機 · 待維修」</li>
+<li>✅「A 客戶要求下週提前交貨 · Q3 交期問題」</li>
+<li>❌ 純問候不算（「早安」「吃飯了嗎」）</li>
+</ul></li>
+</ol>
+<p><strong>AI 觸發時機</strong>：預設<strong>每晚 20:00
+台北時間</strong> · AI 自動掃描當日訊息 · 分析為任務。</p>
+<p><strong>若您等不及</strong>：請 aiproot 業助「手動觸發今日 batch」·
+5-10 分鐘出結果。</p>
+<hr />
+<h2 id="步驟-7--檢視任務看板">步驟 7 · 檢視任務看板</h2>
+<p><strong>操作</strong>（隔天早上 · 或手動觸發 batch 後）：</p>
+<ol type="1">
+<li>側欄「戰情室」</li>
+<li>頂部 3 個 tab：<strong>總覽儀表 | 任務看板 | 今日日誌</strong></li>
+<li>點「<strong>任務看板</strong>」</li>
+</ol>
+<p><strong>應該看到</strong>：</p>
+<ul>
+<li>✅ 頁面出現 Kanban 3 欄：
+<ul>
+<li><strong>待簽核</strong>（新產出的任務 · 主管要看）</li>
+<li><strong>逾時警示</strong>（有截止日過期 · 或建立 &gt; 7
+天沒簽的）</li>
+<li><strong>已簽核</strong>（近 30 筆已完成）</li>
+</ul></li>
+<li>✅ 每張卡片顯示：
+<ul>
+<li>標題（AI 從對話抽的工作事項）</li>
+<li>分類 tag（例：維修工單 / 客訴 / 進度追蹤）</li>
+<li>指派給誰（若對話有提「XX 你負責」）</li>
+<li>截止時間（若對話有提「明天前」）</li>
+<li>部門名</li>
+</ul></li>
+<li>✅ 點卡片 → 右側 drawer 打開 · 顯詳情 +
+可「<strong>簽核此筆</strong>」</li>
+</ul>
+<p><strong>若看不到任何任務</strong>：</p>
+<ul>
+<li>可能對話內容不夠明確 · AI 判斷 confidence 不夠 high（系統只抽 high
+的）</li>
+<li>檢查步驟 5 · 該群是否分派部門</li>
+<li>聯繫 aiproot 業助檢查</li>
+</ul>
+<hr />
+<h2 id="步驟-8--檢視今日日誌">步驟 8 · 檢視今日日誌</h2>
+<p><strong>操作</strong>：</p>
+<ol type="1">
+<li>戰情室 → tab「<strong>今日日誌</strong>」</li>
+<li>選日期範圍（近 7 天 / 近 30 天）</li>
+</ol>
+<p><strong>應該看到</strong>：</p>
+<ul>
+<li>✅ 每天一個區塊 · 每個 LINE 群一張 card</li>
+<li>✅ Card 內顯 AI 抽的當日工作日報項目（若對話有 · 例：報告人 · 產出 ·
+不良 · 工時 · 問題）</li>
+<li>✅ 點「查完整對話」→ 進 aiproot 內部的對話詳情頁</li>
+</ul>
+<hr />
+<h2 id="步驟-9--部門主管視角驗證重要">步驟 9 ·
+部門主管視角驗證（重要）</h2>
+<p><strong>操作</strong>：</p>
+<ol type="1">
+<li>側欄右上點您的名字 → 「登出」</li>
+<li>用步驟 3 建的<strong>部門主管帳號</strong>登入（王主管）</li>
+<li>進戰情室 → 任務看板</li>
+</ol>
+<p><strong>應該看到</strong>：</p>
+<ul>
+<li>✅ <strong>只顯示該主管所屬部門的任務</strong>（品保部主管 ·
+只看品保部的）</li>
+<li>✅ 別部門的任務<strong>完全看不到</strong></li>
+<li>✅ 側欄沒有「部門/成員」（因主管不管人事）</li>
+<li>✅ 側欄沒有「AIPROOT 管理」（那是我方平台方獨有的）</li>
+</ul>
+<p><strong>若主管看到別部門的任務</strong> → 是資安漏洞 · 立即聯繫
+aiproot</p>
+<hr />
+<h1 id="第三部分--功能二驗收--個人日報">第三部分 · 功能二驗收 ·
+個人日報</h1>
+<h2 id="這個功能做什麼-1">這個功能做什麼</h2>
+<ul>
+<li><strong>員工在 LINE 私訊 bot 就能記工作</strong> · 不用開 Excel</li>
+<li><strong>AI 自動整理成「今日日報」</strong> · 員工只需檢查 +
+送出</li>
+<li><strong>主管收到 LINE 通知</strong> · 立即知道員工今日做了什麼</li>
+</ul>
+<h2 id="步驟-10--員工-line-綁定">步驟 10 · 員工 LINE 綁定</h2>
+<p>拿一位員工（例：Alice）測試：</p>
+<p><strong>操作</strong>：</p>
+<ol type="1">
+<li>Alice 打開 LINE App</li>
+<li><strong>搜尋公司 bot ID</strong> · 加為好友</li>
+<li>Bot <strong>立即傳一則訊息</strong>：
+<pre><code>歡迎！點下方按鈕在 LINE 內完成綁定 · 全程 60 秒 · 免登入網頁
+[ 開始綁定 ]</code></pre></li>
+<li><strong>點「開始綁定」按鈕</strong></li>
+<li>LINE App 內開一個小網頁（<strong>不會跳出到瀏覽器</strong>）</li>
+<li>網頁顯示：
+<pre><code>✨ 系統已識別你的 LINE 資料 · 請確認
+
+姓名：王愛麗絲（可改）
+常用群組：
+✓ 福祉—品保部（85% 訊息）
+  福祉—業務部（15%）</code></pre></li>
+<li>Alice 確認姓名 + 群組正確 · 點「<strong>確認綁定</strong>」</li>
+<li>顯「<strong>✓ 綁定成功</strong>」</li>
+</ol>
+<p><strong>應該看到</strong>：</p>
+<ul>
+<li>✅ Bot 秒回綁定訊息（不是幾分鐘後）</li>
+<li>✅ 綁定網頁在 LINE App 內開（不跳瀏覽器）</li>
+<li>✅ 姓名 pre-fill 是 Alice 的 LINE 顯示名</li>
+<li>✅ 常用群組是 Alice 近 30 天在群內發過訊息的推薦</li>
+<li>✅ 綁定完成關閉小網頁 · 跳回 LINE 聊天</li>
+</ul>
+<p><strong>若失敗</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>錯誤訊息</th>
+<th>原因</th>
+<th>處理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>「缺 botId 參數」</td>
+<td>直接開網址進來 · 沒點 bot 按鈕</td>
+<td>回 LINE · 點 bot 推的按鈕</td>
+</tr>
+<tr>
+<td>「400 · developer role」</td>
+<td>Aiproot 端 LINE Login 未 Publish</td>
+<td>聯繫 aiproot</td>
+</tr>
+<tr>
+<td>「載入失敗」（無明確錯誤）</td>
+<td>網路 or backend 問題</td>
+<td>貼截圖聯繫 aiproot</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="步驟-11--員工私訊-bot-記今日工作">步驟 11 · 員工私訊 bot
+記今日工作</h2>
+<p><strong>操作</strong>：</p>
+<p>Alice 在自己和 bot 的私訊視窗 · 傳幾則今日工作：</p>
+<pre><code>Alice：早上 9 點跟 A 客戶開會 · 討論 Q3 交期
+Bot：✓ 已記錄
+
+Alice：下午 3 點跟人資申請 2 名檢驗
+Bot：✓ 已記錄
+
+Alice：昨天那批不良品已回工廠 · 明日補送
+Bot：✓ 已記錄</code></pre>
+<p><strong>應該看到</strong>：</p>
+<ul>
+<li>✅ Bot 每則秒回「✓ 已記錄」（不打擾）</li>
+<li>✅ 若 Alice 未綁定就傳訊息 · Bot 會回「請先完成綁定 + LIFF
+連結」</li>
+</ul>
+<p><strong>技巧</strong>：</p>
+<ul>
+<li>每則訊息<strong>寫清楚時間 + 事項 + 結論</strong>（給 AI
+好整理的材料）</li>
+<li>不用連貫 · 想到就發一則</li>
+<li>貼圖 / 圖片 v1 不會處理 · 只吃文字</li>
+</ul>
+<hr />
+<h2 id="步驟-12--員工看自己日報">步驟 12 · 員工看自己日報</h2>
+<p><strong>操作</strong>：</p>
+<ol type="1">
+<li>Alice 用<strong>自己的員工帳號</strong>登入 aiproot 系統
+<ul>
+<li>帳號 email =
+<code>&lt;Alice 的 lineUserId&gt;@line.local</code>（例：<code>Ualice123@line.local</code>）</li>
+<li>密碼 → <strong>需 aiproot 業助另外設定</strong> ·
+或走「忘記密碼」流程</li>
+</ul></li>
+<li>側欄「戰情室 → <strong>我的日報</strong>」</li>
+<li>若當日還沒到 17:30（AI 自動生成時間）·
+點「<strong>重新生成</strong>」按鈕</li>
+</ol>
+<p><strong>應該看到</strong>：</p>
+<ul>
+<li>✅ 頁面顯今日日期 + AI 整理的項目</li>
+<li>✅ 每項顯：
+<ul>
+<li>時間（例：08:30-10:00）</li>
+<li>標題（例：A 客戶 Q3 交期討論）</li>
+<li>詳情（例：客戶要求提早 15 天 · 品保確認可配合）</li>
+<li>追蹤事項（若有 · 例：明日 09:00 跟人資申請 2 名）</li>
+</ul></li>
+<li>✅ 每項有「<strong>編輯</strong>」「<strong>刪除</strong>」按鈕</li>
+<li>✅ 底部有「<strong>+ 手動加一項</strong>」</li>
+<li>✅
+底部有「<strong>儲存草稿</strong>」「<strong>送出日報</strong>」按鈕</li>
+</ul>
+<p><strong>若看到「今日尚未有記錄」</strong>：</p>
+<ul>
+<li>Alice 當天沒私訊 bot · 或都是貼圖沒文字</li>
+<li>請 Alice 先私訊幾則 · 再按「重新生成」</li>
+</ul>
+<p><strong>若看到「AI 整理失敗」</strong>：</p>
+<ul>
+<li>Backend 錯誤 · 貼截圖聯繫 aiproot</li>
+</ul>
+<hr />
+<h2 id="步驟-13--送出日報--主管收到通知">步驟 13 · 送出日報 ·
+主管收到通知</h2>
+<p><strong>操作</strong>（Alice 端）：</p>
+<ol type="1">
+<li>我的日報頁 · 檢查項目 OK</li>
+<li>若有錯 · 點「編輯」改 · 或「刪除」不要的 · 或「+ 手動加一項」補</li>
+<li>都對 · 點「<strong>送出日報</strong>」</li>
+<li>彈出確認對話 · 點「<strong>送出</strong>」</li>
+</ol>
+<p><strong>應該看到（Alice 端）</strong>：</p>
+<ul>
+<li>✅ 頁面顯「✓ 已送出 · 主管已收到通知」</li>
+<li>✅ 日報狀態變「已送出」· 不能再改</li>
+</ul>
+<p><strong>應該看到（Alice 部門主管的 LINE 端）</strong>：</p>
+<ul>
+<li>✅ 主管 LINE 立即收到 push 通知：
+<pre><code>📋 王愛麗絲 已送出 2026-07-23 個人日報 · 3 項
+進「戰情室 → 部門日報」查看</code></pre></li>
+<li>✅ 若總經理室的人也是<strong>部門級主管</strong>（罕見）·
+也會收到</li>
+<li>✅ Aiproot 業助不會收到（沒相關）</li>
+</ul>
+<p><strong>若主管沒收到通知</strong>：</p>
+<ul>
+<li>主管未綁定 LINE · 系統無法 push · 請主管先走步驟 10 綁定</li>
+<li>主管綁定 LINE 帳號跟 aiproot 帳號<strong>必須是同一位</strong>（透過
+email 對照）</li>
+</ul>
+<hr />
+<h1 id="第四部分--驗收-checklist">第四部分 · 驗收 checklist</h1>
+<p><strong>驗收人</strong>：__________________
+<strong>驗收日期</strong>：__________________</p>
+<h2 id="功能一--line-群組日誌與任務看板">功能一 · LINE
+群組日誌與任務看板</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>檢查項目</th>
+<th style="text-align: center;">通過</th>
+<th>備註</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>系統管理員可登入 · 看到戰情室</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td>可建部門</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td>可建部門主管 · 角色只有「群組負責人」可選</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td>LINE bot 已在指定群組內</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>5</td>
+<td>可分派 LINE 群到部門</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>6</td>
+<td>群內測試訊息 · AI 掃描完能出任務</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>7</td>
+<td>任務看板顯示 AI 抽的工作項目</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>8</td>
+<td>今日日誌顯示各群當日報告</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>9</td>
+<td>部門主管視角 · 只看自己部門</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="功能二--line-個人日報">功能二 · LINE 個人日報</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>檢查項目</th>
+<th style="text-align: center;">通過</th>
+<th>備註</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10</td>
+<td>員工可完成 LINE 綁定 · 全程 60 秒</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>11</td>
+<td>員工私訊 bot · 每則回「✓ 已記錄」</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>12</td>
+<td>我的日報顯示 AI 整理項目</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>13</td>
+<td>送出後主管 LINE 立即收到通知</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="第五部分--遇到問題怎麼辦">第五部分 · 遇到問題怎麼辦</h1>
+<h2 id="步驟">步驟</h2>
+<ol type="1">
+<li><strong>拍照 or 截圖</strong> 顯示問題畫面</li>
+<li><strong>記錄執行步驟</strong>（例：我點了 X · 期待看到 Y · 實際看到
+Z）</li>
+<li><strong>用 email or LINE 聯繫 aiproot 業助</strong></li>
+<li>Aiproot 業助<strong>3 個工作日內回覆解決</strong> or 說明</li>
+</ol>
+<h2 id="常見問題-quick-table">常見問題 quick table</h2>
+<table>
+<thead>
+<tr>
+<th>症狀</th>
+<th>可能原因</th>
+<th>立即動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>登入 401 錯誤</td>
+<td>密碼錯</td>
+<td>重寄密碼</td>
+</tr>
+<tr>
+<td>登入白屏</td>
+<td>系統 backend 掛</td>
+<td>聯繫 aiproot</td>
+</tr>
+<tr>
+<td>Bot 加好友沒收訊息</td>
+<td>webhook 未 connect</td>
+<td>聯繫 aiproot</td>
+</tr>
+<tr>
+<td>綁定「400 developer role」</td>
+<td>Aiproot LINE Login 未 Publish</td>
+<td>聯繫 aiproot</td>
+</tr>
+<tr>
+<td>綁定「缺 botId」</td>
+<td>直接開網址 · 沒點 bot 按鈕</td>
+<td>回 LINE 點按鈕</td>
+</tr>
+<tr>
+<td>任務看板空的</td>
+<td>對話不夠明確 or 部門未分派</td>
+<td>檢查步驟 5-6</td>
+</tr>
+<tr>
+<td>我的日報空的</td>
+<td>員工當天沒私訊</td>
+<td>請員工先私訊幾則</td>
+</tr>
+<tr>
+<td>主管沒收 push</td>
+<td>主管未綁定 LINE</td>
+<td>主管走步驟 10</td>
+</tr>
+</tbody>
+</table>
+<h2 id="聯繫-aiproot">聯繫 aiproot</h2>
+<ul>
+<li>Email：TBD（aiproot 交付時提供）</li>
+<li>LINE：TBD</li>
+<li>緊急電話：TBD</li>
+</ul>
+<hr />
+<h1 id="附錄--給資訊窗口的自檢清單">附錄 · 給資訊窗口的自檢清單</h1>
+<p>若您是台灣福祉的<strong>資訊窗口</strong> ·
+建議<strong>先自己走一次上述所有步驟</strong> · 遇到問題直接跟 aiproot
+溝通 · 別讓總經理和一般員工先踩到 bug 影響信心。</p>
+<p>您額外要驗的：</p>
+<ul class="task-list">
+<li><label><input type="checkbox" />檢查 LINE bot access token
+有效期（LINE console 顯示）</label></li>
+<li><label><input type="checkbox" />檢查 aiproot 後台「AI 成本管理」·
+確認費用在預算內</label></li>
+<li><label><input type="checkbox" />檢查「LINE 綁定稽核」·
+追未綁員工比例</label></li>
+</ul>
+<hr />
+<h1 id="交付簽收">交付簽收</h1>
+<p><strong>驗收人簽名</strong>：______________________________
+<strong>日期</strong>：______________</p>
+<p><strong>Aiproot 交付人簽名</strong>：______________________________
+<strong>日期</strong>：______________</p>
+<p><strong>備註</strong>：</p>
+<hr />
+<hr />
+<hr />
+<p><em>本文件由 aiproot 交付團隊產出 · 2026-07-23 · v1.0</em></p>
+</body>
+</html>
