@@ -123,6 +123,43 @@ export class EmployeeBindingController {
   }
 
   /**
+   * Tenant 自治 · tenant_admin 列自租戶 binding audit
+   * · tenantId 一律取自 JWT（user.tenant_id）· 不接受 query 傳入 · 防跨租戶窺看
+   * · 在 tenant_admin 上下文執行 · user_line_binding + users RLS 皆已 tenant-scope
+   */
+  @Get("tenant/list")
+  @Roles("tenant_admin")
+  async tenantList(@CurrentUser() user: JwtUser, @Query("status") status?: "active" | "revoked") {
+    const tenantId = user.tenant_id;
+    if (!tenantId) throw new BadRequestException("缺租戶識別");
+    const rows = await withTenant({ tenantId, role: "tenant_admin" }, (tx) => this.bindingRepo.listByTenant(tx, tenantId, { status, limit: 500 }));
+    return { bindings: rows };
+  }
+
+  /**
+   * Tenant 自治 · tenant_admin 撤銷自租戶員工綁定
+   * · 跨租戶 binding_id 由 RLS 擋死（service 內在 tenant 上下文執行）
+   */
+  @Post("tenant/revoke/:bindingId")
+  @Roles("tenant_admin")
+  async tenantRevoke(@Param("bindingId") bindingId: string, @CurrentUser() user: JwtUser) {
+    if (!user.tenant_id) throw new BadRequestException("缺租戶識別");
+    if (!isValidUuid(bindingId)) throw new BadRequestException("bindingId 格式錯 · 需為 UUID");
+    await this.svc.revokeBindingForTenant(bindingId, user.tenant_id, user.user_id);
+    return { success: true };
+  }
+
+  /**
+   * Tenant 自治 · tenant_admin 看自租戶未綁定活躍者
+   */
+  @Get("tenant/unbound-stats")
+  @Roles("tenant_admin")
+  async tenantUnboundStats(@CurrentUser() user: JwtUser) {
+    if (!user.tenant_id) throw new BadRequestException("缺租戶識別");
+    return { stats: await this.nudge.computeUnboundStatsForTenant(user.tenant_id) };
+  }
+
+  /**
    * Alice self-revoke · 需登入（但 tenant_admin/group_owner 都可撤自己的）
    */
   @Post("self/revoke")

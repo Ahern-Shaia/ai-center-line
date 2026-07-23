@@ -68,6 +68,35 @@ export class NudgeService {
   }
 
   /**
+   * 單一租戶未綁定活躍者 · 供 tenant_admin 自租戶 audit 頁用
+   * · tenantId 一律由 caller 從 JWT 取（不接受 client 傳入）· 避免跨租戶窺看
+   * · 走 aiproot_admin 上下文只為讓 line_member 的 display_name JOIN 得到值
+   *   （line_member RLS 不開 tenant_admin · 見矩陣 §4.1）· 查詢本身已 lm.tenant_id 綁死該租戶
+   */
+  async computeUnboundStatsForTenant(tenantId: string): Promise<{
+    tenantId: string;
+    tenantName: string;
+    unboundCount: number;
+    top: Array<{ senderLineId: string; displayName: string | null; messageCount: number; topGroupName: string | null }>;
+  }> {
+    const nameRes = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{ tenant_name: string }>(sql`
+      SELECT tenant_name FROM tenants WHERE tenant_id = ${tenantId}::uuid
+    `));
+    const unbound = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.findUnboundActiveUsers(tx, tenantId, 7));
+    return {
+      tenantId,
+      tenantName: nameRes.rows[0]?.tenant_name ?? "",
+      unboundCount: unbound.length,
+      top: unbound.slice(0, 10).map((r) => ({
+        senderLineId: r.senderLineId,
+        displayName: r.displayName,
+        messageCount: r.messageCount,
+        topGroupName: r.topGroupName,
+      })),
+    };
+  }
+
+  /**
    * 查未綁定活躍者 · inline SQL 避免依賴 LineMessageRepository
    * 邏輯對照原 LineMessageRepository.findUnboundActiveUsers
    */

@@ -272,4 +272,21 @@ export class EmployeeBindingService {
     await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.bindingRepo.revoke(tx, bindingId, { revokedBy, reason }));
     this.logger.log(`Binding revoked · bindingId=${bindingId} · reason=${reason}`);
   }
+
+  /**
+   * tenant_admin 撤銷自租戶員工綁定
+   * · 一律在該 tenant 上下文執行 · user_line_binding RLS (USING · FOR ALL) 會把
+   *   非本租戶的 binding_id 濾掉 → UPDATE 命中 0 列 → revoked=false → 視同找不到。
+   *   ⇒ 跨租戶 IDOR 由 RLS 擋死 · 不靠應用層額外查詢。
+   * · tenantId 必須來自 caller 的 JWT（非 client 輸入）。
+   */
+  async revokeBindingForTenant(bindingId: string, tenantId: string, revokedBy: string): Promise<void> {
+    const { revoked } = await withTenant({ tenantId, role: "tenant_admin" }, (tx) =>
+      this.bindingRepo.revoke(tx, bindingId, { revokedBy, reason: "tenant_admin_revoke" }),
+    );
+    if (!revoked) {
+      throw new NotFoundException("找不到可撤銷的綁定 · 可能已撤銷或不屬於你的租戶");
+    }
+    this.logger.log(`Binding revoked by tenant_admin · bindingId=${bindingId} · tenant=${tenantId}`);
+  }
 }

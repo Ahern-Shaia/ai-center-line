@@ -113,7 +113,7 @@ export class UserLineBindingRepository {
    */
   async revoke(tx: Db, bindingId: string, args: {
     revokedBy: string;
-    reason: "self_revoke" | "aiproot_revoke" | "user_deleted";
+    reason: "self_revoke" | "aiproot_revoke" | "tenant_admin_revoke" | "user_deleted";
   }): Promise<{ revoked: boolean }> {
     const res = await tx.execute<{ id: string }>(sql`
       UPDATE user_line_binding SET
