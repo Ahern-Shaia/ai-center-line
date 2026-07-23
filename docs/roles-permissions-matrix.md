@@ -3,7 +3,7 @@
 > 4 role × 全模組權限對照 · 這是實作權限 gate 的 source of truth。
 > 任何 backend `@Roles` / frontend `canView / canEdit` 決定 · 都對照本檔。
 >
-> 版本：v1.0（2026-07-23）
+> 版本：v1.3（2026-07-24）
 > 對應 memory：[feedback_only_aiproot_creates_tenant_accounts.md](../memory/) v2（本檔取代舊 v1）
 
 ---
@@ -125,12 +125,15 @@
 | **密碼 rotate** | ✅ | ❌ | ❌（走 aiproot or forgot-password）| ❌ |
 | 租戶設定 | 👁 | 👁 | ✅ (自 tenant) | ❌ |
 | 稽核記錄 | 👁 (跨) | 👁 (跨) | 👁 (自 tenant) | ❌ |
+| **員工 LINE 綁定**（檢視 + 撤銷 · **v1.3 新開**）| —（用 §3.6 跨租戶版）| — | **✅**（自 tenant） | ❌ |
+| **員工 LINE 綁定 · 未綁定活躍者提示** | —（§3.6）| — | **✅**（自 tenant） | ❌ |
 | 自己 profile（display_name 等非核心欄位）| ✅ | ✅ | ✅ | ✅ |
 
 **變更點**（本次修正 · 逆轉舊 rule）：
 - **部門 CRUD**：tenant_admin 開放
 - **成員 CRUD**：tenant_admin 開放 · **限建 group_owner**（不可建 aiproot_admin / consultant / tenant_admin）
 - **成員 role change**：tenant_admin 可停用 group_owner · 但**不可升為 tenant_admin**
+- **員工 LINE 綁定（v1.3 新開）**：tenant_admin 可檢視 + 撤銷自租戶員工綁定 + 看未綁定活躍者。跨租戶 IDOR 由 `user_line_binding` RLS（FOR ALL · USING）擋死 —— tenant 端 revoke 一律在自租戶上下文執行 · 別租戶 binding_id 命中 0 列。tenantId 一律取自 JWT · 端點 `GET/POST /binding/tenant/*`。aiproot 跨租戶版（§3.6）不變
 
 **Backend 需三重保障**：
 1. `@Roles` 加 tenant_admin
@@ -151,8 +154,8 @@
 | AI 成本管理 | 👁 | 👁 | ❌ | ❌ |
 | 對話分析歷程 | 👁 | 👁 | ❌ | ❌ |
 | **手動觸發 batch** | ✅ | ❌ | ❌ | ❌ |
-| LINE 綁定稽核 | 👁 + 撤銷 | 👁 | ❌ | ❌ |
-| **撤銷 employee 綁定** | ✅ | ❌ | ❌ | ❌ |
+| LINE 綁定稽核（**跨租戶** · 選 tenant）| 👁 + 撤銷 | 👁 | ❌（改用 §3.5 自租戶版）| ❌ |
+| **撤銷 employee 綁定** | ✅（跨租戶）| ❌ | ✅（僅自租戶 · v1.3 · 見 §3.5）| ❌ |
 | 分類管理（rename / archive）| ✅ | 👁 | ❌ | ❌ |
 
 ### 3.7 系統路徑（無 role · scheduled / webhook）
@@ -182,7 +185,7 @@
 | `line_group` | ✅ 全 | ✅ 全 | ✅ 自 tenant | ✅ 自部門 | ✅ |
 | `line_message` | ✅ 全 | ✅ 全 | ✅ 自 tenant | ✅ 自部門 | ✅ |
 | `line_member` | ✅ 全 | ✅ 全 | ❌ | ❌ | ✅ |
-| `user_line_binding` | ✅ 全 | ✅ 全 | ❌ (v1) | ✅ 自己 | ✅ |
+| `user_line_binding` | ✅ 全 | ✅ 全 | ✅ 自 tenant (v1.3) | ✅ 自己 | ✅ |
 | `analysis_upload` | ✅ 全 | ✅ 全 | ❌ | ❌ | ✅ |
 | `analysis_result` | ✅ 全 | ✅ 全 | ❌ | ❌ | ✅ |
 | `category_registry` | ✅ 全 | ✅ 全 | ✅ 自 tenant | ❌ | ✅ |
@@ -208,7 +211,7 @@
 | 資料 · 知識 | 全 | 已 role-based |
 | AI 對話分析 | **僅 aiproot_admin + consultant** | 已 `roles:` gate |
 | 通訊接頭層 | **僅 aiproot_admin + consultant** | 已 `roles:` gate |
-| 設定 | 全 · **變更後 tenant_admin 可用 depts/members**（本次修正）| 現況 gate 未擋 · 但 `depts` 頁內部 canView 擋掉 tenant_admin · **需改** |
+| 設定 | 全 · **變更後 tenant_admin 可用 depts/members**（本次修正）· **「員工 LINE 綁定」item 僅 tenant_admin**（item 級 `roles: [tenant_admin]` gate · v1.3）| 現況 gate 未擋 · 但 `depts` 頁內部 canView 擋掉 tenant_admin · **需改** |
 | AIPROOT 管理 | 僅 aiproot_admin + consultant | 已 `roles:` gate |
 
 ### 5.2 頁面內 canEdit（e.g. 部門/成員頁）
@@ -305,3 +308,4 @@ const ASSIGNABLE_ROLES = session.role === "aiproot_admin"
 | 2026-07-23 | v1.0 | 首版 · 逆轉舊 rule「aiproot 統包所有帳號建立」· 開放 tenant_admin 建 group_owner + 管自 tenant depts | ahern + Claude · 對話裁定 |
 | 2026-07-23 | **v1.1** | **加 employee role**（migration 0020）· 修 v1 tech debt (LIFF 綁定用 group_owner 卻登不了 web 的邏輯洞)<br>· employee 只能看/送自己日報 · sidebar 只顯「我的日報」<br>· LIFF 綁定 default role 改 employee<br>· 加 LINE Login OAuth 到 web 登入頁 · 員工可用 LINE 一鍵登入 web（免密碼）<br>· 舊 @line.local email users 自動遷 group_owner → employee | ahern + Claude · 對話裁定 |
 | 2026-07-23 | **v1.2** | **Option C · LIFF 綁定加選配設密碼路徑**（employee 也可用 email + 密碼登入）<br>· 部門完全 server derive · 不讓員工手選（避免藍領選錯 · 只有 tenant_admin 可改）<br>· 綁定成功頁增強 · 3 條後續路徑指引（手機/電腦/設密碼）<br>· 私訊「設密碼」關鍵字 → LIFF setup 頁（email + 密碼 · 走 PasswordPolicy）<br>· 帳號建立矩陣新增「LIFF 自服務設密碼」路徑 · 同 tenant email 唯一 · 自設不 force-change<br>· 管理層帳號 (tenant_admin) 建立 flow 不變 · aiproot wizard + email + 密碼 + first-login-change | ahern + Claude · 對話裁定 |
+| 2026-07-24 | **v1.3** | **LINE 綁定稽核開放給客戶方自治**（逆轉 v1「僅 aiproot」）· tenant_admin 可檢視 + 撤銷自租戶員工綁定 + 看未綁定活躍者<br>· 新端點 `GET /binding/tenant/list`、`POST /binding/tenant/revoke/:bindingId`、`GET /binding/tenant/unbound-stats`（皆 `@Roles(tenant_admin)` · tenantId 取自 JWT）<br>· 跨租戶 IDOR 由 `user_line_binding` RLS（FOR ALL · USING）擋死 · revoke 在自租戶上下文執行<br>· 新增 reason `tenant_admin_revoke`<br>· 前端 `settings/TenantBindingAudit.tsx`（無租戶下拉）· sidebar 設定群加 item 級 `roles:[tenant_admin]` gate<br>· aiproot 跨租戶版（§3.6）維持不變 | ahern + Claude · 對話裁定 |
