@@ -1,5 +1,4 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { Cron } from "@nestjs/schedule";
 import PQueue from "p-queue";
 import { sql } from "drizzle-orm";
 import { withTenant } from "../db/client.js";
@@ -9,10 +8,11 @@ import { PersonalDailyReportService } from "./personal-daily-report.service.js";
  * PersonalReportSchedulerService · PDR-M3
  * 對照 docs/modules/personal-daily-report.md §6
  *
- * 每日 17:30 台北 · 掃全綁定 user · 逐個生成日報
+ * 平台化後（scheduler-config M2）· @Cron decorator 已移除
+ * · 由 SchedulerManager 依 scheduler_config 表動態註冊 CronJob
+ * · 保留 runForDate 作為純 executor · 由 SchedulerManager.dispatch / 手動 endpoint 呼叫
  * · PQueue 5 · 避免 LLM 併發爆
- * · 只掃 tenant.batch_enabled=true 的 tenant (config 對齊 warroom 一致)
- * · env PDR_SCHEDULER_ENABLED=false 可 kill
+ * · 只掃 tenant.batch_enabled=true 的 tenant
  */
 @Injectable()
 export class PersonalReportSchedulerService {
@@ -22,22 +22,15 @@ export class PersonalReportSchedulerService {
     private readonly reportService: PersonalDailyReportService,
   ) {}
 
-  @Cron("30 17 * * *", { timeZone: "Asia/Taipei" })
-  async handleDailyGeneration(): Promise<void> {
-    if (process.env.PDR_SCHEDULER_ENABLED === "false") {
-      this.logger.log("PDR_SCHEDULER_ENABLED=false · skip");
-      return;
-    }
-    const today = getTaipeiDate();
-    await this.runForDate(today);
-  }
-
   /**
-   * 手動觸發 · aiproot 「重新生成」用 (M4 UI)
-   * · 若 reportDate 缺 · 用今日
+   * 手動觸發 · aiproot 「重新生成」用 · 或 SchedulerManager 呼叫
+   * · tenantId 傳則 scope 到單 tenant · 未傳掃全 tenant
    */
-  async runForDate(reportDate: string): Promise<{ total: number; succeeded: number; empty: number; failed: number }> {
-    // Step 1 · 撈全綁定 user list (aiproot_admin 跨租戶讀)
+  async runForDate(reportDate: string, tenantId?: string): Promise<{ total: number; succeeded: number; empty: number; failed: number }> {
+    // Step 1 · 撈綁定 user list (aiproot_admin 跨租戶讀)
+    const tenantFilter = tenantId
+      ? sql`AND u.tenant_id = ${tenantId}::uuid`
+      : sql``;
     const users = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{
       tenant_id: string;
       user_id: string;
@@ -48,6 +41,7 @@ export class PersonalReportSchedulerService {
       JOIN tenants t ON t.tenant_id = u.tenant_id
       WHERE b.status = 'active'
         AND t.batch_enabled = true
+        ${tenantFilter}
     `));
 
     const rows = users.rows;
@@ -71,9 +65,4 @@ export class PersonalReportSchedulerService {
     this.logger.log(`PDR scheduler done · date=${reportDate} · ok=${succeeded} empty=${empty} failed=${failed}`);
     return { total: rows.length, succeeded, empty, failed };
   }
-}
-
-function getTaipeiDate(): string {
-  const now = new Date();
-  return now.toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });   // en-CA → YYYY-MM-DD
 }

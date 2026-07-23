@@ -26,6 +26,7 @@ import { PersonalReportSchedulerService } from "./personal-report-scheduler.serv
   exports: [
     PersonalDailyReportService,
     PersonalDailyReportRepository,
+    PersonalReportSchedulerService,
   ],
 })
 export class PersonalDailyReportModule {}

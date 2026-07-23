@@ -31,6 +31,7 @@ import { ConvoAnalysisRealtimeModule } from "./convo-analysis-realtime/convo-ana
 import { EmployeeBindingModule } from "./employee-binding/employee-binding.module.js";
 import { WarroomTaskBoardModule } from "./warroom-task-board/warroom-task-board.module.js";
 import { PersonalDailyReportModule } from "./personal-daily-report/personal-daily-report.module.js";
+import { SchedulerConfigModule } from "./scheduler-config/scheduler-config.module.js";
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { PersonalDailyReportModule } from "./personal-daily-report/personal-dail
     EmployeeBindingModule,
     WarroomTaskBoardModule,
     PersonalDailyReportModule,
+    SchedulerConfigModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [
