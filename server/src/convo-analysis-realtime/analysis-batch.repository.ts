@@ -19,6 +19,28 @@ export interface AnalysisBatchRow {
 @Injectable()
 export class AnalysisBatchRepository {
   /**
+   * P1-fix M2 · idempotent check · runBatch 開頭呼叫
+   * 若已存在且 status=completed / empty · caller 決定 skip 或 rerun
+   */
+  async getExisting(tx: Db, args: {
+    tenantId: string;
+    groupId: string;
+    batchDate: string;
+  }): Promise<{ batchId: string; status: string; uploadId: number | null; messageCount: number } | null> {
+    const res = await tx.execute<{ batch_id: string; status: string; upload_id: number | null; message_count: number }>(sql`
+      SELECT batch_id, status, upload_id, message_count
+      FROM analysis_batch
+      WHERE tenant_id = ${args.tenantId}::uuid
+        AND group_id = ${args.groupId}
+        AND batch_date = ${args.batchDate}::date
+      LIMIT 1
+    `);
+    const row = res.rows[0];
+    if (!row) return null;
+    return { batchId: row.batch_id, status: row.status, uploadId: row.upload_id, messageCount: row.message_count };
+  }
+
+  /**
    * 開始 batch · 冪等 UNIQUE (tenant_id, group_id, batch_date)
    * 若已存在 (手動重跑) · 覆蓋 upload_id 前值 · 狀態改回 running
    * 回 batchId + 是否 first (供 log)

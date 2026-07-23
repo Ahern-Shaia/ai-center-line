@@ -1,10 +1,11 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { SchedulerRegistry } from "@nestjs/schedule";
 import { CronJob } from "cron";
+import { sql } from "drizzle-orm";
 import { withSystemTx } from "../db/client.js";
 import { BatchSchedulerService } from "../convo-analysis-realtime/batch-scheduler.service.js";
 import { PersonalReportSchedulerService } from "../personal-daily-report/personal-report-scheduler.service.js";
-import { SchedulerConfigRepository, type SchedulerConfigRow } from "./scheduler-config.repository.js";
+import { SchedulerConfigRepository, type SchedulerConfigRow, type SchedulerId } from "./scheduler-config.repository.js";
 
 const JOB_PREFIX = "sched:";
 
@@ -112,18 +113,68 @@ export class SchedulerManager implements OnModuleInit {
     return `${JOB_PREFIX}${schedulerId}:${tenantId ?? "platform"}`;
   }
 
+  /**
+   * P1-fix D3 · Multi-instance double run
+   * 用 pg_try_advisory_lock 讓多 pod 情境只有一個拿到鎖
+   * · lock key = schedulerId + tenantId 的 hash · int8 (postgres advisory lock 用)
+   * · try_advisory_lock 拿不到 → 靜默 return · 讓另一 pod 跑
+   */
+  private lockKey(schedulerId: SchedulerId, tenantId: string | null): bigint {
+    // FNV-1a 64-bit hash → BigInt
+    const key = `${schedulerId}:${tenantId ?? "platform"}`;
+    let h = 14695981039346656037n;
+    for (let i = 0; i < key.length; i++) {
+      h ^= BigInt(key.charCodeAt(i));
+      h = (h * 1099511628211n) & 0xffffffffffffffffn;
+    }
+    // Postgres advisory lock 用 int8 (bigint) · 範圍 -2^63 ~ 2^63-1
+    return h > 0x7fffffffffffffffn ? h - 0x10000000000000000n : h;
+  }
+
+  /**
+   * P1-fix D4 · Platform default vs tenant override 排除
+   * 撈已有 override 的 tenant list · dispatch 時排除
+   */
+  private async listOverriddenTenants(schedulerId: SchedulerId): Promise<Set<string>> {
+    const rows = await withSystemTx((tx) => tx.execute<{ tenant_id: string }>(sql`
+      SELECT tenant_id::text
+      FROM scheduler_config
+      WHERE scheduler_id = ${schedulerId}
+        AND tenant_id IS NOT NULL
+        AND enabled = true
+    `));
+    return new Set(rows.rows.map((r) => r.tenant_id));
+  }
+
   private async dispatch(cfg: SchedulerConfigRow): Promise<void> {
     const startedAt = new Date().toISOString();
-    this.logger.log(`dispatch ${cfg.schedulerId} tenant=${cfg.tenantId ?? "platform-default"} · startedAt=${startedAt}`);
+
+    // P1-fix D3 · advisory lock · multi-pod 只讓一個跑
+    const lockKey = this.lockKey(cfg.schedulerId, cfg.tenantId);
+    const lockRes = await withSystemTx((tx) => tx.execute<{ locked: boolean }>(sql`
+      SELECT pg_try_advisory_lock(${lockKey.toString()}::bigint) AS locked
+    `));
+    if (!lockRes.rows[0]?.locked) {
+      this.logger.log(`dispatch ${cfg.schedulerId} tenant=${cfg.tenantId ?? "platform-default"} · another instance holds lock · skip`);
+      return;
+    }
+
     try {
+      this.logger.log(`dispatch ${cfg.schedulerId} tenant=${cfg.tenantId ?? "platform-default"} · startedAt=${startedAt}`);
       let result: Record<string, unknown>;
+
+      // P1-fix D4 · Platform default 跑時排除有 override 的 tenant
+      const excludeTenants = cfg.tenantId === null
+        ? await this.listOverriddenTenants(cfg.schedulerId)
+        : new Set<string>();
+
       if (cfg.schedulerId === "pdr") {
         const today = getTaipeiDate();
-        const res = await this.pdrScheduler.runForDate(today, cfg.tenantId ?? undefined);
-        result = { ...res, reportDate: today };
+        const res = await this.pdrScheduler.runForDate(today, cfg.tenantId ?? undefined, excludeTenants);
+        result = { ...res, reportDate: today, excludedTenants: [...excludeTenants] };
       } else if (cfg.schedulerId === "group_batch") {
-        const res = await this.batchScheduler.runPending("cron", cfg.lookbackDays, cfg.tenantId ?? undefined);
-        result = { ...res };
+        const res = await this.batchScheduler.runPending("cron", cfg.lookbackDays, cfg.tenantId ?? undefined, excludeTenants);
+        result = { ...res, excludedTenants: [...excludeTenants] };
       } else {
         this.logger.warn(`dispatch unknown schedulerId=${cfg.schedulerId}`);
         return;
@@ -146,6 +197,11 @@ export class SchedulerManager implements OnModuleInit {
           result: { startedAt, status: "failed", errorMessage: errMsg.slice(0, 500) },
         }));
       } catch { /* 若連 markLastRun 都掛 · 靜默 · scheduler 掛可以從 stdout 看 */ }
+    } finally {
+      // 釋放 advisory lock · 讓下次 fire 可拿到
+      try {
+        await withSystemTx((tx) => tx.execute(sql`SELECT pg_advisory_unlock(${lockKey.toString()}::bigint)`));
+      } catch { /* 忽略 · session 結束 lock 自動釋放 */ }
     }
   }
 }

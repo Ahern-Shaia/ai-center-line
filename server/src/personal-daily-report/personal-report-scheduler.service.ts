@@ -26,7 +26,11 @@ export class PersonalReportSchedulerService {
    * 手動觸發 · aiproot 「重新生成」用 · 或 SchedulerManager 呼叫
    * · tenantId 傳則 scope 到單 tenant · 未傳掃全 tenant
    */
-  async runForDate(reportDate: string, tenantId?: string): Promise<{ total: number; succeeded: number; empty: number; failed: number }> {
+  async runForDate(
+    reportDate: string,
+    tenantId?: string,
+    excludeTenants?: Set<string>,
+  ): Promise<{ total: number; succeeded: number; empty: number; failed: number; skipped: number }> {
     // Step 1 · 撈綁定 user list (aiproot_admin 跨租戶讀)
     const tenantFilter = tenantId
       ? sql`AND u.tenant_id = ${tenantId}::uuid`
@@ -44,14 +48,19 @@ export class PersonalReportSchedulerService {
         ${tenantFilter}
     `));
 
-    const rows = users.rows;
-    this.logger.log(`PDR scheduler · ${reportDate} · ${rows.length} bound users to scan`);
+    // P1-fix D4 · 排除已有 override 的 tenant
+    const filteredRows = excludeTenants && excludeTenants.size > 0
+      ? users.rows.filter((r) => !excludeTenants.has(r.tenant_id))
+      : users.rows;
+    const skipped = users.rows.length - filteredRows.length;
+
+    this.logger.log(`PDR scheduler · ${reportDate} · ${filteredRows.length} to scan (skipped ${skipped} · has override)`);
 
     // Step 2 · PQueue concurrency 5
     const queue = new PQueue({ concurrency: 5 });
     let succeeded = 0, empty = 0, failed = 0;
 
-    await Promise.all(rows.map((r) => queue.add(async () => {
+    await Promise.all(filteredRows.map((r) => queue.add(async () => {
       const res = await this.reportService.generate({
         tenantId: r.tenant_id,
         userId: r.user_id,
@@ -62,7 +71,7 @@ export class PersonalReportSchedulerService {
       else failed++;
     })));
 
-    this.logger.log(`PDR scheduler done · date=${reportDate} · ok=${succeeded} empty=${empty} failed=${failed}`);
-    return { total: rows.length, succeeded, empty, failed };
+    this.logger.log(`PDR scheduler done · date=${reportDate} · ok=${succeeded} empty=${empty} failed=${failed} skipped=${skipped}`);
+    return { total: filteredRows.length, succeeded, empty, failed, skipped };
   }
 }

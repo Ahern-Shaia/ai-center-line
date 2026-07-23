@@ -49,8 +49,23 @@ export class AnalysisBatchService {
     messageCount: number;
   }> {
     // 決定 source · 手動 vs cron
-    const isManual = args.triggeredBy.startsWith("manual:");
+    const isManual = args.triggeredBy.startsWith("manual:") || args.triggeredBy.startsWith("manual-tenant:");
     const source: "webhook" | "webhook_manual" = isManual ? "webhook_manual" : "webhook";
+
+    // P1-fix M2 · idempotent · cron 情境若已 completed 直接 return existing
+    // (manual 情境用戶明說要 rerun · 不 skip)
+    if (!isManual) {
+      const existing = await withSystemTx((tx) => this.batchRepo.getExisting(tx, args));
+      if (existing && (existing.status === "completed" || existing.status === "empty")) {
+        this.logger.log(`batch skip · ${args.tenantId}/${args.groupId}/${args.batchDate} · already ${existing.status} · batchId=${existing.batchId}`);
+        return {
+          batchId: existing.batchId,
+          status: existing.status as "completed" | "empty",
+          uploadId: existing.uploadId,
+          messageCount: existing.messageCount,
+        };
+      }
+    }
 
     // 1. startBatch · 冪等
     const { batchId } = await withSystemTx((tx) => this.batchRepo.startBatch(tx, args));

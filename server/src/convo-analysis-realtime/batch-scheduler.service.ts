@@ -29,20 +29,33 @@ export class BatchSchedulerService {
    * · lookback 天數可調 · default 2
    * · tenantId: optional · 傳則限單 tenant
    */
-  async runPending(triggeredBy: string, lookbackDays = 2, tenantId?: string): Promise<{
+  async runPending(
+    triggeredBy: string,
+    lookbackDays = 2,
+    tenantId?: string,
+    excludeTenants?: Set<string>,
+  ): Promise<{
     total: number;
     completed: number;
     empty: number;
     failed: number;
+    skipped: number;
   }> {
     const pending = await withSystemTx((tx) => this.messageRepo.findPendingBatches(tx, lookbackDays, tenantId));
-    this.logger.log(`daily batch 掃到 ${pending.length} 個待跑 (lookback ${lookbackDays}d, tenant=${tenantId ?? "*"})`);
-    if (pending.length === 0) return { total: 0, completed: 0, empty: 0, failed: 0 };
+
+    // P1-fix D4 · 排除已有 override 的 tenant
+    const filtered = excludeTenants && excludeTenants.size > 0
+      ? pending.filter((p) => !excludeTenants.has(p.tenantId))
+      : pending;
+    const skipped = pending.length - filtered.length;
+
+    this.logger.log(`daily batch 掃到 ${filtered.length} 個待跑 (lookback ${lookbackDays}d, tenant=${tenantId ?? "*"}, skipped ${skipped})`);
+    if (filtered.length === 0) return { total: 0, completed: 0, empty: 0, failed: 0, skipped };
 
     const queue = new PQueue({ concurrency: 3 });
     let completed = 0, empty = 0, failed = 0;
 
-    await Promise.all(pending.map((p) => queue.add(async () => {
+    await Promise.all(filtered.map((p) => queue.add(async () => {
       const result = await this.batchService.runBatch({
         tenantId: p.tenantId,
         groupId: p.groupId,
@@ -54,7 +67,7 @@ export class BatchSchedulerService {
       else failed++;
     })));
 
-    this.logger.log(`daily batch done · completed=${completed} · empty=${empty} · failed=${failed}`);
-    return { total: pending.length, completed, empty, failed };
+    this.logger.log(`daily batch done · completed=${completed} · empty=${empty} · failed=${failed} · skipped=${skipped}`);
+    return { total: filtered.length, completed, empty, failed, skipped };
   }
 }

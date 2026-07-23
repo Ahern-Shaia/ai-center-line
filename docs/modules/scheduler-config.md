@@ -351,16 +351,16 @@ ORDER BY last_run_at DESC;
 |---|---|---|---|---|
 | D1 | executor（PDR / batch）throw | catch + `markLastRun(failed)` + log · scheduler 存活 · 下次仍跑 | ✅ dispatch try/catch | P1 |
 | D2 | `markLastRun` 自己也 throw | inner catch 靜默 · stdout log 保留 | ✅ 靜默 catch | P2 |
-| D3 | Multi-instance（Render 未來 2 pods）· 同時 fire · double run | 同 batch 跑兩次 · cost double · DB unique key 撞 | ⚠️ 已知殘留 · Render 現只 1 pod · 若擴 pod 需加 distributed lock（advisory lock） | P1 |
-| D4 | Platform default job fire 但某 tenant 有 override · double run | Platform default 應該 skip 有 override 的 tenant · **目前 dispatch 沒實作這個排除** | ⚠️ 已知殘留 · MVP 接受 · 治本：dispatch 前 query 「排除有 override 的 tenant」 | P1 |
+| D3 | Multi-instance（Render 未來 2 pods）· 同時 fire · double run | 同 batch 跑兩次 · cost double · DB unique key 撞 | ✅ **P1-fix** · dispatch 內用 `pg_try_advisory_lock` · 多 pod 只讓一個拿到鎖 · 拿不到 skip；finally 內釋放 | P1 |
+| D4 | Platform default job fire 但某 tenant 有 override · double run | Platform default 對已 override 的 tenant 也跑 · cost 2 倍 | ✅ **P1-fix** · `listOverriddenTenants` 撈已 override 的 tenant set · 傳給 PDR / batch scheduler 排除 | P1 |
 
 ### 12.3 手動觸發 endpoint（`POST /warroom/batches/rerun`）
 
 | # | 場景 | 行為 | 狀態 | Sev |
 |---|---|---|---|---|
 | M1 | tenant_admin B 傳 tenant A tenantId 想跨租戶觸發 | body 不接 tenantId · 純從 JWT 取 · 不可能跨 | ✅ controller `user.tenant_id` 取 | P0 |
-| M2 | 同時 cron scheduled + 手動 · double run · same batch | analysis_batch 表有 unique (tenant, group, batch_date) · 第 2 次跑 update 而非重跑 | ⚠️ 已知殘留 · service 內 `runBatch` 需 idempotent check · 目前假設 idempotent | P1 |
-| M3 | tenant_admin 頻繁點按 · DDoS 自己 tenant | 沒 rate limit · 但 batch 內 PQueue 限 concurrency · 影響有限 | ⚠️ 已知殘留 · M6 後補 rate limit | P2 |
+| M2 | 同時 cron scheduled + 手動 · double run · same batch | cron 若已 completed 直接 skip · manual 允 rerun（用戶明說要） | ✅ **P1-fix** · `runBatch` 開頭呼 `getExisting` · cron 情境 completed/empty 直接 return existing | P1 |
+| M3 | tenant_admin 頻繁點按 · DDoS 自己 tenant | 每 5 分鐘 rate limit · 拒回 429 | ✅ **P1-fix** · in-memory `lastTriggered` map · 每 tenant 5 min 限一次 | P2 |
 
 ### 12.4 Config upsert（`POST /scheduler-config`）
 
@@ -405,3 +405,4 @@ ORDER BY last_run_at DESC;
 | 2026-07-23 | v0.1 | 初版 DRAFT — sub-task A1-A5 + OQ-SCH-1..6 | Claude Code |
 | 2026-07-23 | v0.2 | OQ-SCH-1..6 全採建議（B/B/A/A/A/A）· 狀態 DRAFT → APPROVED · 進 M1 | ahern + Claude |
 | 2026-07-23 | v1.0 | M1–M6 全部 SHIPPED · migration 0021 · SchedulerManager · WarroomBatchController · Config UI · 立即分析 button · SOP · FMEA P0 全清 | ahern + Claude |
+| 2026-07-23 | v1.1 | 4 條 P1 fix · pg_advisory_lock (multi-pod) · listOverriddenTenants (排除已 override) · getExisting (idempotent skip) · 5-min rate limit (self-DDoS) · 所有 P1 → ✅ | ahern + Claude |
