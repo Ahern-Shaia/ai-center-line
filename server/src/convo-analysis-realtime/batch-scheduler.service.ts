@@ -29,6 +29,44 @@ export class BatchSchedulerService {
    * · lookback 天數可調 · default 2
    * · tenantId: optional · 傳則限單 tenant
    */
+  /**
+   * 手動 rerun · 指定 tenant + 日期的**所有** group（不管 batch 已 completed）
+   * · WarroomBatchController「立即分析」呼叫 · manual 情境 idempotent 允 rerun
+   * · 對齊 P1-fix M2 · runBatch 內部若 isManual 允 rerun
+   */
+  async runForDate(
+    triggeredBy: string,
+    tenantId: string,
+    targetDate: string,
+  ): Promise<{
+    total: number;
+    completed: number;
+    empty: number;
+    failed: number;
+  }> {
+    const groups = await withSystemTx((tx) => this.messageRepo.findAllGroupsForDate(tx, tenantId, targetDate));
+    this.logger.log(`runForDate · tenant=${tenantId} date=${targetDate} · 掃到 ${groups.length} 群組`);
+    if (groups.length === 0) return { total: 0, completed: 0, empty: 0, failed: 0 };
+
+    const queue = new PQueue({ concurrency: 3 });
+    let completed = 0, empty = 0, failed = 0;
+
+    await Promise.all(groups.map((g) => queue.add(async () => {
+      const result = await this.batchService.runBatch({
+        tenantId: g.tenantId,
+        groupId: g.groupId,
+        batchDate: g.batchDate,
+        triggeredBy,
+      });
+      if (result.status === "completed") completed++;
+      else if (result.status === "empty") empty++;
+      else failed++;
+    })));
+
+    this.logger.log(`runForDate done · tenant=${tenantId} date=${targetDate} · completed=${completed} empty=${empty} failed=${failed}`);
+    return { total: groups.length, completed, empty, failed };
+  }
+
   async runPending(
     triggeredBy: string,
     lookbackDays = 2,

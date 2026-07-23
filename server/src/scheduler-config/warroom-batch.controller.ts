@@ -44,7 +44,9 @@ export class WarroomBatchController {
     lastTriggered.set(user.tenant_id, now);
 
     const triggeredBy = `manual-tenant:${user.user_id}`;
-    // lookback=0 · 只跑當日 · tenant 從 JWT 取（P0 · 防跨 tenant 觸發）
-    return this.scheduler.runPending(triggeredBy, 0, user.tenant_id);
+    // rerun 當日全部 group · 用戶明確意圖花 AI 錢重跑
+    // (findPendingBatches 只給 pending · 已跑過的 skip · 對「立即分析」語意不對)
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
+    return this.scheduler.runForDate(triggeredBy, user.tenant_id, today);
   }
 }

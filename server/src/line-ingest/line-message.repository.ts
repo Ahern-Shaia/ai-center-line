@@ -202,6 +202,42 @@ export class LineMessageRepository {
    * lookback: 近 N 天 · 通常 = 2 (昨日 + 前日 · 防上次 cron 漏)
    * tenantId: optional · 傳則限單 tenant (前端下拉選了單一租戶時用)
    */
+  /**
+   * 撈指定 tenant + 日期的所有群組（不看 batch 存不存在）· 供 manual rerun 用
+   * · WarroomBatchController「立即分析」呼叫 · rerun 當日所有 group
+   * · 排除私訊 / 佔位 group
+   */
+  async findAllGroupsForDate(tx: Db, tenantId: string, targetDate: string): Promise<Array<{
+    tenantId: string;
+    groupId: string;
+    batchDate: string;
+    messageCount: number;
+  }>> {
+    const res = await tx.execute<{
+      tenant_id: string;
+      group_id: string;
+      batch_date: string;
+      message_count: string;
+    }>(sql`
+      SELECT lm.tenant_id::text AS tenant_id,
+             lm.group_id,
+             ${targetDate}::text AS batch_date,
+             count(*)::text AS message_count
+      FROM line_message lm
+      WHERE lm.tenant_id = ${tenantId}::uuid
+        AND lm.chat_context = 'group'
+        AND lm.group_id NOT LIKE '\\_\\_personal\\_\\_%' ESCAPE '\\'
+        AND (lm.sent_at AT TIME ZONE 'Asia/Taipei')::date = ${targetDate}::date
+      GROUP BY lm.tenant_id, lm.group_id
+    `);
+    return res.rows.map((r) => ({
+      tenantId: r.tenant_id,
+      groupId: r.group_id,
+      batchDate: r.batch_date,
+      messageCount: parseInt(r.message_count, 10),
+    }));
+  }
+
   async findPendingBatches(tx: Db, lookbackDays: number = 2, tenantId?: string): Promise<Array<{
     tenantId: string;
     groupId: string;
@@ -223,7 +259,10 @@ export class LineMessageRepository {
         ON ab.tenant_id = lm.tenant_id
        AND ab.group_id = lm.group_id
        AND ab.batch_date = (lm.sent_at AT TIME ZONE 'Asia/Taipei')::date
-      WHERE lm.sent_at >= (now() AT TIME ZONE 'Asia/Taipei' - (${lookbackDays} || ' days')::interval)::timestamptz
+      -- Bug fix · 用 date-based 計算 · 避免 lookback=0 時 (now() - 0 days) 變成「當下」抓不到過去訊息
+      -- lookback=0 → 掃今日 · lookback=1 → 掃今日+昨日 · lookback=2 → 掃今日+前 2 日
+      WHERE (lm.sent_at AT TIME ZONE 'Asia/Taipei')::date >=
+            ((now() AT TIME ZONE 'Asia/Taipei')::date - ${lookbackDays}::int)
         AND ab.batch_id IS NULL
         -- Bug fix · 私訊不屬群組日誌 · 兩層保護（schema 欄位 + group_id prefix）
         AND lm.chat_context = 'group'
