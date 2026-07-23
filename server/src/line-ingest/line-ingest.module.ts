@@ -38,6 +38,7 @@ import { LineWebhookController } from "./line-webhook.controller.js";
     LineGroupService,
     LineApiClient,                  // PDR-M5 · personal-report notify service 用 pushMessage
     LineMessageRepository,          // convo-analysis-realtime M2 batch service 讀
+    LineGroupRepository,            // scheduler-config M4 · WarroomBatchController backfill display_name 用
     MediaStorageService,            // 若 aiproot console 要放 signed URL 也走這
   ],
 })

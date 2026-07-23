@@ -135,6 +135,8 @@ export class LineWebhookService {
           });
           if (upsert.isNew) {
             this.logger.log(`[line-webhook] 新群偵測 · botId=${bot.botId} · groupId=${groupId} · type=${event.type}`);
+            // fire-and-forget auto-probe display_name · 免 tenant_admin 手動去 aiproot 「LINE 機器人」點 probe
+            void this.autoProbeGroupName(bot.channelAccessToken, bot.botId, groupId);
           }
         } catch (err) {
           this.logger.error(`upsert line_group 失敗 · groupId=${groupId} · ${(err as Error).message}`);
@@ -360,6 +362,24 @@ export class LineWebhookService {
       } catch (err) {
         this.logger.error(`落個人訊息失敗 · messageId=${msg.id} · ${(err as Error).message}`);
       }
+    }
+  }
+
+  /**
+   * Fire-and-forget · 新群偵測時自動呼 LINE API 拉群名 · UPDATE line_group.display_name
+   * · 失敗只 log · 不影響 webhook 處理
+   * · 用 withSystemTx 獨立 tx (fire-and-forget 跳出 webhook 的 tenant tx)
+   */
+  private async autoProbeGroupName(accessToken: string, botId: string, groupId: string): Promise<void> {
+    try {
+      const summary = await this.lineApi.getGroupSummary(accessToken, groupId);
+      if (!summary?.groupName) return;
+      await withSystemTx((tx) => this.groupRepo.updateDisplayName(tx, {
+        botId, groupId, displayName: summary.groupName,
+      }));
+      this.logger.log(`[line-webhook] auto-probed display_name · groupId=${groupId} · name=${summary.groupName}`);
+    } catch (err) {
+      this.logger.warn(`[line-webhook] auto-probe display_name 失敗 · groupId=${groupId} · ${(err as Error).message}`);
     }
   }
 }
