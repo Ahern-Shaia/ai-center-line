@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { EmployeeBindingModule } from "../employee-binding/employee-binding.module.js";
 import { LineIngestModule } from "../line-ingest/line-ingest.module.js";
 import { LlmModule } from "../llm/llm.module.js";
 import { PersonalDailyReportController } from "./personal-daily-report.controller.js";
@@ -14,7 +15,7 @@ import { PersonalReportSchedulerService } from "./personal-report-scheduler.serv
  * · 依賴 LineIngestModule (LineApiClient · notify push 用)
  */
 @Module({
-  imports: [LlmModule, LineIngestModule],   // ScheduleModule.forRoot() 已於 AppModule 集中
+  imports: [LlmModule, LineIngestModule, EmployeeBindingModule],   // ScheduleModule.forRoot() 已於 AppModule 集中 · EmployeeBindingModule 用於 LIFF 端點認證
   controllers: [PersonalDailyReportController],
   providers: [
     PersonalDailyReportRepository,

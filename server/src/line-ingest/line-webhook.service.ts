@@ -257,6 +257,8 @@ export class LineWebhookService {
     if (event.type === "message" && event.message?.type === "text") {
       // 查 binding · 若未綁定 · bot reply「請先綁定」(OQ-PDR-8)
       const senderUserId = await this.bindingService.resolveUserByLineUserId(bot.botId, userId);
+      const msg = event.message;
+      const textContent = typeof msg.text === "string" ? truncate(msg.text, 5000) : null;
 
       if (!senderUserId) {
         // 未綁定 · bot 提示
@@ -276,9 +278,36 @@ export class LineWebhookService {
         return;
       }
 
+      // v2 · 關鍵字觸發：Alice 打「日報」/「看日報」/「我的日報」/「daily」 → bot 推「我的日報」LIFF 按鈕
+      // 不落庫此訊息 (是指令 · 非工作記錄)
+      if (textContent && isDailyReportKeyword(textContent)) {
+        if (event.replyToken) {
+          const liffMineUrl = process.env.LIFF_MINE_URL ?? process.env.LIFF_URL?.replace(/\/[\w-]+$/, "/2010801742-WBQkAv5t");
+          // 若沒獨立 LIFF ID for my-daily-report · 走 endpoint URL 直接開 (LIFF 端會 init)
+          const url = liffMineUrl
+            ? `${liffMineUrl.replace(/\?.*$/, "")}?botId=${bot.botId}&page=mine`
+            : `https://ai-center-line-demo.onrender.com/liff/my-daily-report.html?botId=${bot.botId}`;
+          try {
+            await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
+              {
+                type: "template",
+                altText: "查看我的日報",
+                template: {
+                  type: "buttons",
+                  text: "點按鈕看今日 AI 整理的日報 · 可編輯後送出主管",
+                  actions: [{ type: "uri", label: "📋 查看我的日報", uri: url }],
+                },
+              },
+            ]);
+            this.logger.log(`[line-webhook] daily-report keyword · pushed LIFF · user=${userId.slice(-6)}`);
+          } catch (err) {
+            this.logger.warn(`daily-report reply 失敗 · ${(err as Error).message}`);
+          }
+        }
+        return;
+      }
+
       // 已綁定 · 落庫 chat_context='personal'
-      const msg = event.message;
-      const textContent = typeof msg.text === "string" ? truncate(msg.text, 5000) : null;
       try {
         await this.messageRepo.insertOnEvent(tx, {
           messageId: msg.id,
@@ -296,11 +325,11 @@ export class LineWebhookService {
           rawEvent: event as unknown as Record<string, unknown>,
         });
 
-        // bot 輕回應 · 讓 Alice 知道已收到
+        // bot 輕回應 · 讓 Alice 知道已收到 · 首則額外提示可用「日報」查
         if (event.replyToken) {
           try {
             await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
-              { type: "text", text: "✓ 已記錄 · 下班前 17:30 自動整理成日報" },
+              { type: "text", text: "✓ 已記錄\n\n下班前 17:30 自動整理成日報 · 或隨時傳「日報」二字查看" },
             ]);
           } catch (err) {
             this.logger.warn(`personal msg ack reply 失敗 · ${(err as Error).message}`);
@@ -311,6 +340,13 @@ export class LineWebhookService {
       }
     }
   }
+}
+
+// 判斷是否為「查日報」關鍵字 · 支援中英 · 前後空白容錯
+function isDailyReportKeyword(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return t === "日報" || t === "我的日報" || t === "看日報" || t === "查日報"
+    || t === "daily" || t === "daily report" || t === "報告" || t === "查看";
 }
 
 function safeBufFromB64(b64: string | undefined): Buffer | null {

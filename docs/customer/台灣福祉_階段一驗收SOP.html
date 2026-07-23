@@ -398,73 +398,89 @@ Bot：✓ 已記錄</code></pre>
 <li>貼圖 / 圖片 v1 不會處理 · 只吃文字</li>
 </ul>
 <hr />
-<h2 id="步驟-12--員工看自己日報">步驟 12 · 員工看自己日報</h2>
+<h2 id="步驟-12--員工在-line-內看自己日報不用登入網頁">步驟 12 · 員工在
+LINE 內看自己日報（<strong>不用登入網頁</strong>）</h2>
+<p>員工端 Alice 全程在 LINE App 內操作 · 不需開瀏覽器 · 不需帳密。</p>
 <p><strong>操作</strong>：</p>
 <ol type="1">
-<li>Alice 用<strong>自己的員工帳號</strong>登入 aiproot 系統
-<ul>
-<li>帳號 email =
-<code>&lt;Alice 的 lineUserId&gt;@line.local</code>（例：<code>Ualice123@line.local</code>）</li>
-<li>密碼 → <strong>需 aiproot 業助另外設定</strong> ·
-或走「忘記密碼」流程</li>
-</ul></li>
-<li>側欄「戰情室 → <strong>我的日報</strong>」</li>
-<li>若當日還沒到 17:30（AI 自動生成時間）·
-點「<strong>重新生成</strong>」按鈕</li>
+<li>Alice 在<strong>跟 bot 的私訊視窗</strong> ·
+輸入「<strong>日報</strong>」二字 · 送出</li>
+<li>Bot 立即回一則訊息 + 按鈕：
+<pre><code>點按鈕看今日 AI 整理的日報 · 可編輯後送出主管
+[ 📋 查看我的日報 ]</code></pre></li>
+<li>Alice 點「查看我的日報」· LINE <strong>在 App
+內開一個小網頁</strong>（LIFF · 不跳出瀏覽器）</li>
+<li>小網頁顯示今日日報 · AI 已整理項目</li>
 </ol>
 <p><strong>應該看到</strong>：</p>
 <ul>
-<li>✅ 頁面顯今日日期 + AI 整理的項目</li>
-<li>✅ 每項顯：
+<li>✅ 頁面上方顯 Alice 姓名 + 今日日期</li>
+<li>✅ 顯 AI 整理的項目卡片 · 每項有：
 <ul>
 <li>時間（例：08:30-10:00）</li>
 <li>標題（例：A 客戶 Q3 交期討論）</li>
-<li>詳情（例：客戶要求提早 15 天 · 品保確認可配合）</li>
-<li>追蹤事項（若有 · 例：明日 09:00 跟人資申請 2 名）</li>
+<li>詳情（例：客戶要求提早 15 天）</li>
+<li>追蹤事項（若有）</li>
 </ul></li>
-<li>✅ 每項有「<strong>編輯</strong>」「<strong>刪除</strong>」按鈕</li>
-<li>✅ 底部有「<strong>+ 手動加一項</strong>」</li>
-<li>✅
-底部有「<strong>儲存草稿</strong>」「<strong>送出日報</strong>」按鈕</li>
+<li>✅ 每項有「編輯」「刪除」按鈕</li>
+<li>✅ 底部有「+ 手動加一項」按鈕</li>
+<li>✅ 最下方 3 個按鈕：「重新生成」「儲存草稿」「送出日報」</li>
 </ul>
 <p><strong>若看到「今日尚未有記錄」</strong>：</p>
 <ul>
 <li>Alice 當天沒私訊 bot · 或都是貼圖沒文字</li>
-<li>請 Alice 先私訊幾則 · 再按「重新生成」</li>
+<li>請 Alice 先私訊幾則工作內容 · 再打「日報」查</li>
 </ul>
-<p><strong>若看到「AI 整理失敗」</strong>：</p>
+<p><strong>若按鈕跳出網頁到 Chrome/Safari 而非 App 內</strong>：</p>
 <ul>
-<li>Backend 錯誤 · 貼截圖聯繫 aiproot</li>
+<li>LIFF 配置問題 · 聯繫 aiproot 業助</li>
 </ul>
 <hr />
 <h2 id="步驟-13--送出日報--主管收到通知">步驟 13 · 送出日報 ·
 主管收到通知</h2>
-<p><strong>操作</strong>（Alice 端）：</p>
+<p><strong>操作</strong>（Alice 端 · 在 LIFF 頁）：</p>
 <ol type="1">
-<li>我的日報頁 · 檢查項目 OK</li>
-<li>若有錯 · 點「編輯」改 · 或「刪除」不要的 · 或「+ 手動加一項」補</li>
+<li>檢查每項 OK · 若有錯 · 點「編輯」改 · 或「刪除」不要的</li>
 <li>都對 · 點「<strong>送出日報</strong>」</li>
-<li>彈出確認對話 · 點「<strong>送出</strong>」</li>
+<li>彈出確認：「確定送出 3 項給主管？送出後不能再改。」</li>
+<li>按「確定」</li>
 </ol>
 <p><strong>應該看到（Alice 端）</strong>：</p>
 <ul>
-<li>✅ 頁面顯「✓ 已送出 · 主管已收到通知」</li>
-<li>✅ 日報狀態變「已送出」· 不能再改</li>
+<li>✅ 頁面顯「✓ 日報已送出 · 主管會立即收到 LINE 通知」</li>
+<li>✅ 1 秒後 LIFF 頁自動關閉 · 跳回 LINE 聊天</li>
+<li>✅ 再打「日報」查 · 頂部顯「✓ 已於 XX:XX 送出主管」·
+按鈕不能再改</li>
 </ul>
 <p><strong>應該看到（Alice 部門主管的 LINE 端）</strong>：</p>
 <ul>
 <li>✅ 主管 LINE 立即收到 push 通知：
 <pre><code>📋 王愛麗絲 已送出 2026-07-23 個人日報 · 3 項
 進「戰情室 → 部門日報」查看</code></pre></li>
-<li>✅ 若總經理室的人也是<strong>部門級主管</strong>（罕見）·
-也會收到</li>
-<li>✅ Aiproot 業助不會收到（沒相關）</li>
+<li>✅ 主管進 aiproot 網頁 · 戰情室 → 部門日報 ·
+看部門所有員工當日日報</li>
 </ul>
 <p><strong>若主管沒收到通知</strong>：</p>
 <ul>
-<li>主管未綁定 LINE · 系統無法 push · 請主管先走步驟 10 綁定</li>
-<li>主管綁定 LINE 帳號跟 aiproot 帳號<strong>必須是同一位</strong>（透過
-email 對照）</li>
+<li>主管未綁定 LINE · 系統無法 push</li>
+<li>請主管先走步驟 10 綁定</li>
+<li>主管 LINE 帳號跟 aiproot
+帳號<strong>必須是同一位</strong>（透過綁定表對照）</li>
+</ul>
+<hr />
+<h2 id="為什麼員工不用登入網頁">為什麼員工不用登入網頁</h2>
+<p><strong>產品原則</strong>：<strong>不改變員工使用習慣</strong>。</p>
+<ul>
+<li>藍領員工不熟 web 帳密 · 記不住 email/密碼</li>
+<li>全程在 LINE App 內 · 開 LIFF 網頁像用 LINE 貼圖一樣自然</li>
+<li>Alice 只需記一個關鍵字：「<strong>日報</strong>」</li>
+<li>打「日報」→ 出現按鈕 → 點 → 看 → 送出 · 全程 60 秒</li>
+</ul>
+<p><strong>主管級（tenant_admin / group_owner from real
+user）仍用網頁</strong>：</p>
+<ul>
+<li>主管管理任務看板 · 看部門日報 · 建部門主管帳號</li>
+<li>這些<strong>需要大螢幕 + 複雜互動</strong> · 網頁比手機好用</li>
 </ul>
 <hr />
 <h1 id="第四部分--驗收-checklist">第四部分 · 驗收 checklist</h1>
@@ -563,13 +579,13 @@ email 對照）</li>
 </tr>
 <tr>
 <td>12</td>
-<td>我的日報顯示 AI 整理項目</td>
+<td>員工打「日報」· bot 回按鈕 · LINE 內開 LIFF 顯 AI 整理</td>
 <td style="text-align: center;">☐</td>
 <td></td>
 </tr>
 <tr>
 <td>13</td>
-<td>送出後主管 LINE 立即收到通知</td>
+<td>LIFF 頁「送出日報」· 主管 LINE 立即收通知</td>
 <td style="text-align: center;">☐</td>
 <td></td>
 </tr>
@@ -626,9 +642,19 @@ Z）</li>
 <td>檢查步驟 5-6</td>
 </tr>
 <tr>
+<td>打「日報」bot 沒回</td>
+<td>Alice 未綁定 · 或訊息 typo</td>
+<td>檢查是否綁定 · 確認 typo</td>
+</tr>
+<tr>
+<td>LIFF 開錯地方（跳瀏覽器）</td>
+<td>LIFF 配置問題</td>
+<td>聯繫 aiproot</td>
+</tr>
+<tr>
 <td>我的日報空的</td>
 <td>員工當天沒私訊</td>
-<td>請員工先私訊幾則</td>
+<td>請員工先私訊幾則 · 再打「日報」</td>
 </tr>
 <tr>
 <td>主管沒收 push</td>
@@ -667,6 +693,7 @@ Z）</li>
 <hr />
 <hr />
 <hr />
-<p><em>本文件由 aiproot 交付團隊產出 · 2026-07-23 · v1.0</em></p>
+<p><em>本文件由 aiproot 交付團隊產出 · 2026-07-23 · v1.1（Step 12/13 改
+LIFF flow · 員工端零帳密）</em></p>
 </body>
 </html>
