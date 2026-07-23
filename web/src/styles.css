@@ -12,6 +12,8 @@
   --ok:#059669; --ok-tint:#ECFDF5;
   --warn:#D97706; --warn-tint:#FFFBEB;
   --danger:#E11D48; --danger-tint:#FFF1F2;
+  /* brand · 品牌色（LINE 綠 · 官方） */
+  --line-brand:#06C755;
   /* type */
   --sans:'Inter','Noto Sans TC',system-ui,-apple-system,sans-serif;
   --mono:'JetBrains Mono','IBM Plex Mono',ui-monospace,SFMono-Regular,monospace;
@@ -318,7 +320,9 @@ button { cursor:pointer; }
 .field input { width:100%; border:1px solid var(--line); background:var(--surface); color:var(--ink); padding:9px 12px; border-radius:var(--r); font-size:14px; font-family:inherit; transition:border-color .12s var(--ease),box-shadow .12s var(--ease); }
 .field input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-tint); }
 .login-err { font-size:12.5px; color:var(--danger); background:var(--danger-tint); padding:8px 10px; border-radius:var(--r); }
-.login-card > .btn { width:100%; justify-content:center; padding:10px 14px; font-size:14px; }
+/* v2 · 登入按鈕（form 內或直接子孫都套） · 全寬 */
+.login-card .btn { width:100%; justify-content:center; padding:10px 14px; font-size:14px; }
+.login-card form { display:flex; flex-direction:column; gap:14px; margin:0; }
 
 /* ==================== RESPONSIVE ==================== */
 @media (max-width:960px) {
