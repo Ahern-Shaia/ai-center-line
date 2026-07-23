@@ -82,6 +82,10 @@ export class NudgeService {
     lastActiveAt: string;
     topGroupName: string | null;
   }>> {
+    // v2 · 加 lg.department_id IS NOT NULL filter
+    // 修跨租戶洩漏：若 bot A 被誤加進 tenant B 的群 · tenant B 端 line_group.department_id 應為 null
+    // (aiproot 未分派 · 因該群不屬 tenant B) · 有這 filter 就能擋掉未正確配置的資料
+    // 對照矩陣文件 §4.1 line_message RLS 已 tenant scope · 這裡加第 2 層 defense
     const res = await tx.execute<{
       sender_line_id: string;
       display_name: string | null;
@@ -95,12 +99,13 @@ export class NudgeService {
                max(lm.sent_at)::text AS last_active_at,
                mode() WITHIN GROUP (ORDER BY lg.display_name) AS top_group_name
         FROM line_message lm
-        LEFT JOIN line_group lg ON lg.bot_id = lm.bot_id AND lg.group_id = lm.group_id
+        JOIN line_group lg ON lg.bot_id = lm.bot_id AND lg.group_id = lm.group_id
         LEFT JOIN user_line_binding b
           ON b.bot_id = lm.bot_id
          AND b.line_user_id = lm.sender_line_id
          AND b.status = 'active'
         WHERE lm.tenant_id = ${tenantId}::uuid
+          AND lg.department_id IS NOT NULL                   -- v2 · 只算已分派部門的群
           AND lm.sent_at > (now() - (${lookbackDays} || ' days')::interval)
           AND lm.sender_line_id IS NOT NULL
           AND b.binding_id IS NULL
