@@ -147,7 +147,7 @@ export class PersonalDailyReportController {
   }
 
   @Get("mine")
-  @Roles("aiproot_admin", "consultant", "tenant_admin", "group_owner")
+  @Roles("aiproot_admin", "consultant", "tenant_admin", "group_owner", "employee")
   async getMine(@CurrentUser() user: JwtUser, @Query("date") dateStr?: string) {
     const date = dateStr ?? getTaipeiDate();
     if (!isValidDate(date)) throw new BadRequestException("date 格式錯 · 應為 YYYY-MM-DD");
@@ -158,7 +158,7 @@ export class PersonalDailyReportController {
   }
 
   @Post("mine/save")
-  @Roles("aiproot_admin", "consultant", "tenant_admin", "group_owner")
+  @Roles("aiproot_admin", "consultant", "tenant_admin", "group_owner", "employee")
   async saveMine(
     @CurrentUser() user: JwtUser,
     @Body() body: { date?: string; items?: PersonalDailyReportItem[]; action?: "save_draft" | "send" },
@@ -193,7 +193,7 @@ export class PersonalDailyReportController {
   }
 
   @Post("mine/regenerate")
-  @Roles("aiproot_admin", "consultant", "tenant_admin", "group_owner")
+  @Roles("aiproot_admin", "consultant", "tenant_admin", "group_owner", "employee")
   async regenerateMine(
     @CurrentUser() user: JwtUser,
     @Body() body: { date?: string } = {},
