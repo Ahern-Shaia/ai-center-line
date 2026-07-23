@@ -11,6 +11,7 @@ import DepartmentsMembers from "./settings/depts-members/Page";
 import TenantSettings from "./settings/TenantSettings";
 import AuditLog from "./settings/AuditLog";
 import SchedulerConfigPage from "./settings/scheduler-config/Page";
+import LineGroupsPage from "./settings/line-groups/Page";
 import ConversationAnalysisUpload from "./convo-analysis/Upload";
 import ConversationAnalysisList from "./convo-analysis/List";
 import ConversationAnalysisDetail from "./convo-analysis/Detail";
@@ -39,6 +40,7 @@ type Route =
   | { page: "config" }
   | { page: "audit" }
   | { page: "scheduler-config" }
+  | { page: "line-groups" }
   | { page: "convo-list" }
   | { page: "convo-upload" }
   | { page: "convo-detail"; uploadId: number }
@@ -65,6 +67,7 @@ const CRUMB: Record<Route["page"], string> = {
   config: "設定",
   audit: "設定",
   "scheduler-config": "設定",
+  "line-groups": "設定",
   "convo-list": "AI 對話分析",
   "convo-upload": "AI 對話分析",
   "convo-detail": "AI 對話分析",
@@ -90,6 +93,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   config: "租戶設定",
   audit: "稽核記錄",
   "scheduler-config": "定時任務",
+  "line-groups": "LINE 群組",
   "convo-list": "分析列表",
   "convo-upload": "上傳新對話",
   "convo-detail": "分析詳情",
@@ -112,6 +116,7 @@ function defaultRouteFor(session: Session | null): Route {
 }
 
 // aiproot 平台方專屬頁面 · 對 tenant_admin / group_owner / employee 不該顯示
+// 注意 · "line-groups" 不在此 set · 開放給 tenant_admin（perm gate 在 sidebar 過濾）
 const AIPROOT_ONLY_PAGES = new Set([
   "convo-list", "convo-upload", "convo-detail",
   "llm-settings", "line-bots",
@@ -191,7 +196,7 @@ export default function App() {
   const onNav = (key: string) => {
     if (key === "warroom" || key === "signoff") setRoute({ page: "warroom" });
     else if (key === "rag" || key === "media" || key === "km" || key === "map"
-      || key === "depts" || key === "config" || key === "audit" || key === "scheduler-config") {
+      || key === "depts" || key === "config" || key === "audit" || key === "scheduler-config" || key === "line-groups") {
       setRoute({ page: key });
     } else if (key === "convo-list" || key === "convo-upload" || key === "llm-settings") {
       // AI 對話分析設定屬 aiproot 側維護 · tenant 只在戰情室看結果
@@ -250,6 +255,7 @@ export default function App() {
           {route.page === "config" && <TenantSettings />}
           {route.page === "audit" && <AuditLog />}
           {route.page === "scheduler-config" && <SchedulerConfigPage />}
+          {route.page === "line-groups" && <LineGroupsPage />}
           {route.page === "convo-list" && (
             <ConversationAnalysisList
               onOpen={(id) => setRoute({ page: "convo-detail", uploadId: id })}

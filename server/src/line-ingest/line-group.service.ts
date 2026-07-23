@@ -21,6 +21,13 @@ export class LineGroupService {
     return this.groupRepo.listByBot(tx, botId);
   }
 
+  /**
+   * 撈自 tenant 所有 group · tenant_admin「LINE 群組」頁用 (跨 bot)
+   */
+  async listGroupsByTenant(tenantId: string): Promise<LineGroupRow[]> {
+    return this.groupRepo.listByTenant(currentTx(), tenantId);
+  }
+
   async patchGroup(groupRegistryId: string, patch: LineGroupPatchDto): Promise<LineGroupRow> {
     const tx = currentTx();
     const existing = await this.groupRepo.getById(tx, groupRegistryId);

@@ -63,6 +63,7 @@ const NAV: Array<{
     items: [
       // v2 · 部門/成員 開放給 tenant_admin (自 tenant) + aiproot
       { key: "depts", label: "部門/成員", ic: iconTeam, done: true, permAny: ["departments:view", "users:view"] },
+      { key: "line-groups", label: "LINE 群組", ic: iconChat, done: true, perm: "line-groups:view" },
       { key: "config", label: "租戶設定", ic: iconCog, done: true, perm: "tenant-config:view" },
       { key: "scheduler-config", label: "定時任務", ic: iconCog, done: true, perm: "scheduler-config:view" },
       { key: "audit", label: "稽核記錄", ic: iconShield, done: true, perm: "audit:view" },

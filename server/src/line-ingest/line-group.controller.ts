@@ -1,5 +1,7 @@
-import { BadRequestException, Body, Controller, Param, Patch, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { CurrentUser } from "../auth/current-user.decorator.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
+import type { JwtUser } from "../auth/jwt-user.js";
 import { LineGroupService } from "./line-group.service.js";
 import { LineGroupPatchSchema } from "./dto/line-bot.dto.js";
 
@@ -10,6 +12,17 @@ import { LineGroupPatchSchema } from "./dto/line-bot.dto.js";
 @Controller("line-groups")
 export class LineGroupController {
   constructor(private readonly svc: LineGroupService) {}
+
+  // list 自 tenant 所有 group · tenant_admin「LINE 群組」頁用
+  @Get()
+  @RequirePermission("line-groups:view")
+  async list(@CurrentUser() user: JwtUser) {
+    if (!user.tenant_id) {
+      throw new BadRequestException("需綁定 tenant");
+    }
+    const groups = await this.svc.listGroupsByTenant(user.tenant_id);
+    return { groups };
+  }
 
   // 分派 department / 更新 displayName / analyzeEnabled
   @Patch(":groupRegistryId")

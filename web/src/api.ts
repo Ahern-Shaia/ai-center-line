@@ -1001,3 +1001,8 @@ export const getWarroomGroupMessages = (groupId: string, date: string) =>
   req<{ messages: WarroomGroupMessage[]; total: number }>(
     `/warroom/group-messages?groupId=${encodeURIComponent(groupId)}&date=${encodeURIComponent(date)}`,
   );
+
+// LINE 群組 · tenant_admin 頁 (自 tenant 全群列表 + 分派部門)
+// (patchLineGroup 已定義在上方 · aiproot / tenant_admin 共用)
+export const listTenantLineGroups = () =>
+  req<{ groups: LineGroupRow[] }>("/line-groups");

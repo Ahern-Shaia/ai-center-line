@@ -85,6 +85,43 @@ export class LineGroupRepository {
     }));
   }
 
+  /**
+   * 撈自 tenant 所有 group · 給 tenant_admin 「LINE 群組」頁用
+   * · JOIN line_bot filter by tenant_id · 跨 bot 拉齊
+   * · RLS 已於 line_bot / departments 層擋跨 tenant · 這邊只是明確 filter
+   */
+  async listByTenant(tx: Db, tenantId: string): Promise<LineGroupRow[]> {
+    const res = await tx.execute<{
+      group_registry_id: string; bot_id: string; group_id: string;
+      display_name: string | null; department_id: string | null;
+      department_name: string | null; analyze_enabled: boolean;
+      first_seen_at: string; last_event_at: string; event_count: number;
+      status: "active" | "left";
+    }>(sql`
+      SELECT g.group_registry_id, g.bot_id, g.group_id, g.display_name,
+             g.department_id, d.department_name, g.analyze_enabled,
+             g.first_seen_at::text, g.last_event_at::text, g.event_count, g.status
+      FROM line_group g
+      JOIN line_bot b ON b.bot_id = g.bot_id
+      LEFT JOIN departments d ON d.department_id = g.department_id
+      WHERE b.tenant_id = ${tenantId}::uuid
+      ORDER BY g.status ASC, g.last_event_at DESC
+    `);
+    return res.rows.map((r) => ({
+      groupRegistryId: r.group_registry_id,
+      botId: r.bot_id,
+      groupId: r.group_id,
+      displayName: r.display_name,
+      departmentId: r.department_id,
+      departmentName: r.department_name,
+      analyzeEnabled: r.analyze_enabled,
+      firstSeenAt: r.first_seen_at,
+      lastEventAt: r.last_event_at,
+      eventCount: r.event_count,
+      status: r.status,
+    }));
+  }
+
   async getById(tx: Db, groupRegistryId: string): Promise<LineGroupRow | null> {
     const res = await tx.execute<{
       group_registry_id: string; bot_id: string; group_id: string;

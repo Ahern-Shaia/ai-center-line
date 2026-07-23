@@ -1751,6 +1751,15 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .sc-code-tz { font-family:var(--mono, ui-monospace, monospace); font-size:12px; background:var(--well); padding:2px 8px; border-radius:4px; color:var(--ink-2); }
 .sc-card-foot { display:flex; justify-content:flex-end; padding-top:12px; border-top:1px solid var(--line); margin-top:8px; }
 
+/* LINE 群組表 · tenant_admin 頁 */
+.lg-table { width:100%; border-collapse:collapse; margin-top:12px; background:var(--surface); border:1px solid var(--line); border-radius:4px; overflow:hidden; }
+.lg-table th { text-align:left; padding:10px 12px; background:var(--well); font-size:11.5px; font-weight:500; color:var(--ink-3); border-bottom:1px solid var(--line); }
+.lg-table td { padding:10px 12px; font-size:13px; border-bottom:1px solid var(--line); vertical-align:middle; }
+.lg-table tr:last-child td { border-bottom:none; }
+.lg-table tr:hover td { background:var(--well); }
+.lg-table select { padding:5px 8px; font-size:12.5px; }
+.lg-table-left tr:hover td { background:transparent; }
+
 /* pdr pane-hdr 右上分區工具列 · 查看日期 + 當日操作 · 有 label + hint + divider */
 .hdr-toolbar { display:flex; gap:14px; align-items:flex-start; }
 .hdr-group { display:flex; flex-direction:column; gap:4px; min-width:0; }
