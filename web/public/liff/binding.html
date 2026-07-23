@@ -426,6 +426,7 @@
 
   // ==================== 我的日報 flow ====================
   let mineReport = null;
+  let minePendingCount = 0;
   let mineItems = [];
   let mineEditingIdx = -1;
   let mineBusy = false;
@@ -452,6 +453,7 @@
       if (!res.ok) throw new Error("讀取失敗 · " + res.status);
       const data = await res.json();
       mineReport = data.report;
+      minePendingCount = data.pendingMessageCount || 0;
       const today = data.requestedDate;
       document.getElementById("mine-sub").textContent = `${data.userDisplayName || ""} · ${formatDay(today)}`;
       renderMine();
@@ -468,13 +470,22 @@
 
     if (!mineReport) {
       statusEl.className = "status-bar status-empty";
-      statusEl.textContent = "今日尚未有記錄 · 私訊 bot 幾則今日工作後 · 按「重新生成」";
+      if (minePendingCount > 0) {
+        statusEl.textContent = `你今日已私訊 bot ${minePendingCount} 則 · AI 尚未整理 · 按下方「重新生成」`;
+      } else {
+        statusEl.textContent = "今日尚未有記錄 · 私訊 bot 幾則今日工作後 · 按「重新生成」";
+      }
       statusEl.style.display = "block";
-      itemsBox.innerHTML = `<div class="empty-state"><div class="icon">📝</div><div>還沒開始記錄</div><div class="hint">先私訊工作內容給 bot · 例如「早上 9 點跟客戶開會」</div></div>`;
+      if (minePendingCount > 0) {
+        itemsBox.innerHTML = `<div class="empty-state"><div class="icon">✨</div><div>今日已私訊 <b>${minePendingCount}</b> 則</div><div class="hint">按下方「重新生成」讓 AI 立即整理成日報項目</div></div>`;
+      } else {
+        itemsBox.innerHTML = `<div class="empty-state"><div class="icon">📝</div><div>還沒開始記錄</div><div class="hint">先私訊工作內容給 bot · 例如「早上 9 點跟客戶開會」</div></div>`;
+      }
       addBtn.style.display = "none";
       footer.style.display = "block";
       document.getElementById("mine-save").disabled = true;
       document.getElementById("mine-send").disabled = true;
+      document.getElementById("mine-refresh").disabled = false;
       return;
     }
     mineItems = (mineReport.finalItems && mineReport.finalItems.length) ? [...mineReport.finalItems] : (mineReport.aiItems ? [...mineReport.aiItems] : []);

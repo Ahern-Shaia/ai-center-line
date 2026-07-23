@@ -340,7 +340,7 @@ export interface PersonalDailyReportRow {
 
 export const getMyPersonalReport = (date?: string) => {
   const q = date ? `?date=${date}` : "";
-  return req<{ report: PersonalDailyReportRow | null; requestedDate: string }>(`/personal-daily-report/mine${q}`);
+  return req<{ report: PersonalDailyReportRow | null; requestedDate: string; pendingMessageCount: number }>(`/personal-daily-report/mine${q}`);
 };
 
 export const savePersonalReport = (args: { date?: string; items: PersonalDailyReportItem[]; action: "save_draft" | "send" }) =>

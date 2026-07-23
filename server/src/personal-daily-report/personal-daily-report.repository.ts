@@ -36,6 +36,19 @@ export interface PersonalDailyReportRow {
  */
 @Injectable()
 export class PersonalDailyReportRepository {
+  // 今日該員工的私訊訊息數 · empty state 用來顯「已私訊 N 則 · 按重新生成」
+  async countPersonalMessagesForDate(tx: Db, userId: string, reportDate: string): Promise<number> {
+    const res = await tx.execute<{ count: string }>(sql`
+      SELECT COUNT(*)::text AS count
+      FROM line_messages
+      WHERE sender_user_id = ${userId}::uuid
+        AND chat_context = 'personal'
+        AND (sent_at_ms / 1000) >= EXTRACT(EPOCH FROM (${reportDate}::date AT TIME ZONE 'Asia/Taipei'))
+        AND (sent_at_ms / 1000) <  EXTRACT(EPOCH FROM ((${reportDate}::date + INTERVAL '1 day') AT TIME ZONE 'Asia/Taipei'))
+    `);
+    return Number(res.rows[0]?.count ?? 0);
+  }
+
   async getByUserDate(tx: Db, userId: string, reportDate: string): Promise<PersonalDailyReportRow | null> {
     const res = await tx.execute<PersonalDailyReportRow>(sql`
       SELECT report_id AS "reportId",

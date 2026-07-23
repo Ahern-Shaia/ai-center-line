@@ -16,6 +16,7 @@ export default function MyDailyReport() {
   const [date, setDate] = useState<string>(getTaipeiDate());
   const [report, setReport] = useState<PersonalDailyReportRow | null>(null);
   const [items, setItems] = useState<PersonalDailyReportItem[]>([]);
+  const [pendingMessageCount, setPendingMessageCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
@@ -27,6 +28,7 @@ export default function MyDailyReport() {
     try {
       const res = await getMyPersonalReport(date);
       setReport(res.report);
+      setPendingMessageCount(res.pendingMessageCount ?? 0);
       // 若已有 final_items · load · 否則 load ai_items 供編輯
       if (res.report?.finalItems) setItems(res.report.finalItems);
       else if (res.report?.aiItems) setItems(res.report.aiItems);
@@ -111,8 +113,20 @@ export default function MyDailyReport() {
 
       {isEmpty && !loading && (
         <div className="dm-empty">
-          <div>今日尚未有記錄</div>
-          <div className="dm-empty-hint">私訊台灣福祉 bot 幾則今日工作 · AI 會自動整理 · 17:30 也會自動觸發</div>
+          {pendingMessageCount > 0 ? (
+            <>
+              <div>你今日已私訊 bot <b>{pendingMessageCount}</b> 則 · AI 尚未整理</div>
+              <div className="dm-empty-hint">按上方「重新生成」立即整理 · 或等 17:30 scheduler 自動觸發</div>
+              <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => void doRegenerate()} disabled={regenerating}>
+                {regenerating ? "生成中…" : "立即整理"}
+              </button>
+            </>
+          ) : (
+            <>
+              <div>今日尚未有記錄</div>
+              <div className="dm-empty-hint">私訊台灣福祉 bot 幾則今日工作 · AI 會自動整理 · 17:30 也會自動觸發</div>
+            </>
+          )}
         </div>
       )}
 
