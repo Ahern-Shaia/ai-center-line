@@ -3,7 +3,7 @@ import { Public } from "../auth/public.decorator.js";
 import { Roles } from "../auth/roles.decorator.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
-import { withSystemTx } from "../db/client.js";
+import { withTenant } from "../db/client.js";
 import { EmployeeBindingService } from "./employee-binding.service.js";
 import { UserLineBindingRepository } from "./user-line-binding.repository.js";
 import { NudgeService } from "./nudge.service.js";
@@ -104,7 +104,7 @@ export class EmployeeBindingController {
   @Roles("aiproot_admin", "consultant")
   async aiprootList(@Query("tenantId") tenantId?: string, @Query("status") status?: "active" | "revoked") {
     if (!tenantId) throw new BadRequestException("tenantId 必要");
-    const rows = await withSystemTx((tx) => this.bindingRepo.listByTenant(tx, tenantId, { status, limit: 500 }));
+    const rows = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.bindingRepo.listByTenant(tx, tenantId, { status, limit: 500 }));
     return { bindings: rows };
   }
 
@@ -128,7 +128,7 @@ export class EmployeeBindingController {
   @Post("self/revoke")
   @Roles("aiproot_admin", "consultant", "tenant_admin", "group_owner")
   async selfRevoke(@CurrentUser() user: JwtUser) {
-    const binding = await withSystemTx((tx) => this.bindingRepo.getActiveByUserId(tx, user.user_id));
+    const binding = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.bindingRepo.getActiveByUserId(tx, user.user_id));
     if (!binding) throw new BadRequestException("你沒有 active binding");
     await this.svc.revokeBinding(binding.bindingId, user.user_id, "self_revoke");
     return { success: true };

@@ -9,3 +9,4 @@ dist/
 
 # Ragic 全量匯出（客戶原始資料，禁 commit）
 .ragic-export/
+.env.debug
