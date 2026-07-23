@@ -1,5 +1,13 @@
 import { useState } from "react";
 import {
+  Button as AriaButton,
+  ListBox,
+  ListBoxItem,
+  Popover,
+  Select,
+  SelectValue,
+} from "react-aria-components";
+import {
   createLineBot,
   updateLineBot,
   ApiError,
@@ -8,6 +16,50 @@ import {
 } from "../api";
 import { useToast } from "../Toast";
 import Drawer from "../shared/Drawer";
+
+// 統一的租戶下拉 · 對齊 CategoryManagement / BindingAudit / LlmSettings 用的 react-aria Select
+// 避免專案內同一種選單走 native <select> 對不齊 (見 memory feedback_grep_ui_components_before_writing)
+function TenantSelect({
+  tenants, value, onChange, disabled, ariaLabel,
+}: {
+  tenants: Array<{ tenantId: string; tenantName: string }>;
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+  ariaLabel: string;
+}) {
+  const selected = tenants.find((t) => t.tenantId === value);
+  return (
+    <Select
+      className="llm-select"
+      selectedKey={value || undefined}
+      onSelectionChange={(k) => onChange(String(k))}
+      aria-label={ariaLabel}
+      isDisabled={disabled || tenants.length === 0}
+    >
+      <AriaButton className="llm-select-btn" style={{ width: "100%" }}>
+        <SelectValue className="llm-select-value">
+          {() => selected?.tenantName ?? (tenants.length === 0 ? "尚無租戶" : "選擇租戶")}
+        </SelectValue>
+        <svg className="llm-select-chev" width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
+          <path d="M1 1l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </AriaButton>
+      <Popover className="llm-select-pop" offset={4}>
+        <ListBox className="llm-select-list" items={tenants.map((t) => ({ id: t.tenantId, name: t.tenantName }))}>
+          {(item) => (
+            <ListBoxItem id={item.id} textValue={item.name} className="llm-select-item">
+              <span>{item.name}</span>
+              <svg className="llm-select-check" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                <path d="m2 7 3 3 7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </ListBoxItem>
+          )}
+        </ListBox>
+      </Popover>
+    </Select>
+  );
+}
 
 // 新增 Bot Drawer (aiproot_admin only)
 export function NewBotDrawer({
@@ -65,10 +117,13 @@ export function NewBotDrawer({
 
         <div className="field">
           <label>隸屬租戶 *</label>
-          <select value={tenantId} onChange={(e) => setTenantId(e.target.value)} disabled={saving} required>
-            {refs.tenants.length === 0 && <option value="">尚無租戶</option>}
-            {refs.tenants.map((t) => <option key={t.tenantId} value={t.tenantId}>{t.tenantName}</option>)}
-          </select>
+          <TenantSelect
+            tenants={refs.tenants}
+            value={tenantId}
+            onChange={setTenantId}
+            disabled={saving}
+            ariaLabel="隸屬租戶"
+          />
         </div>
 
         <div className="field">
@@ -164,9 +219,13 @@ export function EditBotDrawer({
 
         <div className="field">
           <label>隸屬租戶</label>
-          <select value={tenantId} onChange={(e) => setTenantId(e.target.value)} disabled={saving}>
-            {tenants.map((t) => <option key={t.tenantId} value={t.tenantId}>{t.tenantName}</option>)}
-          </select>
+          <TenantSelect
+            tenants={tenants}
+            value={tenantId}
+            onChange={setTenantId}
+            disabled={saving}
+            ariaLabel="隸屬租戶"
+          />
           {tenantChanged && (
             <div className="llm-hint" style={{ color: "var(--warn)" }}>
               ⚠️ 遷移到新租戶 · 該 bot 底下所有群的「分派部門」將自動清空（舊 tenant 的 dept 對新 tenant 無意義）· 需重新分派
