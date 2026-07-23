@@ -104,19 +104,35 @@
     <button class="btn primary" onclick="closeLiff()">完成 · 回聊天室</button>
   </div>
 
-  <!-- View: success -->
+  <!-- View: success · v2 · 3 條路徑指引 -->
   <div id="view-success" style="display:none;">
     <div class="success-icon">✓</div>
     <h1>綁定完成</h1>
     <p class="sub">你已成功綁定為 <b id="s-name"></b></p>
 
-    <div class="alert ok">
-      <b>接下來 · 你可以：</b>
-      <ul style="padding-left:18px; margin:8px 0 0; line-height:1.7;">
-        <li>私訊 bot 記錄工作</li>
-        <li>下班前 17:30 自動整理日報</li>
-        <li>進 aiproot 確認或微調</li>
-      </ul>
+    <div class="alert ok" style="text-align:left;">
+      <b>接下來你可以：</b>
+      <div style="margin-top:10px; padding:8px; background:#fff; border-radius:6px; margin-bottom:8px;">
+        <div style="font-size:13px; font-weight:600; margin-bottom:2px;">📱 手機用</div>
+        <div style="font-size:11.5px; color:var(--ink-3); line-height:1.6;">
+          · 私訊工作 → bot 自動記錄<br>
+          · 打「日報」→ 查今日日報
+        </div>
+      </div>
+      <div style="padding:8px; background:#fff; border-radius:6px; margin-bottom:8px;">
+        <div style="font-size:13px; font-weight:600; margin-bottom:2px;">💻 電腦用</div>
+        <div style="font-size:11.5px; color:var(--ink-3); line-height:1.6;">
+          · 開 aiproot 網頁 · 點「以 LINE 登入」<br>
+          · 免帳密 · 一鍵進
+        </div>
+      </div>
+      <div style="padding:8px; background:#fff; border-radius:6px;">
+        <div style="font-size:13px; font-weight:600; margin-bottom:2px;">🔒 想用 email + 密碼？</div>
+        <div style="font-size:11.5px; color:var(--ink-3); line-height:1.6;">
+          · 私訊「設密碼」→ bot 給你設定連結<br>
+          · 選配 · 不設也 OK
+        </div>
+      </div>
     </div>
 
     <button class="btn primary" onclick="closeLiff()">完成 · 回聊天室</button>

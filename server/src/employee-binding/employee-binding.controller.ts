@@ -52,6 +52,29 @@ export class EmployeeBindingController {
    * Body: { botId, lineUserId, displayName, primaryGroupId?, metadata? }
    */
   @Public()
+  @Post("liff/set-password")
+  async liffSetPassword(@Body() body: {
+    botId?: string;
+    lineUserId?: string;
+    email?: string;
+    password?: string;
+  }) {
+    // Option C · Alice 綁定後可自設 email + 密碼 · 提供 email 登入備援
+    if (!body?.botId || !body?.lineUserId || !body?.email || !body?.password) {
+      throw new BadRequestException("botId, lineUserId, email, password 必要");
+    }
+    if (!isValidUuid(body.botId)) {
+      throw new BadRequestException("botId 格式錯 · 需為 UUID");
+    }
+    return this.svc.setPasswordViaLiff({
+      botId: body.botId,
+      lineUserId: body.lineUserId,
+      email: body.email,
+      password: body.password,
+    });
+  }
+
+  @Public()
   @Post("liff/complete")
   async liffComplete(@Body() body: {
     botId?: string;

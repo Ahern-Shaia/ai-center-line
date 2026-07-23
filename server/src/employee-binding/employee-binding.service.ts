@@ -1,6 +1,8 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from "@nestjs/common";
+import { Injectable, Logger, BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
 import { sql } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 import { withTenant } from "../db/client.js";
+import { PasswordPolicyService } from "../auth/password-policy.service.js";
 import { UserLineBindingRepository } from "./user-line-binding.repository.js";
 import { LiffPrefillService } from "./liff-prefill.service.js";
 
@@ -25,7 +27,67 @@ export class EmployeeBindingService {
   constructor(
     private readonly bindingRepo: UserLineBindingRepository,
     private readonly prefillService: LiffPrefillService,
+    private readonly passwordPolicy: PasswordPolicyService,
   ) {}
+
+  /**
+   * LIFF 選配 · 綁定完成的員工可設 email + 密碼 · 提供 email 登入備援
+   * · 走 lineUserId 認證 (LIFF SDK 保證)
+   * · Email 唯一性檢查限自 tenant (別 tenant 可重用)
+   * · 密碼走 password policy validate
+   * · 自設 · 不 force change (must_change_password = false)
+   */
+  async setPasswordViaLiff(args: {
+    botId: string;
+    lineUserId: string;
+    email: string;
+    password: string;
+  }): Promise<{ success: true; email: string }> {
+    // Step 1 · 走綁定表對照 · 拿 userId + tenantId
+    const binding = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) =>
+      this.bindingRepo.getActiveByLineUserId(tx, args.botId, args.lineUserId),
+    );
+    if (!binding) throw new NotFoundException("尚未綁定 · 請先完成 LINE 綁定");
+
+    const userInfo = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{
+      tenant_id: string; display_name: string;
+    }>(sql`SELECT tenant_id::text, display_name FROM users WHERE user_id = ${binding.userId}::uuid`));
+    const user = userInfo.rows[0];
+    if (!user) throw new NotFoundException("使用者記錄不存在");
+
+    // Step 2 · 密碼強度驗
+    const emailTrimmed = args.email.trim().toLowerCase();
+    if (!emailTrimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      throw new BadRequestException("email 格式錯");
+    }
+    this.passwordPolicy.validate(args.password, { email: emailTrimmed, displayName: user.display_name });
+
+    // Step 3 · Email 唯一性檢查 (同 tenant · 排除自己)
+    return withTenant({ tenantId: user.tenant_id, role: "tenant_admin" }, async (tx) => {
+      const collide = await tx.execute<{ n: string }>(sql`
+        SELECT count(*)::text AS n FROM users
+        WHERE tenant_id = ${user.tenant_id}::uuid
+          AND lower(email) = ${emailTrimmed}
+          AND user_id != ${binding.userId}::uuid
+      `);
+      if (parseInt(collide.rows[0].n, 10) > 0) {
+        throw new ConflictException("此 email 已被同 tenant 其他使用者用");
+      }
+
+      const hash = await bcrypt.hash(args.password, 10);
+      await tx.execute(sql`
+        UPDATE users SET
+          email = ${emailTrimmed},
+          password_hash = ${hash},
+          password_updated_at = now(),
+          password_expires_at = now() + interval '90 days',
+          must_change_password = false
+        WHERE user_id = ${binding.userId}::uuid
+      `);
+      this.logger.log(`Employee set password · user=${binding.userId} · email=${emailTrimmed}`);
+      return { success: true as const, email: emailTrimmed };
+    });
+  }
 
   /**
    * LIFF 開啟時 · 撈 pre-fill 資料

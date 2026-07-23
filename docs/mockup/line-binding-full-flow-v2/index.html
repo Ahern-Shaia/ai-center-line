@@ -328,19 +328,74 @@
   <div class="screens">
 
     <div class="screen actor-system">
-      <div class="screen-lbl"><b>C1 · LIFF 顯成功 · 1 秒後自動關</b><span class="screen-step">STEP 4</span></div>
-      <div class="screen-desc">Backend INSERT users(role='employee', tenant_id=<from bot>, department_id=<from group>) + user_line_binding</div>
+      <div class="screen-lbl"><b>C1 · LIFF 顯成功 · 3 條後續路徑指引</b><span class="screen-step">STEP 4</span></div>
+      <div class="screen-desc">Backend INSERT users(role='employee') + binding · 前端顯示手機/電腦/設密碼 3 條路徑讓 Alice 知道下一步</div>
       <div class="liff-frame">
         <div class="liff-frame-body">
           <div class="liff-bar">
             <span>LINE 綁定 · aiproot</span>
             <span class="close">×</span>
           </div>
-          <div class="success-badge">
-            <div class="check">✓</div>
-            <div class="txt">綁定成功！</div>
-            <div class="desc">你的部門：品保部</div>
-            <div class="desc" style="margin-top:16px;">1 秒後自動關閉…</div>
+          <div style="padding:18px 14px;">
+            <div style="text-align:center; margin-bottom:14px;">
+              <div style="width:48px; height:48px; margin:0 auto 8px; border-radius:50%; background:var(--ok); color:#fff; display:flex; align-items:center; justify-content:center; font-size:26px;">✓</div>
+              <div style="font-size:15px; font-weight:700; margin-bottom:2px;">綁定成功</div>
+              <div style="font-size:11.5px; color:var(--ink-3);">王愛麗絲 · 品保部</div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px 10px; margin-bottom:6px;">
+              <div style="font-size:12px; font-weight:600; margin-bottom:2px;">📱 手機用</div>
+              <div style="font-size:10.5px; color:var(--ink-3); line-height:1.55;">
+                私訊工作 → 自動記錄<br>
+                打「日報」→ 查今日整理
+              </div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px 10px; margin-bottom:6px;">
+              <div style="font-size:12px; font-weight:600; margin-bottom:2px;">💻 電腦用</div>
+              <div style="font-size:10.5px; color:var(--ink-3); line-height:1.55;">
+                aiproot 網頁 · 點「以 LINE 登入」<br>
+                免帳密 · 一鍵進
+              </div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px 10px;">
+              <div style="font-size:12px; font-weight:600; margin-bottom:2px;">🔒 想用 email/密碼？</div>
+              <div style="font-size:10.5px; color:var(--ink-3); line-height:1.55;">
+                私訊「設密碼」→ 給你設定連結<br>
+                選配 · 不設也可以
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen actor-system">
+      <div class="screen-lbl"><b>C1-alt · (選配) 設密碼 · Option C</b><span class="screen-step">STEP 4+</span></div>
+      <div class="screen-desc">Alice 之後想設 email + 密碼 · 打「設密碼」→ bot 推 LIFF setup 頁 → 填 email + 密碼 → 從此可 email 登入 (或仍走 LINE OAuth)</div>
+      <div class="liff-frame">
+        <div class="liff-frame-body">
+          <div class="liff-bar">
+            <span>設定密碼 · aiproot</span>
+            <span class="close">×</span>
+          </div>
+          <div style="padding:16px 14px;">
+            <h3 style="font-size:14px; text-align:center; margin:0 0 4px;">設定登入密碼</h3>
+            <div style="font-size:10.5px; color:var(--ink-3); text-align:center; margin-bottom:12px;">選配 · 讓你可用 email 登入 aiproot 網頁</div>
+            <div style="background:#F5F6F8; border-radius:6px; padding:8px 10px; margin-bottom:12px; font-size:11px;">
+              <div style="display:flex; justify-content:space-between; padding:2px 0;"><span style="color:var(--ink-3);">姓名</span><span>王愛麗絲</span></div>
+              <div style="display:flex; justify-content:space-between; padding:2px 0;"><span style="color:var(--ink-3);">部門</span><span>品保部</span></div>
+            </div>
+            <div style="margin-bottom:10px;">
+              <label style="display:block; font-size:11px; color:var(--ink-2); margin-bottom:3px;">你的 email</label>
+              <input type="email" placeholder="you@company.com" style="width:100%; padding:7px 10px; border:1px solid var(--line); border-radius:5px; font-size:12px;">
+            </div>
+            <div style="margin-bottom:10px;">
+              <label style="display:block; font-size:11px; color:var(--ink-2); margin-bottom:3px;">密碼</label>
+              <input type="password" style="width:100%; padding:7px 10px; border:1px solid var(--line); border-radius:5px; font-size:12px;">
+            </div>
+            <div style="background:var(--primary-tint); border-radius:4px; padding:6px 10px; font-size:10px; color:#3730A3; margin-bottom:10px;">
+              長度 ≥ 12 · 大小寫數字符號四選三
+            </div>
+            <button style="width:100%; padding:10px; background:var(--line-brand); color:#fff; border:none; border-radius:6px; font-size:12.5px; font-weight:600;">儲存密碼</button>
           </div>
         </div>
       </div>

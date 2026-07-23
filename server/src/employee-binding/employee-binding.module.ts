@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { PasswordPolicyService } from "../auth/password-policy.service.js";
 import { EmployeeBindingController } from "./employee-binding.controller.js";
 import { EmployeeBindingService } from "./employee-binding.service.js";
 import { LiffPrefillService } from "./liff-prefill.service.js";
@@ -15,6 +16,7 @@ import { UserLineBindingRepository } from "./user-line-binding.repository.js";
     LiffPrefillService,
     UserLineBindingRepository,
     NudgeService,
+    PasswordPolicyService,   // 給 setPasswordViaLiff 用 · Option C
   ],
   exports: [
     EmployeeBindingService,

@@ -29,8 +29,11 @@
 | **`employee`** | 一般員工（v2 加）| 自己 | 只看/送自己的日報 · 用 LIFF 或 web LINE 登入 |
 
 **特殊路徑**：
-- 員工（Alice）自服務綁定：透過 LIFF 綁定自動建 `users` 記錄 · role=`employee`（v2 · 舊 group_owner 已透過 migration 0020 遷移）
-- 員工 web 登入：用「以 LINE 登入」（LINE OAuth · 對照 user_line_binding · 免密碼）
+- **員工（Alice）自服務綁定**：透過 LIFF 綁定自動建 `users` 記錄 · role=`employee`（v2 · 舊 group_owner 已透過 migration 0020 遷移）· 部門由 server derive（不讓員工手選）
+- **員工 web 登入 · 2 條路**：
+  - **主路徑** · 「以 LINE 登入」（LINE OAuth · 對照 user_line_binding · 免密碼 · 推薦）
+  - **選配路徑** · 私訊「設密碼」→ LIFF setup 頁 → 填 email + 密碼 → 從此可 email 登入 (Option C · v1.2 加)
+- **員工部門調整**：只有 tenant_admin 可改（走「部門/成員」頁 · 有 audit）· 員工自己不可改
 
 ---
 
@@ -301,3 +304,4 @@ const ASSIGNABLE_ROLES = session.role === "aiproot_admin"
 |---|---|---|---|
 | 2026-07-23 | v1.0 | 首版 · 逆轉舊 rule「aiproot 統包所有帳號建立」· 開放 tenant_admin 建 group_owner + 管自 tenant depts | ahern + Claude · 對話裁定 |
 | 2026-07-23 | **v1.1** | **加 employee role**（migration 0020）· 修 v1 tech debt (LIFF 綁定用 group_owner 卻登不了 web 的邏輯洞)<br>· employee 只能看/送自己日報 · sidebar 只顯「我的日報」<br>· LIFF 綁定 default role 改 employee<br>· 加 LINE Login OAuth 到 web 登入頁 · 員工可用 LINE 一鍵登入 web（免密碼）<br>· 舊 @line.local email users 自動遷 group_owner → employee | ahern + Claude · 對話裁定 |
+| 2026-07-23 | **v1.2** | **Option C · LIFF 綁定加選配設密碼路徑**（employee 也可用 email + 密碼登入）<br>· 部門完全 server derive · 不讓員工手選（避免藍領選錯 · 只有 tenant_admin 可改）<br>· 綁定成功頁增強 · 3 條後續路徑指引（手機/電腦/設密碼）<br>· 私訊「設密碼」關鍵字 → LIFF setup 頁（email + 密碼 · 走 PasswordPolicy）<br>· 帳號建立矩陣新增「LIFF 自服務設密碼」路徑 · 同 tenant email 唯一 · 自設不 force-change<br>· 管理層帳號 (tenant_admin) 建立 flow 不變 · aiproot wizard + email + 密碼 + first-login-change | ahern + Claude · 對話裁定 |

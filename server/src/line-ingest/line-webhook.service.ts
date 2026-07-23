@@ -278,6 +278,30 @@ export class LineWebhookService {
         return;
       }
 
+      // v2 · 「設密碼」關鍵字 · bot 推設密碼 LIFF 按鈕 (Option C · 選配)
+      if (textContent && isSetPasswordKeyword(textContent)) {
+        if (event.replyToken) {
+          const url = `https://ai-center-line-demo.onrender.com/liff/set-password.html?botId=${bot.botId}`;
+          try {
+            await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
+              {
+                type: "template",
+                altText: "設定登入密碼",
+                template: {
+                  type: "buttons",
+                  text: "設密碼後 · 可用 email 登入 aiproot 網頁\n(選配 · 不設也可用「以 LINE 登入」)",
+                  actions: [{ type: "uri", label: "🔒 設定密碼", uri: url }],
+                },
+              },
+            ]);
+            this.logger.log(`[line-webhook] set-password keyword · pushed LIFF · user=${userId.slice(-6)}`);
+          } catch (err) {
+            this.logger.warn(`set-password reply 失敗 · ${(err as Error).message}`);
+          }
+        }
+        return;
+      }
+
       // v2 · 關鍵字觸發：Alice 打「日報」/「看日報」/「我的日報」/「daily」 → bot 推「我的日報」LIFF 按鈕
       // 不落庫此訊息 (是指令 · 非工作記錄)
       if (textContent && isDailyReportKeyword(textContent)) {
@@ -347,6 +371,13 @@ function isDailyReportKeyword(text: string): boolean {
   const t = text.trim().toLowerCase();
   return t === "日報" || t === "我的日報" || t === "看日報" || t === "查日報"
     || t === "daily" || t === "daily report" || t === "報告" || t === "查看";
+}
+
+// 「設密碼」關鍵字 · Option C · 觸發設密碼 LIFF 頁
+function isSetPasswordKeyword(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return t === "設密碼" || t === "設定密碼" || t === "密碼" || t === "改密碼"
+    || t === "set password" || t === "password";
 }
 
 function safeBufFromB64(b64: string | undefined): Buffer | null {
