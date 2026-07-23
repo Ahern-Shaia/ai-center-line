@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>LINE 綁定 · aiproot</title>
+<title>aiproot</title>
 <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
   :root {
@@ -12,13 +12,14 @@
     --primary:#4F46E5; --primary-tint:#EEF2FF;
     --ok:#059669; --ok-tint:#ECFDF5;
     --warn:#D97706; --warn-tint:#FFFBEB;
+    --danger:#DC2626; --danger-tint:#FEF2F2;
     --line-brand:#06C755;
     --sans: 'Noto Sans TC', -apple-system, sans-serif;
     --mono: 'JetBrains Mono', ui-monospace, monospace;
   }
   * { box-sizing:border-box; }
   html, body { margin:0; padding:0; background:#fff; color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.55; }
-  .container { padding:20px 18px; max-width:480px; margin:0 auto; }
+  .container { padding:20px 18px; max-width:520px; margin:0 auto; }
   h1 { font-size:20px; font-weight:700; margin:0 0 6px; letter-spacing:-.01em; text-align:center; }
   .sub { text-align:center; color:var(--ink-3); font-size:13px; margin:0 0 20px; }
 
@@ -39,19 +40,61 @@
   .btn { display:block; width:100%; padding:14px; border:none; border-radius:10px; font-size:16px; font-weight:600; cursor:pointer; margin-bottom:10px; font-family:inherit; }
   .btn.primary { background:var(--line-brand); color:#fff; }
   .btn.secondary { background:transparent; color:var(--ink-2); border:1px solid var(--line); }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
 
-  .form-group { margin-bottom:14px; }
-  .form-lbl { font-size:13px; font-weight:500; color:var(--ink-2); display:block; margin-bottom:6px; }
-  .form-input, .form-select { width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:8px; font-size:15px; font-family:inherit; background:#fff; color:var(--ink); }
-  .form-input:focus, .form-select:focus { outline:none; border-color:var(--primary); }
-  .form-hint { font-size:11.5px; color:var(--ink-3); margin-top:4px; }
+  .form-group, .field { margin-bottom:14px; }
+  .form-lbl, .field label { font-size:13px; font-weight:500; color:var(--ink-2); display:block; margin-bottom:6px; }
+  .form-input, .form-select, .field input, .field textarea { width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:8px; font-size:15px; font-family:inherit; background:#fff; color:var(--ink); }
+  .form-input:focus, .field input:focus, .field textarea:focus { outline:none; border-color:var(--primary); }
+  .form-hint, .field .hint { font-size:11.5px; color:var(--ink-3); margin-top:4px; }
+  .field textarea { resize:vertical; min-height:60px; }
 
   .alert { padding:12px 14px; border-radius:8px; font-size:13px; margin:12px 0; border:1px solid; }
   .alert.info { background:var(--primary-tint); border-color:#C7D2FE; color:#3730A3; }
   .alert.warn { background:var(--warn-tint); border-color:#F5D5A6; color:#7A4E1B; }
   .alert.ok { background:var(--ok-tint); border-color:#A7F3D0; color:#065F46; }
+  .alert.err { background:var(--danger-tint); border-color:#FCA5A5; color:var(--danger); }
 
   .success-icon { width:64px; height:64px; background:var(--ok-tint); color:var(--ok); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:36px; margin:20px auto 12px; }
+
+  .rules { background:var(--primary-tint); border:1px solid #C7D2FE; border-radius:8px; padding:10px 12px; font-size:12px; color:#3730A3; margin-bottom:14px; }
+  .rules ul { margin:6px 0 0 20px; padding:0; }
+  .rules li { margin:2px 0; }
+
+  .info-card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:16px; }
+  .info-row { display:flex; justify-content:space-between; padding:6px 0; font-size:13px; border-bottom:1px solid var(--well); }
+  .info-row:last-child { border-bottom:none; }
+  .info-row .label { color:var(--ink-3); }
+
+  /* daily-report view */
+  .status-bar { padding:10px 14px; border-radius:8px; margin:12px 0; font-size:13px; text-align:center; }
+  .status-empty { background:var(--warn-tint); color:#7A4E1B; border:1px solid #F5D5A6; }
+  .status-sent { background:var(--ok-tint); color:#065F46; border:1px solid #A7F3D0; }
+  .status-failed { background:var(--danger-tint); color:#7F1D1D; border:1px solid #FCA5A5; }
+  .status-ai { background:var(--primary-tint); color:#3730A3; border:1px solid #C7D2FE; }
+  .item { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:10px; }
+  .item.editing { background:var(--primary-tint); border-color:var(--primary); }
+  .item-hdr { display:flex; align-items:baseline; gap:8px; margin-bottom:6px; }
+  .item-idx { background:var(--primary); color:#fff; width:22px; height:22px; border-radius:50%; font-size:11px; display:inline-flex; align-items:center; justify-content:center; font-weight:600; flex-shrink:0; }
+  .item-time { font-size:11.5px; color:var(--ink-3); font-family:var(--mono); background:var(--well); padding:2px 8px; border-radius:3px; }
+  .item-title { flex:1; font-size:14.5px; font-weight:600; color:var(--ink); }
+  .item-detail { font-size:13px; color:var(--ink-2); padding-left:30px; white-space:pre-wrap; margin-top:4px; }
+  .item-followup { font-size:12.5px; color:var(--warn); padding-left:30px; margin-top:4px; }
+  .item-actions { display:flex; gap:6px; padding-left:30px; margin-top:8px; }
+  .btn-inline { display:inline-block; padding:8px 14px; border:1px solid var(--line); border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; background:#fff; color:var(--ink-2); font-family:inherit; margin:0; }
+  .btn-inline.small { padding:5px 10px; font-size:12px; }
+  .btn-inline.primary { background:var(--line-brand); color:#fff; border-color:var(--line-brand); }
+  .btn-inline.danger { color:var(--danger); border-color:var(--danger); }
+  .add-btn { display:block; width:100%; padding:12px; border:1px dashed var(--line); border-radius:8px; background:transparent; color:var(--ink-2); font-family:inherit; cursor:pointer; margin-top:8px; }
+  .add-btn:hover { border-color:var(--primary); color:var(--primary); }
+  .field.inline { padding-left:30px; }
+  .footer { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line); padding:12px 14px; }
+  .footer-inner { max-width:520px; margin:0 auto; display:flex; gap:8px; }
+  .footer-inner .btn-inline { flex:1; padding:12px; font-size:15px; font-weight:600; }
+  .empty-state { text-align:center; padding:40px 20px; color:var(--ink-3); }
+  .empty-state .icon { font-size:48px; opacity:.4; margin-bottom:12px; }
+  .empty-state .hint { font-size:12.5px; color:var(--ink-3); margin-top:8px; }
+  .mine-hdr .sub-info { font-size:12.5px; color:var(--ink-3); text-align:center; }
 
   #loading, #err { text-align:center; padding:40px 20px; }
   #loading .spin { display:inline-block; width:36px; height:36px; border:3px solid var(--line); border-top-color:var(--primary); border-radius:50%; animation:spin 1s linear infinite; }
@@ -63,7 +106,7 @@
 
   <div id="loading">
     <div class="spin"></div>
-    <p style="color:var(--ink-3); margin-top:14px; font-size:13px;">正在讀取你的 LINE 資訊...</p>
+    <p style="color:var(--ink-3); margin-top:14px; font-size:13px;">載入中…</p>
   </div>
 
   <div id="err" style="display:none;">
@@ -72,11 +115,10 @@
     <p style="color:var(--ink-3); font-size:12px; margin-top:12px;">請聯繫公司資訊窗口</p>
   </div>
 
-  <!-- View: prefill confirm · v2 · 只確認不編輯 · 部門由後端 derive -->
+  <!-- View: prefill confirm · 綁定 v2 -->
   <div id="view-prefill" style="display:none;">
     <h1>歡迎 · 是你嗎？</h1>
     <p class="sub">系統已從你的群組活動<br>自動識別你的身分與部門</p>
-
     <div class="card">
       <div class="avatar-lg" id="p-avatar"></div>
       <div class="name" id="p-name"></div>
@@ -86,9 +128,7 @@
       <div class="groups" id="p-groups"></div>
       <div id="p-dept-hint" style="font-size:11px; color:var(--ink-3); margin-top:8px; text-align:center;"></div>
     </div>
-
     <button class="btn primary" onclick="confirmBinding()">✓ 是 · 我是 <span id="p-btn-name"></span></button>
-
     <div style="margin-top:12px; padding:10px 12px; background:var(--warn-tint); border:1px solid #F5D5A6; border-radius:6px; font-size:11.5px; color:#7A4E1B; line-height:1.6;">
       <b>⚠ 若識別錯了？</b><br>
       綁定完成後 · 請聯繫**部門主管**或**公司資訊窗口** · 由他們在「部門/成員」頁調整。<br>
@@ -104,12 +144,11 @@
     <button class="btn primary" onclick="closeLiff()">完成 · 回聊天室</button>
   </div>
 
-  <!-- View: success · v2 · 3 條路徑指引 -->
+  <!-- View: bind success -->
   <div id="view-success" style="display:none;">
     <div class="success-icon">✓</div>
     <h1>綁定完成</h1>
     <p class="sub">你已成功綁定為 <b id="s-name"></b></p>
-
     <div class="alert ok" style="text-align:left;">
       <b>接下來你可以：</b>
       <div style="margin-top:10px; padding:8px; background:#fff; border-radius:6px; margin-bottom:8px;">
@@ -134,91 +173,143 @@
         </div>
       </div>
     </div>
-
     <button class="btn primary" onclick="closeLiff()">完成 · 回聊天室</button>
+  </div>
+
+  <!-- View: set-password -->
+  <div id="view-setpwd" style="display:none;">
+    <h1>設定登入密碼</h1>
+    <p class="sub">選配 · 讓你可用 email 登入 aiproot 網頁<br>不設也可以用「以 LINE 登入」</p>
+    <div class="info-card">
+      <div class="info-row"><span class="label">姓名</span><span id="sp-name">-</span></div>
+      <div class="info-row"><span class="label">公司</span><span id="sp-tenant">-</span></div>
+    </div>
+    <div id="sp-err" class="alert err" style="display:none;"></div>
+    <div class="field">
+      <label>你的 email</label>
+      <input type="email" id="sp-email" placeholder="you@company.com" autocomplete="email">
+      <div class="hint">未來用這個 email 登入 aiproot 網頁</div>
+    </div>
+    <div class="field">
+      <label>密碼</label>
+      <input type="password" id="sp-password" autocomplete="new-password">
+      <div class="hint">建議挑一個好記且沒在其他網站用過的</div>
+    </div>
+    <div class="field">
+      <label>確認密碼</label>
+      <input type="password" id="sp-password2" autocomplete="new-password">
+    </div>
+    <div class="rules">
+      <b>密碼規則：</b>
+      <ul>
+        <li>長度 ≥ 12 字元</li>
+        <li>含大寫 · 小寫 · 數字 · 符號（四選三）</li>
+        <li>不可包含 email 或姓名</li>
+      </ul>
+    </div>
+    <button id="sp-btn-save" class="btn primary" onclick="savePassword()">儲存密碼</button>
+    <button class="btn secondary" onclick="closeLiff()">取消</button>
+  </div>
+
+  <!-- View: set-password success -->
+  <div id="view-setpwd-ok" style="display:none;">
+    <div class="success-icon">✓</div>
+    <h1>密碼已設定</h1>
+    <p class="sub">以後開電腦看 aiproot · 可用<br><b id="sp-ok-email"></b> 登入</p>
+    <p class="sub" style="font-size:11.5px; margin-top:14px;">1 秒後自動關閉…</p>
+  </div>
+
+  <!-- View: my-daily-report -->
+  <div id="view-mine" style="display:none;">
+    <div class="mine-hdr" style="text-align:center; padding:12px 0 8px;">
+      <h1 style="margin-bottom:4px;">我的日報</h1>
+      <div class="sub-info" id="mine-sub">載入中…</div>
+    </div>
+    <div id="mine-status" class="status-bar" style="display:none;"></div>
+    <div id="mine-items"></div>
+    <button id="mine-add" class="add-btn" style="display:none;">+ 手動加一項</button>
   </div>
 
 </div>
 
-<script>
-  // LIFF ID · aiproot 台灣福祉 LINE Login channel 綁定 LIFF app
-  // 建立日期 2026-07-22 · Provider: aiproot · Linked bot: 台灣福祉
-  const LIFF_ID = "2010801742-WBQkAv5t";
+<!-- footer for my-daily-report only -->
+<div class="footer" id="mine-footer" style="display:none;">
+  <div class="footer-inner">
+    <button id="mine-refresh" class="btn-inline">重新生成</button>
+    <button id="mine-save" class="btn-inline">儲存草稿</button>
+    <button id="mine-send" class="btn-inline primary">送出日報</button>
+  </div>
+</div>
 
-  // LIFF SDK 會把原始 URL 的 query 打包成 ?liff.state=<url-encoded>
-  // liff.init() 完成後 · SDK 會 rewrite URL 展開回原本的 query · 所以要在 init 後才讀
-  //
-  // API_BASE · 硬編 backend domain · 因 web static / backend 不同 domain
-  //  - web static: ai-center-line-demo.onrender.com (host binding.html)
-  //  - backend:    ai-center-line.onrender.com (endpoints)
-  //  - 若 window.location 是 localhost (dev) · 走同 port (Vite proxy 處理)
+<script>
+  // 三個 LIFF page 共用同一 LIFF ID (Line Console 只註冊 1 個) · 用 ?page 切 view
+  //   ?page=binding (default)     · 綁定流程
+  //   ?page=set-password          · 設定 email + 密碼
+  //   ?page=mine                  · 我的日報
+  const LIFF_ID = "2010801742-WBQkAv5t";
   const API_BASE = window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1")
     ? window.location.origin
     : "https://ai-center-line.onrender.com";
+
+  let PAGE = "binding";
   let BOT_ID = null;
-  let prefillData = null;
   let lineUserId = null;
   let lineDisplayName = null;
+  let prefillData = null;
+
+  function resolveFromQuery(key) {
+    const q = new URLSearchParams(location.search);
+    let v = q.get(key);
+    if (v) return v;
+    const liffState = q.get("liff.state");
+    if (liffState) {
+      const stateStr = liffState.startsWith("?") ? liffState.slice(1) : liffState;
+      const stateQ = new URLSearchParams(stateStr);
+      v = stateQ.get(key);
+      if (v) return v;
+    }
+    const hash = location.hash.replace(/^#/, "");
+    if (hash) {
+      const hashQ = new URLSearchParams(hash);
+      v = hashQ.get(key);
+      if (v) return v;
+    }
+    return null;
+  }
 
   async function init() {
     try {
-      // Init LIFF (SDK 會處理 liff.state → 原 query 展開)
       await liff.init({ liffId: LIFF_ID });
       if (!liff.isLoggedIn()) { liff.login(); return; }
-
-      // Init 完 · 讀 botId · 三種來源都試 (直接帶 / liff.state / rewrite 後 URL)
-      BOT_ID = resolveBotId();
+      BOT_ID = resolveFromQuery("botId");
+      PAGE = resolveFromQuery("page") || "binding";
       if (!BOT_ID) return showError("缺 botId 參數 · 請透過 bot 私訊的按鈕開啟");
-
-      // Get userId from LIFF SDK
       const profile = await liff.getProfile();
       lineUserId = profile.userId;
       lineDisplayName = profile.displayName;
 
-      // Fetch pretill
-      const res = await fetch(`${API_BASE}/binding/liff/prefill?botId=${BOT_ID}&lineUserId=${encodeURIComponent(lineUserId)}`);
-      if (!res.ok) throw new Error("讀取失敗 · " + res.status);
-      const data = await res.json();
-
-      hide("loading");
-      if (data.status === "already_bound") {
-        document.getElementById("b-info").innerHTML = `已綁定為 <b>${data.existing.userDisplayName}</b><br>綁定時間：${data.existing.boundAt.slice(0, 16)}`;
-        show("view-bound");
-      } else {
-        prefillData = data.prefill;
-        renderPrefill();
-        show("view-prefill");
-      }
+      if (PAGE === "set-password") return initSetPassword();
+      if (PAGE === "mine") return initMine();
+      return initBinding();
     } catch (e) {
       showError(e.message || "初始化失敗");
     }
   }
 
-  // LIFF 3 種 botId 來源都試（依 LINE 官方行為 · 不同版本 SDK / 開啟方式會差）
-  // 1. 直接讀 (若 SDK 已 rewrite 或本來就有)
-  // 2. liff.state 未展開 · 手動解 (url-encoded ?botId=xxx 或 botId=xxx)
-  // 3. hash 也試（極少見 · 保底）
-  function resolveBotId() {
-    const q = new URLSearchParams(location.search);
-    let id = q.get("botId");
-    if (id) return id;
-
-    const liffState = q.get("liff.state");
-    if (liffState) {
-      // liff.state 可能是 "?botId=xxx&yyy=zzz" or 直接 "botId=xxx"
-      const stateStr = liffState.startsWith("?") ? liffState.slice(1) : liffState;
-      const stateQ = new URLSearchParams(stateStr);
-      id = stateQ.get("botId");
-      if (id) return id;
+  // ==================== 綁定 flow ====================
+  async function initBinding() {
+    const res = await fetch(`${API_BASE}/binding/liff/prefill?botId=${BOT_ID}&lineUserId=${encodeURIComponent(lineUserId)}`);
+    if (!res.ok) throw new Error("讀取失敗 · " + res.status);
+    const data = await res.json();
+    hide("loading");
+    if (data.status === "already_bound") {
+      document.getElementById("b-info").innerHTML = `已綁定為 <b>${escapeHtml(data.existing.userDisplayName)}</b><br>綁定時間：${escapeHtml(data.existing.boundAt.slice(0, 16))}`;
+      show("view-bound");
+    } else {
+      prefillData = data.prefill;
+      renderPrefill();
+      show("view-prefill");
     }
-
-    const hash = location.hash.replace(/^#/, "");
-    if (hash) {
-      const hashQ = new URLSearchParams(hash);
-      id = hashQ.get("botId");
-      if (id) return id;
-    }
-    return null;
   }
 
   function renderPrefill() {
@@ -226,14 +317,12 @@
     document.getElementById("p-name").textContent = name;
     document.getElementById("p-btn-name").textContent = name;
     document.getElementById("p-userid").textContent = "LINE UserId: " + lineUserId.slice(-8);
-
     const avatar = document.getElementById("p-avatar");
     if (prefillData.pictureUrl) {
       avatar.innerHTML = '<img src="' + prefillData.pictureUrl + '" alt="">';
     } else {
       avatar.textContent = name[0] || "?";
     }
-
     const groups = prefillData.candidateGroups || [];
     const hintEl = document.getElementById("p-dept-hint");
     if (groups.length === 0) {
@@ -246,25 +335,19 @@
       const pct = Math.round((g.messageCount / total) * 100);
       const primary = i === 0 ? ' primary' : '';
       const label = g.displayName || g.groupId.slice(0, 12);
-      return `<div class="group-item${primary}">📱 ${label}<span class="pct">${pct}%</span></div>`;
+      return `<div class="group-item${primary}">📱 ${escapeHtml(label)}<span class="pct">${pct}%</span></div>`;
     }).join('');
     document.getElementById("p-groups").innerHTML = html;
-    // 顯示 primary group 對到哪個部門
     const primary = groups[0];
     if (primary && primary.departmentName) {
-      hintEl.innerHTML = `→ 綁定後你歸屬「<b>${primary.departmentName}</b>」部門`;
+      hintEl.innerHTML = `→ 綁定後你歸屬「<b>${escapeHtml(primary.departmentName)}</b>」部門`;
     } else if (primary) {
       hintEl.innerHTML = "→ 此群尚未分派部門 · 綁定後主管會幫你調整";
     }
   }
 
   async function confirmBinding() {
-    // v2 · 只傳 displayName · 不傳 primaryGroupId (後端 derive)
     const displayName = prefillData.displayName || lineDisplayName || "（未知）";
-    await doComplete(displayName);
-  }
-
-  async function doComplete(displayName) {
     try {
       const res = await fetch(`${API_BASE}/binding/liff/complete`, {
         method: "POST",
@@ -282,11 +365,8 @@
       }
       const data = await res.json();
       let deptText = "";
-      if (data.departmentName) {
-        deptText = " · " + data.departmentName;
-      } else if (data.departmentSource === "unassigned_needs_manager") {
-        deptText = " · （待主管指派部門）";
-      }
+      if (data.departmentName) deptText = " · " + data.departmentName;
+      else if (data.departmentSource === "unassigned_needs_manager") deptText = " · （待主管指派部門）";
       document.getElementById("s-name").textContent = data.displayName + deptText;
       hide("view-prefill"); show("view-success");
     } catch (e) {
@@ -294,16 +374,255 @@
     }
   }
 
-  function closeLiff() {
-    if (liff && liff.closeWindow) { liff.closeWindow(); }
+  // ==================== 設密碼 flow ====================
+  async function initSetPassword() {
+    const res = await fetch(`${API_BASE}/binding/liff/prefill?botId=${BOT_ID}&lineUserId=${encodeURIComponent(lineUserId)}`);
+    const data = await res.json();
+    if (data.status !== "already_bound") return showError("尚未完成綁定 · 請先加 bot 好友完成綁定");
+    document.getElementById("sp-name").textContent = data.existing.userDisplayName || "-";
+    document.getElementById("sp-tenant").textContent = "本公司";
+    hide("loading"); show("view-setpwd");
   }
 
+  async function savePassword() {
+    const email = document.getElementById("sp-email").value.trim().toLowerCase();
+    const password = document.getElementById("sp-password").value;
+    const password2 = document.getElementById("sp-password2").value;
+    const errEl = document.getElementById("sp-err");
+    errEl.style.display = "none";
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showSetPwdErr("email 格式錯");
+    if (!password) return showSetPwdErr("請輸入密碼");
+    if (password !== password2) return showSetPwdErr("兩次密碼不一致");
+
+    const btn = document.getElementById("sp-btn-save");
+    btn.disabled = true; btn.textContent = "儲存中…";
+    try {
+      const res = await fetch(`${API_BASE}/binding/liff/set-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ botId: BOT_ID, lineUserId, email, password }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "設定失敗" }));
+        const msg = err?.failures?.join("\n") || err?.message || "設定失敗";
+        return showSetPwdErr(msg);
+      }
+      document.getElementById("sp-ok-email").textContent = email;
+      hide("view-setpwd"); show("view-setpwd-ok");
+      setTimeout(closeLiff, 1500);
+    } catch (e) {
+      showSetPwdErr(e.message || "設定失敗");
+    } finally {
+      btn.disabled = false; btn.textContent = "儲存密碼";
+    }
+  }
+
+  function showSetPwdErr(msg) {
+    const el = document.getElementById("sp-err");
+    el.textContent = msg;
+    el.style.display = "block";
+  }
+
+  // ==================== 我的日報 flow ====================
+  let mineReport = null;
+  let mineItems = [];
+  let mineEditingIdx = -1;
+  let mineBusy = false;
+
+  async function initMine() {
+    hide("loading"); show("view-mine");
+    await fetchMine();
+    document.getElementById("mine-add").onclick = () => {
+      mineItems.push({ title: "", detail: "", time: "", followup: "" });
+      mineEditingIdx = mineItems.length - 1;
+      renderMine();
+    };
+    document.getElementById("mine-refresh").onclick = mineRegenerate;
+    document.getElementById("mine-save").onclick = () => mineSave("save_draft");
+    document.getElementById("mine-send").onclick = () => {
+      if (!confirm(`確定送出 ${mineItems.length} 項給主管？送出後不能再改。`)) return;
+      mineSave("send");
+    };
+  }
+
+  async function fetchMine() {
+    try {
+      const res = await fetch(`${API_BASE}/personal-daily-report/liff/mine?botId=${BOT_ID}&lineUserId=${encodeURIComponent(lineUserId)}`);
+      if (!res.ok) throw new Error("讀取失敗 · " + res.status);
+      const data = await res.json();
+      mineReport = data.report;
+      const today = data.requestedDate;
+      document.getElementById("mine-sub").textContent = `${data.userDisplayName || ""} · ${formatDay(today)}`;
+      renderMine();
+    } catch (e) {
+      showError("載入日報失敗 · " + (e.message || e));
+    }
+  }
+
+  function renderMine() {
+    const statusEl = document.getElementById("mine-status");
+    const itemsBox = document.getElementById("mine-items");
+    const addBtn = document.getElementById("mine-add");
+    const footer = document.getElementById("mine-footer");
+
+    if (!mineReport) {
+      statusEl.className = "status-bar status-empty";
+      statusEl.textContent = "今日尚未有記錄 · 私訊 bot 幾則今日工作後 · 按「重新生成」";
+      statusEl.style.display = "block";
+      itemsBox.innerHTML = `<div class="empty-state"><div class="icon">📝</div><div>還沒開始記錄</div><div class="hint">先私訊工作內容給 bot · 例如「早上 9 點跟客戶開會」</div></div>`;
+      addBtn.style.display = "none";
+      footer.style.display = "block";
+      document.getElementById("mine-save").disabled = true;
+      document.getElementById("mine-send").disabled = true;
+      return;
+    }
+    mineItems = (mineReport.finalItems && mineReport.finalItems.length) ? [...mineReport.finalItems] : (mineReport.aiItems ? [...mineReport.aiItems] : []);
+    const isSent = mineReport.status === "sent";
+    const isEmpty = mineReport.status === "empty";
+    const isFailed = mineReport.status === "failed";
+    if (isSent) {
+      statusEl.className = "status-bar status-sent";
+      statusEl.textContent = `✓ 已於 ${formatDateTime(mineReport.sentAt)} 送出主管`;
+    } else if (isEmpty) {
+      statusEl.className = "status-bar status-empty";
+      statusEl.textContent = "今日尚未有記錄 · 先私訊 bot 幾則工作內容";
+    } else if (isFailed) {
+      statusEl.className = "status-bar status-failed";
+      statusEl.textContent = "AI 整理失敗 · 按「重新生成」再試";
+    } else if (mineReport.aiGeneratedAt) {
+      statusEl.className = "status-bar status-ai";
+      statusEl.textContent = `✨ AI 已整理 ${mineItems.length} 項 · 請確認或編輯`;
+    }
+    statusEl.style.display = "block";
+
+    itemsBox.innerHTML = "";
+    mineItems.forEach((item, idx) => itemsBox.appendChild(renderMineItem(item, idx, isSent)));
+    addBtn.style.display = isSent ? "none" : "block";
+    footer.style.display = "block";
+    document.getElementById("mine-save").disabled = isSent || mineItems.length === 0;
+    document.getElementById("mine-send").disabled = isSent || mineItems.length === 0;
+    document.getElementById("mine-send").textContent = isSent ? "已送出" : "送出日報";
+  }
+
+  function renderMineItem(item, idx, readonly) {
+    const div = document.createElement("div");
+    div.className = "item" + (mineEditingIdx === idx ? " editing" : "");
+    if (mineEditingIdx === idx && !readonly) {
+      div.innerHTML = `
+        <div class="item-hdr"><span class="item-idx">${idx + 1}</span><span class="item-title">編輯中</span></div>
+        <div class="field inline"><label>時間 (例 08:30 或 09:00-11:00)</label><input type="text" id="edit-time" value="${escapeHtml(item.time || "")}" placeholder="時間"></div>
+        <div class="field inline"><label>事項標題 *</label><input type="text" id="edit-title" value="${escapeHtml(item.title || "")}" placeholder="事項標題"></div>
+        <div class="field inline"><label>詳細內容</label><textarea id="edit-detail" rows="3" placeholder="詳細內容">${escapeHtml(item.detail || "")}</textarea></div>
+        <div class="field inline"><label>追蹤事項</label><input type="text" id="edit-followup" value="${escapeHtml(item.followup || "")}" placeholder="例：明日 09:00 跟人資申請"></div>
+        <div class="item-actions">
+          <button class="btn-inline small primary" onclick="mineSaveEdit(${idx})">完成</button>
+          <button class="btn-inline small" onclick="mineCancelEdit()">取消</button>
+        </div>`;
+    } else {
+      div.innerHTML = `
+        <div class="item-hdr">
+          <span class="item-idx">${idx + 1}</span>
+          ${item.time ? `<span class="item-time">${escapeHtml(item.time)}</span>` : ""}
+          <span class="item-title">${escapeHtml(item.title || "（未命名）")}</span>
+        </div>
+        ${item.detail ? `<div class="item-detail">${escapeHtml(item.detail)}</div>` : ""}
+        ${item.followup ? `<div class="item-followup"><b>追蹤</b> · ${escapeHtml(item.followup)}</div>` : ""}
+        ${!readonly ? `<div class="item-actions">
+          <button class="btn-inline small" onclick="mineStartEdit(${idx})">編輯</button>
+          <button class="btn-inline small danger" onclick="mineDeleteItem(${idx})">刪除</button>
+        </div>` : ""}`;
+    }
+    return div;
+  }
+
+  function mineStartEdit(idx) { mineEditingIdx = idx; renderMine(); }
+  function mineCancelEdit() { mineEditingIdx = -1; renderMine(); }
+  function mineSaveEdit(idx) {
+    const time = document.getElementById("edit-time").value.trim();
+    const title = document.getElementById("edit-title").value.trim();
+    const detail = document.getElementById("edit-detail").value.trim();
+    const followup = document.getElementById("edit-followup").value.trim();
+    if (!title) { alert("標題必要"); return; }
+    mineItems[idx] = { time: time || undefined, title, detail: detail || undefined, followup: followup || undefined };
+    mineEditingIdx = -1;
+    renderMine();
+  }
+  function mineDeleteItem(idx) {
+    if (!confirm("確定刪除此項？")) return;
+    mineItems.splice(idx, 1);
+    renderMine();
+  }
+  async function mineRegenerate() {
+    if (mineBusy) return;
+    if (!confirm("將重跑 AI 整理 · 覆蓋現有編輯 · 確定？")) return;
+    mineBusy = true;
+    try {
+      const res = await fetch(`${API_BASE}/personal-daily-report/liff/regenerate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ botId: BOT_ID, lineUserId }),
+      });
+      const data = await res.json();
+      if (data.status === "empty") alert("今日仍無私訊記錄 · 請先私訊 bot");
+      else if (data.status === "failed") alert("生成失敗 · " + (data.errorMessage || ""));
+      await fetchMine();
+    } catch (e) {
+      alert("重新生成失敗 · " + (e.message || e));
+    } finally {
+      mineBusy = false;
+    }
+  }
+  async function mineSave(action) {
+    if (mineBusy) return;
+    mineBusy = true;
+    try {
+      const res = await fetch(`${API_BASE}/personal-daily-report/liff/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ botId: BOT_ID, lineUserId, items: mineItems, action }),
+      });
+      if (!res.ok) throw new Error("儲存失敗 · " + res.status);
+      if (action === "send") {
+        alert("✓ 日報已送出 · 主管會立即收到 LINE 通知");
+        setTimeout(closeLiff, 1000);
+      } else {
+        alert("✓ 草稿已儲存");
+        await fetchMine();
+      }
+    } catch (e) {
+      alert("儲存失敗 · " + (e.message || e));
+    } finally {
+      mineBusy = false;
+    }
+  }
+
+  // ==================== 共用 utils ====================
+  function closeLiff() { if (liff && liff.closeWindow) liff.closeWindow(); }
   function show(id) { document.getElementById(id).style.display = "block"; }
   function hide(id) { document.getElementById(id).style.display = "none"; }
   function showError(msg) {
     document.getElementById("err-msg").textContent = msg;
     hide("loading"); show("err");
   }
+  function escapeHtml(s) {
+    return String(s || "").replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function formatDay(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString("zh-TW", { year: "numeric", month: "numeric", day: "numeric", weekday: "long" });
+  }
+  function formatDateTime(iso) {
+    return new Date(iso).toLocaleString("zh-TW", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+
+  window.confirmBinding = confirmBinding;
+  window.savePassword = savePassword;
+  window.mineStartEdit = mineStartEdit;
+  window.mineCancelEdit = mineCancelEdit;
+  window.mineSaveEdit = mineSaveEdit;
+  window.mineDeleteItem = mineDeleteItem;
+  window.closeLiff = closeLiff;
 
   init();
 </script>

@@ -279,9 +279,10 @@ export class LineWebhookService {
       }
 
       // v2 · 「設密碼」關鍵字 · bot 推設密碼 LIFF 按鈕 (Option C · 選配)
+      // 3 頁共用同一 LIFF endpoint (binding.html) · 用 ?page=set-password 切 view
       if (textContent && isSetPasswordKeyword(textContent)) {
         if (event.replyToken) {
-          const url = `https://ai-center-line-demo.onrender.com/liff/set-password.html?botId=${bot.botId}`;
+          const url = buildLiffUrl(bot.botId, "set-password");
           try {
             await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
               {
@@ -304,13 +305,10 @@ export class LineWebhookService {
 
       // v2 · 關鍵字觸發：Alice 打「日報」/「看日報」/「我的日報」/「daily」 → bot 推「我的日報」LIFF 按鈕
       // 不落庫此訊息 (是指令 · 非工作記錄)
+      // 3 頁共用同一 LIFF endpoint (binding.html) · 用 ?page=mine 切 view
       if (textContent && isDailyReportKeyword(textContent)) {
         if (event.replyToken) {
-          const liffMineUrl = process.env.LIFF_MINE_URL ?? process.env.LIFF_URL?.replace(/\/[\w-]+$/, "/2010801742-WBQkAv5t");
-          // 若沒獨立 LIFF ID for my-daily-report · 走 endpoint URL 直接開 (LIFF 端會 init)
-          const url = liffMineUrl
-            ? `${liffMineUrl.replace(/\?.*$/, "")}?botId=${bot.botId}&page=mine`
-            : `https://ai-center-line-demo.onrender.com/liff/my-daily-report.html?botId=${bot.botId}`;
+          const url = buildLiffUrl(bot.botId, "mine");
           try {
             await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
               {
@@ -364,6 +362,16 @@ export class LineWebhookService {
       }
     }
   }
+}
+
+// 建 LIFF button URL · 3 個 view (binding / set-password / mine) 共用同一 endpoint
+// 若 LIFF_URL 是 liff.line.me/{liffId} · 直接 append query
+// 若 LIFF_URL 是 Web URL (含 .html) · 也直接 append query
+// 若無 LIFF_URL env · fallback 到 demo web URL
+function buildLiffUrl(botId: string, page: "binding" | "set-password" | "mine"): string {
+  const base = process.env.LIFF_URL ?? "https://ai-center-line-demo.onrender.com/liff/binding.html";
+  const sep = base.includes("?") ? "&" : "?";
+  return `${base}${sep}botId=${botId}&page=${page}`;
 }
 
 // 判斷是否為「查日報」關鍵字 · 支援中英 · 前後空白容錯
