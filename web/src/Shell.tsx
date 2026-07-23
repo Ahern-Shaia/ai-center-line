@@ -33,6 +33,7 @@ const NAV: Array<{
   },
   {
     group: "資料 · 知識",
+    roles: ["aiproot_admin", "consultant", "tenant_admin", "group_owner"],   // employee 只看「我的日報」
     items: [
       { key: "rag", label: "智慧檢索", ic: iconChat, done: true },
       { key: "media", label: "素材看板", ic: iconMedia, done: true },
@@ -58,6 +59,7 @@ const NAV: Array<{
   },
   {
     group: "設定",
+    roles: ["aiproot_admin", "consultant", "tenant_admin", "group_owner"],   // employee 只看「我的日報」
     items: [
       // v2 · 部門/成員 開放給 tenant_admin (自 tenant) + aiproot
       { key: "depts", label: "部門/成員", ic: iconTeam, done: true, permAny: ["departments:view", "users:view"] },

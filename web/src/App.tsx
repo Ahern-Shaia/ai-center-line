@@ -100,9 +100,16 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "roles-mgmt": "權限管理",
 };
 
+// employee 沒 warroom-tasks:view · 若 default 進 warroom 會 toast 洗版
+// 依 role 決定 landing · employee → 我的日報 · 其他 → 總覽儀表
+function defaultRouteFor(session: Session | null): Route {
+  if (session?.role === "employee") return { page: "my-daily-report" };
+  return { page: "warroom" };
+}
+
 export default function App() {
   const [session, setSession] = useState<Session | null>(() => getSession());
-  const [route, setRoute] = useState<Route>({ page: "warroom" });
+  const [route, setRoute] = useState<Route>(() => defaultRouteFor(getSession()));
   const [refreshing, setRefreshing] = useState(false);
   const [asOf, setAsOf] = useState<string | undefined>(undefined);
 
@@ -114,6 +121,13 @@ export default function App() {
         .catch(() => undefined);
     }
   }, [session]);
+
+  // Login 完 · 若 employee 還停在 warroom (initial) · 切到我的日報 · 免 toast 洗版
+  useEffect(() => {
+    if (session?.role === "employee" && route.page === "warroom") {
+      setRoute({ page: "my-daily-report" });
+    }
+  }, [session?.role, route.page]);
 
   const pageRef = useRef<{ refresh: () => Promise<void>; asOf: () => string | undefined }>({
     refresh: async () => undefined,
