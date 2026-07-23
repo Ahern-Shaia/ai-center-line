@@ -11,6 +11,152 @@
     /* Default styles provided by pandoc.
     ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
     */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
     span.smallcaps{font-variant: small-caps;}
     div.columns{display: flex; gap: 1.5em;}
     div.column{flex: auto;}
@@ -30,7 +176,6 @@
     }
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.min.css" />
 </head>
 <body>
 <header id="title-block-header">
@@ -43,8 +188,13 @@
 <p><strong>給誰看</strong>：台灣福祉總經理室 / 部門主管 / 資訊窗口 /
 一般員工</p>
 <p><strong>目的</strong>：一步步驗收兩個新功能 · 確認可以用了才簽收</p>
-<p><strong>版本</strong>：v1.0（2026-07-23）｜對應：階段一開發（2026-07）｜aiproot
+<p><strong>版本</strong>：v1.1（2026-07-23）｜對應：階段一開發（2026-07）｜aiproot
 交付</p>
+<p><strong>v1.1 修訂</strong>：新增「日報 empty state 顯已私訊 N 則 +
+原始訊息 list」、「送出前完整 preview（LIFF confirm dialog + Web
+編輯區下方 live preview）」、「Web 我的日報 pane-hdr
+分區工具列（查看日期 + 當日操作）」、「移除 UI 圖示型 emoji」、「Web
+employee default landing = 我的日報」等驗收項</p>
 </blockquote>
 <hr />
 <h2 id="這份文件是什麼">這份文件是什麼</h2>
@@ -407,28 +557,41 @@ LINE 內看自己日報（<strong>不用登入網頁</strong>）</h2>
 輸入「<strong>日報</strong>」二字 · 送出</li>
 <li>Bot 立即回一則訊息 + 按鈕：
 <pre><code>點按鈕看今日 AI 整理的日報 · 可編輯後送出主管
-[ 📋 查看我的日報 ]</code></pre></li>
+[ 查看我的日報 ]</code></pre></li>
 <li>Alice 點「查看我的日報」· LINE <strong>在 App
 內開一個小網頁</strong>（LIFF · 不跳出瀏覽器）</li>
-<li>小網頁顯示今日日報 · AI 已整理項目</li>
+<li>小網頁顯示今日日報</li>
 </ol>
-<p><strong>應該看到</strong>：</p>
+<p><strong>兩種可能情境</strong>（依當日訊息狀態）：</p>
+<p><strong>情境 A · AI 已整理</strong>（scheduler 已跑 /
+之前手動生成過）：</p>
 <ul>
-<li>✅ 頁面上方顯 Alice 姓名 + 今日日期</li>
-<li>✅ 顯 AI 整理的項目卡片 · 每項有：
+<li>頁面上方顯 Alice 姓名 + 今日日期</li>
+<li>顯 AI 整理的項目卡片 · 每項有：
 <ul>
 <li>時間（例：08:30-10:00）</li>
 <li>標題（例：A 客戶 Q3 交期討論）</li>
 <li>詳情（例：客戶要求提早 15 天）</li>
 <li>追蹤事項（若有）</li>
 </ul></li>
-<li>✅ 每項有「編輯」「刪除」按鈕</li>
-<li>✅ 底部有「+ 手動加一項」按鈕</li>
-<li>✅ 最下方 3 個按鈕：「重新生成」「儲存草稿」「送出日報」</li>
+<li>每項有「編輯」「刪除」按鈕</li>
+<li>底部有「+ 手動加一項」按鈕</li>
+<li><strong>編輯區下方即時「主管將看到 · 預覽」</strong>（隨編輯 live
+update · 送出前可看整份報告樣式）</li>
+<li>最下方 3 個按鈕：「重新生成」「儲存草稿」「送出日報」</li>
 </ul>
-<p><strong>若看到「今日尚未有記錄」</strong>：</p>
+<p><strong>情境 B · 尚未整理</strong>（今日有私訊 · 但 AI 還沒跑）：</p>
 <ul>
-<li>Alice 當天沒私訊 bot · 或都是貼圖沒文字</li>
+<li>頂部橘色 status bar：「你今日已私訊 bot <strong>N</strong> 則 · AI
+尚未整理 · 按下方『重新生成』」</li>
+<li>中間顯「今日已私訊 <strong>N</strong> 則」</li>
+<li>下方展開 <strong>bot 收到的原始訊息 list</strong>（依時間排序 ·
+Alice 可確認 bot 有收到什麼）</li>
+<li>按「重新生成」→ 5–10 秒後 AI 整理完 → 頁面 refresh 到情境 A</li>
+</ul>
+<p><strong>若看到「還沒開始記錄」</strong>：</p>
+<ul>
+<li>Alice 當天沒私訊 bot · 或都是貼圖 / 圖片沒文字</li>
 <li>請 Alice 先私訊幾則工作內容 · 再打「日報」查</li>
 </ul>
 <p><strong>若按鈕跳出網頁到 Chrome/Safari 而非 App 內</strong>：</p>
@@ -442,22 +605,40 @@ LINE 內看自己日報（<strong>不用登入網頁</strong>）</h2>
 <ol type="1">
 <li>檢查每項 OK · 若有錯 · 點「編輯」改 · 或「刪除」不要的</li>
 <li>都對 · 點「<strong>送出日報</strong>」</li>
-<li>彈出確認：「確定送出 3 項給主管？送出後不能再改。」</li>
-<li>按「確定」</li>
+<li><strong>彈出 confirm dialog</strong>（不是 native prompt）·
+內含<strong>完整 preview</strong>：
+<pre><code>送出今日日報
+主管將收到以下 3 項 · 送出後不能再改
+
+┌────────────────────────────────┐
+│ 王愛麗絲 · 個人日報            │
+│ 2026-07-23（週四）             │
+│ ─────────────                  │
+│ 1. A 客戶 Q3 交期  09:00-10:30 │
+│    客戶要求提早 15 天...        │
+│    → 追蹤 · 明日 09:00 開會    │
+│ 2. 申請 2 名檢驗   15:00       │
+│    人資已收單 · 週五前回        │
+│ 3. 不良品已回工廠              │
+│ ─────────────                  │
+│ 共 3 項                        │
+└────────────────────────────────┘
+
+[ 取消 ]           [ 確定送出 ]</code></pre></li>
+<li>確認 preview 沒問題 · 按「<strong>確定送出</strong>」</li>
 </ol>
 <p><strong>應該看到（Alice 端）</strong>：</p>
 <ul>
-<li>✅ 頁面顯「✓ 日報已送出 · 主管會立即收到 LINE 通知」</li>
-<li>✅ 1 秒後 LIFF 頁自動關閉 · 跳回 LINE 聊天</li>
-<li>✅ 再打「日報」查 · 頂部顯「✓ 已於 XX:XX 送出主管」·
-按鈕不能再改</li>
+<li>頁面顯「日報已送出 · 主管會立即收到 LINE 通知」</li>
+<li>1 秒後 LIFF 頁自動關閉 · 跳回 LINE 聊天</li>
+<li>再打「日報」查 · 頂部顯「已於 XX:XX 送出主管」· 按鈕不能再改</li>
 </ul>
 <p><strong>應該看到（Alice 部門主管的 LINE 端）</strong>：</p>
 <ul>
-<li>✅ 主管 LINE 立即收到 push 通知：
-<pre><code>📋 王愛麗絲 已送出 2026-07-23 個人日報 · 3 項
+<li>主管 LINE 立即收到 push 通知：
+<pre><code>王愛麗絲 已送出 2026-07-23 個人日報 · 3 項
 進「戰情室 → 部門日報」查看</code></pre></li>
-<li>✅ 主管進 aiproot 網頁 · 戰情室 → 部門日報 ·
+<li>主管進 aiproot 網頁 · 戰情室 → 部門日報 ·
 看部門所有員工當日日報</li>
 </ul>
 <p><strong>若主管沒收到通知</strong>：</p>
@@ -479,7 +660,19 @@ LINE 內看自己日報（<strong>不用登入網頁</strong>）</h2>
 <ul>
 <li>打開 aiproot 網址 → 點「<strong>以 LINE 登入</strong>」按鈕</li>
 <li>用 Alice 的 LINE 帳號授權（不用打帳號密碼）</li>
-<li>登入後 sidebar 只有「我的日報」（角色是 <code>employee</code>）</li>
+<li>登入後 <strong>default
+直接進「我的日報」</strong>（role=<code>employee</code> · sidebar
+只有這一項）</li>
+<li>頁面右上有工具列分兩區：
+<ul>
+<li><strong>查看日期</strong> · date picker ·
+可切歷史日看以前送過的日報（hint 顯「今日」/「昨天」/「N 天前」）</li>
+<li><strong>當日操作</strong> · 「重新生成」按鈕（hint「重跑 AI ·
+保留手動編輯」）</li>
+</ul></li>
+<li>編輯區下方<strong>即時 preview</strong>（隨編輯 live update ·
+送出前可看主管將收到的完整格式）</li>
+<li>送「送出日報」→ dialog 內同樣 show 完整 preview + 確定按鈕</li>
 <li>大螢幕編輯 · 適合處理多項工作</li>
 </ul>
 <p><strong>主管級（tenant_admin / group_owner from real user）仍用 email
@@ -586,13 +779,51 @@ LINE 內看自己日報（<strong>不用登入網頁</strong>）</h2>
 </tr>
 <tr>
 <td>12</td>
-<td>員工打「日報」· bot 回按鈕 · LINE 內開 LIFF 顯 AI 整理</td>
+<td>員工打「日報」· bot 回按鈕 · LINE 內開 LIFF 顯今日狀態</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>12a</td>
+<td>若 AI 尚未整理 · LIFF 應顯「已私訊 N 則」+ 原始訊息 list</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>12b</td>
+<td>按「重新生成」· 5-10 秒後 AI 整理完 · 頁面 refresh</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>12c</td>
+<td>編輯區下方應有「主管將看到 · 預覽」live preview 區塊</td>
 <td style="text-align: center;">☐</td>
 <td></td>
 </tr>
 <tr>
 <td>13</td>
-<td>LIFF 頁「送出日報」· 主管 LINE 立即收通知</td>
+<td>按「送出日報」· 彈 confirm dialog 內含完整 preview</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>13a</td>
+<td>確定送出後 · 主管 LINE 立即收通知（純文字 · 無 emoji 開頭）</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>14</td>
+<td>員工 web 登入 (LINE OAuth) · 直接進「我的日報」頁 · sidebar
+只有這項</td>
+<td style="text-align: center;">☐</td>
+<td></td>
+</tr>
+<tr>
+<td>15</td>
+<td>Web 「我的日報」右上有分兩區工具列（查看日期 + 當日操作）·
+可切歷史日</td>
 <td style="text-align: center;">☐</td>
 <td></td>
 </tr>
