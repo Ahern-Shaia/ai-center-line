@@ -94,6 +94,12 @@
   .empty-state { text-align:center; padding:40px 20px; color:var(--ink-3); }
   .empty-state .icon { font-size:48px; opacity:.4; margin-bottom:12px; }
   .empty-state .hint { font-size:12.5px; color:var(--ink-3); margin-top:8px; }
+  .raw-list { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-top:8px; }
+  .raw-hdr { font-size:11.5px; color:var(--ink-3); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  .raw-msg { display:flex; gap:10px; padding:6px 0; font-size:13px; }
+  .raw-msg + .raw-msg { border-top:1px dashed var(--line); }
+  .raw-time { font-family:var(--mono); color:var(--ink-3); font-size:11.5px; flex-shrink:0; min-width:40px; padding-top:2px; }
+  .raw-text { color:var(--ink); flex:1; white-space:pre-wrap; word-break:break-word; }
   .mine-hdr .sub-info { font-size:12.5px; color:var(--ink-3); text-align:center; }
 
   #loading, #err { text-align:center; padding:40px 20px; }
@@ -427,6 +433,7 @@
   // ==================== 我的日報 flow ====================
   let mineReport = null;
   let minePendingCount = 0;
+  let minePendingMessages = [];
   let mineItems = [];
   let mineEditingIdx = -1;
   let mineBusy = false;
@@ -454,6 +461,7 @@
       const data = await res.json();
       mineReport = data.report;
       minePendingCount = data.pendingMessageCount || 0;
+      minePendingMessages = data.pendingMessages || [];
       const today = data.requestedDate;
       document.getElementById("mine-sub").textContent = `${data.userDisplayName || ""} · ${formatDay(today)}`;
       renderMine();
@@ -477,7 +485,25 @@
       }
       statusEl.style.display = "block";
       if (minePendingCount > 0) {
-        itemsBox.innerHTML = `<div class="empty-state"><div class="icon">✨</div><div>今日已私訊 <b>${minePendingCount}</b> 則</div><div class="hint">按下方「重新生成」讓 AI 立即整理成日報項目</div></div>`;
+        const rawList = minePendingMessages.map((m) => {
+          const time = new Date(m.sentAt).toLocaleTimeString("zh-TW", { hour12: false, hour: "2-digit", minute: "2-digit" });
+          let content;
+          if (m.messageType === "text") content = escapeHtml(m.textContent || "");
+          else if (m.messageType === "sticker") content = `<span style="color:var(--ink-3)">[貼圖]</span>`;
+          else if (m.messageType === "image") content = `<span style="color:var(--ink-3)">[圖片]</span>`;
+          else content = `<span style="color:var(--ink-3)">[${escapeHtml(m.messageType)}]</span>`;
+          return `<div class="raw-msg"><div class="raw-time">${time}</div><div class="raw-text">${content}</div></div>`;
+        }).join("");
+        itemsBox.innerHTML = `
+          <div class="empty-state" style="padding:20px 12px;">
+            <div class="icon">✨</div>
+            <div>今日已私訊 <b>${minePendingCount}</b> 則</div>
+            <div class="hint">按下方「重新生成」讓 AI 立即整理成日報項目</div>
+          </div>
+          <div class="raw-list">
+            <div class="raw-hdr">bot 收到的原始訊息 · 依時間排序</div>
+            ${rawList}
+          </div>`;
       } else {
         itemsBox.innerHTML = `<div class="empty-state"><div class="icon">📝</div><div>還沒開始記錄</div><div class="hint">先私訊工作內容給 bot · 例如「早上 9 點跟客戶開會」</div></div>`;
       }

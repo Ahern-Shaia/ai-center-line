@@ -62,8 +62,9 @@ export class PersonalDailyReportController {
 
     // 撈日報 · aiproot_admin 上下文跨租戶讀 (personal_daily_report RLS 允)
     const row = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.repo.getByUserDate(tx, userId, date));
-    // 今日私訊筆數 · 給 empty state UI 顯示「你今日已私訊 N 則」
+    // 今日私訊筆數 + 原始 list · empty state 展開讓使用者確認 bot 有收到什麼
     const pendingMessageCount = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.repo.countPersonalMessagesForDate(tx, userId, date));
+    const pendingMessages = row ? [] : await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.repo.listPersonalMessagesForDate(tx, userId, date));
 
     // 撈員工姓名 · 顯示用
     const info = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{ display_name: string; tenant_name: string }>(sql_import`
@@ -79,6 +80,7 @@ export class PersonalDailyReportController {
       userDisplayName: user?.display_name ?? "",
       tenantName: user?.tenant_name ?? "",
       pendingMessageCount,
+      pendingMessages,
     };
   }
 
@@ -158,7 +160,8 @@ export class PersonalDailyReportController {
     const tx = currentTx();
     const row = await this.repo.getByUserDate(tx, user.user_id, date);
     const pendingMessageCount = await this.repo.countPersonalMessagesForDate(tx, user.user_id, date);
-    return { report: row, requestedDate: date, pendingMessageCount };
+    const pendingMessages = row ? [] : await this.repo.listPersonalMessagesForDate(tx, user.user_id, date);
+    return { report: row, requestedDate: date, pendingMessageCount, pendingMessages };
   }
 
   @Post("mine/save")

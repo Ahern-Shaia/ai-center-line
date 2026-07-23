@@ -338,9 +338,21 @@ export interface PersonalDailyReportRow {
   departmentName?: string | null;
 }
 
+export interface PendingRawMessage {
+  messageId: string;
+  messageType: string;
+  textContent: string | null;
+  sentAt: string;
+}
+
 export const getMyPersonalReport = (date?: string) => {
   const q = date ? `?date=${date}` : "";
-  return req<{ report: PersonalDailyReportRow | null; requestedDate: string; pendingMessageCount: number }>(`/personal-daily-report/mine${q}`);
+  return req<{
+    report: PersonalDailyReportRow | null;
+    requestedDate: string;
+    pendingMessageCount: number;
+    pendingMessages: PendingRawMessage[];
+  }>(`/personal-daily-report/mine${q}`);
 };
 
 export const savePersonalReport = (args: { date?: string; items: PersonalDailyReportItem[]; action: "save_draft" | "send" }) =>

@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>我的日報 · UI Preview</title>
+<style>
+  :root {
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --line:#E5E7EB; --well:#F1F3F6; --surface:#FFFFFF;
+    --primary:#4F46E5; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5; --ok-600:#047857;
+    --warn:#D97706; --warn-tint:#FFFBEB;
+    --danger:#DC2626; --danger-tint:#FEF2F2;
+    --line-brand:#06C755;
+    --sans: 'Noto Sans TC', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; background:#F1F3F6; font-family:var(--sans); font-size:14px; color:var(--ink); }
+  .page { padding:24px; max-width:1600px; margin:0 auto; }
+  h1.page-title { font-size:22px; margin:0 0 6px; }
+  .page-sub { color:var(--ink-3); margin:0 0 28px; font-size:13px; }
+
+  .section-title { font-size:15px; font-weight:600; margin:24px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--ink); display:inline-block; }
+  .grid-web { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:36px; }
+  .grid-liff { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
+
+  .state-card { background:#fff; border:1px solid var(--line); border-radius:10px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  .state-hdr { background:var(--ink); color:#fff; padding:8px 14px; font-size:12px; font-weight:600; letter-spacing:.03em; }
+  .state-hdr .state-tag { float:right; background:rgba(255,255,255,.15); padding:2px 8px; border-radius:4px; font-size:10.5px; font-weight:500; }
+
+  /* ==== Web MyDailyReport pane ==== */
+  .pane { padding:20px; background:#fff; min-height:520px; }
+  .pane-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; gap:12px; }
+  .pane-hdr h1 { font-size:17px; margin:0 0 4px; }
+  .pane-hdr .sub { font-size:12px; color:var(--ink-3); }
+  .tf { padding:6px 10px; border:1px solid var(--line); border-radius:6px; font-size:13px; font-family:inherit; }
+  .btn { padding:7px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink-2); font-size:13px; cursor:pointer; font-family:inherit; }
+  .btn.btn-primary { background:var(--line-brand); color:#fff; border-color:var(--line-brand); }
+  .btn.small { padding:4px 10px; font-size:11.5px; }
+  .btn:disabled { opacity:.5; }
+  .dm-empty { text-align:center; padding:60px 20px; color:var(--ink-3); background:var(--well); border-radius:8px; margin-top:20px; }
+  .dm-empty-hint { font-size:12px; margin-top:8px; color:var(--ink-3); }
+  .pdr-items { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .pdr-item { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px 14px; }
+  .pdr-item-hdr { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .pdr-item-idx { background:var(--primary); color:#fff; width:20px; height:20px; border-radius:50%; font-size:11px; display:inline-flex; align-items:center; justify-content:center; font-weight:600; }
+  .pdr-item-time { font-size:11px; color:var(--ink-3); font-family:var(--mono); background:var(--well); padding:2px 6px; border-radius:3px; }
+  .pdr-item-title { flex:1; font-size:13.5px; font-weight:600; }
+  .pdr-item-detail { font-size:12.5px; color:var(--ink-2); padding-left:28px; margin-top:6px; }
+  .pdr-item-followup { font-size:12px; color:var(--warn); padding-left:28px; margin-top:4px; }
+  .pdr-item-actions { display:flex; gap:4px; }
+  .pdr-add { width:100%; padding:10px; border:1px dashed var(--line); color:var(--ink-2); background:transparent; margin-top:6px; }
+  .pdr-foot { display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--well); border-radius:8px; margin-top:12px; }
+
+  /* ==== LIFF mine phone frame ==== */
+  .phone { max-width:360px; margin:0 auto; background:#F9FAFB; border-radius:26px; overflow:hidden; box-shadow:inset 0 0 0 1px var(--line); position:relative; }
+  .phone-notch { height:24px; background:#000; display:flex; justify-content:center; align-items:center; color:#fff; font-size:10px; letter-spacing:.05em; }
+  .phone-liff-topbar { padding:10px 14px; border-bottom:1px solid var(--line); background:#fff; text-align:center; font-size:12.5px; }
+  .phone-liff-topbar .t1 { font-weight:600; }
+  .phone-liff-topbar .t2 { color:var(--ink-3); font-size:10.5px; }
+  .liff-body { padding:14px 12px; min-height:460px; position:relative; }
+  .mine-hdr h1 { text-align:center; font-size:17px; margin:0 0 4px; }
+  .mine-hdr .sub-info { text-align:center; color:var(--ink-3); font-size:11.5px; margin-bottom:12px; }
+  .status-bar { padding:9px 12px; border-radius:8px; margin:8px 0; font-size:12px; text-align:center; }
+  .status-empty { background:var(--warn-tint); color:#7A4E1B; border:1px solid #F5D5A6; }
+  .status-sent { background:var(--ok-tint); color:#065F46; border:1px solid #A7F3D0; }
+  .status-ai { background:var(--primary-tint); color:#3730A3; border:1px solid #C7D2FE; }
+  .empty-state { text-align:center; padding:36px 16px; color:var(--ink-3); }
+  .empty-state .icon { font-size:40px; opacity:.5; margin-bottom:10px; }
+  .empty-state .hint { font-size:11.5px; margin-top:6px; }
+  .item { background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:8px; }
+  .item-hdr { display:flex; align-items:baseline; gap:6px; margin-bottom:4px; }
+  .item-idx { background:var(--primary); color:#fff; width:20px; height:20px; border-radius:50%; font-size:10.5px; display:inline-flex; align-items:center; justify-content:center; font-weight:600; }
+  .item-time { font-size:10.5px; color:var(--ink-3); font-family:var(--mono); background:var(--well); padding:2px 6px; border-radius:3px; }
+  .item-title { flex:1; font-size:12.5px; font-weight:600; }
+  .item-detail { font-size:11.5px; color:var(--ink-2); padding-left:26px; margin-top:3px; }
+  .item-followup { font-size:11px; color:var(--warn); padding-left:26px; margin-top:3px; }
+  .item-actions { display:flex; gap:4px; padding-left:26px; margin-top:6px; }
+  .btn-inline { padding:4px 10px; font-size:11px; border:1px solid var(--line); border-radius:5px; background:#fff; color:var(--ink-2); font-family:inherit; }
+  .btn-inline.primary { background:var(--line-brand); color:#fff; border-color:var(--line-brand); }
+  .add-btn { display:block; width:100%; padding:10px; border:1px dashed var(--line); background:transparent; color:var(--ink-2); border-radius:8px; margin-top:6px; font-family:inherit; }
+  .liff-footer { border-top:1px solid var(--line); background:#fff; padding:10px 12px; display:flex; gap:6px; }
+  .liff-footer .btn-inline { flex:1; padding:9px 6px; font-size:12px; font-weight:600; }
+
+  .note { background:var(--primary-tint); border-left:3px solid var(--primary); padding:10px 14px; border-radius:0 6px 6px 0; font-size:12.5px; color:#3730A3; margin:16px 0; }
+  .note b { color:#312E81; }
+
+  /* raw messages · empty state 展開 */
+  .pdr-raw-list { background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:14px 16px; }
+  .pdr-raw-hdr { font-size:12px; color:var(--ink-3); margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  .pdr-raw-item { display:flex; gap:12px; padding:6px 0; font-size:13.5px; }
+  .pdr-raw-item + .pdr-raw-item { border-top:1px dashed var(--line); }
+  .pdr-raw-time { font-family:var(--mono); color:var(--ink-3); font-size:12px; flex-shrink:0; min-width:44px; padding-top:2px; }
+  .pdr-raw-text { color:var(--ink); flex:1; white-space:pre-wrap; }
+
+  .raw-list { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-top:8px; }
+  .raw-hdr { font-size:11px; color:var(--ink-3); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  .raw-msg { display:flex; gap:10px; padding:5px 0; font-size:12px; }
+  .raw-msg + .raw-msg { border-top:1px dashed var(--line); }
+  .raw-time { font-family:var(--mono); color:var(--ink-3); font-size:10.5px; flex-shrink:0; min-width:36px; padding-top:2px; }
+  .raw-text { color:var(--ink); flex:1; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1 class="page-title">「我的日報」UI Preview</h1>
+  <p class="page-sub">對照 commit da118d8 · 新增 pendingMessageCount empty state hint · Web 版與 LIFF 版並列</p>
+
+  <div class="note">
+    <b>本 preview 展示重點</b>：empty state 有 3 種樣態 —— (A) 全空 · (B) 已私訊 N 則但未 AI 整理 · (C) 已 AI 整理有內容。<br>
+    (B) 是新增的 hint · 就是你私訊 bot「已記錄」後打開網頁該看到的畫面。
+  </div>
+
+  <div class="section-title">Web 版 · 「我的日報」頁</div>
+  <div class="grid-web">
+
+    <!-- State: empty · no pending -->
+    <div class="state-card">
+      <div class="state-hdr">A · 完全空 <span class="state-tag">首次登入</span></div>
+      <div class="pane">
+        <div class="pane-hdr">
+          <div>
+            <h1>我的日報 · 2026年7月23日 星期四</h1>
+            <div class="sub">今日尚未記錄 · 私訊 bot 一些內容後可按重新生成</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <input class="tf" value="2026-07-23">
+            <button class="btn">重新生成</button>
+          </div>
+        </div>
+        <div class="dm-empty">
+          <div>今日尚未有記錄</div>
+          <div class="dm-empty-hint">私訊台灣福祉 bot 幾則今日工作 · AI 會自動整理 · 17:30 也會自動觸發</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- State: pending count > 0 · 展 raw messages -->
+    <div class="state-card">
+      <div class="state-hdr">B · 已私訊 · 未整理 <span class="state-tag">新加 · 對應你的 case</span></div>
+      <div class="pane">
+        <div class="pane-hdr">
+          <div>
+            <h1>我的日報 · 2026年7月23日 星期四</h1>
+            <div class="sub">今日尚未記錄 · 私訊 bot 一些內容後可按重新生成</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <input class="tf" value="2026-07-23">
+            <button class="btn">重新生成</button>
+          </div>
+        </div>
+        <div class="dm-empty" style="margin-bottom:12px;">
+          <div>你今日已私訊 bot <b>3</b> 則 · AI 尚未整理</div>
+          <div class="dm-empty-hint">下方是 bot 收到的原始訊息 · 按「立即整理」讓 AI 抽成日報項目 · 或等 17:30 scheduler 自動觸發</div>
+          <button class="btn btn-primary" style="margin-top:12px;">立即整理</button>
+        </div>
+        <div class="pdr-raw-list">
+          <div class="pdr-raw-hdr">bot 收到的原始訊息 · 依時間排序</div>
+          <div class="pdr-raw-item"><div class="pdr-raw-time">09:12</div><div class="pdr-raw-text">早上 9 點跟 A 客戶開會 · 討論 Q3 交期 · 客戶要求提早 15 天</div></div>
+          <div class="pdr-raw-item"><div class="pdr-raw-time">15:03</div><div class="pdr-raw-text">下午 3 點跟人資申請 2 名檢驗 · 週五前回</div></div>
+          <div class="pdr-raw-item"><div class="pdr-raw-time">17:20</div><div class="pdr-raw-text">昨天那批不良品已回工廠 · 明日補送</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- State: has items · draft -->
+    <div class="state-card">
+      <div class="state-hdr">C · AI 已整理 · 待送 <span class="state-tag">正常流程</span></div>
+      <div class="pane">
+        <div class="pane-hdr">
+          <div>
+            <h1>我的日報 · 2026年7月23日 星期四</h1>
+            <div class="sub">✨ AI 已於 7/23 15:20 整理 · 請確認或微調</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <input class="tf" value="2026-07-23">
+            <button class="btn">重新生成</button>
+          </div>
+        </div>
+        <div class="pdr-items">
+          <div class="pdr-item">
+            <div class="pdr-item-hdr">
+              <span class="pdr-item-idx">1</span>
+              <span class="pdr-item-time">09:00-10:30</span>
+              <span class="pdr-item-title">A 客戶 Q3 交期討論</span>
+              <div class="pdr-item-actions"><button class="btn small">編輯</button><button class="btn small">刪除</button></div>
+            </div>
+            <div class="pdr-item-detail">客戶要求提早 15 天出貨 · 已答覆需回工廠確認產能</div>
+            <div class="pdr-item-followup"><b>追蹤</b> · 明日 09:00 開產能會議</div>
+          </div>
+          <div class="pdr-item">
+            <div class="pdr-item-hdr">
+              <span class="pdr-item-idx">2</span>
+              <span class="pdr-item-time">15:00</span>
+              <span class="pdr-item-title">跟人資申請 2 名檢驗</span>
+              <div class="pdr-item-actions"><button class="btn small">編輯</button><button class="btn small">刪除</button></div>
+            </div>
+            <div class="pdr-item-detail">人資已收單 · 週五前回覆</div>
+          </div>
+          <div class="pdr-item">
+            <div class="pdr-item-hdr">
+              <span class="pdr-item-idx">3</span>
+              <span class="pdr-item-title">不良品已回工廠</span>
+              <div class="pdr-item-actions"><button class="btn small">編輯</button><button class="btn small">刪除</button></div>
+            </div>
+            <div class="pdr-item-detail">昨天那批 · 明日補送客戶</div>
+          </div>
+          <button class="btn pdr-add">+ 手動加一項</button>
+        </div>
+        <div class="pdr-foot">
+          <div style="font-size:12px; color:var(--ink-3);">今日私訊 8 則 · 3 項待送出</div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn">儲存草稿</button>
+            <button class="btn btn-primary">送出日報</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-title">LIFF 版 · LINE 內開啟</div>
+  <div class="grid-liff">
+
+    <!-- Phone A -->
+    <div class="state-card">
+      <div class="state-hdr">A · 完全空</div>
+      <div style="padding:12px; background:#F1F3F6;">
+        <div class="phone">
+          <div class="phone-notch">13:28 ⬤ ⬤ ⬤</div>
+          <div class="phone-liff-topbar">
+            <div class="t1">aiproot</div>
+            <div class="t2">ai-center-line-demo.onrender.com</div>
+          </div>
+          <div class="liff-body">
+            <div class="mine-hdr">
+              <h1>我的日報</h1>
+              <div class="sub-info">林曉風 Patrick · 2026年7月23日 星期四</div>
+            </div>
+            <div class="status-bar status-empty">今日尚未有記錄 · 私訊 bot 幾則今日工作後 · 按「重新生成」</div>
+            <div class="empty-state">
+              <div class="icon">📝</div>
+              <div>還沒開始記錄</div>
+              <div class="hint">先私訊工作內容給 bot · 例如「早上 9 點跟客戶開會」</div>
+            </div>
+          </div>
+          <div class="liff-footer">
+            <button class="btn-inline">重新生成</button>
+            <button class="btn-inline" disabled>儲存草稿</button>
+            <button class="btn-inline primary" disabled>送出日報</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone B · 展 raw messages -->
+    <div class="state-card">
+      <div class="state-hdr">B · 已私訊 · 未整理 <span class="state-tag">新 hint · 展開原始訊息</span></div>
+      <div style="padding:12px; background:#F1F3F6;">
+        <div class="phone">
+          <div class="phone-notch">13:28 ⬤ ⬤ ⬤</div>
+          <div class="phone-liff-topbar">
+            <div class="t1">aiproot</div>
+            <div class="t2">ai-center-line-demo.onrender.com</div>
+          </div>
+          <div class="liff-body">
+            <div class="mine-hdr">
+              <h1>我的日報</h1>
+              <div class="sub-info">林曉風 Patrick · 2026年7月23日 星期四</div>
+            </div>
+            <div class="status-bar status-empty">你今日已私訊 bot 3 則 · AI 尚未整理 · 按下方「重新生成」</div>
+            <div class="empty-state" style="padding:20px 12px;">
+              <div class="icon">✨</div>
+              <div>今日已私訊 <b>3</b> 則</div>
+              <div class="hint">按下方「重新生成」讓 AI 立即整理成日報項目</div>
+            </div>
+            <div class="raw-list">
+              <div class="raw-hdr">bot 收到的原始訊息 · 依時間排序</div>
+              <div class="raw-msg"><div class="raw-time">09:12</div><div class="raw-text">早上 9 點跟 A 客戶開會 · 討論 Q3 交期 · 客戶要求提早 15 天</div></div>
+              <div class="raw-msg"><div class="raw-time">15:03</div><div class="raw-text">下午 3 點跟人資申請 2 名檢驗 · 週五前回</div></div>
+              <div class="raw-msg"><div class="raw-time">17:20</div><div class="raw-text">昨天那批不良品已回工廠 · 明日補送</div></div>
+            </div>
+          </div>
+          <div class="liff-footer">
+            <button class="btn-inline">重新生成</button>
+            <button class="btn-inline" disabled>儲存草稿</button>
+            <button class="btn-inline primary" disabled>送出日報</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone C -->
+    <div class="state-card">
+      <div class="state-hdr">C · AI 已整理 · 待送</div>
+      <div style="padding:12px; background:#F1F3F6;">
+        <div class="phone">
+          <div class="phone-notch">13:28 ⬤ ⬤ ⬤</div>
+          <div class="phone-liff-topbar">
+            <div class="t1">aiproot</div>
+            <div class="t2">ai-center-line-demo.onrender.com</div>
+          </div>
+          <div class="liff-body">
+            <div class="mine-hdr">
+              <h1>我的日報</h1>
+              <div class="sub-info">林曉風 Patrick · 2026年7月23日 星期四</div>
+            </div>
+            <div class="status-bar status-ai">✨ AI 已整理 3 項 · 請確認或編輯</div>
+            <div class="item">
+              <div class="item-hdr">
+                <span class="item-idx">1</span>
+                <span class="item-time">09:00-10:30</span>
+                <span class="item-title">A 客戶 Q3 交期</span>
+              </div>
+              <div class="item-detail">客戶要求提早 15 天 · 已答覆需回工廠確認</div>
+              <div class="item-followup"><b>追蹤</b> · 明日 09:00 開產能會議</div>
+              <div class="item-actions"><button class="btn-inline">編輯</button><button class="btn-inline">刪除</button></div>
+            </div>
+            <div class="item">
+              <div class="item-hdr">
+                <span class="item-idx">2</span>
+                <span class="item-time">15:00</span>
+                <span class="item-title">申請 2 名檢驗</span>
+              </div>
+              <div class="item-detail">人資已收單 · 週五前回</div>
+              <div class="item-actions"><button class="btn-inline">編輯</button><button class="btn-inline">刪除</button></div>
+            </div>
+            <button class="add-btn">+ 手動加一項</button>
+          </div>
+          <div class="liff-footer">
+            <button class="btn-inline">重新生成</button>
+            <button class="btn-inline">儲存草稿</button>
+            <button class="btn-inline primary">送出日報</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note" style="margin-top:32px;">
+    <b>流程對應</b> · 你的截圖情境 = 私訊完 bot 進 web → 應該看到 <b>State B</b>（Web 中間那個）· 標「你今日已私訊 3 則 · AI 尚未整理」<br>
+    按「立即整理」→ AI 跑完 → 頁面自動 refresh → <b>State C</b>
+  </div>
+</div>
+</body>
+</html>

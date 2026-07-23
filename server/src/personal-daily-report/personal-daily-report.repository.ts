@@ -40,13 +40,42 @@ export class PersonalDailyReportRepository {
   async countPersonalMessagesForDate(tx: Db, userId: string, reportDate: string): Promise<number> {
     const res = await tx.execute<{ count: string }>(sql`
       SELECT COUNT(*)::text AS count
-      FROM line_messages
+      FROM line_message
       WHERE sender_user_id = ${userId}::uuid
         AND chat_context = 'personal'
-        AND (sent_at_ms / 1000) >= EXTRACT(EPOCH FROM (${reportDate}::date AT TIME ZONE 'Asia/Taipei'))
-        AND (sent_at_ms / 1000) <  EXTRACT(EPOCH FROM ((${reportDate}::date + INTERVAL '1 day') AT TIME ZONE 'Asia/Taipei'))
+        AND (sent_at AT TIME ZONE 'Asia/Taipei')::date = ${reportDate}::date
     `);
     return Number(res.rows[0]?.count ?? 0);
+  }
+
+  // 今日該員工的原始私訊 list · empty state 展開顯給使用者確認 bot 有收到什麼
+  // 上限 50 則 · 避免 payload 過大 · 依 sent_at 升序
+  async listPersonalMessagesForDate(tx: Db, userId: string, reportDate: string): Promise<Array<{
+    messageId: string;
+    messageType: string;
+    textContent: string | null;
+    sentAt: string;
+  }>> {
+    const res = await tx.execute<{
+      message_id: string;
+      message_type: string;
+      text_content: string | null;
+      sent_at: string;
+    }>(sql`
+      SELECT message_id, message_type, text_content, sent_at::text
+      FROM line_message
+      WHERE sender_user_id = ${userId}::uuid
+        AND chat_context = 'personal'
+        AND (sent_at AT TIME ZONE 'Asia/Taipei')::date = ${reportDate}::date
+      ORDER BY sent_at ASC
+      LIMIT 50
+    `);
+    return res.rows.map((r) => ({
+      messageId: r.message_id,
+      messageType: r.message_type,
+      textContent: r.text_content,
+      sentAt: r.sent_at,
+    }));
   }
 
   async getByUserDate(tx: Db, userId: string, reportDate: string): Promise<PersonalDailyReportRow | null> {

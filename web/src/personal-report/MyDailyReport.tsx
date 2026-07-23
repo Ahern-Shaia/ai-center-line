@@ -4,6 +4,7 @@ import {
   getMyPersonalReport,
   regeneratePersonalReport,
   savePersonalReport,
+  type PendingRawMessage,
   type PersonalDailyReportItem,
   type PersonalDailyReportRow,
 } from "../api";
@@ -17,6 +18,7 @@ export default function MyDailyReport() {
   const [report, setReport] = useState<PersonalDailyReportRow | null>(null);
   const [items, setItems] = useState<PersonalDailyReportItem[]>([]);
   const [pendingMessageCount, setPendingMessageCount] = useState(0);
+  const [pendingMessages, setPendingMessages] = useState<PendingRawMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
@@ -29,6 +31,7 @@ export default function MyDailyReport() {
       const res = await getMyPersonalReport(date);
       setReport(res.report);
       setPendingMessageCount(res.pendingMessageCount ?? 0);
+      setPendingMessages(res.pendingMessages ?? []);
       // 若已有 final_items · load · 否則 load ai_items 供編輯
       if (res.report?.finalItems) setItems(res.report.finalItems);
       else if (res.report?.aiItems) setItems(res.report.aiItems);
@@ -112,22 +115,36 @@ export default function MyDailyReport() {
       {loading && !report && <div className="dm-empty">載入中…</div>}
 
       {isEmpty && !loading && (
-        <div className="dm-empty">
-          {pendingMessageCount > 0 ? (
-            <>
+        pendingMessageCount > 0 ? (
+          <div>
+            <div className="dm-empty" style={{ marginBottom: 12 }}>
               <div>你今日已私訊 bot <b>{pendingMessageCount}</b> 則 · AI 尚未整理</div>
-              <div className="dm-empty-hint">按上方「重新生成」立即整理 · 或等 17:30 scheduler 自動觸發</div>
+              <div className="dm-empty-hint">下方是 bot 收到的原始訊息 · 按「立即整理」讓 AI 抽成日報項目 · 或等 17:30 scheduler 自動觸發</div>
               <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => void doRegenerate()} disabled={regenerating}>
                 {regenerating ? "生成中…" : "立即整理"}
               </button>
-            </>
-          ) : (
-            <>
-              <div>今日尚未有記錄</div>
-              <div className="dm-empty-hint">私訊台灣福祉 bot 幾則今日工作 · AI 會自動整理 · 17:30 也會自動觸發</div>
-            </>
-          )}
-        </div>
+            </div>
+            <div className="pdr-raw-list">
+              <div className="pdr-raw-hdr">bot 收到的原始訊息 · 依時間排序</div>
+              {pendingMessages.map((m) => (
+                <div key={m.messageId} className="pdr-raw-item">
+                  <div className="pdr-raw-time">{formatTimeHM(m.sentAt)}</div>
+                  <div className="pdr-raw-text">
+                    {m.messageType === "text" && m.textContent}
+                    {m.messageType === "sticker" && <span style={{ color: "var(--ink-3)" }}>[貼圖]</span>}
+                    {m.messageType === "image" && <span style={{ color: "var(--ink-3)" }}>[圖片]</span>}
+                    {!["text", "sticker", "image"].includes(m.messageType) && <span style={{ color: "var(--ink-3)" }}>[{m.messageType}]</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="dm-empty">
+            <div>今日尚未有記錄</div>
+            <div className="dm-empty-hint">私訊台灣福祉 bot 幾則今日工作 · AI 會自動整理 · 17:30 也會自動觸發</div>
+          </div>
+        )
       )}
 
       {isFailed && !loading && (
@@ -288,4 +305,8 @@ function formatDay(iso: string): string {
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("zh-TW", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function formatTimeHM(iso: string): string {
+  return new Date(iso).toLocaleTimeString("zh-TW", { hour12: false, hour: "2-digit", minute: "2-digit" });
 }

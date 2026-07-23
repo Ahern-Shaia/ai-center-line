@@ -1714,6 +1714,13 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .pdr-add { align-self:flex-start; background:transparent; border:1px dashed var(--line); color:var(--ink-2); }
 .pdr-add:hover { border-color:var(--primary); color:var(--primary); }
 .pdr-foot { display:flex; align-items:center; justify-content:space-between; margin-top:20px; padding-top:16px; border-top:1px solid var(--line); gap:12px; flex-wrap:wrap; }
+/* pdr raw messages · empty state 展開的 bot 收到訊息 */
+.pdr-raw-list { background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:14px 16px; }
+.pdr-raw-hdr { font-size:12px; color:var(--ink-3); margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+.pdr-raw-item { display:flex; gap:12px; padding:6px 0; font-size:13.5px; }
+.pdr-raw-item + .pdr-raw-item { border-top:1px dashed var(--line); }
+.pdr-raw-time { font-family:var(--mono, ui-monospace, monospace); color:var(--ink-3); font-size:12px; flex-shrink:0; min-width:44px; padding-top:2px; }
+.pdr-raw-text { color:var(--ink); flex:1; white-space:pre-wrap; word-break:break-word; }
 
 /* ==============================================
    PE-M5 · 權限管理 UI
