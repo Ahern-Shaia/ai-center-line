@@ -234,7 +234,7 @@ export class LineWebhookService {
         try {
           const url = `${liffUrl}?botId=${bot.botId}`;
           await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
-            { type: "text", text: "歡迎！點下方按鈕在 LINE 內完成綁定 · 全程 60 秒 · 免登入網頁" },
+            { type: "text", text: "歡迎加入！請點下方按鈕完成綁定 · 綁定後即可使用個人日報功能" },
             {
               type: "template",
               altText: "完成綁定",

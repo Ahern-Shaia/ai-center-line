@@ -190,7 +190,7 @@ Commit + push · 觸發 web static site redeploy。
 2. **確認 bot 自動推綁定訊息**
    - 應立即收到：
      ```
-     歡迎！點下方按鈕在 LINE 內完成綁定 · 全程 60 秒 · 免登入網頁
+     歡迎加入！請點下方按鈕完成綁定 · 綁定後即可使用個人日報功能
      [ 開始綁定 ]
      ```
    - 若沒收到 → 對照 §9 troubleshooting「follow event 沒觸發」
