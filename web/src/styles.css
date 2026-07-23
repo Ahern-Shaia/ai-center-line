@@ -1714,6 +1714,21 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .pdr-add { align-self:flex-start; background:transparent; border:1px dashed var(--line); color:var(--ink-2); }
 .pdr-add:hover { border-color:var(--primary); color:var(--primary); }
 .pdr-foot { display:flex; align-items:center; justify-content:space-between; margin-top:20px; padding-top:16px; border-top:1px solid var(--line); gap:12px; flex-wrap:wrap; }
+/* pdr pane-hdr 右上分區工具列 · 查看日期 + 當日操作 · 有 label + hint + divider */
+.hdr-toolbar { display:flex; gap:14px; align-items:flex-start; }
+.hdr-group { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.hdr-group + .hdr-group { border-left:1px solid var(--line); padding-left:14px; }
+.hdr-label { font-size:10.5px; color:var(--ink-3); letter-spacing:.05em; font-weight:500; }
+.hdr-group .tf { padding:6px 10px; font-size:12.5px; }
+.hdr-group .btn { font-size:12.5px; padding:6px 12px; text-align:center; }
+.hdr-group-hint { font-size:10.5px; color:var(--ink-3); margin-top:2px; }
+.hdr-group-hint.warn { color:var(--warn); }
+@media (max-width:760px) {
+  .hdr-toolbar { flex-direction:column; gap:10px; width:100%; }
+  .hdr-group + .hdr-group { border-left:none; padding-left:0; border-top:1px solid var(--line); padding-top:10px; }
+  .hdr-group .tf, .hdr-group .btn { width:100%; }
+}
+
 /* pdr preview · 主管將看到的完整報告 · 編輯區下方即時 preview + confirm dialog 內共用 */
 .pdr-preview { border:1px solid var(--line); border-radius:6px; padding:14px 16px; margin-top:14px; background:linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%); }
 .pdr-preview-hdr { font-size:11px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; padding-bottom:6px; border-bottom:1px dashed var(--line); display:flex; justify-content:space-between; align-items:center; }

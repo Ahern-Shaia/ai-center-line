@@ -49,6 +49,16 @@
   .pdr-add { width:100%; padding:8px; border:1px dashed var(--line); color:var(--ink-2); background:transparent; margin-top:4px; font-size:12px; }
   .pdr-foot { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--well); border-radius:6px; margin-top:10px; font-size:12px; }
 
+  /* pane-hdr 右上分區工具列 · 方案 A · date picker + 重新生成 分兩 group */
+  .hdr-toolbar { display:flex; gap:14px; align-items:flex-start; }
+  .hdr-group { display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .hdr-group + .hdr-group { border-left:1px solid var(--line); padding-left:14px; }
+  .hdr-label { font-size:10.5px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.05em; font-weight:500; }
+  .hdr-group .tf { padding:6px 10px; font-size:12.5px; }
+  .hdr-group .btn { font-size:12.5px; padding:6px 12px; text-align:center; }
+  .hdr-group-hint { font-size:10.5px; color:var(--ink-3); margin-top:2px; }
+  .hdr-group-hint.warn { color:var(--warn); }
+
   /* Preview block · 主管將看到 */
   .preview-block { border:1px solid var(--line); border-radius:6px; padding:14px 16px; margin-top:14px; background:linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%); }
   .preview-block .pv-hdr { font-size:11px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; padding-bottom:6px; border-bottom:1px dashed var(--line); display:flex; justify-content:space-between; align-items:center; }
@@ -127,11 +137,19 @@
         <div class="pane-hdr">
           <div>
             <h1>我的日報 · 2026年7月23日 星期四</h1>
-            <div class="sub">✨ AI 已於 7/23 15:20 整理 · 請確認或微調</div>
+            <div class="sub">AI 已於 7/23 15:20 整理 · 請確認或微調</div>
           </div>
-          <div style="display:flex; gap:6px;">
-            <input class="tf" value="2026-07-23">
-            <button class="btn">重新生成</button>
+          <div class="hdr-toolbar">
+            <div class="hdr-group">
+              <label class="hdr-label">查看日期</label>
+              <input class="tf" type="date" value="2026-07-23">
+              <div class="hdr-group-hint">今日</div>
+            </div>
+            <div class="hdr-group">
+              <label class="hdr-label">當日操作</label>
+              <button class="btn">重新生成</button>
+              <div class="hdr-group-hint">重跑 AI · 保留手動編輯</div>
+            </div>
           </div>
         </div>
         <div class="pdr-items">
@@ -210,7 +228,7 @@
               <h1>我的日報</h1>
               <div class="sub-info">林曉風 Patrick · 7/23 週四</div>
             </div>
-            <div class="status-bar status-ai">✨ AI 已整理 3 項</div>
+            <div class="status-bar status-ai">AI 已整理 3 項</div>
             <div class="item">
               <div class="item-hdr"><span class="item-idx">1</span><span class="item-time">09:00-10:30</span><span class="item-title">A 客戶 Q3 交期</span></div>
               <div class="item-detail">客戶要求提早 15 天</div>
@@ -253,7 +271,7 @@
       <div class="state-hdr">Web 版 · 點「送出日報」後</div>
       <div class="pane dialog-shell" style="min-height:420px;">
         <div class="pane-hdr" style="opacity:.5; filter:blur(1px);">
-          <div><h1>我的日報 · 2026年7月23日</h1><div class="sub">✨ AI 已整理</div></div>
+          <div><h1>我的日報 · 2026年7月23日</h1><div class="sub">AI 已整理</div></div>
           <div style="display:flex; gap:6px;"><input class="tf" value="2026-07-23"><button class="btn">重新生成</button></div>
         </div>
         <div class="pdr-items" style="opacity:.4; filter:blur(1px);">
@@ -333,8 +351,8 @@
           <div style="display:flex; gap:6px;"><input class="tf" value="2026-07-23"><button class="btn">重新生成</button></div>
         </div>
         <div class="tabs">
-          <div class="tab">✏️ 編輯（3 項）</div>
-          <div class="tab active">👀 預覽 · 主管將看到</div>
+          <div class="tab">編輯（3 項）</div>
+          <div class="tab active">預覽 · 主管將看到</div>
         </div>
         <div class="preview-block" style="margin-top:0;">
           <div class="pv-title" style="font-size:14px;">林曉風 Patrick · 個人日報</div>

@@ -174,21 +174,21 @@
     <div class="alert ok" style="text-align:left;">
       <b>接下來你可以：</b>
       <div style="margin-top:10px; padding:8px; background:#fff; border-radius:6px; margin-bottom:8px;">
-        <div style="font-size:13px; font-weight:600; margin-bottom:2px;">📱 手機用</div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:2px;">手機用</div>
         <div style="font-size:11.5px; color:var(--ink-3); line-height:1.6;">
           · 私訊工作 → bot 自動記錄<br>
           · 打「日報」→ 查今日日報
         </div>
       </div>
       <div style="padding:8px; background:#fff; border-radius:6px; margin-bottom:8px;">
-        <div style="font-size:13px; font-weight:600; margin-bottom:2px;">💻 電腦用</div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:2px;">電腦用</div>
         <div style="font-size:11.5px; color:var(--ink-3); line-height:1.6;">
           · 開 aiproot 網頁 · 點「以 LINE 登入」<br>
           · 免帳密 · 一鍵進
         </div>
       </div>
       <div style="padding:8px; background:#fff; border-radius:6px;">
-        <div style="font-size:13px; font-weight:600; margin-bottom:2px;">🔒 想用 email + 密碼？</div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:2px;">想用 email + 密碼？</div>
         <div style="font-size:11.5px; color:var(--ink-3); line-height:1.6;">
           · 私訊「設密碼」→ bot 給你設定連結<br>
           · 選配 · 不設也 OK
@@ -371,7 +371,7 @@
       const pct = Math.round((g.messageCount / total) * 100);
       const primary = i === 0 ? ' primary' : '';
       const label = g.displayName || g.groupId.slice(0, 12);
-      return `<div class="group-item${primary}">📱 ${escapeHtml(label)}<span class="pct">${pct}%</span></div>`;
+      return `<div class="group-item${primary}">${escapeHtml(label)}<span class="pct">${pct}%</span></div>`;
     }).join('');
     document.getElementById("p-groups").innerHTML = html;
     const primary = groups[0];
@@ -557,7 +557,7 @@
         }).join("");
         itemsBox.innerHTML = `
           <div class="empty-state" style="padding:20px 12px;">
-            <div class="icon">✨</div>
+            <div style="font-size:14px; font-weight:600; margin-bottom:6px;">尚未整理</div>
             <div>今日已私訊 <b>${minePendingCount}</b> 則</div>
             <div class="hint">按下方「重新生成」讓 AI 立即整理成日報項目</div>
           </div>
@@ -566,7 +566,7 @@
             ${rawList}
           </div>`;
       } else {
-        itemsBox.innerHTML = `<div class="empty-state"><div class="icon">📝</div><div>還沒開始記錄</div><div class="hint">先私訊工作內容給 bot · 例如「早上 9 點跟客戶開會」</div></div>`;
+        itemsBox.innerHTML = `<div class="empty-state"><div style="font-size:14px; font-weight:600; margin-bottom:6px;">還沒開始記錄</div><div class="hint">先私訊工作內容給 bot · 例如「早上 9 點跟客戶開會」</div></div>`;
       }
       addBtn.style.display = "none";
       footer.style.display = "block";
@@ -590,7 +590,7 @@
       statusEl.textContent = "AI 整理失敗 · 按「重新生成」再試";
     } else if (mineReport.aiGeneratedAt) {
       statusEl.className = "status-bar status-ai";
-      statusEl.textContent = `✨ AI 已整理 ${mineItems.length} 項 · 請確認或編輯`;
+      statusEl.textContent = `AI 已整理 ${mineItems.length} 項 · 請確認或編輯`;
     }
     statusEl.style.display = "block";
 

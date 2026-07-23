@@ -291,7 +291,7 @@ export class LineWebhookService {
                 template: {
                   type: "buttons",
                   text: "設密碼後 · 可用 email 登入 aiproot 網頁\n(選配 · 不設也可用「以 LINE 登入」)",
-                  actions: [{ type: "uri", label: "🔒 設定密碼", uri: url }],
+                  actions: [{ type: "uri", label: "設定密碼", uri: url }],
                 },
               },
             ]);
@@ -317,7 +317,7 @@ export class LineWebhookService {
                 template: {
                   type: "buttons",
                   text: "點按鈕看今日 AI 整理的日報 · 可編輯後送出主管",
-                  actions: [{ type: "uri", label: "📋 查看我的日報", uri: url }],
+                  actions: [{ type: "uri", label: "查看我的日報", uri: url }],
                 },
               },
             ]);

@@ -84,6 +84,16 @@ export default function MyDailyReport() {
   const hasItems = items.length > 0;
 
   const displayDate = useMemo(() => formatDay(date), [date]);
+  const dateHint = useMemo(() => {
+    const today = getTaipeiDate();
+    if (date === today) return "今日";
+    const d1 = new Date(`${date}T00:00:00`);
+    const d2 = new Date(`${today}T00:00:00`);
+    const diff = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff === 1) return "昨天";
+    if (diff > 0) return `${diff} 天前`;
+    return "";
+  }, [date]);
 
   return (
     <div className="pane">
@@ -92,30 +102,38 @@ export default function MyDailyReport() {
           <h1>我的日報 · {displayDate}</h1>
           <div className="sub">
             {report?.aiGeneratedAt && !isSent && !isFailed && (
-              <>✨ AI 已於 {formatDateTime(report.aiGeneratedAt)} 整理 · 請確認或微調</>
+              <>AI 已於 {formatDateTime(report.aiGeneratedAt)} 整理 · 請確認或微調</>
             )}
-            {isSent && <>✅ 已於 {formatDateTime(report.sentAt!)} 送出</>}
+            {isSent && <>已於 {formatDateTime(report.sentAt!)} 送出</>}
             {isEmpty && <>今日尚未記錄 · 私訊 bot 一些內容後可按重新生成</>}
             {isFailed && <>AI 整理失敗 · 可重新生成 or 聯繫業助</>}
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <input
-            type="date"
-            className="tf"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            max={getTaipeiDate()}
-            disabled={busy}
-          />
-          <button
-            className="btn"
-            onClick={() => void doRegenerate()}
-            disabled={busy || regenerating}
-            title="重跑 AI 整理今日私訊 · 你的手動編輯不受影響"
-          >
-            {regenerating ? "生成中…" : "重新生成"}
-          </button>
+        <div className="hdr-toolbar">
+          <div className="hdr-group">
+            <label className="hdr-label" htmlFor="pdr-date">查看日期</label>
+            <input
+              id="pdr-date"
+              type="date"
+              className="tf"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              max={getTaipeiDate()}
+              disabled={busy}
+            />
+            <div className="hdr-group-hint">{dateHint}</div>
+          </div>
+          <div className="hdr-group">
+            <label className="hdr-label">當日操作</label>
+            <button
+              className="btn"
+              onClick={() => void doRegenerate()}
+              disabled={busy || regenerating}
+            >
+              {regenerating ? "生成中…" : "重新生成"}
+            </button>
+            <div className="hdr-group-hint">重跑 AI · 保留手動編輯</div>
+          </div>
         </div>
       </div>
 

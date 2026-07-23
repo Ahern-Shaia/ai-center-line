@@ -70,7 +70,7 @@ export class PersonalReportNotifyService {
       const empName = emp.rows[0]?.display_name ?? "員工";
 
       // Step 3 · 逐個 push
-      const messageText = `📋 ${empName} 已送出 ${args.reportDate} 個人日報 · ${args.itemCount} 項\n進「戰情室 → 部門日報」查看`;
+      const messageText = `${empName} 已送出 ${args.reportDate} 個人日報 · ${args.itemCount} 項\n進「戰情室 → 部門日報」查看`;
       let ok = 0, fail = 0;
       for (const r of recipients.rows) {
         try {
