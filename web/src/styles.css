@@ -1714,6 +1714,22 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .pdr-add { align-self:flex-start; background:transparent; border:1px dashed var(--line); color:var(--ink-2); }
 .pdr-add:hover { border-color:var(--primary); color:var(--primary); }
 .pdr-foot { display:flex; align-items:center; justify-content:space-between; margin-top:20px; padding-top:16px; border-top:1px solid var(--line); gap:12px; flex-wrap:wrap; }
+/* pdr preview · 主管將看到的完整報告 · 編輯區下方即時 preview + confirm dialog 內共用 */
+.pdr-preview { border:1px solid var(--line); border-radius:6px; padding:14px 16px; margin-top:14px; background:linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%); }
+.pdr-preview-hdr { font-size:11px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; padding-bottom:6px; border-bottom:1px dashed var(--line); display:flex; justify-content:space-between; align-items:center; }
+.pdr-preview-badge { background:var(--primary-tint); color:#3730A3; padding:2px 8px; border-radius:10px; font-size:10.5px; text-transform:none; letter-spacing:0; }
+.pdr-preview-title { font-size:14px; font-weight:600; margin-bottom:2px; color:var(--ink); }
+.pdr-preview-date { font-size:12px; color:var(--ink-3); margin-bottom:10px; }
+.pdr-preview-item { padding:8px 0; font-size:13px; line-height:1.55; }
+.pdr-preview-item + .pdr-preview-item { border-top:1px dashed var(--line); }
+.pdr-preview-item-hdr { font-weight:600; color:var(--ink); display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; }
+.pdr-preview-idx { color:var(--primary); font-weight:700; flex-shrink:0; }
+.pdr-preview-title-text { flex:1; min-width:0; }
+.pdr-preview-time { color:var(--ink-3); font-family:var(--mono, ui-monospace, monospace); font-size:11.5px; flex-shrink:0; }
+.pdr-preview-detail { padding-left:22px; color:var(--ink-2); font-size:12.5px; margin-top:3px; white-space:pre-wrap; word-break:break-word; }
+.pdr-preview-followup { padding-left:22px; color:var(--warn); font-size:12px; margin-top:3px; }
+.pdr-preview-foot { text-align:right; font-size:11.5px; color:var(--ink-3); margin-top:8px; padding-top:6px; border-top:1px dashed var(--line); }
+
 /* pdr raw messages · empty state 展開的 bot 收到訊息 */
 .pdr-raw-list { background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:14px 16px; }
 .pdr-raw-hdr { font-size:12px; color:var(--ink-3); margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--line); }

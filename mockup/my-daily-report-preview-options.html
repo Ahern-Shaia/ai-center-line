@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>日報預覽位置 · 3 方案</title>
+<style>
+  :root {
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --line:#E5E7EB; --well:#F1F3F6; --surface:#FFFFFF;
+    --primary:#4F46E5; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5;
+    --warn:#D97706; --warn-tint:#FFFBEB;
+    --line-brand:#06C755;
+    --sans: 'Noto Sans TC', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; background:#F1F3F6; font-family:var(--sans); font-size:14px; color:var(--ink); }
+  .page { padding:24px; max-width:1800px; margin:0 auto; }
+  h1.page-title { font-size:22px; margin:0 0 6px; }
+  .page-sub { color:var(--ink-3); margin:0 0 24px; font-size:13px; }
+
+  .section-title { font-size:15px; font-weight:600; margin:24px 0 12px; padding:6px 12px; background:var(--ink); color:#fff; display:inline-block; border-radius:4px; }
+  .opt-note { font-size:12.5px; color:var(--ink-3); margin:-6px 0 12px; }
+
+  .grid { display:grid; grid-template-columns:1.5fr 1fr; gap:16px; margin-bottom:28px; }
+
+  .state-card { background:#fff; border:1px solid var(--line); border-radius:10px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  .state-hdr { background:var(--ink-2); color:#fff; padding:8px 14px; font-size:12px; font-weight:600; letter-spacing:.03em; }
+
+  /* Web pane */
+  .pane { padding:18px; background:#fff; }
+  .pane-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; gap:12px; }
+  .pane-hdr h1 { font-size:16px; margin:0 0 4px; }
+  .pane-hdr .sub { font-size:12px; color:var(--ink-3); }
+  .tf { padding:5px 8px; border:1px solid var(--line); border-radius:5px; font-size:12px; }
+  .btn { padding:6px 10px; border:1px solid var(--line); border-radius:5px; background:#fff; color:var(--ink-2); font-size:12.5px; cursor:pointer; font-family:inherit; }
+  .btn.btn-primary { background:var(--line-brand); color:#fff; border-color:var(--line-brand); }
+  .btn.small { padding:3px 8px; font-size:11px; }
+  .pdr-items { display:flex; flex-direction:column; gap:6px; }
+  .pdr-item { background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:9px 12px; }
+  .pdr-item-hdr { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .pdr-item-idx { background:var(--primary); color:#fff; width:18px; height:18px; border-radius:50%; font-size:10.5px; display:inline-flex; align-items:center; justify-content:center; font-weight:600; }
+  .pdr-item-time { font-size:10.5px; color:var(--ink-3); font-family:var(--mono); background:var(--well); padding:2px 6px; border-radius:3px; }
+  .pdr-item-title { flex:1; font-size:12.5px; font-weight:600; }
+  .pdr-item-detail { font-size:11.5px; color:var(--ink-2); padding-left:26px; margin-top:4px; }
+  .pdr-item-followup { font-size:11px; color:var(--warn); padding-left:26px; margin-top:3px; }
+  .pdr-item-actions { display:flex; gap:4px; }
+  .pdr-add { width:100%; padding:8px; border:1px dashed var(--line); color:var(--ink-2); background:transparent; margin-top:4px; font-size:12px; }
+  .pdr-foot { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--well); border-radius:6px; margin-top:10px; font-size:12px; }
+
+  /* Preview block · 主管將看到 */
+  .preview-block { border:1px solid var(--line); border-radius:6px; padding:14px 16px; margin-top:14px; background:linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%); }
+  .preview-block .pv-hdr { font-size:11px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; padding-bottom:6px; border-bottom:1px dashed var(--line); display:flex; justify-content:space-between; align-items:center; }
+  .preview-block .pv-badge { background:var(--primary-tint); color:#3730A3; padding:2px 8px; border-radius:10px; font-size:10.5px; text-transform:none; letter-spacing:0; }
+  .preview-block .pv-title { font-size:13.5px; font-weight:600; margin-bottom:2px; }
+  .preview-block .pv-date { font-size:11.5px; color:var(--ink-3); margin-bottom:10px; }
+  .preview-block .pv-item { padding:6px 0; font-size:12.5px; line-height:1.55; }
+  .preview-block .pv-item + .pv-item { border-top:1px dashed var(--line); }
+  .preview-block .pv-item-hdr { font-weight:600; color:var(--ink); }
+  .preview-block .pv-item-hdr .pv-idx { display:inline-block; width:20px; color:var(--primary); font-weight:700; }
+  .preview-block .pv-item-hdr .pv-time { color:var(--ink-3); font-family:var(--mono); font-size:11px; margin-left:8px; }
+  .preview-block .pv-item-detail { padding-left:20px; color:var(--ink-2); font-size:12px; margin-top:2px; }
+  .preview-block .pv-item-followup { padding-left:20px; color:var(--warn); font-size:11.5px; margin-top:2px; }
+  .preview-block .pv-foot { text-align:right; font-size:11px; color:var(--ink-3); margin-top:8px; padding-top:6px; border-top:1px dashed var(--line); }
+
+  /* Tab */
+  .tabs { display:flex; gap:0; border-bottom:1px solid var(--line); margin-bottom:12px; }
+  .tab { padding:8px 16px; font-size:12.5px; cursor:pointer; color:var(--ink-3); border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+
+  /* Dialog */
+  .dialog-shell { position:relative; }
+  .dialog-backdrop { position:absolute; inset:0; background:rgba(15,23,42,.4); border-radius:10px 10px 0 0; }
+  .dialog { position:absolute; top:40px; left:50%; transform:translateX(-50%); width:calc(100% - 40px); max-width:420px; background:#fff; border-radius:10px; box-shadow:0 20px 40px rgba(0,0,0,.15); padding:16px 18px; }
+  .dialog h3 { margin:0 0 10px; font-size:15px; }
+  .dialog .dg-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; padding-top:10px; border-top:1px solid var(--line); }
+
+  /* Phone frame · LIFF */
+  .phone { max-width:340px; margin:0 auto; background:#F9FAFB; border-radius:22px; overflow:hidden; box-shadow:inset 0 0 0 1px var(--line); }
+  .phone-notch { height:22px; background:#000; color:#fff; font-size:9.5px; display:flex; justify-content:center; align-items:center; letter-spacing:.05em; }
+  .phone-liff-topbar { padding:8px 12px; border-bottom:1px solid var(--line); background:#fff; text-align:center; font-size:11.5px; }
+  .phone-liff-topbar .t1 { font-weight:600; }
+  .phone-liff-topbar .t2 { color:var(--ink-3); font-size:10px; }
+  .liff-body { padding:12px 10px; min-height:400px; max-height:500px; overflow-y:auto; position:relative; }
+  .mine-hdr h1 { text-align:center; font-size:15px; margin:0 0 3px; }
+  .mine-hdr .sub-info { text-align:center; color:var(--ink-3); font-size:11px; margin-bottom:10px; }
+  .status-bar { padding:8px 10px; border-radius:6px; margin:6px 0; font-size:11.5px; text-align:center; }
+  .status-ai { background:var(--primary-tint); color:#3730A3; border:1px solid #C7D2FE; }
+  .item { background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px 10px; margin-bottom:6px; }
+  .item-hdr { display:flex; align-items:baseline; gap:5px; margin-bottom:3px; }
+  .item-idx { background:var(--primary); color:#fff; width:18px; height:18px; border-radius:50%; font-size:10px; display:inline-flex; align-items:center; justify-content:center; font-weight:600; }
+  .item-time { font-size:10px; color:var(--ink-3); font-family:var(--mono); background:var(--well); padding:1px 5px; border-radius:3px; }
+  .item-title { flex:1; font-size:11.5px; font-weight:600; }
+  .item-detail { font-size:10.5px; color:var(--ink-2); padding-left:24px; margin-top:2px; }
+  .item-actions { display:flex; gap:3px; padding-left:24px; margin-top:4px; }
+  .btn-inline { padding:3px 8px; font-size:10px; border:1px solid var(--line); border-radius:4px; background:#fff; color:var(--ink-2); }
+  .liff-footer { border-top:1px solid var(--line); background:#fff; padding:8px 10px; display:flex; gap:5px; }
+  .liff-footer .btn-inline { flex:1; padding:8px 4px; font-size:11px; font-weight:600; }
+  .liff-footer .btn-inline.primary { background:var(--line-brand); color:#fff; border-color:var(--line-brand); }
+
+  /* Verdict summary */
+  .verdict { background:var(--primary-tint); border-left:3px solid var(--primary); padding:12px 14px; border-radius:0 6px 6px 0; font-size:13px; color:#3730A3; margin:24px 0; }
+  .verdict b { color:#312E81; }
+
+  .cols-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; align-items:flex-start; margin-top:24px; }
+  .cols-3 .col { background:#fff; border:1px solid var(--line); border-radius:6px; padding:12px; font-size:12.5px; }
+  .cols-3 .col b { display:block; margin-bottom:6px; font-size:12.5px; }
+  .cols-3 .col ul { margin:4px 0 0 16px; padding:0; }
+  .cols-3 .col li { margin:2px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1 class="page-title">「送出前完整預覽」放哪 · 3 方案並列</h1>
+  <p class="page-sub">送出前員工要看到主管會收到的完整格式 · 三個位置方案讓你挑</p>
+
+  <!-- 方案 A -->
+  <div class="section-title">方案 A · 編輯區下方即時預覽</div>
+  <div class="opt-note">編輯區底部固定一塊「主管將看到 · 預覽」· 隨編輯 live update · 一直看得到</div>
+  <div class="grid">
+
+    <!-- Web -->
+    <div class="state-card">
+      <div class="state-hdr">Web 版</div>
+      <div class="pane">
+        <div class="pane-hdr">
+          <div>
+            <h1>我的日報 · 2026年7月23日 星期四</h1>
+            <div class="sub">✨ AI 已於 7/23 15:20 整理 · 請確認或微調</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <input class="tf" value="2026-07-23">
+            <button class="btn">重新生成</button>
+          </div>
+        </div>
+        <div class="pdr-items">
+          <div class="pdr-item">
+            <div class="pdr-item-hdr">
+              <span class="pdr-item-idx">1</span>
+              <span class="pdr-item-time">09:00-10:30</span>
+              <span class="pdr-item-title">A 客戶 Q3 交期</span>
+              <div class="pdr-item-actions"><button class="btn small">編輯</button><button class="btn small">刪除</button></div>
+            </div>
+            <div class="pdr-item-detail">客戶要求提早 15 天 · 已答覆需回工廠確認</div>
+            <div class="pdr-item-followup"><b>追蹤</b> · 明日 09:00 開產能會議</div>
+          </div>
+          <div class="pdr-item">
+            <div class="pdr-item-hdr">
+              <span class="pdr-item-idx">2</span>
+              <span class="pdr-item-time">15:00</span>
+              <span class="pdr-item-title">申請 2 名檢驗</span>
+              <div class="pdr-item-actions"><button class="btn small">編輯</button><button class="btn small">刪除</button></div>
+            </div>
+            <div class="pdr-item-detail">人資已收單 · 週五前回</div>
+          </div>
+          <div class="pdr-item">
+            <div class="pdr-item-hdr">
+              <span class="pdr-item-idx">3</span>
+              <span class="pdr-item-title">不良品已回工廠</span>
+              <div class="pdr-item-actions"><button class="btn small">編輯</button><button class="btn small">刪除</button></div>
+            </div>
+            <div class="pdr-item-detail">昨天那批 · 明日補送客戶</div>
+          </div>
+          <button class="btn pdr-add">+ 手動加一項</button>
+        </div>
+
+        <div class="preview-block">
+          <div class="pv-hdr">主管將看到 <span class="pv-badge">live preview</span></div>
+          <div class="pv-title">林曉風 Patrick · 個人日報</div>
+          <div class="pv-date">2026-07-23（週四）</div>
+          <div class="pv-item">
+            <div class="pv-item-hdr"><span class="pv-idx">1.</span>A 客戶 Q3 交期<span class="pv-time">09:00-10:30</span></div>
+            <div class="pv-item-detail">客戶要求提早 15 天 · 已答覆需回工廠確認</div>
+            <div class="pv-item-followup">→ 追蹤 · 明日 09:00 開產能會議</div>
+          </div>
+          <div class="pv-item">
+            <div class="pv-item-hdr"><span class="pv-idx">2.</span>申請 2 名檢驗<span class="pv-time">15:00</span></div>
+            <div class="pv-item-detail">人資已收單 · 週五前回</div>
+          </div>
+          <div class="pv-item">
+            <div class="pv-item-hdr"><span class="pv-idx">3.</span>不良品已回工廠</div>
+            <div class="pv-item-detail">昨天那批 · 明日補送客戶</div>
+          </div>
+          <div class="pv-foot">共 3 項 · 未送出</div>
+        </div>
+
+        <div class="pdr-foot">
+          <div style="color:var(--ink-3);">今日私訊 8 則 · 3 項待送出</div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn">儲存草稿</button>
+            <button class="btn btn-primary">送出日報</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIFF -->
+    <div class="state-card">
+      <div class="state-hdr">LIFF 版</div>
+      <div style="padding:12px; background:#F1F3F6;">
+        <div class="phone">
+          <div class="phone-notch">13:28 ⬤ ⬤ ⬤</div>
+          <div class="phone-liff-topbar">
+            <div class="t1">aiproot</div>
+            <div class="t2">ai-center-line-demo.onrender.com</div>
+          </div>
+          <div class="liff-body">
+            <div class="mine-hdr">
+              <h1>我的日報</h1>
+              <div class="sub-info">林曉風 Patrick · 7/23 週四</div>
+            </div>
+            <div class="status-bar status-ai">✨ AI 已整理 3 項</div>
+            <div class="item">
+              <div class="item-hdr"><span class="item-idx">1</span><span class="item-time">09:00-10:30</span><span class="item-title">A 客戶 Q3 交期</span></div>
+              <div class="item-detail">客戶要求提早 15 天</div>
+              <div class="item-actions"><button class="btn-inline">編輯</button><button class="btn-inline">刪除</button></div>
+            </div>
+            <div class="item">
+              <div class="item-hdr"><span class="item-idx">2</span><span class="item-time">15:00</span><span class="item-title">申請 2 名檢驗</span></div>
+              <div class="item-actions"><button class="btn-inline">編輯</button><button class="btn-inline">刪除</button></div>
+            </div>
+
+            <div class="preview-block" style="margin-top:10px; padding:10px 12px;">
+              <div class="pv-hdr" style="font-size:9.5px;">主管將看到 <span class="pv-badge" style="font-size:9px;">live</span></div>
+              <div class="pv-title" style="font-size:11.5px;">林曉風 Patrick · 個人日報</div>
+              <div class="pv-date" style="font-size:10px;">2026-07-23（週四）</div>
+              <div class="pv-item" style="font-size:10.5px; padding:4px 0;">
+                <div class="pv-item-hdr"><span class="pv-idx">1.</span>A 客戶 Q3 交期<span class="pv-time" style="font-size:9.5px;">09:00</span></div>
+                <div class="pv-item-detail" style="font-size:10px;">客戶要求提早 15 天</div>
+              </div>
+              <div class="pv-item" style="font-size:10.5px; padding:4px 0;">
+                <div class="pv-item-hdr"><span class="pv-idx">2.</span>申請 2 名檢驗</div>
+              </div>
+              <div class="pv-foot" style="font-size:9.5px;">共 2 項 · 未送出</div>
+            </div>
+          </div>
+          <div class="liff-footer">
+            <button class="btn-inline">重新生成</button>
+            <button class="btn-inline">儲存草稿</button>
+            <button class="btn-inline primary">送出日報</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方案 B -->
+  <div class="section-title">方案 B · 只在送出 confirm dialog 內預覽</div>
+  <div class="opt-note">編輯頁保持乾淨 · 按「送出日報」→ 彈 dialog 內展開完整預覽 + 確定按鈕</div>
+  <div class="grid">
+    <div class="state-card">
+      <div class="state-hdr">Web 版 · 點「送出日報」後</div>
+      <div class="pane dialog-shell" style="min-height:420px;">
+        <div class="pane-hdr" style="opacity:.5; filter:blur(1px);">
+          <div><h1>我的日報 · 2026年7月23日</h1><div class="sub">✨ AI 已整理</div></div>
+          <div style="display:flex; gap:6px;"><input class="tf" value="2026-07-23"><button class="btn">重新生成</button></div>
+        </div>
+        <div class="pdr-items" style="opacity:.4; filter:blur(1px);">
+          <div class="pdr-item"><div class="pdr-item-hdr"><span class="pdr-item-idx">1</span><span class="pdr-item-title">A 客戶 Q3 交期</span></div></div>
+          <div class="pdr-item"><div class="pdr-item-hdr"><span class="pdr-item-idx">2</span><span class="pdr-item-title">申請 2 名檢驗</span></div></div>
+        </div>
+        <div class="dialog-backdrop"></div>
+        <div class="dialog">
+          <h3>送出今日日報</h3>
+          <div style="font-size:12.5px; color:var(--ink-3); margin-bottom:10px;">主管將收到以下 3 項 · 送出後不能再改</div>
+          <div class="preview-block" style="margin:0;">
+            <div class="pv-title" style="font-size:13px;">林曉風 Patrick · 個人日報</div>
+            <div class="pv-date">2026-07-23（週四）</div>
+            <div class="pv-item">
+              <div class="pv-item-hdr"><span class="pv-idx">1.</span>A 客戶 Q3 交期<span class="pv-time">09:00-10:30</span></div>
+              <div class="pv-item-detail">客戶要求提早 15 天</div>
+              <div class="pv-item-followup">→ 追蹤 · 明日 09:00 開產能會議</div>
+            </div>
+            <div class="pv-item">
+              <div class="pv-item-hdr"><span class="pv-idx">2.</span>申請 2 名檢驗<span class="pv-time">15:00</span></div>
+              <div class="pv-item-detail">人資已收單</div>
+            </div>
+            <div class="pv-item">
+              <div class="pv-item-hdr"><span class="pv-idx">3.</span>不良品已回工廠</div>
+              <div class="pv-item-detail">昨天那批 · 明日補送</div>
+            </div>
+          </div>
+          <div class="dg-actions"><button class="btn">取消</button><button class="btn btn-primary">確定送出</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-card">
+      <div class="state-hdr">LIFF 版 · 點「送出日報」後</div>
+      <div style="padding:12px; background:#F1F3F6;">
+        <div class="phone dialog-shell">
+          <div class="phone-notch">13:28 ⬤ ⬤ ⬤</div>
+          <div class="phone-liff-topbar"><div class="t1">aiproot</div><div class="t2">ai-center-line-demo.onrender.com</div></div>
+          <div class="liff-body" style="opacity:.35; filter:blur(1px);">
+            <div class="mine-hdr"><h1>我的日報</h1></div>
+            <div class="item"><div class="item-hdr"><span class="item-idx">1</span><span class="item-title">A 客戶</span></div></div>
+          </div>
+          <div class="dialog-backdrop" style="border-radius:0;"></div>
+          <div class="dialog" style="top:40px; width:calc(100% - 24px);">
+            <h3 style="font-size:13.5px;">送出今日日報</h3>
+            <div style="font-size:11px; color:var(--ink-3); margin-bottom:8px;">主管將收到以下 3 項 · 不能再改</div>
+            <div class="preview-block" style="margin:0; padding:10px 12px;">
+              <div class="pv-title" style="font-size:11.5px;">林曉風 Patrick · 個人日報</div>
+              <div class="pv-date" style="font-size:10px;">2026-07-23（週四）</div>
+              <div class="pv-item" style="font-size:10.5px; padding:4px 0;">
+                <div class="pv-item-hdr"><span class="pv-idx">1.</span>A 客戶 Q3 交期</div>
+                <div class="pv-item-detail" style="font-size:10px;">客戶要求提早 15 天</div>
+              </div>
+              <div class="pv-item" style="font-size:10.5px; padding:4px 0;">
+                <div class="pv-item-hdr"><span class="pv-idx">2.</span>申請 2 名檢驗</div>
+              </div>
+              <div class="pv-item" style="font-size:10.5px; padding:4px 0;">
+                <div class="pv-item-hdr"><span class="pv-idx">3.</span>不良品已回工廠</div>
+              </div>
+            </div>
+            <div class="dg-actions" style="padding-top:8px;"><button class="btn-inline">取消</button><button class="btn-inline primary">確定送出</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方案 C -->
+  <div class="section-title">方案 C · 編輯 / 預覽 tab 切換</div>
+  <div class="opt-note">頂 tab 切換 · 使用者主動去看預覽 · 送出 dialog 內就不再重複 preview（只 confirm）</div>
+  <div class="grid">
+    <div class="state-card">
+      <div class="state-hdr">Web 版 · 切到「預覽」tab</div>
+      <div class="pane">
+        <div class="pane-hdr">
+          <div><h1>我的日報 · 2026年7月23日 星期四</h1></div>
+          <div style="display:flex; gap:6px;"><input class="tf" value="2026-07-23"><button class="btn">重新生成</button></div>
+        </div>
+        <div class="tabs">
+          <div class="tab">✏️ 編輯（3 項）</div>
+          <div class="tab active">👀 預覽 · 主管將看到</div>
+        </div>
+        <div class="preview-block" style="margin-top:0;">
+          <div class="pv-title" style="font-size:14px;">林曉風 Patrick · 個人日報</div>
+          <div class="pv-date">2026-07-23（週四）</div>
+          <div class="pv-item">
+            <div class="pv-item-hdr"><span class="pv-idx">1.</span>A 客戶 Q3 交期<span class="pv-time">09:00-10:30</span></div>
+            <div class="pv-item-detail">客戶要求提早 15 天 · 已答覆需回工廠確認</div>
+            <div class="pv-item-followup">→ 追蹤 · 明日 09:00 開產能會議</div>
+          </div>
+          <div class="pv-item">
+            <div class="pv-item-hdr"><span class="pv-idx">2.</span>申請 2 名檢驗<span class="pv-time">15:00</span></div>
+            <div class="pv-item-detail">人資已收單 · 週五前回</div>
+          </div>
+          <div class="pv-item">
+            <div class="pv-item-hdr"><span class="pv-idx">3.</span>不良品已回工廠</div>
+            <div class="pv-item-detail">昨天那批 · 明日補送客戶</div>
+          </div>
+          <div class="pv-foot">共 3 項 · 未送出</div>
+        </div>
+        <div class="pdr-foot" style="margin-top:14px;">
+          <div style="color:var(--ink-3);">切回編輯 tab 可繼續調整</div>
+          <div style="display:flex; gap:6px;"><button class="btn">儲存草稿</button><button class="btn btn-primary">送出日報</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-card">
+      <div class="state-hdr">LIFF 版 · 切到「預覽」tab</div>
+      <div style="padding:12px; background:#F1F3F6;">
+        <div class="phone">
+          <div class="phone-notch">13:28 ⬤ ⬤ ⬤</div>
+          <div class="phone-liff-topbar"><div class="t1">aiproot</div><div class="t2">ai-center-line-demo.onrender.com</div></div>
+          <div class="liff-body">
+            <div class="mine-hdr"><h1>我的日報</h1><div class="sub-info">林曉風 Patrick · 7/23</div></div>
+            <div class="tabs" style="margin-bottom:8px;">
+              <div class="tab" style="padding:6px 10px; font-size:11px;">編輯 (3)</div>
+              <div class="tab active" style="padding:6px 10px; font-size:11px;">預覽</div>
+            </div>
+            <div class="preview-block" style="margin:0; padding:10px 12px;">
+              <div class="pv-title" style="font-size:11.5px;">林曉風 Patrick · 個人日報</div>
+              <div class="pv-date" style="font-size:10px;">2026-07-23（週四）</div>
+              <div class="pv-item" style="font-size:10.5px; padding:4px 0;">
+                <div class="pv-item-hdr"><span class="pv-idx">1.</span>A 客戶 Q3 交期</div>
+                <div class="pv-item-detail" style="font-size:10px;">客戶要求提早 15 天</div>
+                <div class="pv-item-followup" style="font-size:9.5px;">→ 追蹤 · 明日 09:00</div>
+              </div>
+              <div class="pv-item" style="font-size:10.5px; padding:4px 0;">
+                <div class="pv-item-hdr"><span class="pv-idx">2.</span>申請 2 名檢驗</div>
+                <div class="pv-item-detail" style="font-size:10px;">人資已收單</div>
+              </div>
+              <div class="pv-item" style="font-size:10.5px; padding:4px 0;">
+                <div class="pv-item-hdr"><span class="pv-idx">3.</span>不良品已回工廠</div>
+              </div>
+              <div class="pv-foot" style="font-size:9.5px;">共 3 項 · 未送出</div>
+            </div>
+          </div>
+          <div class="liff-footer">
+            <button class="btn-inline">重新生成</button>
+            <button class="btn-inline">儲存草稿</button>
+            <button class="btn-inline primary">送出日報</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <b>各方案取捨</b>
+  </div>
+  <div class="cols-3">
+    <div class="col">
+      <b>A · 即時預覽在下方</b>
+      <div>優點</div>
+      <ul>
+        <li>所見即所得 · 一改就變</li>
+        <li>不需切換 · 認知負擔最低</li>
+        <li>LIFF 手機頁面會變很長</li>
+      </ul>
+      <div style="margin-top:6px;">缺點</div>
+      <ul>
+        <li>LIFF 直排 · 手機用戶要下滑才看到</li>
+        <li>編輯 + 預覽同頁 · 資訊密度高</li>
+      </ul>
+    </div>
+    <div class="col">
+      <b>B · Dialog 內預覽</b>
+      <div>優點</div>
+      <ul>
+        <li>編輯頁最乾淨</li>
+        <li>送出前強制看一次 · 不易誤送</li>
+        <li>手機 dialog 直接聚焦</li>
+      </ul>
+      <div style="margin-top:6px;">缺點</div>
+      <ul>
+        <li>編輯過程看不到「主管將看到」的樣子</li>
+        <li>發現要改要關 dialog 回編輯</li>
+      </ul>
+    </div>
+    <div class="col">
+      <b>C · Tab 切換</b>
+      <div>優點</div>
+      <ul>
+        <li>手機空間最省 · 一次一 view</li>
+        <li>使用者主動切預覽 · 意圖明確</li>
+      </ul>
+      <div style="margin-top:6px;">缺點</div>
+      <ul>
+        <li>要點 tab 才看到 · 有些人不會切</li>
+        <li>編輯時看不到成果</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -19,6 +19,7 @@ export default function MyDailyReport() {
   const [items, setItems] = useState<PersonalDailyReportItem[]>([]);
   const [pendingMessageCount, setPendingMessageCount] = useState(0);
   const [pendingMessages, setPendingMessages] = useState<PendingRawMessage[]>([]);
+  const [userDisplayName, setUserDisplayName] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
@@ -32,6 +33,7 @@ export default function MyDailyReport() {
       setReport(res.report);
       setPendingMessageCount(res.pendingMessageCount ?? 0);
       setPendingMessages(res.pendingMessages ?? []);
+      setUserDisplayName(res.userDisplayName ?? "");
       // 若已有 final_items · load · 否則 load ai_items 供編輯
       if (res.report?.finalItems) setItems(res.report.finalItems);
       else if (res.report?.aiItems) setItems(res.report.aiItems);
@@ -106,7 +108,12 @@ export default function MyDailyReport() {
             max={getTaipeiDate()}
             disabled={busy}
           />
-          <button className="btn" onClick={() => void doRegenerate()} disabled={busy || regenerating}>
+          <button
+            className="btn"
+            onClick={() => void doRegenerate()}
+            disabled={busy || regenerating}
+            title="重跑 AI 整理今日私訊 · 你的手動編輯不受影響"
+          >
             {regenerating ? "生成中…" : "重新生成"}
           </button>
         </div>
@@ -155,27 +162,39 @@ export default function MyDailyReport() {
       )}
 
       {(hasItems || (report && report.aiItems.length > 0)) && (
-        <div className="pdr-items">
-          {items.map((item, idx) => (
-            <ItemCard
-              key={idx}
-              item={item}
-              idx={idx}
-              onChange={(updated) => {
-                if (!canEdit) return;
-                setItems((s) => s.map((it, i) => i === idx ? updated : it));
-              }}
-              onDelete={() => canEdit && setItems((s) => s.filter((_, i) => i !== idx))}
-              readonly={!canEdit}
-            />
-          ))}
+        <>
+          <div className="pdr-items">
+            {items.map((item, idx) => (
+              <ItemCard
+                key={idx}
+                item={item}
+                idx={idx}
+                onChange={(updated) => {
+                  if (!canEdit) return;
+                  setItems((s) => s.map((it, i) => i === idx ? updated : it));
+                }}
+                onDelete={() => canEdit && setItems((s) => s.filter((_, i) => i !== idx))}
+                readonly={!canEdit}
+              />
+            ))}
 
-          {canEdit && (
-            <button className="btn pdr-add" onClick={() => setItems((s) => [...s, { title: "", detail: "", time: "", followup: "" }])}>
-              + 手動加一項
-            </button>
+            {canEdit && (
+              <button className="btn pdr-add" onClick={() => setItems((s) => [...s, { title: "", detail: "", time: "", followup: "" }])}>
+                + 手動加一項
+              </button>
+            )}
+          </div>
+
+          {items.length > 0 && (
+            <ReportPreview
+              items={items}
+              userDisplayName={userDisplayName}
+              displayDate={displayDate}
+              isSent={isSent}
+              live={!isSent}
+            />
           )}
-        </div>
+        </>
       )}
 
       {report && !isEmpty && !isFailed && (
@@ -208,17 +227,14 @@ export default function MyDailyReport() {
         busy={busy}
         title="送出今日日報"
         body={
-          <>
-            即將送出 <b>{items.length}</b> 項日報給主管<br />
-            送出後：
-            <ul style={{ marginLeft: 20, marginTop: 6 }}>
-              <li>主管會收到通知</li>
-              <li>此份日報不能再改</li>
-              <li>可到 aiproot 記錄查詢</li>
-            </ul>
-          </>
+          <div>
+            <div style={{ marginBottom: 10, fontSize: 13, color: "var(--ink-3)" }}>
+              主管將收到以下 <b style={{ color: "var(--ink)" }}>{items.length}</b> 項 · 送出後不能再改
+            </div>
+            <ReportPreview items={items} userDisplayName={userDisplayName} displayDate={displayDate} isSent={false} live={false} />
+          </div>
         }
-        confirmLabel="送出"
+        confirmLabel="確定送出"
         tone="primary"
       />
     </div>
@@ -290,6 +306,39 @@ function ItemCard({
           <b>追蹤</b> · {item.followup}
         </div>
       )}
+    </div>
+  );
+}
+
+function ReportPreview({
+  items, userDisplayName, displayDate, isSent, live,
+}: {
+  items: PersonalDailyReportItem[];
+  userDisplayName: string;
+  displayDate: string;
+  isSent: boolean;
+  live: boolean;
+}) {
+  return (
+    <div className="pdr-preview">
+      <div className="pdr-preview-hdr">
+        <span>主管將看到 · 預覽</span>
+        {live && <span className="pdr-preview-badge">live preview</span>}
+      </div>
+      <div className="pdr-preview-title">{userDisplayName || "員工"} · 個人日報</div>
+      <div className="pdr-preview-date">{displayDate}</div>
+      {items.map((it, idx) => (
+        <div key={idx} className="pdr-preview-item">
+          <div className="pdr-preview-item-hdr">
+            <span className="pdr-preview-idx">{idx + 1}.</span>
+            <span className="pdr-preview-title-text">{it.title || "（未命名事項）"}</span>
+            {it.time && <span className="pdr-preview-time">{it.time}</span>}
+          </div>
+          {it.detail && <div className="pdr-preview-detail">{it.detail}</div>}
+          {it.followup && <div className="pdr-preview-followup">→ 追蹤 · {it.followup}</div>}
+        </div>
+      ))}
+      <div className="pdr-preview-foot">共 {items.length} 項 · {isSent ? "已送出" : "未送出"}</div>
     </div>
   );
 }

@@ -161,7 +161,21 @@ export class PersonalDailyReportController {
     const row = await this.repo.getByUserDate(tx, user.user_id, date);
     const pendingMessageCount = await this.repo.countPersonalMessagesForDate(tx, user.user_id, date);
     const pendingMessages = row ? [] : await this.repo.listPersonalMessagesForDate(tx, user.user_id, date);
-    return { report: row, requestedDate: date, pendingMessageCount, pendingMessages };
+    // 撈員工姓名 · preview 用（主管將看到的 header）
+    const info = await tx.execute<{ display_name: string; tenant_name: string }>(sql_import`
+      SELECT u.display_name, t.tenant_name
+      FROM users u JOIN tenants t ON t.tenant_id = u.tenant_id
+      WHERE u.user_id = ${user.user_id}::uuid
+    `);
+    const meta = info.rows[0];
+    return {
+      report: row,
+      requestedDate: date,
+      pendingMessageCount,
+      pendingMessages,
+      userDisplayName: meta?.display_name ?? "",
+      tenantName: meta?.tenant_name ?? "",
+    };
   }
 
   @Post("mine/save")

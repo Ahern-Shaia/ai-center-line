@@ -352,6 +352,8 @@ export const getMyPersonalReport = (date?: string) => {
     requestedDate: string;
     pendingMessageCount: number;
     pendingMessages: PendingRawMessage[];
+    userDisplayName: string;
+    tenantName: string;
   }>(`/personal-daily-report/mine${q}`);
 };
 
