@@ -93,17 +93,28 @@ export class EmployeeBindingService {
    *   - INSERT users (tenant_id 從 bot 查 · display_name · department_id · role='employee')
    *   - INSERT user_line_binding · method='liff_self_service'
    */
+  /**
+   * v2 · 部門完全由 server derive · 不接受 body 傳來的 primaryGroupId
+   * 邏輯：從 line_message 撈 Alice 過去 30 天發言最多的群 → 該群 department_id
+   * 若無活動 / 信心度低 · 落 department_id=null · 需 tenant_admin 於「部門/成員」頁手動指派
+   *
+   * 為什麼不讓員工選：
+   *   1. 藍領員工可能選錯（閒聊群 / 部門名不對應）
+   *   2. UserId 是 LINE 保證的技術認證 · 群組活動也是 · 系統推斷比人工可靠
+   *   3. 若選錯 · 產出全歸錯 · 主管看不到員工貢獻
+   *   4. 只有 tenant_admin 可改（責任明確 · 有 audit）
+   */
   async completeLiffBinding(args: {
     botId: string;
     lineUserId: string;
     displayName: string;
-    primaryGroupId: string | null;
     metadata: Record<string, unknown>;
   }): Promise<{
     userId: string;
     bindingId: string;
     displayName: string;
     departmentName: string | null;
+    departmentSource: "auto_from_group_activity" | "unassigned_needs_manager";
   }> {
     // 檢查是否已綁定（防重）· 跨租戶讀走 aiproot_admin (需通過 user_line_binding EXISTS→users 子查詢)
     const existing = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.bindingRepo.getActiveByLineUserId(tx, args.botId, args.lineUserId));
@@ -122,23 +133,31 @@ export class EmployeeBindingService {
 
     // Step 2 · 拿到 tenant 後 · 走 tenant_admin 讀 departments + INSERT users/binding
     return withTenant({ tenantId: bot.tenant_id, role: "tenant_admin" }, async (tx) => {
-      let departmentId: string | null = null;
-      let departmentName: string | null = null;
-      if (args.primaryGroupId) {
-        const groupRes = await tx.execute<{ department_id: string | null; department_name: string | null }>(sql`
-          SELECT lg.department_id::text, d.department_name
-          FROM line_group lg
-          LEFT JOIN departments d ON d.department_id = lg.department_id
-          WHERE lg.bot_id = ${args.botId}::uuid AND lg.group_id = ${args.primaryGroupId}
-          LIMIT 1
-        `);
-        const g = groupRes.rows[0];
-        departmentId = g?.department_id ?? null;
-        departmentName = g?.department_name ?? null;
-      }
+      // Derive department · 從 line_message 撈 Alice 近 30 天發言最多的群 → 對應 department
+      const inferred = await tx.execute<{ department_id: string | null; department_name: string | null; message_count: number }>(sql`
+        SELECT lg.department_id::text,
+               d.department_name,
+               count(*)::int AS message_count
+        FROM line_message lm
+        JOIN line_group lg ON lg.bot_id = lm.bot_id AND lg.group_id = lm.group_id
+        LEFT JOIN departments d ON d.department_id = lg.department_id
+        WHERE lm.bot_id = ${args.botId}::uuid
+          AND lm.sender_line_id = ${args.lineUserId}
+          AND lm.chat_context = 'group'
+          AND lm.sent_at > now() - interval '30 days'
+          AND lg.department_id IS NOT NULL
+        GROUP BY lg.department_id, d.department_name
+        ORDER BY count(*) DESC
+        LIMIT 1
+      `);
+      const primaryDept = inferred.rows[0];
+      const departmentId: string | null = primaryDept?.department_id ?? null;
+      const departmentName: string | null = primaryDept?.department_name ?? null;
+      const source: "auto_from_group_activity" | "unassigned_needs_manager" =
+        departmentId ? "auto_from_group_activity" : "unassigned_needs_manager";
+
       const tenantId = bot.tenant_id;
       // INSERT users · role='employee' (v2 · 對照 migration 0020 加的 role)
-      // employee role 只有 my-daily-report + 基本 view perm · 不能簽核 / 不能管理
       const userRes = await tx.execute<{ user_id: string }>(sql`
         INSERT INTO users
           (tenant_id, email, display_name, department_id, role, must_change_password)
@@ -159,16 +178,17 @@ export class EmployeeBindingService {
         lineUserId: args.lineUserId,
         boundBy: newUserId,
         bindingMethod: "liff_self_service",
-        metadata: args.metadata,
+        metadata: { ...args.metadata, dept_source: source, dept_inferred_from_messages: primaryDept?.message_count ?? 0 },
       });
 
-      this.logger.log(`LIFF binding complete · user=${args.displayName} (${newUserId}) · botId=${args.botId} · lineUserId=${args.lineUserId.slice(-6)}`);
+      this.logger.log(`LIFF binding complete · user=${args.displayName} · dept=${departmentName ?? "(未分派)"} · source=${source}`);
 
       return {
         userId: newUserId,
         bindingId,
         displayName: args.displayName,
         departmentName,
+        departmentSource: source,
       };
     });
   }

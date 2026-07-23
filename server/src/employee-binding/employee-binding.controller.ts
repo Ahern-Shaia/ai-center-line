@@ -57,9 +57,9 @@ export class EmployeeBindingController {
     botId?: string;
     lineUserId?: string;
     displayName?: string;
-    primaryGroupId?: string;
     metadata?: Record<string, unknown>;
   }) {
+    // v2 · 只需 botId + lineUserId + displayName · 部門由後端 derive (不接受 primaryGroupId)
     if (!body?.botId || !body?.lineUserId || !body?.displayName) {
       throw new BadRequestException("botId, lineUserId, displayName 必要");
     }
@@ -70,7 +70,6 @@ export class EmployeeBindingController {
       botId: body.botId,
       lineUserId: body.lineUserId,
       displayName: body.displayName,
-      primaryGroupId: body.primaryGroupId ?? null,
       metadata: body.metadata ?? {},
     });
   }

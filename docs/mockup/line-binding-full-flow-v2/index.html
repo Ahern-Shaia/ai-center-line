@@ -246,10 +246,10 @@
   <div class="screens">
 
     <div class="screen actor-system">
-      <div class="screen-lbl"><b>B1 · LIFF 開啟 · 自動 pre-fill</b><span class="screen-step">STEP 3</span></div>
+      <div class="screen-lbl"><b>B1 · LIFF 開啟 · 自動識別 · 只確認</b><span class="screen-step">STEP 3</span></div>
       <div class="screen-desc">
         <b>關鍵機制</b>：LIFF SDK 拿到的 <code>lineUserId</code> · 跟 Alice 在群組發言時 webhook 收到的 <code>event.source.userId</code> <b>是同一個字串</b>（LINE 保證 · 同一 bot 底下 UserId 唯一）。<br>
-        系統靠這個對照 · 從 <code>line_message</code> 撈 Alice 過去 30 天在群裡發過的訊息 · 反推她主要在哪個部門群 · 自動 pre-fill。
+        系統從 <code>line_message</code> 撈 Alice 過去 30 天發言最多的群 → 反推她的部門 · <b>自動 derive · 不讓員工手選</b>（避免選錯造成資料歸屬錯）。
       </div>
       <div class="liff-frame">
         <div class="liff-frame-body">
@@ -259,26 +259,33 @@
           </div>
           <div class="liff-page">
             <div class="avatar-lg">王</div>
-            <h2>綁定 LINE 帳號</h2>
-            <div class="sub">在 LINE 內完成 · 不用密碼</div>
+            <h2>歡迎 · 是你嗎？</h2>
+            <div class="sub">系統已從你的群組活動<br>自動識別你的身分與部門</div>
             <div class="prefill-card">
               <div class="name">王愛麗絲</div>
               <div class="uid">Ualice1234567890</div>
               <div class="divider"></div>
-              <div class="grp-lbl">✨ 系統推薦部門（依你近 30 天發言）：</div>
-              <div class="grp-item primary">✓ 福祉—品保部 <span class="pct">85%</span></div>
-              <div class="grp-item">福祉—業務部 <span class="pct">15%</span></div>
+              <div class="grp-lbl">系統偵測你主要在：</div>
+              <div class="grp-item primary">📱 福祉—品保部 <span class="pct">85%</span></div>
+              <div class="grp-item">📱 福祉—業務部 <span class="pct">15%</span></div>
+              <div style="font-size:11px; color:var(--ink-3); margin-top:8px; text-align:center;">
+                → 綁定後你歸屬「<b>品保部</b>」
+              </div>
             </div>
-            <button class="btn-large btn-primary">確認綁定</button>
-            <button class="btn-large btn-secondary">修改資料</button>
+            <button class="btn-large btn-primary">✓ 是 · 我是王愛麗絲</button>
+            <div style="margin-top:12px; padding:10px 12px; background:var(--warn-tint); border:1px solid #F5D5A6; border-radius:6px; font-size:11px; color:#7A4E1B; line-height:1.55;">
+              <b>⚠ 若識別錯了？</b><br>
+              請聯繫主管在後台「部門/成員」頁調整。<br>
+              <span style="color:var(--ink-3); font-size:10px;">為避免手誤 · 這裡只讓你確認 · 不讓你自行修改。</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <div class="screen actor-system">
-      <div class="screen-lbl"><b>B2 · (可選) 微調姓名 / 部門</b><span class="screen-step">STEP 3-alt</span></div>
-      <div class="screen-desc">若 Alice 覺得 pre-fill 不準 · 可改姓名（公司稱呼）· 選其他部門</div>
+      <div class="screen-lbl"><b>B2 · 極端 case · 尚未在群發言</b><span class="screen-step">STEP 3-alt</span></div>
+      <div class="screen-desc">若 Alice 從未在工作群發過訊息 · 系統無法推斷部門 · 落 department=null · 提示主管手動指派</div>
       <div class="liff-frame">
         <div class="liff-frame-body">
           <div class="liff-bar">
@@ -286,20 +293,21 @@
             <span class="close">×</span>
           </div>
           <div class="liff-page">
-            <h2>編輯綁定資料</h2>
-            <div style="margin-bottom:12px;">
-              <label style="display:block; font-size:11px; color:var(--ink-3); margin-bottom:4px;">姓名（公司稱呼）</label>
-              <input type="text" value="王愛麗絲" style="width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:5px; font-size:13px;">
-            </div>
-            <div style="margin-bottom:12px;">
-              <label style="display:block; font-size:11px; color:var(--ink-3); margin-bottom:4px;">主要工作群</label>
-              <div style="border:1px solid var(--line); border-radius:5px; padding:8px; font-size:12px;">
-                <label style="display:block; margin:4px 0;"><input type="radio" checked> 福祉—品保部</label>
-                <label style="display:block; margin:4px 0;"><input type="radio"> 福祉—業務部</label>
-                <label style="display:block; margin:4px 0;"><input type="radio"> 其他 (手動選)</label>
+            <div class="avatar-lg">王</div>
+            <h2>歡迎 · 是你嗎？</h2>
+            <div class="sub">系統已識別你的 LINE 資料</div>
+            <div class="prefill-card">
+              <div class="name">王愛麗絲</div>
+              <div class="uid">Ualice1234567890</div>
+              <div class="divider"></div>
+              <div style="text-align:center; color:var(--ink-3); font-size:12px; padding:10px;">
+                尚未在任何工作群發過訊息
+              </div>
+              <div style="font-size:11px; color:var(--ink-3); margin-top:8px; text-align:center;">
+                → 綁定後 · 主管會在後台幫你分派部門
               </div>
             </div>
-            <button class="btn-large btn-primary">儲存並綁定</button>
+            <button class="btn-large btn-primary">✓ 是 · 綁定</button>
           </div>
         </div>
       </div>

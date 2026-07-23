@@ -72,43 +72,28 @@
     <p style="color:var(--ink-3); font-size:12px; margin-top:12px;">請聯繫公司資訊窗口</p>
   </div>
 
-  <!-- View: prefill confirm -->
+  <!-- View: prefill confirm · v2 · 只確認不編輯 · 部門由後端 derive -->
   <div id="view-prefill" style="display:none;">
     <h1>歡迎 · 是你嗎？</h1>
-    <p class="sub">系統已從你的 LINE 資料 + 群組活動<br>推斷你的身分</p>
+    <p class="sub">系統已從你的群組活動<br>自動識別你的身分與部門</p>
 
     <div class="card">
       <div class="avatar-lg" id="p-avatar"></div>
       <div class="name" id="p-name"></div>
       <div class="note" id="p-userid"></div>
       <hr>
-      <div style="font-size:12px; color:var(--ink-3); margin-bottom:6px;"><b>常出現的群組：</b></div>
+      <div style="font-size:12px; color:var(--ink-3); margin-bottom:6px;"><b>系統偵測你主要在：</b></div>
       <div class="groups" id="p-groups"></div>
+      <div id="p-dept-hint" style="font-size:11px; color:var(--ink-3); margin-top:8px; text-align:center;"></div>
     </div>
 
     <button class="btn primary" onclick="confirmBinding()">✓ 是 · 我是 <span id="p-btn-name"></span></button>
-    <button class="btn secondary" onclick="showEdit()">修改姓名 / 主要群組</button>
-  </div>
 
-  <!-- View: edit -->
-  <div id="view-edit" style="display:none;">
-    <h1>修改個人資料</h1>
-    <p class="sub">若 LINE 顯示名不是你的真名 · 或主要群組推斷錯 · 請修改</p>
-
-    <div class="form-group">
-      <label class="form-lbl">姓名</label>
-      <input class="form-input" id="e-name" type="text">
-      <div class="form-hint" id="e-name-hint"></div>
+    <div style="margin-top:12px; padding:10px 12px; background:var(--warn-tint); border:1px solid #F5D5A6; border-radius:6px; font-size:11.5px; color:#7A4E1B; line-height:1.6;">
+      <b>⚠ 若識別錯了？</b><br>
+      綁定完成後 · 請聯繫**部門主管**或**公司資訊窗口** · 由他們在「部門/成員」頁調整。<br>
+      <span style="color:var(--ink-3); font-size:10.5px;">為避免手誤造成資料歸屬錯 · 這裡只讓你確認 · 不讓你自行修改。</span>
     </div>
-
-    <div class="form-group">
-      <label class="form-lbl">主要群組（決定你屬哪個部門）</label>
-      <select class="form-select" id="e-group"></select>
-      <div class="form-hint">系統顯示你有參與的群組 · 選你「主要屬於」的那個</div>
-    </div>
-
-    <button class="btn primary" onclick="confirmBindingWithEdits()">儲存並綁定</button>
-    <button class="btn secondary" onclick="showPrefill()">回上一頁</button>
   </div>
 
   <!-- View: already bound -->
@@ -234,8 +219,10 @@
     }
 
     const groups = prefillData.candidateGroups || [];
+    const hintEl = document.getElementById("p-dept-hint");
     if (groups.length === 0) {
-      document.getElementById("p-groups").innerHTML = "<div style='color:var(--ink-3); font-size:12px;'>尚未在任何群組發過訊息 · 請主管協助分派</div>";
+      document.getElementById("p-groups").innerHTML = "<div style='color:var(--ink-3); font-size:12px; text-align:center;'>尚未在任何工作群發過訊息</div>";
+      hintEl.innerHTML = "→ 綁定後 · 主管會在後台幫你分派部門";
       return;
     }
     const total = groups.reduce((s, g) => s + g.messageCount, 0);
@@ -246,49 +233,22 @@
       return `<div class="group-item${primary}">📱 ${label}<span class="pct">${pct}%</span></div>`;
     }).join('');
     document.getElementById("p-groups").innerHTML = html;
-  }
-
-  function showEdit() {
-    const name = prefillData.displayName || lineDisplayName || "";
-    document.getElementById("e-name").value = name;
-    document.getElementById("e-name-hint").textContent = "LINE 顯示為：" + name;
-
-    const sel = document.getElementById("e-group");
-    sel.innerHTML = "";
-    (prefillData.candidateGroups || []).forEach((g, i) => {
-      const opt = document.createElement("option");
-      opt.value = g.groupId;
-      opt.textContent = "📱 " + (g.displayName || g.groupId.slice(0, 12)) + (i === 0 ? "（推斷）" : "");
-      sel.appendChild(opt);
-    });
-    const noneOpt = document.createElement("option");
-    noneOpt.value = "";
-    noneOpt.textContent = "暫不指定";
-    sel.appendChild(noneOpt);
-
-    hide("view-prefill");
-    show("view-edit");
-  }
-
-  function showPrefill() {
-    hide("view-edit");
-    show("view-prefill");
+    // 顯示 primary group 對到哪個部門
+    const primary = groups[0];
+    if (primary && primary.departmentName) {
+      hintEl.innerHTML = `→ 綁定後你歸屬「<b>${primary.departmentName}</b>」部門`;
+    } else if (primary) {
+      hintEl.innerHTML = "→ 此群尚未分派部門 · 綁定後主管會幫你調整";
+    }
   }
 
   async function confirmBinding() {
-    const primaryGroupId = (prefillData.candidateGroups[0] || {}).groupId || null;
+    // v2 · 只傳 displayName · 不傳 primaryGroupId (後端 derive)
     const displayName = prefillData.displayName || lineDisplayName || "（未知）";
-    await doComplete(displayName, primaryGroupId);
+    await doComplete(displayName);
   }
 
-  async function confirmBindingWithEdits() {
-    const displayName = document.getElementById("e-name").value.trim();
-    const primaryGroupId = document.getElementById("e-group").value || null;
-    if (!displayName) return alert("請輸入姓名");
-    await doComplete(displayName, primaryGroupId);
-  }
-
-  async function doComplete(displayName, primaryGroupId) {
+  async function doComplete(displayName) {
     try {
       const res = await fetch(`${API_BASE}/binding/liff/complete`, {
         method: "POST",
@@ -297,7 +257,6 @@
           botId: BOT_ID,
           lineUserId,
           displayName,
-          primaryGroupId,
           metadata: { lineDisplayName, candidateGroupsCount: (prefillData.candidateGroups || []).length },
         }),
       });
@@ -306,8 +265,14 @@
         throw new Error(err.message || "綁定失敗");
       }
       const data = await res.json();
-      document.getElementById("s-name").textContent = data.displayName + (data.departmentName ? " · " + data.departmentName : "");
-      hide("view-prefill"); hide("view-edit"); show("view-success");
+      let deptText = "";
+      if (data.departmentName) {
+        deptText = " · " + data.departmentName;
+      } else if (data.departmentSource === "unassigned_needs_manager") {
+        deptText = " · （待主管指派部門）";
+      }
+      document.getElementById("s-name").textContent = data.displayName + deptText;
+      hide("view-prefill"); show("view-success");
     } catch (e) {
       alert(e.message);
     }
