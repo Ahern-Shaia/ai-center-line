@@ -111,11 +111,26 @@ function defaultRouteFor(session: Session | null): Route {
   return { page: "warroom" };
 }
 
+// aiproot 平台方專屬頁面 · 對 tenant_admin / group_owner / employee 不該顯示
+const AIPROOT_ONLY_PAGES = new Set([
+  "convo-list", "convo-upload", "convo-detail",
+  "llm-settings", "line-bots",
+  "onboard-tenant", "cost-dashboard", "batch-history",
+  "binding-audit", "category-mgmt", "roles-mgmt",
+]);
+
+function isPageAllowedForRole(page: string, role: string): boolean {
+  if (AIPROOT_ONLY_PAGES.has(page) && role !== "aiproot_admin" && role !== "consultant") return false;
+  if (page === "warroom" && role === "employee") return false;
+  return true;
+}
+
 export default function App() {
   const [session, setSession] = useState<Session | null>(() => getSession());
   const [route, setRoute] = useState<Route>(() => defaultRouteFor(getSession()));
   const [refreshing, setRefreshing] = useState(false);
   const [asOf, setAsOf] = useState<string | undefined>(undefined);
+  const prevRoleRef = useRef<string | null>(session?.role ?? null);
 
   useEffect(() => {
     if (session) return;
@@ -126,12 +141,25 @@ export default function App() {
     }
   }, [session]);
 
-  // Login 完 · 若 employee 還停在 warroom (initial) · 切到我的日報 · 免 toast 洗版
+  // P0 · session 切換時強制 reset route · 避免舊 admin 頁面殘留（切帳號看到別人資料的 bug）
+  // - null → 有值（login）：重設到新 role 的 default
+  // - A role → B role（切帳號）：重設到新 role 的 default
+  // - 有值 → null（logout）：直接進 Login 頁 · route 保留無影響
   useEffect(() => {
-    if (session?.role === "employee" && route.page === "warroom") {
-      setRoute({ page: "my-daily-report" });
+    const currentRole = session?.role ?? null;
+    if (currentRole && prevRoleRef.current !== currentRole) {
+      setRoute(defaultRouteFor(session));
     }
-  }, [session?.role, route.page]);
+    prevRoleRef.current = currentRole;
+  }, [session]);
+
+  // P0 defense in depth · 任何時刻 route 對當前 role 不允許 · 立即 reset
+  // 防止 stale route / URL 直接 nav / 未來 nav 邏輯漏擋
+  useEffect(() => {
+    if (session && !isPageAllowedForRole(route.page, session.role)) {
+      setRoute(defaultRouteFor(session));
+    }
+  }, [session, route.page]);
 
   const pageRef = useRef<{ refresh: () => Promise<void>; asOf: () => string | undefined }>({
     refresh: async () => undefined,
