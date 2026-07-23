@@ -126,6 +126,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
   const toast = useToast();
   const initials = session.email.slice(0, 2).toUpperCase();
   const [changePwOpen, setChangePwOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const perms = usePermissions();
   // 若 item 有 perm / permAny · 依 usePermissions 過濾 · 沒設就顯
   const itemVisible = (it: { perm?: string; permAny?: string[] }) => {
@@ -134,8 +135,14 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
     return true;
   };
 
+  const handleNav = (key: string) => {
+    setMobileNavOpen(false);
+    onNav(key);
+  };
+
   return (
-    <div className="app">
+    <div className={`app${mobileNavOpen ? " mobile-nav-open" : ""}`}>
+      {mobileNavOpen && <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} aria-hidden />}
       <aside className="sidebar">
         <div className="sb-brand" title={brand.name}>
           <span className="sb-brand-mark" aria-hidden>{brand.mark}</span>
@@ -143,6 +150,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
             <div className="sb-brand-name">{brand.name}</div>
             <div className="sb-brand-sub">{brand.sub}</div>
           </div>
+          <button className="sb-close" onClick={() => setMobileNavOpen(false)} aria-label="關閉選單">×</button>
         </div>
         <nav className="sb-nav">
           {NAV.filter((g) => !g.roles || g.roles.includes(session.role))
@@ -155,7 +163,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
                 <button
                   key={it.key}
                   className={`sb-link${active === it.key ? " active" : ""}${!it.done ? " planned" : ""}`}
-                  onClick={() => it.done ? onNav(it.key) : toast.show(`「${it.label}」規劃於後續版本推出`)}
+                  onClick={() => it.done ? handleNav(it.key) : toast.show(`「${it.label}」規劃於後續版本推出`)}
                   aria-current={active === it.key ? "page" : undefined}
                 >
                   <it.ic />
@@ -175,6 +183,11 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
       <div className="main">
         <div className="topbar">
           <div className="topbar-inner">
+          <button className="mobile-menu-btn" onClick={() => setMobileNavOpen(true)} aria-label="選單">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
           <div className="crumb">
             {crumb && <><b>{crumb}</b><span className="sep" aria-hidden>›</span></>}
             <span className="cur">{pageTitle ?? crumb ?? "總覽"}</span>

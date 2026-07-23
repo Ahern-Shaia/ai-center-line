@@ -325,6 +325,14 @@ button { cursor:pointer; }
 .login-card form { display:flex; flex-direction:column; gap:14px; margin:0; }
 
 /* ==================== RESPONSIVE ==================== */
+
+/* mobile menu button · 桌機隱 · 手機顯 */
+.mobile-menu-btn { display:none; background:transparent; border:1px solid var(--line); border-radius:var(--r); padding:6px; color:var(--ink-2); cursor:pointer; align-items:center; justify-content:center; }
+.mobile-menu-btn:hover { background:var(--well); }
+.sb-close { display:none; background:transparent; border:none; color:var(--ink-3); font-size:22px; cursor:pointer; padding:0 6px; margin-left:auto; }
+.mobile-nav-backdrop { display:none; position:fixed; inset:0; background:rgba(17,24,39,.45); z-index:90; }
+
+/* Tablet · 960-1024px */
 @media (max-width:960px) {
   :root { --sidebar-w:64px; }
   .sb-brand { justify-content:center; padding:0; }
@@ -338,6 +346,103 @@ button { cursor:pointer; }
   .so-count { flex-basis:100%; }
   .so-detail { padding-left:20px; }
   .user-meta { display:none; }
+}
+
+/* Mobile · <760px · sidebar 全隱 · hamburger drawer */
+@media (max-width:760px) {
+  /* App · sidebar 從 grid 拿掉 · main 全寬 */
+  .app { grid-template-columns:1fr; }
+  .sidebar {
+    position:fixed; top:0; left:0; bottom:0; z-index:100;
+    width:260px; max-width:80vw;
+    transform:translateX(-100%);
+    transition:transform .22s var(--ease);
+    border-right:1px solid var(--line);
+    box-shadow:2px 0 12px rgba(0,0,0,.08);
+  }
+  .app.mobile-nav-open .sidebar { transform:translateX(0); }
+  .app.mobile-nav-open .mobile-nav-backdrop { display:block; }
+
+  /* Mobile 內 sidebar 展開時恢復完整樣式（不受 tablet media query 壓縮）*/
+  .sidebar .sb-brand { justify-content:flex-start; padding:0 14px; }
+  .sidebar .sb-brand > *:not(.sb-close) { display:flex; }
+  .sidebar .sb-brand .sb-brand-text { display:block; }
+  .sidebar .sb-link span:not(.ic) { display:inline; }
+  .sidebar .sb-group { text-align:left; padding:8px 14px 4px; font-size:11px; }
+  .sidebar .sb-foot { display:block; }
+  .sidebar .sb-close { display:inline-block; }
+
+  /* Topbar */
+  .mobile-menu-btn { display:inline-flex; }
+  .topbar-inner { padding:0 12px; gap:8px; }
+  .crumb { font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .crumb b { display:none; } /* 手機隱 breadcrumb 上層 */
+  .crumb .sep { display:none; }
+  .as-of { display:none; } /* 手機隱 as-of 節省空間 */
+  .user-btn .user-meta { display:none; }
+  .user-btn { padding:4px; }
+
+  /* Pane · 內距減 · 字體適應 */
+  .pane { padding:14px 12px 60px; }
+  .pane-hdr { flex-direction:column; align-items:flex-start; gap:8px; margin-bottom:14px; }
+  .pane-hdr h1 { font-size:17px; line-height:1.4; word-break:normal; }
+  .pane-hdr .actions { width:100%; }
+
+  /* Table 手機 · 允 horizontal scroll */
+  .dm-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .dm-table { min-width:600px; font-size:12.5px; }
+
+  /* Warroom tabs 手機縮 */
+  .wr-tabs { overflow-x:auto; }
+  .wr-tab { padding:8px 12px; font-size:13px; white-space:nowrap; }
+
+  /* Kanban 手機 · 單欄 (改 flex) */
+  .kanban { grid-template-columns:1fr !important; }
+
+  /* Daily log 手機 · 單欄 */
+  .dl-day-cards { grid-template-columns:1fr !important; }
+
+  /* MyDailyReport 手機 */
+  .pdr-items { gap:10px; }
+  .pdr-item { padding:12px 14px; }
+  .pdr-item-hdr { flex-wrap:wrap; gap:6px; }
+  .pdr-item-title { flex:1 1 100%; margin-top:2px; }
+  .pdr-item-actions { padding-left:0; }
+  .pdr-item-detail, .pdr-item-followup { padding-left:0; }
+  .pdr-foot { flex-direction:column; align-items:stretch; gap:10px; }
+  .pdr-foot > div:last-child { display:flex; gap:8px; }
+  .pdr-foot > div:last-child > .btn { flex:1; }
+
+  /* Personal edit view */
+  .pdr-item-row { flex-direction:column; }
+  .pdr-time { flex:1 1 100%; }
+
+  /* Drawer · 手機半屏 */
+  .drawer-overlay + .drawer { width:100vw !important; max-width:none !important; }
+
+  /* Login · 手機縮 padding */
+  .login-wrap { padding:16px; }
+  .login-card { padding:20px 18px; }
+
+  /* Rolesmgt · 手機轉單欄 */
+  .rm-layout { grid-template-columns:1fr !important; }
+  .rm-sidebar { max-height:200px; overflow-y:auto; }
+
+  /* 各種 dialog / confirmDialog · 手機全屏 */
+  .cd-dialog { padding:16px 18px; }
+
+  /* Buttons 保守 min-height for touch */
+  .btn { min-height:36px; }
+
+  /* Form 元素 · 觸控友善 */
+  .field input, .tf, input[type=text], input[type=email], input[type=password], input[type=date], textarea, select { min-height:38px; font-size:14px; }
+}
+
+/* Very small mobile · <400px */
+@media (max-width:400px) {
+  .pane { padding:10px 10px 50px; }
+  .pane-hdr h1 { font-size:16px; }
+  .wr-tab { padding:8px 10px; font-size:12px; }
 }
 
 /* ==================== DRAWER（React Aria Modal + Dialog） ==================== */
