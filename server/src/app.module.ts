@@ -6,6 +6,7 @@ import { HealthController } from "./health/health.controller.js";
 import { HealthService } from "./health/health.service.js";
 import { AuthController } from "./auth/auth.controller.js";
 import { AuthService } from "./auth/auth.service.js";
+import { LineOauthService } from "./auth/line-oauth.service.js";
 import { PasswordPolicyService } from "./auth/password-policy.service.js";
 import { PasswordHistoryRepository } from "./auth/password-history.repository.js";
 import { JwtAuthGuard } from "./auth/jwt-auth.guard.js";
@@ -57,6 +58,7 @@ import { PersonalDailyReportModule } from "./personal-daily-report/personal-dail
   providers: [
     HealthService,
     AuthService,
+    LineOauthService,
     PasswordPolicyService,
     PasswordHistoryRepository,
     SignoffService,

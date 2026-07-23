@@ -26,9 +26,11 @@
 | **`consultant`** | aiproot 派給客戶的顧問 | 跨全部租戶 | 只讀 · 給諮詢建議 · 不動系統 |
 | **`tenant_admin`** | 客戶公司總經理室 / 管理層 | 該租戶內 | 管自己公司部門 + 員工 + 看戰情室 · 建部門主管帳號 |
 | **`group_owner`** | 客戶公司部門主管 | 該部門內 | 看自己部門任務 · 簽核 · 看部門日報 |
+| **`employee`** | 一般員工（v2 加）| 自己 | 只看/送自己的日報 · 用 LIFF 或 web LINE 登入 |
 
 **特殊路徑**：
-- 員工（Alice）自服務綁定：透過 LIFF 綁定自動建 `users` 記錄 · role=`group_owner`（v1 沒 employee 專用 role · 用 group_owner 代）· 這是**自服務路徑** · 不算「建帳號」
+- 員工（Alice）自服務綁定：透過 LIFF 綁定自動建 `users` 記錄 · role=`employee`（v2 · 舊 group_owner 已透過 migration 0020 遷移）
+- 員工 web 登入：用「以 LINE 登入」（LINE OAuth · 對照 user_line_binding · 免密碼）
 
 ---
 
@@ -298,3 +300,4 @@ const ASSIGNABLE_ROLES = session.role === "aiproot_admin"
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
 | 2026-07-23 | v1.0 | 首版 · 逆轉舊 rule「aiproot 統包所有帳號建立」· 開放 tenant_admin 建 group_owner + 管自 tenant depts | ahern + Claude · 對話裁定 |
+| 2026-07-23 | **v1.1** | **加 employee role**（migration 0020）· 修 v1 tech debt (LIFF 綁定用 group_owner 卻登不了 web 的邏輯洞)<br>· employee 只能看/送自己日報 · sidebar 只顯「我的日報」<br>· LIFF 綁定 default role 改 employee<br>· 加 LINE Login OAuth 到 web 登入頁 · 員工可用 LINE 一鍵登入 web（免密碼）<br>· 舊 @line.local email users 自動遷 group_owner → employee | ahern + Claude · 對話裁定 |

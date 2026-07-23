@@ -177,4 +177,5 @@ export const BUILTIN_ROLE_PERMISSIONS: Record<Role, string[]> = {
   consultant: [],
   tenant_admin: [],
   group_owner: [],
+  employee: [],
 };

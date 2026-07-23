@@ -1,13 +1,17 @@
-import { BadRequestException, Body, Controller, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Post } from "@nestjs/common";
 import { AuthService, type LoginResult } from "./auth.service.js";
 import { CurrentUser } from "./current-user.decorator.js";
 import type { JwtUser } from "./jwt-user.js";
+import { LineOauthService } from "./line-oauth.service.js";
 import { Public } from "./public.decorator.js";
 import { ChangePasswordSchema } from "./dto/change-password.dto.js";
 
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly lineOauth: LineOauthService,
+  ) {}
 
   @Public()
   @Post("login")
@@ -30,5 +34,20 @@ export class AuthController {
     }
     await this.auth.changePassword(user.user_id, parsed.data.oldPassword, parsed.data.newPassword);
     return { status: "ok" };
+  }
+
+  // LINE Login OAuth · 前端拿 auth URL
+  @Public()
+  @Get("line/oauth-url")
+  async lineOauthUrl() {
+    return this.lineOauth.buildAuthUrl();
+  }
+
+  // LINE Login OAuth · callback · 前端把 code 傳來 · backend 換 JWT
+  @Public()
+  @Post("line/callback")
+  async lineOauthCallback(@Body() body: { code?: string }) {
+    if (!body?.code) throw new BadRequestException("缺 code");
+    return this.lineOauth.handleCallback(body.code);
   }
 }

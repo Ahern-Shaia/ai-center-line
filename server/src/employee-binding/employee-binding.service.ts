@@ -90,7 +90,7 @@ export class EmployeeBindingService {
    *
    * 系統：
    *   - 查 primaryGroupId → department_id
-   *   - INSERT users (tenant_id 從 bot 查 · display_name · department_id · role='group_owner')
+   *   - INSERT users (tenant_id 從 bot 查 · display_name · department_id · role='employee')
    *   - INSERT user_line_binding · method='liff_self_service'
    */
   async completeLiffBinding(args: {
@@ -137,7 +137,8 @@ export class EmployeeBindingService {
         departmentName = g?.department_name ?? null;
       }
       const tenantId = bot.tenant_id;
-      // INSERT users · role='group_owner' 對齊現有 role 設計（v1 不加 employee role）
+      // INSERT users · role='employee' (v2 · 對照 migration 0020 加的 role)
+      // employee role 只有 my-daily-report + 基本 view perm · 不能簽核 / 不能管理
       const userRes = await tx.execute<{ user_id: string }>(sql`
         INSERT INTO users
           (tenant_id, email, display_name, department_id, role, must_change_password)
@@ -146,7 +147,7 @@ export class EmployeeBindingService {
            ${args.lineUserId + "@line.local"},
            ${args.displayName},
            ${departmentId}::uuid,
-           'group_owner',
+           'employee',
            false)
         RETURNING user_id::text
       `);

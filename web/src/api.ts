@@ -46,7 +46,7 @@ export interface ConfirmResult {
   skipped: string[];
 }
 
-export type Role = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owner";
+export type Role = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owner" | "employee";
 export interface Session {
   email: string;
   role: Role;
@@ -204,6 +204,23 @@ export async function login(email: string, password: string): Promise<{ mustChan
   if (d.password_expires_at) localStorage.setItem(EXPIRES_AT_KEY, d.password_expires_at);
   else localStorage.removeItem(EXPIRES_AT_KEY);
   return { mustChange: d.must_change_password };
+}
+
+// LINE Login OAuth · 走 LIFF 的 same LINE Login channel
+export async function getLineOauthUrl(): Promise<{ url: string; state: string }> {
+  return req<{ url: string; state: string }>("/auth/line/oauth-url");
+}
+
+export async function completeLineOauth(code: string): Promise<void> {
+  const d = await req<{ access_token: string; role: string; tenant_id: string | null }>("/auth/line/callback", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+  setToken(d.access_token);
+  // LINE 登入不走 email/密碼 · 記錄 email 用預設佔位
+  localStorage.setItem(EMAIL_KEY, `line-user@${d.tenant_id ?? "aiproot"}`);
+  localStorage.removeItem(MUST_CHANGE_KEY);
+  localStorage.removeItem(EXPIRES_AT_KEY);
 }
 export const getWarroom = () => req<Warroom>("/warroom");
 export const getPending = () => req<{ pending: PendingTicket[] }>("/signoff");

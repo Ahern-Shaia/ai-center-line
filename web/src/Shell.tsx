@@ -24,9 +24,11 @@ const NAV: Array<{
   {
     group: "戰情室",
     items: [
-      { key: "warroom", label: "總覽儀表", ic: iconGauge, done: true },
-      { key: "signoff", label: "每日簽核", ic: iconCheck, done: true },
+      // 我的日報 · 全角色可見 · 是 employee 唯一功能 · 主管也自己填
       { key: "my-daily-report", label: "我的日報", ic: iconBook, done: true },
+      // 總覽儀表 / 每日簽核 · 主管級才顯 (employee 只看得到我的日報)
+      { key: "warroom", label: "總覽儀表", ic: iconGauge, done: true, perm: "warroom-tasks:view" },
+      { key: "signoff", label: "每日簽核", ic: iconCheck, done: true, perm: "signoff:action" },
     ],
   },
   {
@@ -82,6 +84,7 @@ const ROLE_LABEL: Record<string, string> = {
   consultant: "顧問",
   tenant_admin: "總經理室",
   group_owner: "群組負責人",
+  employee: "一般員工",
 };
 
 // TODO(iam-followup): JWT 應內含 tenant_name · 目前 hard-code 補

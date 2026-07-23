@@ -1,11 +1,41 @@
-import { useState } from "react";
-import { ApiError, login } from "./api";
+import { useEffect, useState } from "react";
+import { ApiError, login, getLineOauthUrl, completeLineOauth } from "./api";
+
+// LINE OAuth state · 存 sessionStorage · callback 回來 verify
+const LINE_STATE_KEY = "line-oauth-state";
 
 export default function Login({ onLogin }: { onLogin: () => void }) {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [lineBusy, setLineBusy] = useState(false);
+
+  // 處理 LINE OAuth callback · URL 帶 ?code=&state=
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const state = params.get("state");
+    if (!code) return;
+    const savedState = sessionStorage.getItem(LINE_STATE_KEY);
+    if (!savedState || savedState !== state) {
+      setErr("LINE 登入 state 不符 · 請重試（可能是 tab 過期）");
+      window.history.replaceState({}, "", window.location.pathname);
+      return;
+    }
+    sessionStorage.removeItem(LINE_STATE_KEY);
+    setLineBusy(true);
+    completeLineOauth(code)
+      .then(() => {
+        window.history.replaceState({}, "", window.location.pathname);
+        onLogin();
+      })
+      .catch((e) => {
+        setErr(e instanceof ApiError ? e.message : "LINE 登入失敗");
+        window.history.replaceState({}, "", window.location.pathname);
+      })
+      .finally(() => setLineBusy(false));
+  }, [onLogin]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,34 +48,75 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) setErr("帳號或密碼錯誤");
       else if (e instanceof ApiError) setErr(e.message);
-      else setErr("登入失敗，請稍後再試");
+      else setErr("登入失敗 · 請稍後再試");
     } finally {
       setBusy(false);
     }
   }
 
+  async function loginWithLine() {
+    if (lineBusy) return;
+    setLineBusy(true);
+    setErr("");
+    try {
+      const { url, state } = await getLineOauthUrl();
+      sessionStorage.setItem(LINE_STATE_KEY, state);
+      window.location.href = url;
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : "無法產生 LINE 登入連結 · 請確認 aiproot 端已配置");
+      setLineBusy(false);
+    }
+  }
+
   return (
     <div className="login-wrap">
-      <form className="login-card" onSubmit={submit}>
+      <div className="login-card">
         <div className="login-brand">
           <span className="mark">AI</span>
           <span className="name">aiproot 戰情室</span>
         </div>
         <div>
           <div className="login-h1">登入</div>
-          <div className="login-sub">請使用您的公司帳號登入</div>
+          <div className="login-sub">主管級請用公司帳號 · 員工可直接用 LINE 登入</div>
         </div>
-        <div className="field">
-          <label htmlFor="email">電子郵件</label>
-          <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required placeholder="you@company.com" />
+
+        <form onSubmit={submit}>
+          <div className="field">
+            <label htmlFor="email">電子郵件</label>
+            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" placeholder="you@company.com" />
+          </div>
+          <div className="field">
+            <label htmlFor="pw">密碼</label>
+            <input id="pw" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" />
+          </div>
+          {err && <div className="login-err" role="alert">{err}</div>}
+          <button type="submit" className="btn btn-primary" disabled={busy || lineBusy || !email || !pw}>
+            {busy ? "登入中…" : "登入"}
+          </button>
+        </form>
+
+        <div className="login-divider"><span>或</span></div>
+
+        <button
+          type="button"
+          className="btn line-login-btn"
+          onClick={() => void loginWithLine()}
+          disabled={busy || lineBusy}
+          aria-label="以 LINE 登入"
+        >
+          <span className="line-login-icon" aria-hidden>
+            <svg width="20" height="20" viewBox="0 0 100 100" fill="currentColor">
+              <path d="M50 6C25.7 6 6 22 6 41.7c0 17.7 15.6 32.5 36.7 35.3 1.4.3 3.4.9 3.9 2.2.4 1.1.3 2.9.1 4.1l-.6 3.8c-.2 1.1-.9 4.4 3.9 2.4 4.8-2 25.9-15.2 35.3-26.1C91.7 55.9 94 49 94 41.7 94 22 74.3 6 50 6zm-16.3 47H26c-.5 0-1-.4-1-1V37c0-.5.4-1 1-1h2c.5 0 1 .4 1 1v13h4.7c.5 0 1 .4 1 1v2c0 .5-.5 1-1 1zm7-1c0 .5-.4 1-1 1h-2c-.5 0-1-.4-1-1V37c0-.5.4-1 1-1h2c.5 0 1 .4 1 1v15zm18 0c0 .5-.4 1-1 1h-2c-.1 0-.2 0-.3-.1l-6.9-9.3v9.4c0 .5-.4 1-1 1h-2c-.5 0-1-.4-1-1V37c0-.5.4-1 1-1h2c.1 0 .2 0 .3.1l6.9 9.3V37c0-.5.4-1 1-1h2c.5 0 1 .4 1 1v15zm12-13H65v3h5.7c.5 0 1 .4 1 1v2c0 .5-.4 1-1 1H65v3h5.7c.5 0 1 .4 1 1v2c0 .5-.4 1-1 1H62c-.5 0-1-.4-1-1V37c0-.5.4-1 1-1h8.7c.5 0 1 .4 1 1v2c0 .5-.5 1-1 1z"/>
+            </svg>
+          </span>
+          <span>{lineBusy ? "處理中…" : "以 LINE 登入（員工用）"}</span>
+        </button>
+
+        <div className="login-hint">
+          <b>員工</b>：先加公司 LINE Bot 好友完成綁定 · 才能用 LINE 登入<br />
+          <b>主管</b>：兩者皆可 · 建議用公司帳號密碼（有 2FA 保護）
         </div>
-        <div className="field">
-          <label htmlFor="pw">密碼</label>
-          <input id="pw" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" required />
-        </div>
-        {err && <div className="login-err" role="alert">{err}</div>}
-        <button className="btn btn-primary" disabled={busy}>{busy ? "登入中…" : "登入"}</button>
-      </form>
+      </div>
     </div>
   );
 }
