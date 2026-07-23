@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   listDepartments,
   listTenantUsers,
   createTenantUser,
   updateTenantUser,
   deleteTenantUser,
+  getSession,
   ApiError,
   type DepartmentDto,
   type TenantUserDto,
@@ -20,7 +21,13 @@ const ROLE_LABEL: Record<UserRole, string> = {
   group_owner: "群組負責人",
 };
 
-const ASSIGNABLE_ROLES: UserRole[] = ["tenant_admin", "group_owner"];
+// caller role → 可指派的 role 清單 · 對應 docs/roles-permissions-matrix.md §2
+// aiproot_admin 全能 · tenant_admin 限 group_owner
+function assignableRolesFor(callerRole: string | undefined): UserRole[] {
+  if (callerRole === "aiproot_admin") return ["tenant_admin", "group_owner"];
+  if (callerRole === "tenant_admin") return ["group_owner"];
+  return [];
+}
 
 export function Members({
   tenantId, canEdit, onChanged,
@@ -160,11 +167,13 @@ function MemberDrawer({
   onSaved: () => void;
 }) {
   const toast = useToast();
+  const session = getSession();
+  const assignable = useMemo(() => assignableRolesFor(session?.role), [session?.role]);
   const isEdit = user != null;
   const [saving, setSaving] = useState(false);
   const [email, setEmail] = useState(user?.email ?? "");
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
-  const [role, setRole] = useState<UserRole>(user?.role ?? "group_owner");
+  const [role, setRole] = useState<UserRole>(user?.role ?? assignable[0] ?? "group_owner");
   const [departmentId, setDepartmentId] = useState(user?.departmentId ?? "");
   const [password, setPassword] = useState("");
   const [rotatePassword, setRotatePassword] = useState(false);
@@ -221,9 +230,13 @@ function MemberDrawer({
         <div className="field">
           <label>角色 *</label>
           <select value={role} onChange={(e) => setRole(e.target.value as UserRole)} disabled={saving}>
-            {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+            {assignable.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
           </select>
-          <div className="llm-hint">此頁只可新增 tenant_admin / group_owner · aiproot 級由平台方另建</div>
+          <div className="llm-hint">
+            {session?.role === "tenant_admin"
+              ? "只可新增部門主管 (group_owner) · 總經理室級請聯繫 aiproot"
+              : "此頁只可新增 tenant_admin / group_owner · aiproot 級由平台方另建"}
+          </div>
         </div>
 
         <div className="field">

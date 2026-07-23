@@ -762,6 +762,38 @@ export const listPermissions = () =>
 export const listRoles = () =>
   req<{ roles: RoleDto[] }>("/roles");
 
+// Phase 2 · Custom role management (aiproot only)
+export const createRole = (args: {
+  roleKey: string;
+  roleName: string;
+  tenantId?: string | null;
+  permissionIds: string[];
+}) => req<{ roleId: string }>("/roles", {
+  method: "POST",
+  body: JSON.stringify(args),
+});
+
+export const updateRolePermissions = (roleId: string, permissionIds: string[]) =>
+  req<{ success: boolean }>(`/roles/${roleId}/permissions`, {
+    method: "PATCH",
+    body: JSON.stringify({ permissionIds }),
+  });
+
+export const renameRole = (roleId: string, roleName: string) =>
+  req<{ success: boolean }>(`/roles/${roleId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ roleName }),
+  });
+
+export const deleteRole = (roleId: string) =>
+  req<{ success: boolean }>(`/roles/${roleId}`, { method: "DELETE" });
+
+export const assignUserRole = (userId: string, roleId: string) =>
+  req<{ success: boolean }>(`/users/${userId}/assign-role`, {
+    method: "POST",
+    body: JSON.stringify({ roleId }),
+  });
+
 // === AI Cost Management ===
 
 export interface CostSummaryDto {

@@ -12,19 +12,28 @@ import {
   getSession,
   ApiError,
 } from "../../api";
+import { usePermissions } from "../../permission/PermissionContext";
 import { useToast } from "../../Toast";
 import { Departments } from "./Departments";
 import { Members } from "./Members";
 
 type Tab = "dept" | "member";
 
-// 部門 / 成員管理 · aiproot 統包客戶方組織
-// 頂部 tenant selector (aiproot 選看哪家客戶) · 底下 tab (部門 / 成員) 各自 CRUD
+// 部門 / 成員管理 · v2 分權 · tenant_admin 可管自 tenant
+// 對照 docs/roles-permissions-matrix.md §3.5
 export default function DepartmentsMembers() {
   const session = getSession();
   const toast = useToast();
-  const canView = session?.role === "aiproot_admin" || session?.role === "consultant";
-  const canEdit = session?.role === "aiproot_admin";
+  const perms = usePermissions();
+  // View gate · 任一 view perm
+  const canView = perms.hasAny("departments:view", "users:view");
+  // Edit gate · 任一 manage perm
+  const canEdit = perms.hasAny(
+    "departments:manage-tenant", "departments:manage",
+    "users:create-group-owner", "users:manage",
+  );
+  // Tenant selector · 有 tenants:view 才能選 (aiproot / consultant)
+  const canSwitchTenant = perms.has("tenants:view");
 
   const [tenants, setTenants] = useState<Array<{ tenantId: string; tenantName: string }>>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
@@ -34,6 +43,13 @@ export default function DepartmentsMembers() {
 
   const loadTenants = useCallback(async () => {
     if (!canView) { setLoading(false); return; }
+    // tenant_admin 自動用 own tenant · 不呼跨 tenant list API
+    if (!canSwitchTenant && session?.tenantId) {
+      setTenants([{ tenantId: session.tenantId, tenantName: "本租戶" }]);
+      setSelectedTenantId(session.tenantId);
+      setLoading(false);
+      return;
+    }
     try {
       const refs = await getLineRefs();
       setTenants(refs.tenants);
@@ -45,7 +61,7 @@ export default function DepartmentsMembers() {
     } finally {
       setLoading(false);
     }
-  }, [canView, selectedTenantId, toast]);
+  }, [canView, canSwitchTenant, selectedTenantId, session?.tenantId, toast]);
 
   useEffect(() => { loadTenants(); }, [loadTenants]);
 
@@ -60,7 +76,7 @@ export default function DepartmentsMembers() {
       <div className="pane">
         <div className="pane-hdr"><div><h1>部門 / 成員</h1></div></div>
         <div className="dm-empty">
-          <div>此頁僅限 aiproot 平台方管理</div>
+          <div>你的角色無權管理部門 / 成員 · 請聯繫管理員</div>
         </div>
       </div>
     );
@@ -71,11 +87,16 @@ export default function DepartmentsMembers() {
       <div className="pane-hdr">
         <div>
           <h1>部門 / 成員</h1>
-          <div className="sub">aiproot 側維護客戶方組織 · 部門建立後可在「LINE 機器人管理」綁定群組</div>
+          <div className="sub">
+            {canSwitchTenant
+              ? "aiproot 側維護所有客戶方組織 · 部門建立後可在「LINE 機器人管理」綁定群組"
+              : "管理本公司部門與部門主管 · 部門建立後 aiproot 或本頁可分派 LINE 群組"}
+          </div>
         </div>
       </div>
 
-      {/* Tenant selector */}
+      {/* Tenant selector (只 aiproot / consultant 顯示) */}
+      {canSwitchTenant && (
       <div className="dm-tenant-picker">
         <label className="dm-tenant-lbl">目前操作租戶</label>
         <Select
@@ -107,6 +128,7 @@ export default function DepartmentsMembers() {
           </Popover>
         </Select>
       </div>
+      )}
 
       {/* Tabs */}
       <div className="dm-tabs">

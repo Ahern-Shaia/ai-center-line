@@ -3,15 +3,23 @@ import { Button as AriaButton, Header as AriaHeader, Menu, MenuItem, MenuTrigger
 import { useState } from "react";
 import type { Role, Session } from "./api";
 import { useToast } from "./Toast";
+import { usePermissions } from "./permission/PermissionContext";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
 
-// 對照 docs/台灣福祉_系統設計文件_開發用.md §1-C C3 tenant_admin 8 module 全景。
-// 全部走 mock 資料頁面（demo 錄影用）；正式版逐步接後端。
-// 通訊接頭層等平台方項目透過 roles 過濾 · 不歸客戶 tenant_admin 管
+// 對照 docs/roles-permissions-matrix.md · 每個 item 綁 permission
+// - 沒設 perm = 全角色可見 (基本頁如戰情室 · RLS 已 scope 內容)
+// - 設 perm = 依 usePermissions 過濾
 const NAV: Array<{
   group: string;
-  roles?: Role[];              // 未設 = 全角色可見
-  items: Array<{ key: string; label: string; ic: () => ReactNode; done: boolean }>;
+  roles?: Role[];              // 舊 · 未來全走 items[].perm
+  items: Array<{
+    key: string;
+    label: string;
+    ic: () => ReactNode;
+    done: boolean;
+    perm?: string;              // 有這 perm 才顯示 (可選 · 沒設 = 全顯)
+    permAny?: string[];         // 任一 perm 有就顯
+  }>;
 }> = [
   {
     group: "戰情室",
@@ -49,9 +57,10 @@ const NAV: Array<{
   {
     group: "設定",
     items: [
-      { key: "depts", label: "部門/成員", ic: iconTeam, done: true },
-      { key: "config", label: "租戶設定", ic: iconCog, done: true },
-      { key: "audit", label: "稽核記錄", ic: iconShield, done: true },
+      // v2 · 部門/成員 開放給 tenant_admin (自 tenant) + aiproot
+      { key: "depts", label: "部門/成員", ic: iconTeam, done: true, permAny: ["departments:view", "users:view"] },
+      { key: "config", label: "租戶設定", ic: iconCog, done: true, perm: "tenant-config:view" },
+      { key: "audit", label: "稽核記錄", ic: iconShield, done: true, perm: "audit:view" },
     ],
   },
   {
@@ -63,6 +72,7 @@ const NAV: Array<{
       { key: "batch-history", label: "對話分析歷程", ic: iconChat, done: true },
       { key: "binding-audit", label: "LINE 綁定稽核", ic: iconTeam, done: true },
       { key: "category-mgmt", label: "分類管理", ic: iconBook, done: true },
+      { key: "roles-mgmt", label: "權限管理", ic: iconShield, done: true, perm: "roles:view" },
     ],
   },
 ];
@@ -113,6 +123,13 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
   const toast = useToast();
   const initials = session.email.slice(0, 2).toUpperCase();
   const [changePwOpen, setChangePwOpen] = useState(false);
+  const perms = usePermissions();
+  // 若 item 有 perm / permAny · 依 usePermissions 過濾 · 沒設就顯
+  const itemVisible = (it: { perm?: string; permAny?: string[] }) => {
+    if (it.perm) return perms.has(it.perm);
+    if (it.permAny) return perms.hasAny(...it.permAny);
+    return true;
+  };
 
   return (
     <div className="app">
@@ -125,7 +142,10 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
           </div>
         </div>
         <nav className="sb-nav">
-          {NAV.filter((g) => !g.roles || g.roles.includes(session.role)).map((g) => (
+          {NAV.filter((g) => !g.roles || g.roles.includes(session.role))
+            .map((g) => ({ ...g, items: g.items.filter(itemVisible) }))
+            .filter((g) => g.items.length > 0)
+            .map((g) => (
             <div key={g.group}>
               <div className="sb-group">{g.group}</div>
               {g.items.map((it) => (

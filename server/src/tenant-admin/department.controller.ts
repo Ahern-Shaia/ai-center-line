@@ -1,18 +1,21 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
-import { Roles } from "../auth/roles.decorator.js";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { DepartmentService } from "./department.service.js";
 import { DepartmentCreateSchema, DepartmentDeleteSchema, DepartmentUpdateSchema } from "./dto/department.dto.js";
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// tenant-admin console · aiproot 統包 · 客戶方部門 CRUD
+// 部門 CRUD · v2 分權：
+//   · list · departments:view (含 tenant_admin)
+//   · create/update/delete · departments:manage-tenant (tenant_admin) OR departments:manage (aiproot)
+// 對照 docs/roles-permissions-matrix.md §3.5
 @Controller("tenant-admin/departments")
 export class DepartmentController {
   constructor(private readonly svc: DepartmentService) {}
 
-  // 列表 · aiproot 需傳 tenantId 指定看哪家
+  // 列表 · aiproot / tenant_admin 皆可 (tenantId 過濾)
   @Get()
-  @Roles("aiproot_admin", "consultant")
+  @RequirePermission("departments:view")
   async list(@Query("tenantId") tenantId: string) {
     if (!tenantId || !uuidRegex.test(tenantId)) {
       throw new BadRequestException({ status: "tenant_id_required", message: "需傳 tenantId" });
@@ -22,7 +25,7 @@ export class DepartmentController {
   }
 
   @Post()
-  @Roles("aiproot_admin")
+  @RequirePermission("departments:manage-tenant", "departments:manage")
   async create(@Body() body: unknown) {
     const parsed = DepartmentCreateSchema.safeParse(body);
     if (!parsed.success) {
@@ -37,7 +40,7 @@ export class DepartmentController {
   }
 
   @Patch(":id")
-  @Roles("aiproot_admin")
+  @RequirePermission("departments:manage-tenant", "departments:manage")
   async update(@Param("id") id: string, @Body() body: unknown) {
     const parsed = DepartmentUpdateSchema.safeParse(body);
     if (!parsed.success) {
@@ -52,7 +55,7 @@ export class DepartmentController {
   }
 
   @Delete(":id")
-  @Roles("aiproot_admin")
+  @RequirePermission("departments:manage-tenant", "departments:manage")
   async delete(@Param("id") id: string, @Body() body: unknown) {
     const parsed = DepartmentDeleteSchema.safeParse(body);
     if (!parsed.success) {

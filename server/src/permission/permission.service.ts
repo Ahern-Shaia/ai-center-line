@@ -91,6 +91,84 @@ export class PermissionService {
       permissions: r.permission_ids,
     }));
   }
+
+  // ==================================================================
+  // Phase 2 · Custom role UI backend
+  // ==================================================================
+
+  async createCustomRole(args: {
+    roleKey: string;
+    roleName: string;
+    tenantId: string | null;
+    permissionIds: string[];
+  }): Promise<{ roleId: string }> {
+    const res = await db.transaction(async (tx) => {
+      const roleRes = await tx.execute<{ role_id: string }>(sql`
+        INSERT INTO roles (role_key, role_name, tenant_id, is_system)
+        VALUES (${args.roleKey}, ${args.roleName}, ${args.tenantId}, false)
+        RETURNING role_id
+      `);
+      const roleId = roleRes.rows[0].role_id;
+      if (args.permissionIds.length > 0) {
+        const values = args.permissionIds.map((pid) => sql`(${roleId}::uuid, ${pid})`);
+        await tx.execute(sql`
+          INSERT INTO role_permissions (role_id, permission_id)
+          VALUES ${sql.join(values, sql`, `)}
+          ON CONFLICT DO NOTHING
+        `);
+      }
+      return { roleId };
+    });
+    this.invalidateAll();
+    return res;
+  }
+
+  async updateRolePermissions(roleId: string, permissionIds: string[]): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`DELETE FROM role_permissions WHERE role_id = ${roleId}::uuid`);
+      if (permissionIds.length > 0) {
+        const values = permissionIds.map((pid) => sql`(${roleId}::uuid, ${pid})`);
+        await tx.execute(sql`
+          INSERT INTO role_permissions (role_id, permission_id)
+          VALUES ${sql.join(values, sql`, `)}
+        `);
+      }
+    });
+    this.invalidateAll();
+  }
+
+  async renameRole(roleId: string, newName: string): Promise<void> {
+    await db.execute(sql`
+      UPDATE roles SET role_name = ${newName}, updated_at = now()
+      WHERE role_id = ${roleId}::uuid AND is_system = false
+    `);
+  }
+
+  async deleteRole(roleId: string): Promise<void> {
+    const usage = await db.execute<{ count: string }>(sql`
+      SELECT count(*)::text AS count FROM users WHERE role_id = ${roleId}::uuid
+    `);
+    const n = parseInt(usage.rows[0].count, 10);
+    if (n > 0) {
+      throw new Error(`此 role 尚有 ${n} 個 user 使用 · 請先 reassign 才能刪除`);
+    }
+    const res = await db.execute(sql`
+      DELETE FROM roles WHERE role_id = ${roleId}::uuid AND is_system = false
+    `);
+    if ((res.rowCount ?? 0) === 0) {
+      throw new Error("此 role 不存在或為 system role (不可刪)");
+    }
+    this.invalidateAll();
+  }
+
+  async assignRoleToUser(userId: string, roleId: string): Promise<void> {
+    await db.execute(sql`
+      UPDATE users SET role_id = ${roleId}::uuid,
+                       role = (SELECT role_key FROM roles WHERE role_id = ${roleId}::uuid)
+      WHERE user_id = ${userId}::uuid
+    `);
+    this.invalidateUser(userId);
+  }
 }
 
 // Fallback role → permissions map · 未有 DB 前的預設 (backup for @Roles delegation)
