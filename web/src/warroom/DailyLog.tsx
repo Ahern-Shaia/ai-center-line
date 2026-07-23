@@ -116,6 +116,7 @@ export default function DailyLog() {
                 departmentName={u.departmentName}
                 batchDate={u.batchDate}
                 dailyReports={u.dailyReports}
+                records={u.records}
                 uploadId={u.uploadId}
               />
             ))}
@@ -127,13 +128,14 @@ export default function DailyLog() {
 }
 
 function GroupCard({
-  groupId, groupName, departmentName, batchDate, dailyReports, uploadId,
+  groupId, groupName, departmentName, batchDate, dailyReports, records, uploadId,
 }: {
   groupId: string;
   groupName: string | null;
   departmentName: string | null;
   batchDate: string;
   dailyReports: Array<Record<string, unknown>>;
+  records: Array<Record<string, unknown>>;
   uploadId: number;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -165,9 +167,7 @@ function GroupCard({
         <span className="dl-card-group">{groupName ?? groupId}</span>
         {departmentName && <span className="dl-card-dept">{departmentName}</span>}
       </div>
-      {dailyReports.length === 0 ? (
-        <div className="dl-card-empty">當日無工作日報</div>
-      ) : (
+      {dailyReports.length > 0 ? (
         <ul className="dl-report-list">
           {dailyReports.slice(0, 5).map((r, i) => (
             <li key={i} className="dl-report-item">
@@ -182,6 +182,26 @@ function GroupCard({
             </li>
           )}
         </ul>
+      ) : records.length > 0 ? (
+        <>
+          <div className="dl-records-hint">
+            此群無工廠報工格式訊息 · 但 AI 抽出 <b>{records.length}</b> 項分類記錄
+          </div>
+          <div className="dl-records">
+            {records.slice(0, 5).map((r, i) => (
+              <RecordItem key={i} r={r} />
+            ))}
+            {records.length > 5 && (
+              <div className="dl-report-more">
+                <a onClick={() => (window.location.hash = `#/convo-detail/${uploadId}`)}>
+                  + {records.length - 5} 筆 · 查完整對話 →
+                </a>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="dl-card-empty">當日無工作日報</div>
       )}
 
       <button className="dl-card-toggle" onClick={() => void toggleExpand()}>
@@ -221,6 +241,51 @@ function GroupCard({
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("zh-TW", { hour12: false, hour: "2-digit", minute: "2-digit" });
+}
+
+// AI 抽的分類記錄 (records) · daily_reports 空時 fallback view
+// 對應 schema · category / title / detail / status / person / machine_code / work_order
+function RecordItem({ r }: { r: Record<string, unknown> }) {
+  const category = (r.category as string) || "未分類";
+  const title = (r.title as string) || "";
+  const detail = (r.detail as string) || "";
+  const status = r.status as string | null;
+  const person = r.person as string | null;
+  const machineCode = r.machine_code as string | null;
+  const workOrder = r.work_order as string | null;
+
+  const fields: Array<[string, string]> = [];
+  if (person) fields.push(["對口", person]);
+  if (machineCode) fields.push(["機台", machineCode]);
+  if (workOrder) fields.push(["工單", workOrder]);
+  if (status) fields.push(["狀態", statusLabel(status)]);
+
+  return (
+    <div className="dl-record-item">
+      <div className="dl-record-cat">{category}</div>
+      <div className="dl-record-summary">
+        {title}
+        {detail && detail !== title && <span style={{ color: "var(--ink-2)" }}> · {detail}</span>}
+      </div>
+      {fields.length > 0 && (
+        <div className="dl-record-fields">
+          {fields.map(([k, v]) => (
+            <span key={k} className="dl-record-field"><b>{k}</b>{v}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function statusLabel(status: string): string {
+  switch (status) {
+    case "open": return "待處理";
+    case "in_progress": return "處理中";
+    case "resolved": return "已結案";
+    case "info": return "訊息";
+    default: return status;
+  }
 }
 
 function DailyReportSummary({ r }: { r: Record<string, unknown> }) {

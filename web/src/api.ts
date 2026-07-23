@@ -263,6 +263,7 @@ export interface WarroomDailyReport {
   departmentName: string | null;
   batchDate: string;
   dailyReports: Array<Record<string, unknown>>;
+  records: Array<Record<string, unknown>>;    // AI 抽的分類記錄 · daily_reports 空 (業務對話) 時 fallback 顯
   status: string;
   uploadedAt: string;
 }

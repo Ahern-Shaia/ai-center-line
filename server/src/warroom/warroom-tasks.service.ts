@@ -36,6 +36,7 @@ export interface WarroomDaily {
   departmentName: string | null;
   batchDate: string;
   dailyReports: Array<Record<string, unknown>>;
+  records: Array<Record<string, unknown>>;    // AI 抽的分類記錄 · 業務對話 (無工廠報工) 情境當 fallback 顯示
   status: string;
   uploadedAt: string;
 }
@@ -154,12 +155,14 @@ export class WarroomTasksService {
       status: string;
       uploaded_at: string;
       daily_reports: unknown;
+      records: unknown;
       group_name: string | null;
       department_name: string | null;
     }>(sql`
       SELECT au.id, au.group_id, au.batch_date::text, au.status,
              au.uploaded_at::text,
              ar.daily_reports,
+             ar.records,
              lg.display_name AS group_name,
              d.department_name
       FROM analysis_upload au
@@ -186,6 +189,7 @@ export class WarroomTasksService {
         departmentName: r.department_name,
         batchDate: r.batch_date,
         dailyReports: (r.daily_reports as Array<Record<string, unknown>>) ?? [],
+        records: (r.records as Array<Record<string, unknown>>) ?? [],
         status: r.status,
         uploadedAt: r.uploaded_at,
       });

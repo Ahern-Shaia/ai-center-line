@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>今日日誌 · 群卡展開 view · UI Preview</title>
+<style>
+  :root {
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --line:#E5E7EB; --well:#F1F3F6; --surface:#FFFFFF; --surface-2:#F5F6F8;
+    --primary:#4F46E5; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5;
+    --warn:#D97706; --warn-tint:#FFFBEB; --warn-600:#D97706;
+    --sans: 'Noto Sans TC', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; background:#F1F3F6; font-family:var(--sans); font-size:14px; color:var(--ink); }
+  .page { padding:24px; max-width:1400px; margin:0 auto; }
+  h1.page-title { font-size:22px; margin:0 0 6px; }
+  .page-sub { color:var(--ink-3); margin:0 0 20px; font-size:13px; }
+  .note { background:var(--primary-tint); border-left:3px solid var(--primary); padding:11px 15px; border-radius:0 6px 6px 0; font-size:12.5px; color:#3730A3; margin-bottom:20px; }
+  .note b { color:#312E81; }
+
+  .dl-day { margin-bottom:20px; background:#fff; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
+  .dl-day-hdr { padding:10px 16px; background:var(--well); display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); }
+  .dl-day-date { font-size:13.5px; font-weight:600; }
+  .dl-day-count { font-size:11.5px; color:var(--ink-3); background:#fff; padding:2px 10px; border-radius:12px; border:1px solid var(--line); }
+  .dl-day-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:12px; padding:14px; }
+  .dl-card { background:#fff; border:1px solid var(--line); border-radius:4px; padding:12px 14px; }
+  .dl-card-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .dl-card-group { font-size:13px; font-weight:600; }
+  .dl-card-dept { font-size:11.5px; color:var(--ink-3); background:var(--surface-2); padding:2px 8px; border-radius:3px; }
+  .dl-card-empty { font-size:12px; color:var(--ink-3); font-style:italic; padding:6px 0; }
+
+  .dl-card-toggle { display:block; width:100%; margin-top:10px; padding:6px; background:transparent; border:1px dashed var(--line); border-radius:4px; color:var(--ink-2); font-size:11.5px; cursor:pointer; font-family:inherit; }
+  .dl-card-toggle:hover { border-color:var(--primary); color:var(--primary); }
+
+  .dl-raw { margin-top:8px; padding:10px 12px; background:var(--surface-2); border-radius:4px; max-height:320px; overflow-y:auto; }
+  .dl-raw-hdr { font-size:10.5px; color:var(--ink-3); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  .dl-raw-item { display:flex; flex-direction:column; gap:2px; padding:6px 0; font-size:12px; }
+  .dl-raw-item + .dl-raw-item { border-top:1px dashed var(--line); }
+  .dl-raw-meta { display:flex; gap:8px; align-items:baseline; font-size:11px; }
+  .dl-raw-time { font-family:var(--mono); color:var(--ink-3); flex-shrink:0; }
+  .dl-raw-who { color:var(--ink-2); font-weight:500; }
+  .dl-raw-text { color:var(--ink); white-space:pre-wrap; word-break:break-word; padding-left:0; font-size:12px; }
+
+  /* records fallback view · daily_reports 空但 records 有 */
+  .dl-records-hint { padding:8px 10px; background:var(--warn-tint); border:1px solid #F5D5A6; border-radius:4px; font-size:11.5px; color:#7A4E1B; margin-top:6px; }
+  .dl-records-hint b { color:#5F3D14; }
+  .dl-records { display:flex; flex-direction:column; margin-top:6px; }
+  .dl-record-item { padding:10px 0; font-size:12px; }
+  .dl-record-item + .dl-record-item { border-top:1px solid var(--line); }
+  .dl-record-cat { font-size:11px; color:var(--ink-3); font-weight:500; margin-bottom:3px; }
+  .dl-record-summary { color:var(--ink); line-height:1.55; font-size:12.5px; }
+  .dl-record-fields { display:flex; flex-wrap:wrap; gap:8px; margin-top:5px; font-size:11.5px; color:var(--ink-2); }
+  .dl-record-field b { color:var(--ink); font-weight:500; }
+  .dl-record-field b::after { content:"："; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1 class="page-title">「今日日誌」群卡展開 view · Preview</h1>
+  <p class="page-sub">對照 commit 7afe85d 已 ship · 加「Preview · 台灣福祉場景」records fallback view 建議</p>
+
+  <div class="note">
+    <b>診斷結果</b>（SQL 剛跑）· AI 有跑 · records 有值 · daily_reports 全 0<br>
+    · daily_reports 專抽工廠報工格式（線別/機台/工單/產出/不良/工時）· 對業務訊息回空正確<br>
+    · records 是 AI 抽的分類記錄 · 目前 UI 沒顯示<br>
+    · Mockup 展示：State A 已 ship 的「展開原始訊息」· State B 建議加的「records fallback」
+  </div>
+
+  <div class="dl-day">
+    <div class="dl-day-hdr">
+      <span class="dl-day-date">今日 · 7/23 週四</span>
+      <span class="dl-day-count">3 群</span>
+    </div>
+    <div class="dl-day-cards">
+
+      <!-- State A · 已 ship · 展開原始訊息 -->
+      <div class="dl-card" style="border:2px solid var(--primary);">
+        <div class="dl-card-hdr">
+          <span class="dl-card-group">技術工程部_技術開發組</span>
+          <span class="dl-card-dept">技術部</span>
+        </div>
+        <div class="dl-card-empty">當日無工作日報</div>
+
+        <button class="dl-card-toggle">收合原始訊息 ▲</button>
+        <div class="dl-raw">
+          <div class="dl-raw-hdr">bot 收到的訊息 · 14 則</div>
+          <div class="dl-raw-item">
+            <div class="dl-raw-meta">
+              <span class="dl-raw-time">09:12</span>
+              <span class="dl-raw-who">王小明</span>
+            </div>
+            <div class="dl-raw-text">早安 大家 · 今天要 review 上週的驗證結果</div>
+          </div>
+          <div class="dl-raw-item">
+            <div class="dl-raw-meta">
+              <span class="dl-raw-time">09:15</span>
+              <span class="dl-raw-who">李技師</span>
+            </div>
+            <div class="dl-raw-text">好 · 我 10 點會議室準備好</div>
+          </div>
+          <div class="dl-raw-item">
+            <div class="dl-raw-meta">
+              <span class="dl-raw-time">10:30</span>
+              <span class="dl-raw-who">王小明</span>
+            </div>
+            <div class="dl-raw-text">驗證結果 3 項需修 · 我已建 ticket · 週五前完成</div>
+          </div>
+          <div class="dl-raw-item">
+            <div class="dl-raw-meta">
+              <span class="dl-raw-time">14:22</span>
+              <span class="dl-raw-who">(未綁定成員)</span>
+            </div>
+            <div class="dl-raw-text">M-103 皮帶送到了 · 明天早上換</div>
+          </div>
+          <div class="dl-raw-item">
+            <div class="dl-raw-meta">
+              <span class="dl-raw-time">15:03</span>
+              <span class="dl-raw-who">李技師</span>
+            </div>
+            <div class="dl-raw-text">收到 · 我 8:00 到廠</div>
+          </div>
+          <div style="text-align:center; padding:6px 0 0; font-size:11px; color:var(--ink-3);">... 還有 9 則</div>
+        </div>
+      </div>
+
+      <!-- State B · 建議加 · records fallback view -->
+      <div class="dl-card" style="border:2px solid var(--warn);">
+        <div class="dl-card-hdr">
+          <span class="dl-card-group">福祉集團-業務二部(含售服)</span>
+          <span class="dl-card-dept">業務二部</span>
+        </div>
+        <div class="dl-card-empty">當日無工作日報</div>
+
+        <div class="dl-records-hint">
+          <b>提示</b> · 此群無工廠報工格式訊息 · 但 AI 抽出 <b>3 項</b>分類記錄
+        </div>
+        <div class="dl-records">
+          <div class="dl-record-item">
+            <div class="dl-record-cat">客戶事項</div>
+            <div class="dl-record-summary">A 客戶 Q3 交期討論 · 客戶要求提早 15 天</div>
+            <div class="dl-record-fields">
+              <span class="dl-record-field"><b>客戶</b>A</span>
+              <span class="dl-record-field"><b>交期</b>Q3</span>
+              <span class="dl-record-field"><b>優先</b>高</span>
+            </div>
+          </div>
+          <div class="dl-record-item">
+            <div class="dl-record-cat">內部溝通</div>
+            <div class="dl-record-summary">申請人資 2 名檢驗員 · 週五前回</div>
+            <div class="dl-record-fields">
+              <span class="dl-record-field"><b>對口</b>人資</span>
+              <span class="dl-record-field"><b>截止</b>週五</span>
+            </div>
+          </div>
+          <div class="dl-record-item">
+            <div class="dl-record-cat">品質問題</div>
+            <div class="dl-record-summary">昨天不良品已回工廠 · 明日補送</div>
+          </div>
+        </div>
+
+        <button class="dl-card-toggle">展開群內原始訊息 ▼</button>
+      </div>
+
+      <!-- 一般情境 · 有 daily_reports · 已 ship -->
+      <div class="dl-card">
+        <div class="dl-card-hdr">
+          <span class="dl-card-group">福祉—品保部</span>
+          <span class="dl-card-dept">品保部</span>
+        </div>
+        <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px;">
+          <li style="font-size:12px; padding:6px 8px; background:var(--surface-2); border-radius:3px;">
+            <div style="font-weight:600; font-size:12.5px;">王小明</div>
+            <div style="color:var(--ink-2);">線別 A · 機台 M-102 · 工單 WO-1123 · 產出 320 · 不良 4 · 工時 8h</div>
+          </li>
+        </ul>
+        <button class="dl-card-toggle">展開群內原始訊息 ▼</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:24px; border-left-color:var(--warn); background:var(--warn-tint); color:#7A4E1B;">
+    <b>Preview 對照</b><br>
+    · <b>State A</b>（藍框 · 已 ship）· commit 7afe85d 落實 · 每張群卡展開看 bot 收到的原始訊息<br>
+    · <b>State B</b>（橘框 · 建議加）· 若 daily_reports 空但 records 有值 · fallback 顯 records · 對業務場景（台灣福祉）最有價值<br>
+    · 一般情境 · 有 daily_reports 直接顯（不變）
+  </div>
+</div>
+</body>
+</html>
