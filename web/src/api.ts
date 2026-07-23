@@ -132,6 +132,11 @@ function friendlyStatusMessage(status: number): string {
 // 若 server 特意寫了中文訊息（非 Nest 預設英文），優先使用；否則走 mapping。
 const GENERIC_SERVER_MSG = /^(internal server error|bad request|not found|forbidden|unauthorized|too many requests|unprocessable entity|conflict|payload too large)$/i;
 
+// 登入流程本身的端點：這裡回 401 = 這次登入嘗試失敗（帳密錯 / LINE 未綁定 /
+// LINE 授權失敗），不是「既有 session 過期」。不可清 token、也不可用「工作階段已過期」
+// 蓋掉 server 的真實原因，否則使用者（尤其 LINE 登入）會看到誤導訊息。
+const PRE_AUTH_PATHS = new Set(["/auth/login", "/auth/line/callback", "/auth/line/oauth-url"]);
+
 // API base URL：
 // - dev（本機）：不設 VITE_API_BASE_URL → 空字串 → `/api${path}` 走 Vite proxy 到 localhost:3000
 // - prod（Render）：設 VITE_API_BASE_URL=https://ai-center-line.onrender.com → 前端直打 backend
@@ -159,7 +164,7 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
     throw new ApiError(0, "無法連線到伺服器，請確認網路後再試");
   }
 
-  if (res.status === 401 && path !== "/auth/login") {
+  if (res.status === 401 && !PRE_AUTH_PATHS.has(path)) {
     logout();
     throw new ApiError(401, "工作階段已過期，請重新登入");
   }
