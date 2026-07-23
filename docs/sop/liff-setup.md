@@ -290,6 +290,44 @@ LIFF binding complete · user=Alice (uuid) · botId=... · lineUserId=xxx
 **檢查**：
 - 是不是選錯 tenant · audit 頁上方切租戶
 - Backend logs 找 `LIFF binding complete` · 有 = 綁定成功 · 只是 UI 沒 refresh · 點重新整理
+- **v1.1 已修 bug**（2026-07-23）：`aiprootList` endpoint 原本用 `withSystemTx` · 但 users RLS 不允 system role · 導致 JOIN users 拿 0 rows · 前端顯「尚無記錄」但 DB 實際有資料。修法：改 `withTenant({tenantId: null, role: 'aiproot_admin'})`。若你用舊 backend 版本（commit 前於 `98e4911`）· 需 upgrade。
+
+### 9.8 直接 psql 連 DB debug · SELECT 都回 0 rows
+
+**症狀**：Render psql 進 DB · SELECT 任何表都 0 rows · 但 aiproot 網頁明明有資料。
+
+**原因**：所有 tenant 表都 `FORCE ROW LEVEL SECURITY`（就算 DB owner 也要過 RLS）· psql 連線的 session 沒設 `app.actor_role` · policy 判斷失敗 · 只回 0 rows。
+
+**修**：進 psql 後 · 每次 debug 前**必先**跑：
+```sql
+SET app.actor_role = 'aiproot_admin';
+```
+
+之後所有 SELECT 就能看到全部資料（因 `p_users` / `p_tenants` 等 policy 允 aiproot_admin bypass）。
+
+**若要跨 session 生效**（極少需要）：
+```sql
+ALTER DATABASE ai_center_line_db SET app.actor_role = 'aiproot_admin';
+```
+（不推 · 全 session 生效 · 對 backend session 也會有影響 · 除非你確定沒 side effect）
+
+### 9.9 綁定的 users 記錄 role 顯 `group_owner` 而非 `employee`
+
+**情境**：在 migration 0020（`0020_employee_role.sql`）push 之前 · LIFF 綁定建的 users 是舊 `group_owner` role · 之後跑 migration 0020 只 UPDATE 已存在的 `@line.local` users · 沒問題。
+
+**但**：若你先 push code (backend service.completeLiffBinding default 已改 employee) · migration 0020 還沒跑 · 綁定會失敗（CHECK constraint 沒有 employee）。
+
+**檢查現況**：
+```sql
+SET app.actor_role = 'aiproot_admin';
+SELECT display_name, role, email FROM users WHERE email LIKE '%@line.local';
+```
+
+若有 `role='group_owner'` · 手動遷：
+```sql
+UPDATE users SET role = 'employee'
+WHERE role = 'group_owner' AND email LIKE '%@line.local';
+```
 
 ---
 
@@ -317,3 +355,4 @@ LIFF binding complete · user=Alice (uuid) · botId=... · lineUserId=xxx
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
 | 2026-07-23 | v1.0 | 首版 · 從實作 employee-line-binding 方向 8 提煉 | ahern + Claude |
+| 2026-07-23 | v1.1 | Troubleshoot 加 §9.7-9.9：<br>· 9.7 audit endpoint RLS bug 修法（commit `98e4911`）<br>· 9.8 psql debug 必先 `SET app.actor_role='aiproot_admin'`<br>· 9.9 舊 group_owner @line.local users 手動遷 employee | ahern + Claude · 實測後補 |
