@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, getWarroomDailyReports, triggerWarroomBatchRerun, type WarroomDailyDays } from "../api";
+import { ApiError, getWarroomDailyReports, getWarroomGroupMessages, triggerWarroomBatchRerun, type WarroomDailyDays, type WarroomGroupMessage } from "../api";
 import { usePermissions } from "../permission/PermissionContext";
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
@@ -109,36 +109,118 @@ export default function DailyLog() {
           </div>
           <div className="dl-day-cards">
             {day.uploads.map((u) => (
-              <div key={u.uploadId} className="dl-card">
-                <div className="dl-card-hdr">
-                  <span className="dl-card-group">{u.groupName ?? u.groupId}</span>
-                  {u.departmentName && <span className="dl-card-dept">{u.departmentName}</span>}
-                </div>
-                {u.dailyReports.length === 0 ? (
-                  <div className="dl-card-empty">當日無工作日報</div>
-                ) : (
-                  <ul className="dl-report-list">
-                    {u.dailyReports.slice(0, 5).map((r, i) => (
-                      <li key={i} className="dl-report-item">
-                        <DailyReportSummary r={r} />
-                      </li>
-                    ))}
-                    {u.dailyReports.length > 5 && (
-                      <li className="dl-report-more">
-                        <a onClick={() => (window.location.hash = `#/convo-detail/${u.uploadId}`)}>
-                          + {u.dailyReports.length - 5} 筆 · 查完整對話 →
-                        </a>
-                      </li>
-                    )}
-                  </ul>
-                )}
-              </div>
+              <GroupCard
+                key={u.uploadId}
+                groupId={u.groupId}
+                groupName={u.groupName}
+                departmentName={u.departmentName}
+                batchDate={u.batchDate}
+                dailyReports={u.dailyReports}
+                uploadId={u.uploadId}
+              />
             ))}
           </div>
         </div>
       ))}
     </>
   );
+}
+
+function GroupCard({
+  groupId, groupName, departmentName, batchDate, dailyReports, uploadId,
+}: {
+  groupId: string;
+  groupName: string | null;
+  departmentName: string | null;
+  batchDate: string;
+  dailyReports: Array<Record<string, unknown>>;
+  uploadId: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [messages, setMessages] = useState<WarroomGroupMessage[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const toast = useToast();
+
+  async function toggleExpand() {
+    if (expanded) { setExpanded(false); return; }
+    setExpanded(true);
+    if (messages !== null) return;   // 已載入 · 不重打
+    setLoading(true);
+    try {
+      const res = await getWarroomGroupMessages(groupId, batchDate);
+      setMessages(res.messages);
+      setTotal(res.total);
+    } catch (err) {
+      toast.show(err instanceof ApiError ? err.message : "載入群訊息失敗", "danger");
+      setExpanded(false);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="dl-card">
+      <div className="dl-card-hdr">
+        <span className="dl-card-group">{groupName ?? groupId}</span>
+        {departmentName && <span className="dl-card-dept">{departmentName}</span>}
+      </div>
+      {dailyReports.length === 0 ? (
+        <div className="dl-card-empty">當日無工作日報</div>
+      ) : (
+        <ul className="dl-report-list">
+          {dailyReports.slice(0, 5).map((r, i) => (
+            <li key={i} className="dl-report-item">
+              <DailyReportSummary r={r} />
+            </li>
+          ))}
+          {dailyReports.length > 5 && (
+            <li className="dl-report-more">
+              <a onClick={() => (window.location.hash = `#/convo-detail/${uploadId}`)}>
+                + {dailyReports.length - 5} 筆 · 查完整對話 →
+              </a>
+            </li>
+          )}
+        </ul>
+      )}
+
+      <button className="dl-card-toggle" onClick={() => void toggleExpand()}>
+        {expanded ? "收合原始訊息 ▲" : "展開群內原始訊息 ▼"}
+      </button>
+
+      {expanded && (
+        <div className="dl-raw">
+          {loading && <div style={{ fontSize: 12, color: "var(--ink-3)", padding: 8 }}>載入中…</div>}
+          {!loading && messages && messages.length === 0 && (
+            <div style={{ fontSize: 12, color: "var(--ink-3)", padding: 8, textAlign: "center" }}>當日此群 bot 無收到訊息</div>
+          )}
+          {!loading && messages && messages.length > 0 && (
+            <>
+              <div className="dl-raw-hdr">bot 收到的訊息 · {total} 則{total > 100 ? "（顯示前 100）" : ""}</div>
+              {messages.map((m) => (
+                <div key={m.messageId} className="dl-raw-item">
+                  <div className="dl-raw-meta">
+                    <span className="dl-raw-time">{formatTime(m.sentAt)}</span>
+                    <span className="dl-raw-who">{m.senderName ?? "(未綁定成員)"}</span>
+                  </div>
+                  <div className="dl-raw-text">
+                    {m.messageType === "text" && m.textContent}
+                    {m.messageType === "sticker" && <span style={{ color: "var(--ink-3)" }}>[貼圖]</span>}
+                    {m.messageType === "image" && <span style={{ color: "var(--ink-3)" }}>[圖片]</span>}
+                    {!["text", "sticker", "image"].includes(m.messageType) && <span style={{ color: "var(--ink-3)" }}>[{m.messageType}]</span>}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("zh-TW", { hour12: false, hour: "2-digit", minute: "2-digit" });
 }
 
 function DailyReportSummary({ r }: { r: Record<string, unknown> }) {

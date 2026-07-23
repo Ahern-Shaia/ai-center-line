@@ -198,6 +198,65 @@ export class WarroomTasksService {
 
     return { days };
   }
+
+  /**
+   * 撈指定 group + 日期的原始訊息 · tenant_admin 想看「bot 收到什麼」用
+   * · 對照 PDR empty state pattern · 讓使用者確認訊息確實進 DB · 只是 AI 抽不出
+   * · RLS 已擋跨 tenant (line_message tenant scope)
+   * · 上限 100 則 · 避免 payload 爆
+   */
+  async listGroupMessages(args: { groupId: string; batchDate: string }): Promise<{
+    messages: Array<{
+      messageId: string;
+      senderName: string | null;
+      senderLineId: string | null;
+      messageType: string;
+      textContent: string | null;
+      sentAt: string;
+    }>;
+    total: number;
+  }> {
+    const tx = currentTx();
+    const res = await tx.execute<{
+      message_id: string;
+      sender_line_id: string | null;
+      sender_name: string | null;
+      message_type: string;
+      text_content: string | null;
+      sent_at: string;
+    }>(sql`
+      SELECT lm.message_id,
+             lm.sender_line_id,
+             u.display_name AS sender_name,
+             lm.message_type,
+             lm.text_content,
+             lm.sent_at::text
+      FROM line_message lm
+      LEFT JOIN users u ON u.user_id = lm.sender_user_id
+      WHERE lm.group_id = ${args.groupId}
+        AND (lm.sent_at AT TIME ZONE 'Asia/Taipei')::date = ${args.batchDate}::date
+        AND lm.chat_context = 'group'
+      ORDER BY lm.sent_at ASC
+      LIMIT 100
+    `);
+    const messages = res.rows.map((r) => ({
+      messageId: r.message_id,
+      senderName: r.sender_name,
+      senderLineId: r.sender_line_id,
+      messageType: r.message_type,
+      textContent: r.text_content,
+      sentAt: r.sent_at,
+    }));
+    // 也回 total (避免使用者以為 100 是全部)
+    const countRes = await tx.execute<{ total: string }>(sql`
+      SELECT count(*)::text AS total
+      FROM line_message lm
+      WHERE lm.group_id = ${args.groupId}
+        AND (lm.sent_at AT TIME ZONE 'Asia/Taipei')::date = ${args.batchDate}::date
+        AND lm.chat_context = 'group'
+    `);
+    return { messages, total: parseInt(countRes.rows[0]?.total ?? "0", 10) };
+  }
 }
 
 function sqlToday(): string {

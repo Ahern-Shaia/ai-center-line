@@ -986,3 +986,17 @@ export const triggerWarroomBatchRerun = () =>
     method: "POST",
     body: "{}",
   });
+
+// 群組原始訊息 (今日日誌 · 展開群卡看 bot 收到什麼)
+export interface WarroomGroupMessage {
+  messageId: string;
+  senderName: string | null;
+  senderLineId: string | null;
+  messageType: string;
+  textContent: string | null;
+  sentAt: string;
+}
+export const getWarroomGroupMessages = (groupId: string, date: string) =>
+  req<{ messages: WarroomGroupMessage[]; total: number }>(
+    `/warroom/group-messages?groupId=${encodeURIComponent(groupId)}&date=${encodeURIComponent(date)}`,
+  );
