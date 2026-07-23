@@ -10,6 +10,7 @@ import {
 } from "../../api";
 import { usePermissions } from "../../permission/PermissionContext";
 import { useToast } from "../../Toast";
+import StyledSelect from "../../shared/StyledSelect";
 
 // tenant_admin「LINE 群組」頁
 // 對照 docs/roles-permissions-matrix.md §3.4 · perm=line-groups:view / assign
@@ -132,18 +133,15 @@ export default function LineGroupsPage() {
                   </td>
                   <td>
                     {canAssign ? (
-                      <select
-                        className="tf"
+                      <StyledSelect
+                        items={depts.map((d) => ({ id: d.departmentId, label: d.departmentName }))}
                         value={g.departmentId ?? ""}
+                        onChange={(v) => void handleAssign(g.groupRegistryId, v || null)}
+                        ariaLabel={`分派「${g.displayName ?? g.groupId}」到部門`}
                         disabled={saving}
-                        onChange={(e) => void handleAssign(g.groupRegistryId, e.target.value || null)}
-                        style={{ width: "100%" }}
-                      >
-                        <option value="">(未分派)</option>
-                        {depts.map((d) => (
-                          <option key={d.departmentId} value={d.departmentId}>{d.departmentName}</option>
-                        ))}
-                      </select>
+                        allowEmpty
+                        emptyLabel="(未分派)"
+                      />
                     ) : (
                       <span>{g.departmentName ?? "(未分派)"}</span>
                     )}
