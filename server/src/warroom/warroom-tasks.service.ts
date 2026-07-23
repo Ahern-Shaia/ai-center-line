@@ -169,6 +169,8 @@ export class WarroomTasksService {
       WHERE au.batch_date IS NOT NULL
         AND au.batch_date::date BETWEEN ${fromDate}::date AND ${toDate}::date
         AND au.status = 'done'
+        -- Bug fix · 私訊佔位 group 不進群組日誌
+        AND au.group_id NOT LIKE '\\_\\_personal\\_\\_%' ESCAPE '\\'
       ORDER BY au.batch_date DESC, au.uploaded_at DESC
       LIMIT 200
     `);

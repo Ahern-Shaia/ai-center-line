@@ -225,6 +225,9 @@ export class LineMessageRepository {
        AND ab.batch_date = (lm.sent_at AT TIME ZONE 'Asia/Taipei')::date
       WHERE lm.sent_at >= (now() AT TIME ZONE 'Asia/Taipei' - (${lookbackDays} || ' days')::interval)::timestamptz
         AND ab.batch_id IS NULL
+        -- Bug fix · 私訊不屬群組日誌 · 兩層保護（schema 欄位 + group_id prefix）
+        AND lm.chat_context = 'group'
+        AND lm.group_id NOT LIKE '\\_\\_personal\\_\\_%' ESCAPE '\\'
         AND (${tenantId ?? null}::uuid IS NULL OR lm.tenant_id = ${tenantId ?? null}::uuid)
         -- 手動 (tenantId 有值) 忽略 batch_enabled · 走 UI 使用者意志
         -- cron (tenantId=null) 強制 join tenants filter batch_enabled=true
