@@ -166,6 +166,7 @@
     <a href="#stage-a">A · 加好友觸發</a>
     <a href="#stage-b">B · LIFF 綁定</a>
     <a href="#stage-c">C · 綁定完成</a>
+    <a href="#mechanism">✦ 機制 · 一次綁定三處識別</a>
     <a href="#stage-d">D · 日常 · LIFF 查日報</a>
     <a href="#stage-e">E · 日常 · Web 登入 (可選)</a>
     <a href="#stage-f">F · Web 我的日報</a>
@@ -246,7 +247,10 @@
 
     <div class="screen actor-system">
       <div class="screen-lbl"><b>B1 · LIFF 開啟 · 自動 pre-fill</b><span class="screen-step">STEP 3</span></div>
-      <div class="screen-desc">系統從 line_member 自動撈 Alice 的 displayName 和近 30 天發過訊息的群組推薦</div>
+      <div class="screen-desc">
+        <b>關鍵機制</b>：LIFF SDK 拿到的 <code>lineUserId</code> · 跟 Alice 在群組發言時 webhook 收到的 <code>event.source.userId</code> <b>是同一個字串</b>（LINE 保證 · 同一 bot 底下 UserId 唯一）。<br>
+        系統靠這個對照 · 從 <code>line_message</code> 撈 Alice 過去 30 天在群裡發過的訊息 · 反推她主要在哪個部門群 · 自動 pre-fill。
+      </div>
       <div class="liff-frame">
         <div class="liff-frame-body">
           <div class="liff-bar">
@@ -363,6 +367,70 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ============================================================ MECHANISM CALLOUT -->
+<div class="stage" id="mechanism">
+  <div class="stage-hdr" style="background:#F0FDD4; border-left-color:var(--ok-600);">
+    <span class="stage-num" style="color:var(--ok-600);">✦</span>
+    <span class="stage-title">關鍵機制 · 「一次綁定 · 三處識別」</span>
+    <span class="stage-sub">同一個 lineUserId 貫穿 · LINE 平台保證</span>
+  </div>
+  <div style="background:#fff; border:1px solid var(--line); border-radius:var(--r-lg); padding:24px; box-shadow:var(--sh-sm);">
+    <div style="text-align:center; margin-bottom:20px;">
+      <div style="display:inline-block; padding:10px 18px; background:var(--ok-tint); border:2px solid var(--ok-600); border-radius:8px;">
+        <div style="font-size:11px; color:var(--ink-3);">Alice 的 LINE UserId（LINE 服務端簽發 · 同一 Bot 底下唯一）</div>
+        <code style="font-family:var(--mono); font-size:14px; font-weight:700; color:var(--ok-600);">Ualice1234567890</code>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
+      <div style="border:1px solid var(--line); border-radius:8px; padding:14px; background:#F9FAFB;">
+        <div style="font-size:11px; color:var(--ink-3); margin-bottom:4px;">情境 1 · 群組發言</div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:8px;">「今天 3 台機台停機」</div>
+        <div style="font-size:11px; color:var(--ink-2); font-family:var(--mono); background:var(--well); padding:6px 8px; border-radius:4px;">
+          webhook · group_id=C福祉品保部<br>
+          <b>sender_line_id = Ualice1234567890</b>
+        </div>
+        <div style="margin-top:8px; font-size:10.5px; color:var(--ok-600);">→ 對照 user_line_binding · 落庫 sender_user_id = Alice</div>
+      </div>
+
+      <div style="border:1px solid var(--line); border-radius:8px; padding:14px; background:#F9FAFB;">
+        <div style="font-size:11px; color:var(--ink-3); margin-bottom:4px;">情境 2 · 私訊 bot</div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:8px;">「早上 9 點跟 A 客戶開會」</div>
+        <div style="font-size:11px; color:var(--ink-2); font-family:var(--mono); background:var(--well); padding:6px 8px; border-radius:4px;">
+          webhook · 1-on-1 (無 group_id)<br>
+          <b>sender_line_id = Ualice1234567890</b>
+        </div>
+        <div style="margin-top:8px; font-size:10.5px; color:var(--ok-600);">→ 同一個 UserId · 落庫 chat_context='personal'</div>
+      </div>
+
+      <div style="border:1px solid var(--line); border-radius:8px; padding:14px; background:#F9FAFB;">
+        <div style="font-size:11px; color:var(--ink-3); margin-bottom:4px;">情境 3 · LIFF / Web 登入</div>
+        <div style="font-size:13px; font-weight:600; margin-bottom:8px;">開 LIFF 頁 or 點「以 LINE 登入」</div>
+        <div style="font-size:11px; color:var(--ink-2); font-family:var(--mono); background:var(--well); padding:6px 8px; border-radius:4px;">
+          liff.getProfile() or OAuth callback<br>
+          <b>userId = Ualice1234567890</b>
+        </div>
+        <div style="margin-top:8px; font-size:10.5px; color:var(--ok-600);">→ 同一個 UserId · 認證通過 · 發 JWT</div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px; padding:14px 18px; background:var(--primary-tint); border-radius:6px; font-size:12.5px; line-height:1.7;">
+      <b style="color:#3730A3;">📌 為什麼這重要</b><br>
+      <span style="color:var(--ink-2);">
+        Alice <b>只綁定一次</b>（Stage B）· 之後不管她在哪發言 / 點什麼 · 系統都認識她。<br>
+        - <b>群組訊息</b> → 自動歸屬 Alice · 主管在戰情室看得到「Alice 的貢獻」<br>
+        - <b>私訊記工作</b> → 落 personal · AI 整理成 Alice 的個人日報<br>
+        - <b>Web 登入</b> → 免打帳密 · 一鍵 LINE OAuth<br>
+        <b>Alice 不用管技術細節 · 她只要正常用 LINE 就行。</b>
+      </span>
+    </div>
+
+    <div style="margin-top:12px; padding:10px 14px; background:var(--warn-tint); border:1px solid #F5D5A6; border-radius:6px; font-size:11.5px; color:#7A4E1B;">
+      <b>技術保證</b>：LINE 平台規定 · 同一個 LINE 帳號對同一 Bot 的 UserId 是**永久唯一**（不會變）。不管透過群組 / 私訊 / LIFF SDK / OAuth 拿到的 · 都是同一個字串。這是 LIFF Zero-Config 綁定能成立的技術命脈。
+    </div>
   </div>
 </div>
 
