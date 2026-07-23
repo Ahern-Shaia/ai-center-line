@@ -1,5 +1,6 @@
 import { Module, OnModuleInit } from "@nestjs/common";
 import { ConvoAnalysisRealtimeModule } from "../convo-analysis-realtime/convo-analysis-realtime.module.js";
+import { LineIngestModule } from "../line-ingest/line-ingest.module.js";
 import { PermissionModule } from "../permission/permission.module.js";
 import { PersonalDailyReportModule } from "../personal-daily-report/personal-daily-report.module.js";
 import { SchedulerConfigController } from "./scheduler-config.controller.js";
@@ -20,6 +21,7 @@ import { WarroomBatchController } from "./warroom-batch.controller.js";
     PermissionModule,
     PersonalDailyReportModule,
     ConvoAnalysisRealtimeModule,
+    LineIngestModule,      // WarroomBatchController 用 LineApiClient + LineGroupRepository backfill 群名
   ],
   controllers: [SchedulerConfigController, WarroomBatchController],
   providers: [
