@@ -1,0 +1,32 @@
+# Render Blueprint — 前端靜態站快取標頭硬化（第 2 層）
+#
+# ⚠️ 套用方式（二選一）：
+#  A.（推薦 · 不動現有設定）到 Render 後台 → 該 Static Site → Settings → Headers，
+#     手動加下面兩條 Header 規則即可，不需採用本 blueprint。現站是用 web/public/_redirects
+#     做 SPA fallback（非 blueprint 管理），直接改後台最不會出事。
+#  B. 若要改用 Blueprint 管理：本檔的 buildCommand / staticPublishPath 必須對齊你「現有」
+#     Static Site 的實際設定（下面是常見值 · 套用前先跟後台核對，否則可能建錯站/改壞 build）。
+#
+# 兩條 Header 的用意：
+#  - /assets/*：檔名帶 content hash · 內容不變 → 可永久快取（immutable）· 加速且不會給到舊版
+#  - /index.html：一律 no-cache · 每次都重新驗證 → 下一次完整載入一定拿到最新 bundle 引用
+#  （真正解「webview 記憶體卡舊版」靠 app 端 UpdateBanner · 本層是輔助）
+
+services:
+  - type: web
+    runtime: static
+    name: ai-center-line-demo
+    buildCommand: cd web && npm ci && npm run build
+    staticPublishPath: web/dist
+    routes:
+      # SPA fallback（等同 web/public/_redirects）
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: "public, max-age=31536000, immutable"
+      - path: /index.html
+        name: Cache-Control
+        value: "no-cache"
