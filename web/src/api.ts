@@ -943,3 +943,46 @@ export interface UnboundStats {
 }
 export const getUnboundStats = () =>
   req<{ stats: UnboundStats[] }>("/binding/aiproot/unbound-stats");
+
+// ============================================================
+// scheduler-config · 平台化定時任務
+// ============================================================
+export type SchedulerId = "pdr" | "group_batch";
+export interface SchedulerConfigRow {
+  schedulerId: SchedulerId;
+  tenantId: string | null;
+  enabled: boolean;
+  cronExpr: string;
+  timeZone: string;
+  minSourceCount: number;
+  lookbackDays: number;
+  concurrency: number;
+  lastRunAt: string | null;
+  lastRunResult: Record<string, unknown> | null;
+  updatedBy: string | null;
+  updatedAt: string;
+}
+
+export const listSchedulerConfigs = () =>
+  req<{ configs: SchedulerConfigRow[] }>("/scheduler-config");
+
+export const upsertSchedulerConfig = (args: {
+  schedulerId: SchedulerId;
+  tenantId?: string | null;
+  enabled: boolean;
+  cronExpr: string;
+  timeZone: string;
+  minSourceCount: number;
+  lookbackDays: number;
+  concurrency: number;
+}) =>
+  req<{ config: SchedulerConfigRow }>("/scheduler-config", {
+    method: "POST",
+    body: JSON.stringify(args),
+  });
+
+export const triggerWarroomBatchRerun = () =>
+  req<{ total: number; completed: number; empty: number; failed: number }>("/warroom/batches/rerun", {
+    method: "POST",
+    body: "{}",
+  });

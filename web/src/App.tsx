@@ -10,6 +10,7 @@ import CustomerMap from "./kb/CustomerMap";
 import DepartmentsMembers from "./settings/depts-members/Page";
 import TenantSettings from "./settings/TenantSettings";
 import AuditLog from "./settings/AuditLog";
+import SchedulerConfigPage from "./settings/scheduler-config/Page";
 import ConversationAnalysisUpload from "./convo-analysis/Upload";
 import ConversationAnalysisList from "./convo-analysis/List";
 import ConversationAnalysisDetail from "./convo-analysis/Detail";
@@ -37,6 +38,7 @@ type Route =
   | { page: "depts" }
   | { page: "config" }
   | { page: "audit" }
+  | { page: "scheduler-config" }
   | { page: "convo-list" }
   | { page: "convo-upload" }
   | { page: "convo-detail"; uploadId: number }
@@ -62,6 +64,7 @@ const CRUMB: Record<Route["page"], string> = {
   depts: "設定",
   config: "設定",
   audit: "設定",
+  "scheduler-config": "設定",
   "convo-list": "AI 對話分析",
   "convo-upload": "AI 對話分析",
   "convo-detail": "AI 對話分析",
@@ -86,6 +89,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   depts: "部門 / 成員",
   config: "租戶設定",
   audit: "稽核記錄",
+  "scheduler-config": "定時任務",
   "convo-list": "分析列表",
   "convo-upload": "上傳新對話",
   "convo-detail": "分析詳情",
@@ -159,7 +163,7 @@ export default function App() {
   const onNav = (key: string) => {
     if (key === "warroom" || key === "signoff") setRoute({ page: "warroom" });
     else if (key === "rag" || key === "media" || key === "km" || key === "map"
-      || key === "depts" || key === "config" || key === "audit") {
+      || key === "depts" || key === "config" || key === "audit" || key === "scheduler-config") {
       setRoute({ page: key });
     } else if (key === "convo-list" || key === "convo-upload" || key === "llm-settings") {
       // AI 對話分析設定屬 aiproot 側維護 · tenant 只在戰情室看結果
@@ -217,6 +221,7 @@ export default function App() {
           {route.page === "depts" && <DepartmentsMembers />}
           {route.page === "config" && <TenantSettings />}
           {route.page === "audit" && <AuditLog />}
+          {route.page === "scheduler-config" && <SchedulerConfigPage />}
           {route.page === "convo-list" && (
             <ConversationAnalysisList
               onOpen={(id) => setRoute({ page: "convo-detail", uploadId: id })}

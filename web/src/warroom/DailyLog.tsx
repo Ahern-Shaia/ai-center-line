@@ -1,14 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, getWarroomDailyReports, type WarroomDailyDays } from "../api";
+import { ApiError, getWarroomDailyReports, triggerWarroomBatchRerun, type WarroomDailyDays } from "../api";
+import { usePermissions } from "../permission/PermissionContext";
 import { useToast } from "../Toast";
+import ConfirmDialog from "../shared/ConfirmDialog";
 
 // WTB-M4 · 日誌 view · 按天列 · 每 upload 一 card
-// 對照 docs/modules/warroom-task-board.md §7.3
+// scheduler-config M4 · 加「立即分析」按鈕（tenant_admin / aiproot 可觸發）
+// 對照 docs/modules/warroom-task-board.md §7.3 · docs/modules/scheduler-config.md §6
 export default function DailyLog() {
   const [data, setData] = useState<WarroomDailyDays | null>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState<7 | 30>(7);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [confirmAnalyze, setConfirmAnalyze] = useState(false);
   const toast = useToast();
+  const perms = usePermissions();
+  // tenant_admin / aiproot 可手動觸發自 tenant group_batch 分析
+  const canTriggerAnalyze = perms.has("scheduler-config:manage-tenant") || perms.has("scheduler-config:manage-platform");
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -29,6 +37,20 @@ export default function DailyLog() {
 
   useEffect(() => { void refresh(); }, [refresh]);
 
+  async function doAnalyze() {
+    setAnalyzing(true);
+    try {
+      const res = await triggerWarroomBatchRerun();
+      toast.show(`分析完成 · 掃 ${res.total} 群組 · ${res.completed} 成功 / ${res.empty} 無資料 / ${res.failed} 失敗`, res.failed === 0 ? "ok" : "warn");
+      setConfirmAnalyze(false);
+      await refresh();
+    } catch (err) {
+      toast.show(err instanceof ApiError ? err.message : "分析失敗", "danger");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
   return (
     <>
       <div className="pane-hdr">
@@ -36,11 +58,45 @@ export default function DailyLog() {
           <h1>今日日誌</h1>
           <div className="sub">各 LINE 群組每日活動摘要 · 由 AI 從當日對話抽取</div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button className={`btn${days === 7 ? " btn-primary" : ""}`} onClick={() => setDays(7)}>近 7 天</button>
-          <button className={`btn${days === 30 ? " btn-primary" : ""}`} onClick={() => setDays(30)}>近 30 天</button>
+        <div className="hdr-toolbar">
+          <div className="hdr-group">
+            <label className="hdr-label">查看範圍</label>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button className={`btn${days === 7 ? " btn-primary" : ""}`} onClick={() => setDays(7)}>近 7 天</button>
+              <button className={`btn${days === 30 ? " btn-primary" : ""}`} onClick={() => setDays(30)}>近 30 天</button>
+            </div>
+          </div>
+          {canTriggerAnalyze && (
+            <div className="hdr-group">
+              <label className="hdr-label">當日操作</label>
+              <button
+                className="btn btn-primary"
+                onClick={() => setConfirmAnalyze(true)}
+                disabled={analyzing}
+              >{analyzing ? "分析中…" : "立即分析"}</button>
+              <div className="hdr-group-hint">AI 掃當日訊息並整理</div>
+            </div>
+          )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmAnalyze}
+        onClose={() => !analyzing && setConfirmAnalyze(false)}
+        onConfirm={() => void doAnalyze()}
+        busy={analyzing}
+        title="立即分析今日對話"
+        body={
+          <div>
+            將對本 tenant 所有 LINE 群組立即跑 AI 分析今日對話 · 需 30–60 秒
+            <div style={{ marginTop: 10, padding: 10, background: "var(--warn-tint)", border: "1px solid #F5D5A6", borderRadius: 6, fontSize: 12, color: "#7A4E1B" }}>
+              提示 · 若當日訊息還在持續 · 分析後新來的訊息不會即時進入 · 建議 17:30 後再手動觸發 · 或等隔天自動跑
+            </div>
+          </div>
+        }
+        confirmLabel="確定分析"
+        tone="primary"
+      />
 
       {loading && !data && <div className="dm-empty">載入中…</div>}
       {data && data.days.length === 0 && <div className="dm-empty">此期間內無日誌</div>}

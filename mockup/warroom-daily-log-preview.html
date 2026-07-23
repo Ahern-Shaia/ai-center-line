@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>今日日誌 · tenant_admin 視角 · UI Preview</title>
+<style>
+  :root {
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --line:#E5E7EB; --well:#F1F3F6; --surface:#FFFFFF;
+    --primary:#4F46E5; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5;
+    --warn:#D97706; --warn-tint:#FFFBEB;
+    --danger:#DC2626; --danger-tint:#FEF2F2;
+    --sans: 'Noto Sans TC', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; background:#F1F3F6; font-family:var(--sans); font-size:14px; color:var(--ink); }
+
+  /* App shell mimic */
+  .shell { display:grid; grid-template-columns:220px 1fr; min-height:100vh; }
+  .sidebar { background:var(--ink); color:#fff; padding:16px 0; }
+  .brand { padding:0 18px 20px; border-bottom:1px solid rgba(255,255,255,.1); }
+  .brand-name { font-size:16px; font-weight:700; }
+  .brand-sub { font-size:11px; color:rgba(255,255,255,.5); margin-top:2px; }
+  .nav-group { padding:14px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+  .nav-group-label { font-size:10.5px; color:rgba(255,255,255,.4); padding:0 18px 6px; letter-spacing:.06em; }
+  .nav-item { padding:8px 18px; font-size:13px; color:rgba(255,255,255,.7); cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+  .nav-item:hover { background:rgba(255,255,255,.05); color:#fff; }
+  .nav-item.active { background:var(--primary); color:#fff; }
+  .nav-badge { background:rgba(255,255,255,.1); padding:1px 7px; border-radius:10px; font-size:10.5px; }
+
+  .main { display:flex; flex-direction:column; }
+  .topbar { background:#fff; border-bottom:1px solid var(--line); padding:10px 22px; display:flex; justify-content:space-between; align-items:center; }
+  .crumb { font-size:12.5px; color:var(--ink-3); }
+  .crumb .cur { color:var(--ink); font-weight:500; }
+  .topbar-right { display:flex; gap:8px; align-items:center; font-size:12px; color:var(--ink-3); }
+  .user-pill { background:var(--well); padding:5px 10px; border-radius:20px; font-size:12px; }
+
+  .pane { padding:22px; flex:1; }
+  .pane-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; gap:16px; }
+  .pane-hdr h1 { font-size:20px; margin:0 0 4px; }
+  .pane-hdr .sub { font-size:13px; color:var(--ink-3); }
+  .btn { padding:7px 14px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink-2); font-size:13px; cursor:pointer; font-family:inherit; }
+  .btn.btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+  .dl-day { margin-bottom:24px; background:#fff; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .dl-day-hdr { padding:10px 16px; background:var(--well); display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); }
+  .dl-day-date { font-size:13.5px; font-weight:600; color:var(--ink); }
+  .dl-day-count { font-size:11.5px; color:var(--ink-3); background:#fff; padding:2px 10px; border-radius:12px; border:1px solid var(--line); }
+  .dl-day-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:12px; padding:14px; }
+  .dl-card { background:#fff; border:1px solid var(--line); border-radius:6px; padding:12px 14px; }
+  .dl-card-hdr { display:flex; align-items:baseline; justify-content:space-between; padding-bottom:8px; margin-bottom:8px; border-bottom:1px dashed var(--line); }
+  .dl-card-group { font-size:13.5px; font-weight:600; color:var(--ink); }
+  .dl-card-dept { font-size:10.5px; color:var(--primary); background:var(--primary-tint); padding:2px 8px; border-radius:10px; }
+  .dl-report-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+  .dl-report-item { font-size:12.5px; color:var(--ink-2); padding:6px 0; border-bottom:1px dashed rgba(0,0,0,.04); }
+  .dl-report-item:last-child { border-bottom:none; }
+  .dl-report-who { font-weight:600; color:var(--ink); margin-right:8px; }
+  .dl-report-parts { font-family:var(--mono); font-size:11.5px; color:var(--ink-2); }
+  .dl-report-issue { font-size:11.5px; color:var(--warn); margin-top:2px; padding-left:0; }
+  .dl-report-more { font-size:11.5px; color:var(--primary); cursor:pointer; padding:6px 0 0; }
+  .dl-card-empty { font-size:12px; color:var(--ink-3); padding:14px 0; text-align:center; }
+
+  .note { background:var(--primary-tint); border-left:3px solid var(--primary); padding:11px 15px; border-radius:0 6px 6px 0; font-size:12.5px; color:#3730A3; margin-bottom:20px; }
+  .note b { color:#312E81; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-name">台</div>
+      <div class="brand-name">台灣福祉</div>
+      <div class="brand-sub">戰情室</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">戰情室</div>
+      <div class="nav-item">我的日報</div>
+      <div class="nav-item active">總覽儀表<span class="nav-badge">今日</span></div>
+      <div class="nav-item">每日簽核<span class="nav-badge">3</span></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">資料 · 知識</div>
+      <div class="nav-item">智慧檢索</div>
+      <div class="nav-item">素材看板</div>
+      <div class="nav-item">知識庫</div>
+      <div class="nav-item">客戶地圖</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">設定</div>
+      <div class="nav-item">部門/成員</div>
+      <div class="nav-item">租戶設定</div>
+      <div class="nav-item">稽核記錄</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="crumb">戰情室 › <span class="cur">總覽儀表</span></div>
+      <div class="topbar-right">
+        <span>資料截至 · 2026-07-23 13:45</span>
+        <button class="btn" style="padding:4px 10px; font-size:12px;">重新整理</button>
+        <div class="user-pill">王總 · 總經理室</div>
+      </div>
+    </div>
+
+    <div class="pane">
+      <div class="note">
+        <b>你的角色 · tenant_admin</b>（總經理室）· 這頁看到的是<b>本 tenant 全部門所有 LINE 群組</b>的日誌 · 由 AI 從當日群組對話抽取。
+      </div>
+
+      <div class="pane-hdr">
+        <div>
+          <h1>今日日誌</h1>
+          <div class="sub">各 LINE 群組每日活動摘要 · 由 AI 從當日對話抽取 · 次日 08:00 自動整理（可管理員自訂）</div>
+        </div>
+        <div style="display:flex; gap:14px; align-items:flex-start;">
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:10.5px; color:var(--ink-3); letter-spacing:.05em; font-weight:500;">查看範圍</label>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-primary">近 7 天</button>
+              <button class="btn">近 30 天</button>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px; border-left:1px solid var(--line); padding-left:14px;">
+            <label style="font-size:10.5px; color:var(--ink-3); letter-spacing:.05em; font-weight:500;">當日操作</label>
+            <button class="btn btn-primary" onclick="document.getElementById('analyze-dialog').style.display='flex'">立即分析</button>
+            <div style="font-size:10.5px; color:var(--ink-3); margin-top:2px;">AI 掃當日訊息並整理</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 立即分析 confirm dialog · mockup 用 -->
+      <div id="analyze-dialog" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.45); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:#fff; width:100%; max-width:500px; border-radius:10px; padding:20px 22px;">
+          <h3 style="margin:0 0 6px; font-size:16px;">立即分析今日對話</h3>
+          <div style="font-size:12.5px; color:var(--ink-3); margin-bottom:14px;">將對本 tenant 底下 3 個 LINE 群組 · 立即跑 AI 分析今日 (2026-07-23) 的對話 · 需 30–60 秒</div>
+
+          <div style="background:var(--well); border-radius:6px; padding:12px; margin-bottom:14px;">
+            <div style="font-size:11.5px; color:var(--ink-3); margin-bottom:6px;">將分析的群組：</div>
+            <ul style="margin:0; padding-left:18px; font-size:13px;">
+              <li>福祉—品保部群（品保部）</li>
+              <li>福祉—業務部群（業務部）</li>
+              <li>福祉—技術支援群（技術部）</li>
+            </ul>
+          </div>
+
+          <div style="background:var(--warn-tint); border:1px solid #F5D5A6; border-radius:6px; padding:10px 12px; font-size:11.5px; color:#7A4E1B; margin-bottom:14px;">
+            <b>提示</b> · 若當日訊息還在持續 · 分析後新來的訊息不會即時進入 · 建議 17:30 後再手動觸發 · 或等隔天 08:00 自動跑。
+          </div>
+
+          <div style="display:flex; gap:8px; justify-content:flex-end; padding-top:12px; border-top:1px solid var(--line);">
+            <button class="btn" onclick="document.getElementById('analyze-dialog').style.display='none'">取消</button>
+            <button class="btn btn-primary">確定分析</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Day 1: 今日 -->
+      <div class="dl-day">
+        <div class="dl-day-hdr">
+          <span class="dl-day-date">今日 · 7/23 週四</span>
+          <span class="dl-day-count">3 群</span>
+        </div>
+        <div class="dl-day-cards">
+          <div class="dl-card">
+            <div class="dl-card-hdr">
+              <span class="dl-card-group">福祉—品保部群</span>
+              <span class="dl-card-dept">品保部</span>
+            </div>
+            <ul class="dl-report-list">
+              <li class="dl-report-item">
+                <span class="dl-report-who">王小明</span>
+                <span class="dl-report-parts">線別 A · 機台 M-102 · 工單 WO-1123 · 產出 320 · 不良 4 · 工時 8h</span>
+              </li>
+              <li class="dl-report-item">
+                <span class="dl-report-who">陳大華</span>
+                <span class="dl-report-parts">線別 A · 機台 M-103 · 工單 WO-1124 · 產出 285 · 不良 12 · 工時 8h</span>
+                <div class="dl-report-issue">問題：M-103 下午卡料 2 次 · 需維修</div>
+              </li>
+              <li class="dl-report-item">
+                <span class="dl-report-who">李小華</span>
+                <span class="dl-report-parts">線別 B · 機台 M-201 · 工單 WO-1128 · 產出 410 · 不良 3 · 工時 8h</span>
+              </li>
+              <li class="dl-report-item">
+                <span class="dl-report-who">周美麗</span>
+                <span class="dl-report-parts">線別 B · 機台 M-202 · 產出 未填 · 工時 4h</span>
+                <div class="dl-report-issue">問題：早班交接不清 · 補回 WO 中</div>
+              </li>
+              <li class="dl-report-item">
+                <span class="dl-report-who">張大明</span>
+                <span class="dl-report-parts">線別 C · 機台 M-301 · 工單 WO-1130 · 產出 220 · 不良 5 · 工時 8h</span>
+              </li>
+              <li class="dl-report-more">+ 3 筆 · 查完整對話 →</li>
+            </ul>
+          </div>
+
+          <div class="dl-card">
+            <div class="dl-card-hdr">
+              <span class="dl-card-group">福祉—業務部群</span>
+              <span class="dl-card-dept">業務部</span>
+            </div>
+            <ul class="dl-report-list">
+              <li class="dl-report-item">
+                <span class="dl-report-who">王愛麗絲</span>
+                <span class="dl-report-parts">客戶 A 交期討論 · 提前 15 天</span>
+                <div class="dl-report-issue">問題：需回工廠確認產能 · 明日 09:00 開會</div>
+              </li>
+              <li class="dl-report-item">
+                <span class="dl-report-who">林曉風</span>
+                <span class="dl-report-parts">客戶 B 拜訪 · 樣品送出</span>
+              </li>
+              <li class="dl-report-item">
+                <span class="dl-report-who">吳大明</span>
+                <span class="dl-report-parts">客戶 C 詢價 · 已回覆報價單</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="dl-card">
+            <div class="dl-card-hdr">
+              <span class="dl-card-group">福祉—技術支援群</span>
+              <span class="dl-card-dept">技術部</span>
+            </div>
+            <ul class="dl-report-list">
+              <li class="dl-report-item">
+                <span class="dl-report-who">李小龍</span>
+                <span class="dl-report-parts">巡檢 A 線 · 皮帶張力調整</span>
+              </li>
+              <li class="dl-report-item">
+                <span class="dl-report-who">技師組</span>
+                <span class="dl-report-parts">M-103 維修工單建 · 明日 08:30 上工</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Day 2: 昨日 -->
+      <div class="dl-day">
+        <div class="dl-day-hdr">
+          <span class="dl-day-date">昨日 · 7/22 週三</span>
+          <span class="dl-day-count">3 群</span>
+        </div>
+        <div class="dl-day-cards">
+          <div class="dl-card">
+            <div class="dl-card-hdr">
+              <span class="dl-card-group">福祉—品保部群</span>
+              <span class="dl-card-dept">品保部</span>
+            </div>
+            <ul class="dl-report-list">
+              <li class="dl-report-item">
+                <span class="dl-report-who">王小明</span>
+                <span class="dl-report-parts">線別 A · 產出 340 · 不良 6 · 工時 8h</span>
+              </li>
+              <li class="dl-report-item">
+                <span class="dl-report-who">陳大華</span>
+                <span class="dl-report-parts">線別 A · 產出 305 · 不良 8 · 工時 8h</span>
+              </li>
+              <li class="dl-report-more">+ 4 筆 · 查完整對話 →</li>
+            </ul>
+          </div>
+
+          <div class="dl-card">
+            <div class="dl-card-hdr">
+              <span class="dl-card-group">福祉—業務部群</span>
+              <span class="dl-card-dept">業務部</span>
+            </div>
+            <div class="dl-card-empty">當日無工作日報</div>
+          </div>
+
+          <div class="dl-card">
+            <div class="dl-card-hdr">
+              <span class="dl-card-group">福祉—技術支援群</span>
+              <span class="dl-card-dept">技術部</span>
+            </div>
+            <ul class="dl-report-list">
+              <li class="dl-report-item">
+                <span class="dl-report-who">李小龍</span>
+                <span class="dl-report-parts">M-202 皮帶更換 · 3h</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Day 3: 7/21 -->
+      <div class="dl-day">
+        <div class="dl-day-hdr">
+          <span class="dl-day-date">7/21 週二</span>
+          <span class="dl-day-count">2 群</span>
+        </div>
+        <div class="dl-day-cards">
+          <div class="dl-card">
+            <div class="dl-card-hdr">
+              <span class="dl-card-group">福祉—品保部群</span>
+              <span class="dl-card-dept">品保部</span>
+            </div>
+            <ul class="dl-report-list">
+              <li class="dl-report-item">
+                <span class="dl-report-who">陳大華</span>
+                <span class="dl-report-parts">線別 A · 產出 315 · 工時 8h</span>
+              </li>
+            </ul>
+          </div>
+          <div class="dl-card">
+            <div class="dl-card-hdr">
+              <span class="dl-card-group">福祉—業務部群</span>
+              <span class="dl-card-dept">業務部</span>
+            </div>
+            <ul class="dl-report-list">
+              <li class="dl-report-item">
+                <span class="dl-report-who">王愛麗絲</span>
+                <span class="dl-report-parts">客戶 D 拜訪 · 樣品確認</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>
