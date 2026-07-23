@@ -146,7 +146,14 @@
 
   // LIFF SDK 會把原始 URL 的 query 打包成 ?liff.state=<url-encoded>
   // liff.init() 完成後 · SDK 會 rewrite URL 展開回原本的 query · 所以要在 init 後才讀
-  const API_BASE = window.location.origin.replace(/\/liff\/.*/, "");  // 同 origin
+  //
+  // API_BASE · 硬編 backend domain · 因 web static / backend 不同 domain
+  //  - web static: ai-center-line-demo.onrender.com (host binding.html)
+  //  - backend:    ai-center-line.onrender.com (endpoints)
+  //  - 若 window.location 是 localhost (dev) · 走同 port (Vite proxy 處理)
+  const API_BASE = window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1")
+    ? window.location.origin
+    : "https://ai-center-line.onrender.com";
   let BOT_ID = null;
   let prefillData = null;
   let lineUserId = null;

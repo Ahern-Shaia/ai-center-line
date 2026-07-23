@@ -1,5 +1,4 @@
 import { Module } from "@nestjs/common";
-import { ScheduleModule } from "@nestjs/schedule";
 import { LineIngestModule } from "../line-ingest/line-ingest.module.js";
 import { LlmModule } from "../llm/llm.module.js";
 import { PersonalDailyReportController } from "./personal-daily-report.controller.js";
@@ -15,7 +14,7 @@ import { PersonalReportSchedulerService } from "./personal-report-scheduler.serv
  * · 依賴 LineIngestModule (LineApiClient · notify push 用)
  */
 @Module({
-  imports: [ScheduleModule.forRoot(), LlmModule, LineIngestModule],
+  imports: [LlmModule, LineIngestModule],   // ScheduleModule.forRoot() 已於 AppModule 集中
   controllers: [PersonalDailyReportController],
   providers: [
     PersonalDailyReportRepository,

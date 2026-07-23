@@ -1,5 +1,4 @@
 import { Module } from "@nestjs/common";
-import { ScheduleModule } from "@nestjs/schedule";
 import { ConversationAnalysisModule } from "../conversation-analysis/conversation-analysis.module.js";
 import { LineIngestModule } from "../line-ingest/line-ingest.module.js";
 import { AnalysisBatchRepository } from "./analysis-batch.repository.js";
@@ -7,9 +6,9 @@ import { AnalysisBatchService } from "./analysis-batch.service.js";
 import { BatchSchedulerService } from "./batch-scheduler.service.js";
 import { AnalysisBatchController } from "./analysis-batch.controller.js";
 
+// ScheduleModule.forRoot() 已於 AppModule 集中 register · 此處不再重複 (會複製 cron 觸發)
 @Module({
   imports: [
-    ScheduleModule.forRoot(),          // data-sync-layer 已引 · nest 允多次 forRoot () · 冪等
     ConversationAnalysisModule,
     LineIngestModule,
   ],

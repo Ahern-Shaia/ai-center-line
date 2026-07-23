@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { JwtModule } from "@nestjs/jwt";
+import { ScheduleModule } from "@nestjs/schedule";
 import { HealthController } from "./health/health.controller.js";
 import { HealthService } from "./health/health.service.js";
 import { AuthController } from "./auth/auth.controller.js";
@@ -37,6 +38,7 @@ import { PersonalDailyReportModule } from "./personal-daily-report/personal-dail
       secret: process.env.JWT_SECRET ?? "dev-only-change-me",
       signOptions: { expiresIn: "8h" },
     }),
+    ScheduleModule.forRoot(),   // Global · 集中一次 register · feature module 不再重複 (每次 forRoot 會複製 cron 註冊)
     NotifyModule,
     LlmModule,
     ConversationAnalysisModule,
