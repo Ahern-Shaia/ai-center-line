@@ -1,13 +1,5 @@
 import { useState } from "react";
 import {
-  Button as AriaButton,
-  ListBox,
-  ListBoxItem,
-  Popover,
-  Select,
-  SelectValue,
-} from "react-aria-components";
-import {
   createLineBot,
   updateLineBot,
   ApiError,
@@ -16,49 +8,11 @@ import {
 } from "../api";
 import { useToast } from "../Toast";
 import Drawer from "../shared/Drawer";
+import StyledSelect from "../shared/StyledSelect";
 
-// 統一的租戶下拉 · 對齊 CategoryManagement / BindingAudit / LlmSettings 用的 react-aria Select
-// 避免專案內同一種選單走 native <select> 對不齊 (見 memory feedback_grep_ui_components_before_writing)
-function TenantSelect({
-  tenants, value, onChange, disabled, ariaLabel,
-}: {
-  tenants: Array<{ tenantId: string; tenantName: string }>;
-  value: string;
-  onChange: (v: string) => void;
-  disabled?: boolean;
-  ariaLabel: string;
-}) {
-  const selected = tenants.find((t) => t.tenantId === value);
-  return (
-    <Select
-      className="llm-select"
-      selectedKey={value || undefined}
-      onSelectionChange={(k) => onChange(String(k))}
-      aria-label={ariaLabel}
-      isDisabled={disabled || tenants.length === 0}
-    >
-      <AriaButton className="llm-select-btn" style={{ width: "100%" }}>
-        <SelectValue className="llm-select-value">
-          {() => selected?.tenantName ?? (tenants.length === 0 ? "尚無租戶" : "選擇租戶")}
-        </SelectValue>
-        <svg className="llm-select-chev" width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
-          <path d="M1 1l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      </AriaButton>
-      <Popover className="llm-select-pop" offset={4}>
-        <ListBox className="llm-select-list" items={tenants.map((t) => ({ id: t.tenantId, name: t.tenantName }))}>
-          {(item) => (
-            <ListBoxItem id={item.id} textValue={item.name} className="llm-select-item">
-              <span>{item.name}</span>
-              <svg className="llm-select-check" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-                <path d="m2 7 3 3 7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </ListBoxItem>
-          )}
-        </ListBox>
-      </Popover>
-    </Select>
-  );
+// 用 shared StyledSelect · 對齊全 project 統一樣式 (見 memory feedback_grep_ui_components_before_writing)
+function tenantsToItems(tenants: Array<{ tenantId: string; tenantName: string }>) {
+  return tenants.map((t) => ({ id: t.tenantId, label: t.tenantName }));
 }
 
 // 新增 Bot Drawer (aiproot_admin only)
@@ -117,12 +71,13 @@ export function NewBotDrawer({
 
         <div className="field">
           <label>隸屬租戶 *</label>
-          <TenantSelect
-            tenants={refs.tenants}
+          <StyledSelect
+            items={tenantsToItems(refs.tenants)}
             value={tenantId}
             onChange={setTenantId}
             disabled={saving}
             ariaLabel="隸屬租戶"
+            placeholder="選擇租戶"
           />
         </div>
 
@@ -219,12 +174,13 @@ export function EditBotDrawer({
 
         <div className="field">
           <label>隸屬租戶</label>
-          <TenantSelect
-            tenants={tenants}
+          <StyledSelect
+            items={tenantsToItems(tenants)}
             value={tenantId}
             onChange={setTenantId}
             disabled={saving}
             ariaLabel="隸屬租戶"
+            placeholder="選擇租戶"
           />
           {tenantChanged && (
             <div className="llm-hint" style={{ color: "var(--warn)" }}>

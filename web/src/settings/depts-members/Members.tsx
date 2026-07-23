@@ -13,6 +13,7 @@ import {
 } from "../../api";
 import { useToast } from "../../Toast";
 import Drawer from "../../shared/Drawer";
+import StyledSelect from "../../shared/StyledSelect";
 
 const ROLE_LABEL: Record<UserRole, string> = {
   aiproot_admin: "AIPROOT 管理員",
@@ -229,9 +230,13 @@ function MemberDrawer({
 
         <div className="field">
           <label>角色 *</label>
-          <select value={role} onChange={(e) => setRole(e.target.value as UserRole)} disabled={saving}>
-            {assignable.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
-          </select>
+          <StyledSelect
+            items={assignable.map((r) => ({ id: r, label: ROLE_LABEL[r] }))}
+            value={role}
+            onChange={(v) => setRole(v as UserRole)}
+            disabled={saving}
+            ariaLabel="角色"
+          />
           <div className="llm-hint">
             {session?.role === "tenant_admin"
               ? "只可新增部門主管 (group_owner) · 總經理室級請聯繫 aiproot"
@@ -241,10 +246,15 @@ function MemberDrawer({
 
         <div className="field">
           <label>所屬部門</label>
-          <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} disabled={saving}>
-            <option value="">未分派</option>
-            {depts.map((d) => <option key={d.departmentId} value={d.departmentId}>{d.departmentName}</option>)}
-          </select>
+          <StyledSelect
+            items={depts.map((d) => ({ id: d.departmentId, label: d.departmentName }))}
+            value={departmentId}
+            onChange={setDepartmentId}
+            disabled={saving}
+            ariaLabel="所屬部門"
+            allowEmpty
+            emptyLabel="未分派"
+          />
         </div>
 
         {!isEdit && (

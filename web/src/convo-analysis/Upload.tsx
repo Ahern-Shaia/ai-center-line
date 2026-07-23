@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createConvoUpload, ApiError } from "../api";
 import { useToast } from "../Toast";
+import StyledSelect from "../shared/StyledSelect";
 
 interface Props {
   onUploaded: (id: number) => void;
@@ -84,13 +85,13 @@ export default function ConversationAnalysisUpload({ onUploaded }: Props) {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>租戶</label>
-          <select
+          <StyledSelect
+            items={[{ id: "twh", label: "台灣福祉（twh）" }]}
             value={tenantSlug}
+            onChange={() => undefined}
             disabled
-            style={{ padding: 8, border: "1px solid #ccc", borderRadius: 4, width: "100%" }}
-          >
-            <option value="twh">台灣福祉（twh）</option>
-          </select>
+            ariaLabel="租戶"
+          />
           <div style={{ fontSize: 12, color: "#999", marginTop: 4 }}>
             pilot 階段只支援 twh 主檔 grounding · 未來擴 tenant registry
           </div>

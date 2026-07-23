@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { AUDIT_LOG, type AuditAction } from "../mockdata/auditLog";
+import StyledSelect from "../shared/StyledSelect";
 
 const ACTION_OPTIONS: (AuditAction | "all")[] = ["all", "登入", "查看", "簽核", "駁回", "代簽核", "檢索", "匯出", "變更設定"];
 const ACTION_LABEL: Record<string, string> = { all: "全部動作" };
@@ -48,10 +49,16 @@ export default function AuditLog() {
           placeholder="搜尋對象，例如：WO-2506 / T-030 / STARIA"
           aria-label="搜尋對象"
         />
-        <select className="al-select" value={actor} onChange={(e) => setActor(e.target.value)} aria-label="使用者篩選">
-          <option value="">全部使用者</option>
-          {actors.map((a) => <option key={a} value={a}>{a}</option>)}
-        </select>
+        <StyledSelect
+          items={actors.map((a) => ({ id: a, label: a }))}
+          value={actor}
+          onChange={setActor}
+          ariaLabel="使用者篩選"
+          allowEmpty
+          emptyLabel="全部使用者"
+          className="llm-select al-select"
+        />
+
         <div className="al-actions">
           {ACTION_OPTIONS.map((a) => (
             <button
