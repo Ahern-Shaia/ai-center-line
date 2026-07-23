@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>LINE 綁定完整流程 v2 · UI Flow Mockup</title>
+<style>
+  :root {
+    --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6;
+    --line:#E5E7EB; --line-2:#F0F2F5;
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --primary:#4F46E5; --primary-2:#4338CA; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5; --ok-600:#059669;
+    --warn:#D97706; --warn-tint:#FFFBEB; --warn-600:#D97706;
+    --rose:#DC2626; --rose-tint:#FEF2F2; --rose-600:#DC2626;
+    --line-brand:#06C755;
+    --r:6px; --r-sm:4px; --r-lg:10px;
+    --sans: 'Inter', 'Noto Sans TC', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+    --sh-sm: 0 1px 2px rgba(17,24,39,.05);
+    --sh-md: 0 4px 12px rgba(17,24,39,.08);
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px 32px; background:var(--canvas); color:var(--ink); font-family:var(--sans); font-size:14px; line-height:1.55; }
+
+  .page-hdr { max-width:1400px; margin:0 auto 32px; padding-bottom:16px; border-bottom:1px solid var(--line); }
+  .page-hdr h1 { font-size:22px; font-weight:700; margin:0 0 6px; letter-spacing:-0.01em; }
+  .page-hdr .sub { color:var(--ink-3); font-size:13.5px; margin:0 0 8px; }
+  .badge { display:inline-block; padding:2px 10px; background:var(--ok-tint); color:var(--ok-600); border-radius:4px; font-size:12px; font-weight:600; margin-right:6px; }
+  .toc { display:flex; gap:12px; margin-top:14px; flex-wrap:wrap; }
+  .toc a { color:var(--ink-2); text-decoration:none; font-size:12.5px; padding:4px 12px; border:1px solid var(--line); border-radius:999px; background:var(--surface); }
+  .toc a:hover { background:var(--primary-tint); color:var(--primary); border-color:var(--primary); }
+
+  .legend { max-width:1400px; margin:0 auto 24px; padding:12px 16px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); display:flex; gap:20px; flex-wrap:wrap; font-size:12.5px; }
+  .legend-item { display:flex; align-items:center; gap:6px; }
+  .legend-dot { width:12px; height:12px; border-radius:3px; }
+  .legend-dot.actor-alice { background:#D9F99D; }
+  .legend-dot.actor-bot { background:#7DD3FC; }
+  .legend-dot.actor-system { background:#DDD6FE; }
+
+  .stage { max-width:1400px; margin:0 auto 40px; }
+  .stage-hdr { display:flex; align-items:baseline; gap:12px; margin-bottom:16px; padding:12px 18px; background:var(--primary-tint); border-radius:var(--r); border-left:4px solid var(--primary); }
+  .stage-num { font-family:var(--mono); font-size:14px; font-weight:700; color:var(--primary); }
+  .stage-title { font-size:16px; font-weight:700; letter-spacing:-.01em; }
+  .stage-sub { font-size:12.5px; color:var(--ink-3); margin-left:auto; }
+  .stage-actor { font-size:11px; color:var(--ink-3); background:var(--surface); padding:3px 10px; border:1px solid var(--line); border-radius:999px; }
+
+  .screens { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:20px; }
+
+  .screen { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden; box-shadow:var(--sh-sm); display:flex; flex-direction:column; }
+  .screen-lbl { padding:10px 14px; border-bottom:1px solid var(--line); background:var(--well); font-size:11.5px; color:var(--ink-3); display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .screen-lbl b { color:var(--ink-2); font-weight:600; font-size:12px; }
+  .screen-step { background:var(--primary); color:#fff; padding:2px 8px; border-radius:3px; font-size:10.5px; font-family:var(--mono); }
+  .screen-desc { padding:10px 14px; font-size:11.5px; color:var(--ink-3); background:var(--surface); border-bottom:1px solid var(--line-2); }
+
+  /* ===== Phone frame (LINE App) ===== */
+  .line-phone { background:#000; padding:8px; border-radius:24px; max-width:270px; margin:14px auto; }
+  .line-phone-body { background:#EDEEF0; border-radius:16px; overflow:hidden; }
+
+  .line-app-bar { background:#fff; padding:10px 12px; border-bottom:1px solid #ddd; display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; }
+  .line-back { color:var(--line-brand); font-size:14px; }
+  .line-avatar { width:24px; height:24px; border-radius:50%; background:var(--line-brand); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; }
+
+  .line-chat { background:#EDEEF0; padding:12px 8px; min-height:300px; display:flex; flex-direction:column; gap:8px; }
+  .msg-in, .msg-out { max-width:82%; padding:8px 10px; font-size:12px; border-radius:12px; line-height:1.5; word-break:break-word; }
+  .msg-in { align-self:flex-end; background:#8DE356; color:#000; border-top-right-radius:2px; }
+  .msg-out { align-self:flex-start; background:#fff; border-top-left-radius:2px; }
+  .msg-out.card { padding:0; max-width:88%; overflow:hidden; border:1px solid #ddd; }
+  .msg-out.card .card-body { padding:10px 12px; }
+  .msg-out.card .card-btn { display:block; padding:12px; text-align:center; font-weight:600; color:var(--line-brand); border-top:1px solid #eee; background:#F9FAFB; font-size:12.5px; cursor:pointer; }
+  .msg-meta { font-size:9.5px; color:#9CA3AF; align-self:flex-start; padding-left:6px; }
+  .msg-meta.right { align-self:flex-end; padding-right:6px; }
+
+  .line-input { background:#fff; padding:10px 12px; border-top:1px solid #ddd; display:flex; gap:8px; align-items:center; }
+  .line-input-box { flex:1; background:#F0F0F0; border-radius:16px; padding:6px 12px; font-size:11.5px; color:#999; }
+
+  /* ===== LIFF WebView frame ===== */
+  .liff-frame { background:#000; padding:8px; border-radius:24px; max-width:270px; margin:14px auto; }
+  .liff-frame-body { background:#fff; border-radius:16px; overflow:hidden; min-height:400px; }
+  .liff-bar { background:#f5f5f5; padding:10px 12px; border-bottom:1px solid #eaeaea; display:flex; align-items:center; justify-content:space-between; font-size:12px; color:#555; }
+  .liff-bar .url { font-size:10px; color:#999; font-family:var(--mono); }
+  .liff-bar .close { color:#666; font-size:16px; font-weight:300; }
+
+  .liff-page { padding:16px 14px; }
+  .liff-page h2 { text-align:center; font-size:16px; font-weight:700; margin:8px 0 4px; }
+  .liff-page .sub { text-align:center; font-size:11.5px; color:var(--ink-3); margin-bottom:14px; }
+
+  .avatar-lg { width:56px; height:56px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:600; margin:0 auto 10px; }
+
+  .prefill-card { background:var(--ok-tint); border:1.5px solid var(--ok); border-radius:10px; padding:14px 12px; margin-bottom:12px; }
+  .prefill-card .name { font-size:15px; font-weight:700; text-align:center; margin-bottom:2px; }
+  .prefill-card .uid { font-family:var(--mono); font-size:10px; color:var(--ink-3); text-align:center; margin-bottom:10px; }
+  .prefill-card .divider { border-top:1px solid rgba(0,0,0,.08); margin:8px 0; }
+  .prefill-card .grp-lbl { font-size:11px; color:var(--ink-3); margin-bottom:6px; }
+  .prefill-card .grp-item { padding:6px 10px; margin:4px 0; background:#fff; border:1px solid var(--line); border-radius:6px; font-size:11.5px; }
+  .prefill-card .grp-item.primary { border-color:var(--ok); font-weight:600; }
+  .prefill-card .grp-item .pct { float:right; font-size:10px; color:var(--ink-3); }
+
+  .btn-large { display:block; width:100%; padding:12px; border:none; border-radius:8px; font-size:14px; font-weight:600; margin-top:8px; cursor:pointer; }
+  .btn-primary { background:var(--line-brand); color:#fff; }
+  .btn-secondary { background:transparent; color:var(--ink-2); border:1px solid var(--line); }
+
+  .success-badge { text-align:center; padding:24px 12px; }
+  .success-badge .check { width:60px; height:60px; margin:0 auto 12px; border-radius:50%; background:var(--ok); color:#fff; display:flex; align-items:center; justify-content:center; font-size:32px; }
+  .success-badge .txt { font-size:15px; font-weight:700; margin-bottom:4px; }
+  .success-badge .desc { font-size:11.5px; color:var(--ink-3); }
+
+  /* ===== Web browser frame ===== */
+  .web-frame { border:1px solid var(--line); border-radius:8px; overflow:hidden; box-shadow:var(--sh-md); margin:14px 16px; }
+  .web-bar { background:#F5F6F8; padding:8px 12px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; font-size:11px; }
+  .web-bar .dots { display:flex; gap:4px; }
+  .web-bar .dot { width:10px; height:10px; border-radius:50%; background:#ccc; }
+  .web-bar .url { flex:1; background:#fff; padding:3px 10px; border-radius:12px; font-family:var(--mono); font-size:10.5px; color:var(--ink-3); }
+
+  .web-page { padding:20px 16px; min-height:280px; background:#fff; }
+  .web-page.login { background:linear-gradient(135deg, #F0F4FF 0%, #FFF 100%); }
+  .web-page.shell { display:flex; }
+  .web-sidebar { width:120px; background:#F5F6F8; border-right:1px solid var(--line); padding:12px 8px; }
+  .web-sidebar .sb-brand { font-size:11px; font-weight:700; color:var(--primary); margin-bottom:12px; }
+  .web-sidebar .sb-group { font-size:9px; color:var(--ink-3); margin:8px 0 4px; text-transform:uppercase; letter-spacing:0.05em; }
+  .web-sidebar .sb-item { padding:5px 8px; border-radius:4px; font-size:11px; margin:2px 0; color:var(--ink-2); }
+  .web-sidebar .sb-item.active { background:var(--primary-tint); color:var(--primary); font-weight:600; }
+  .web-content { flex:1; padding:14px 16px; }
+
+  .login-card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:20px; max-width:280px; margin:0 auto; box-shadow:var(--sh-md); }
+  .login-card h3 { font-size:16px; text-align:center; margin:0 0 4px; }
+  .login-card .brand { text-align:center; font-size:11px; color:var(--ink-3); margin-bottom:12px; }
+  .login-card .field { margin-bottom:10px; }
+  .login-card .field label { display:block; font-size:11px; color:var(--ink-3); margin-bottom:3px; }
+  .login-card .field input { width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:4px; font-size:12px; }
+  .login-card .divider { display:flex; align-items:center; gap:8px; margin:12px 0; color:var(--ink-3); font-size:10px; }
+  .login-card .divider::before, .login-card .divider::after { content:""; flex:1; height:1px; background:var(--line); }
+  .line-login-btn { display:flex; align-items:center; justify-content:center; gap:6px; background:var(--line-brand); color:#fff; padding:8px; border:none; border-radius:5px; width:100%; font-size:12px; font-weight:600; }
+  .login-card .hint { margin-top:10px; padding:8px; background:var(--well); border-radius:4px; font-size:10.5px; color:var(--ink-2); }
+
+  /* ===== Arrow between stages ===== */
+  .flow-arrow { max-width:1400px; margin:0 auto; text-align:center; font-size:20px; color:var(--primary); padding:8px; }
+
+  /* Actor tint on screen */
+  .actor-alice .screen-lbl { background:#F0FDD4; }
+  .actor-bot .screen-lbl { background:#E0F2FE; }
+  .actor-system .screen-lbl { background:#F3E8FF; }
+
+  .oauth-page { background:#F5F5F5; min-height:280px; padding:20px 14px; }
+  .oauth-panel { background:#fff; border-radius:8px; padding:16px; text-align:center; }
+  .oauth-panel .logo { width:56px; height:56px; margin:0 auto 12px; border-radius:12px; background:var(--line-brand); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; }
+  .oauth-panel .title { font-size:14px; font-weight:600; margin-bottom:8px; }
+  .oauth-panel .app-name { font-size:12px; color:var(--ink-3); margin-bottom:14px; }
+  .oauth-panel .scopes { text-align:left; font-size:11px; color:var(--ink-2); margin:12px 0; padding:8px 12px; background:var(--well); border-radius:4px; }
+  .oauth-panel .scopes li { margin:3px 0; }
+
+  .note { max-width:1400px; margin:32px auto; padding:16px 18px; background:var(--warn-tint); border:1px solid #F5D5A6; border-radius:var(--r); }
+  .note b { color:#7A4E1B; }
+  .note ul { margin:6px 0 0 20px; padding:0; font-size:12.5px; color:var(--ink-2); }
+</style>
+</head>
+<body>
+
+<div class="page-hdr">
+  <h1>LINE 綁定完整流程 v2</h1>
+  <p class="sub">
+    <span class="badge">v2 · 2026-07-23</span>
+    <span class="badge">SHIPPED</span>
+    Alice 從加 bot 好友 · 到綁定完成 · 到日常使用（LIFF + Web 雙路徑）· 全 UI Flow
+  </p>
+  <div class="toc">
+    <a href="#stage-a">A · 加好友觸發</a>
+    <a href="#stage-b">B · LIFF 綁定</a>
+    <a href="#stage-c">C · 綁定完成</a>
+    <a href="#stage-d">D · 日常 · LIFF 查日報</a>
+    <a href="#stage-e">E · 日常 · Web 登入 (可選)</a>
+    <a href="#stage-f">F · Web 我的日報</a>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot actor-alice"></span> Alice (員工)</div>
+  <div class="legend-item"><span class="legend-dot actor-bot"></span> Bot 訊息</div>
+  <div class="legend-item"><span class="legend-dot actor-system"></span> 系統畫面 (LIFF / Web)</div>
+</div>
+
+<!-- ============================================================ STAGE A -->
+<div class="stage" id="stage-a">
+  <div class="stage-hdr">
+    <span class="stage-num">A</span>
+    <span class="stage-title">加 bot 好友 · Bot 秒推綁定按鈕</span>
+    <span class="stage-actor">員工 · 手機 LINE · 全程 5 秒</span>
+  </div>
+  <div class="screens">
+
+    <div class="screen actor-alice">
+      <div class="screen-lbl"><b>A1 · 搜尋公司 bot</b><span class="screen-step">STEP 1</span></div>
+      <div class="screen-desc">Alice 用 LINE App 搜尋公司 bot ID（例：@twh-factory）· 或掃 QR</div>
+      <div class="line-phone">
+        <div class="line-phone-body">
+          <div class="line-app-bar"><span class="line-back">◀</span><span>加入好友</span></div>
+          <div style="padding:20px 16px; background:#fff; text-align:center;">
+            <div style="width:60px; height:60px; margin:0 auto 12px; border-radius:14px; background:var(--line-brand); color:#fff; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700;">T</div>
+            <div style="font-size:14px; font-weight:700;">台灣福祉 AI 助手</div>
+            <div style="font-size:11px; color:#999; margin:4px 0 14px;">@twh-factory</div>
+            <button class="btn-large btn-primary">加入好友</button>
+            <button class="btn-large btn-secondary" style="margin-top:6px;">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen actor-bot">
+      <div class="screen-lbl"><b>A2 · Bot 秒推綁定按鈕</b><span class="screen-step">STEP 2</span></div>
+      <div class="screen-desc">加好友觸發 webhook follow event · Bot 立即 reply · 免費（reply token · 不佔 push quota）</div>
+      <div class="line-phone">
+        <div class="line-phone-body">
+          <div class="line-app-bar">
+            <span class="line-back">◀</span>
+            <span class="line-avatar">T</span>
+            <span>台灣福祉 AI 助手</span>
+          </div>
+          <div class="line-chat">
+            <div class="msg-meta">下午 2:15</div>
+            <div class="msg-out">歡迎！點下方按鈕在 LINE 內完成綁定 · 全程 60 秒 · 免登入網頁</div>
+            <div class="msg-out card">
+              <div class="card-body" style="font-size:11.5px;">點按鈕開始綁定</div>
+              <div class="card-btn">📎 開始綁定</div>
+            </div>
+          </div>
+          <div class="line-input">
+            <div class="line-input-box">輸入訊息…</div>
+            <span style="color:var(--line-brand); font-size:16px;">▶</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="flow-arrow">▼ Alice 點「開始綁定」</div>
+
+<!-- ============================================================ STAGE B -->
+<div class="stage" id="stage-b">
+  <div class="stage-hdr">
+    <span class="stage-num">B</span>
+    <span class="stage-title">LIFF 綁定 · 在 LINE App 內 · 不跳瀏覽器</span>
+    <span class="stage-actor">員工 · LIFF WebView · 全程 30 秒</span>
+  </div>
+  <div class="screens">
+
+    <div class="screen actor-system">
+      <div class="screen-lbl"><b>B1 · LIFF 開啟 · 自動 pre-fill</b><span class="screen-step">STEP 3</span></div>
+      <div class="screen-desc">系統從 line_member 自動撈 Alice 的 displayName 和近 30 天發過訊息的群組推薦</div>
+      <div class="liff-frame">
+        <div class="liff-frame-body">
+          <div class="liff-bar">
+            <span>LINE 綁定 · aiproot</span>
+            <span class="close">×</span>
+          </div>
+          <div class="liff-page">
+            <div class="avatar-lg">王</div>
+            <h2>綁定 LINE 帳號</h2>
+            <div class="sub">全程 60 秒 · 不用密碼</div>
+            <div class="prefill-card">
+              <div class="name">王愛麗絲</div>
+              <div class="uid">Ualice1234567890</div>
+              <div class="divider"></div>
+              <div class="grp-lbl">✨ 系統推薦部門（依你近 30 天發言）：</div>
+              <div class="grp-item primary">✓ 福祉—品保部 <span class="pct">85%</span></div>
+              <div class="grp-item">福祉—業務部 <span class="pct">15%</span></div>
+            </div>
+            <button class="btn-large btn-primary">確認綁定</button>
+            <button class="btn-large btn-secondary">修改資料</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen actor-system">
+      <div class="screen-lbl"><b>B2 · (可選) 微調姓名 / 部門</b><span class="screen-step">STEP 3-alt</span></div>
+      <div class="screen-desc">若 Alice 覺得 pre-fill 不準 · 可改姓名（公司稱呼）· 選其他部門</div>
+      <div class="liff-frame">
+        <div class="liff-frame-body">
+          <div class="liff-bar">
+            <span>LINE 綁定 · aiproot</span>
+            <span class="close">×</span>
+          </div>
+          <div class="liff-page">
+            <h2>編輯綁定資料</h2>
+            <div style="margin-bottom:12px;">
+              <label style="display:block; font-size:11px; color:var(--ink-3); margin-bottom:4px;">姓名（公司稱呼）</label>
+              <input type="text" value="王愛麗絲" style="width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:5px; font-size:13px;">
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="display:block; font-size:11px; color:var(--ink-3); margin-bottom:4px;">主要工作群</label>
+              <div style="border:1px solid var(--line); border-radius:5px; padding:8px; font-size:12px;">
+                <label style="display:block; margin:4px 0;"><input type="radio" checked> 福祉—品保部</label>
+                <label style="display:block; margin:4px 0;"><input type="radio"> 福祉—業務部</label>
+                <label style="display:block; margin:4px 0;"><input type="radio"> 其他 (手動選)</label>
+              </div>
+            </div>
+            <button class="btn-large btn-primary">儲存並綁定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="flow-arrow">▼ Alice 點「確認綁定」</div>
+
+<!-- ============================================================ STAGE C -->
+<div class="stage" id="stage-c">
+  <div class="stage-hdr">
+    <span class="stage-num">C</span>
+    <span class="stage-title">綁定完成 · 系統建 users 記錄 · 自動關 LIFF</span>
+    <span class="stage-actor">系統 · 2 秒</span>
+  </div>
+  <div class="screens">
+
+    <div class="screen actor-system">
+      <div class="screen-lbl"><b>C1 · LIFF 顯成功 · 1 秒後自動關</b><span class="screen-step">STEP 4</span></div>
+      <div class="screen-desc">Backend INSERT users(role='employee', tenant_id=<from bot>, department_id=<from group>) + user_line_binding</div>
+      <div class="liff-frame">
+        <div class="liff-frame-body">
+          <div class="liff-bar">
+            <span>LINE 綁定 · aiproot</span>
+            <span class="close">×</span>
+          </div>
+          <div class="success-badge">
+            <div class="check">✓</div>
+            <div class="txt">綁定成功！</div>
+            <div class="desc">你的部門：品保部</div>
+            <div class="desc" style="margin-top:16px;">1 秒後自動關閉…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen actor-bot">
+      <div class="screen-lbl"><b>C2 · 回 LINE 聊天 · 可開始用</b><span class="screen-step">STEP 5</span></div>
+      <div class="screen-desc">Alice 現在可私訊 bot 記工作 · 或打「日報」查看已整理項目</div>
+      <div class="line-phone">
+        <div class="line-phone-body">
+          <div class="line-app-bar">
+            <span class="line-back">◀</span>
+            <span class="line-avatar">T</span>
+            <span>台灣福祉 AI 助手</span>
+          </div>
+          <div class="line-chat">
+            <div class="msg-meta">下午 2:15</div>
+            <div class="msg-out">歡迎！點下方按鈕在 LINE 內完成綁定…</div>
+            <div class="msg-out card">
+              <div class="card-body" style="font-size:11.5px;">點按鈕開始綁定</div>
+              <div class="card-btn" style="color:#999;">✓ 已完成</div>
+            </div>
+            <div style="text-align:center; font-size:10px; color:var(--ok-600); background:var(--ok-tint); padding:6px; border-radius:4px; margin:6px 20px;">
+              ✓ 已綁定為 王愛麗絲 · 品保部
+            </div>
+          </div>
+          <div class="line-input">
+            <div class="line-input-box">輸入訊息…</div>
+            <span style="color:var(--line-brand); font-size:16px;">▶</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="flow-arrow">▼ 之後 · Alice 每日隨手記工作</div>
+
+<!-- ============================================================ STAGE D -->
+<div class="stage" id="stage-d">
+  <div class="stage-hdr">
+    <span class="stage-num">D</span>
+    <span class="stage-title">日常使用 · LIFF 快速路 · 打「日報」查看</span>
+    <span class="stage-actor">員工 · 手機 LINE · 每次 60 秒</span>
+  </div>
+  <div class="screens">
+
+    <div class="screen actor-alice">
+      <div class="screen-lbl"><b>D1 · Alice 私訊 bot 記工作</b><span class="screen-step">STEP 6</span></div>
+      <div class="screen-desc">bot 每則秒回「✓ 已記錄」· 提示可打「日報」查看</div>
+      <div class="line-phone">
+        <div class="line-phone-body">
+          <div class="line-app-bar">
+            <span class="line-back">◀</span>
+            <span class="line-avatar">T</span>
+            <span>台灣福祉 AI 助手</span>
+          </div>
+          <div class="line-chat">
+            <div class="msg-in">早上 9 點跟 A 客戶開會 · 討論 Q3 交期</div>
+            <div class="msg-out">✓ 已記錄</div>
+            <div class="msg-in">下午 3 點跟人資申請 2 名檢驗</div>
+            <div class="msg-out">✓ 已記錄<br><br>下班前 17:30 自動整理成日報 · 或隨時傳「日報」二字查看</div>
+            <div class="msg-in">日報</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen actor-bot">
+      <div class="screen-lbl"><b>D2 · Bot 回 LIFF 按鈕</b><span class="screen-step">STEP 7</span></div>
+      <div class="screen-desc">關鍵字觸發：日報 / 我的日報 / 看日報 / daily · Bot reply 免費</div>
+      <div class="line-phone">
+        <div class="line-phone-body">
+          <div class="line-app-bar">
+            <span class="line-back">◀</span>
+            <span class="line-avatar">T</span>
+            <span>台灣福祉 AI 助手</span>
+          </div>
+          <div class="line-chat">
+            <div class="msg-in">日報</div>
+            <div class="msg-out card">
+              <div class="card-body" style="font-size:11.5px;">點按鈕看今日 AI 整理的日報 · 可編輯後送出主管</div>
+              <div class="card-btn">📋 查看我的日報</div>
+            </div>
+            <div class="msg-meta">下午 5:30</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen actor-system">
+      <div class="screen-lbl"><b>D3 · LIFF 我的日報頁</b><span class="screen-step">STEP 8</span></div>
+      <div class="screen-desc">認證：LIFF SDK 傳 lineUserId · Backend 查 user_line_binding · 拿 userId 抓日報</div>
+      <div class="liff-frame">
+        <div class="liff-frame-body">
+          <div class="liff-bar">
+            <span>我的日報 · aiproot</span>
+            <span class="close">×</span>
+          </div>
+          <div class="liff-page">
+            <h2>我的日報</h2>
+            <div class="sub">王愛麗絲 · 7 月 23 日</div>
+            <div style="background:var(--primary-tint); color:#3730A3; padding:8px 12px; border-radius:6px; font-size:11.5px; text-align:center; margin-bottom:12px;">
+              ✨ AI 已整理 2 項 · 請確認
+            </div>
+
+            <div style="background:#fff; border:1px solid var(--line); border-radius:6px; padding:10px; margin-bottom:8px;">
+              <div style="display:flex; gap:6px; align-items:baseline; margin-bottom:4px;">
+                <span style="background:var(--primary); color:#fff; width:18px; height:18px; border-radius:50%; font-size:10px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">1</span>
+                <span style="background:var(--well); padding:1px 6px; border-radius:3px; font-family:var(--mono); font-size:9.5px;">09:00-10:30</span>
+                <b style="font-size:12px;">A 客戶 Q3 交期討論</b>
+              </div>
+              <div style="font-size:11px; color:var(--ink-2); padding-left:24px;">客戶要求提早 15 天 · 品保確認可配合</div>
+              <div style="font-size:10.5px; color:var(--warn-600); padding-left:24px; margin-top:4px;">
+                <b>追蹤</b> · 明日 09:00 跟人資申請 2 名檢驗
+              </div>
+              <div style="padding-left:24px; margin-top:6px; display:flex; gap:4px;">
+                <button style="background:#fff; border:1px solid var(--line); padding:3px 8px; border-radius:3px; font-size:10px;">編輯</button>
+                <button style="background:#fff; border:1px solid var(--line); padding:3px 8px; border-radius:3px; font-size:10px; color:var(--rose-600);">刪除</button>
+              </div>
+            </div>
+
+            <div style="background:#fff; border:1px solid var(--line); border-radius:6px; padding:10px; margin-bottom:8px;">
+              <div style="display:flex; gap:6px; align-items:baseline; margin-bottom:4px;">
+                <span style="background:var(--primary); color:#fff; width:18px; height:18px; border-radius:50%; font-size:10px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">2</span>
+                <span style="background:var(--well); padding:1px 6px; border-radius:3px; font-family:var(--mono); font-size:9.5px;">15:00</span>
+                <b style="font-size:12px;">人資申請</b>
+              </div>
+              <div style="font-size:11px; color:var(--ink-2); padding-left:24px;">下午 3 點跟人資申請 2 名檢驗</div>
+            </div>
+
+            <button style="width:100%; padding:10px; border:1px dashed var(--line); border-radius:6px; background:transparent; color:var(--ink-2); font-size:12px; margin-top:8px;">+ 手動加一項</button>
+
+            <div style="display:flex; gap:6px; margin-top:12px;">
+              <button style="flex:1; padding:10px; border:1px solid var(--line); border-radius:6px; background:#fff; font-size:12px;">重新生成</button>
+              <button style="flex:1; padding:10px; border:1px solid var(--line); border-radius:6px; background:#fff; font-size:12px;">儲存草稿</button>
+              <button style="flex:1; padding:10px; border:none; background:var(--line-brand); color:#fff; border-radius:6px; font-size:12px; font-weight:600;">送出</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="flow-arrow">▼ 或 · 若 Alice 想大螢幕編輯</div>
+
+<!-- ============================================================ STAGE E -->
+<div class="stage" id="stage-e">
+  <div class="stage-hdr">
+    <span class="stage-num">E</span>
+    <span class="stage-title">日常使用 · Web 詳細路 · 「以 LINE 登入」（可選）</span>
+    <span class="stage-actor">員工 · 電腦瀏覽器 · 全程 20 秒</span>
+  </div>
+  <div class="screens">
+
+    <div class="screen actor-alice">
+      <div class="screen-lbl"><b>E1 · 打開 aiproot 網頁 · 點 LINE 登入</b><span class="screen-step">STEP 9</span></div>
+      <div class="screen-desc">員工不用記帳號密碼 · 直接一鍵 LINE 授權</div>
+      <div class="web-frame">
+        <div class="web-bar">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <div class="url">ai-center-line-demo.onrender.com/</div>
+        </div>
+        <div class="web-page login">
+          <div class="login-card">
+            <h3>aiproot 戰情室</h3>
+            <div class="brand">請使用您的公司帳號登入</div>
+            <div class="field"><label>電子郵件</label><input type="text" placeholder="you@company.com"></div>
+            <div class="field"><label>密碼</label><input type="password"></div>
+            <button style="width:100%; padding:8px; background:var(--primary); color:#fff; border:none; border-radius:5px; font-size:12px; font-weight:600;">登入</button>
+            <div class="divider"><span>或</span></div>
+            <button class="line-login-btn">
+              <span>💬</span> 以 LINE 登入（員工用）
+            </button>
+            <div class="hint">
+              <b>員工</b>：先加公司 LINE Bot 好友完成綁定<br>
+              <b>主管</b>：兩者皆可 · 建議 email（有 2FA）
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen actor-system">
+      <div class="screen-lbl"><b>E2 · LINE OAuth 授權頁</b><span class="screen-step">STEP 10</span></div>
+      <div class="screen-desc">LINE 官方授權頁 · 顯 aiproot 名字 · Alice 授權 · LINE redirect 回 aiproot 帶 code</div>
+      <div class="web-frame">
+        <div class="web-bar">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <div class="url">access.line.me/oauth2/v2.1/authorize?...</div>
+        </div>
+        <div class="oauth-page">
+          <div class="oauth-panel">
+            <div class="logo">L</div>
+            <div class="title">LINE 授權</div>
+            <div class="app-name">「aiproot」想取得您的 LINE 帳號資訊</div>
+            <div class="scopes">
+              <b>將取得：</b>
+              <ul style="margin:4px 0 0 16px; padding:0; font-size:10.5px;">
+                <li>您的 LINE 名稱與大頭貼</li>
+                <li>您的 LINE UserId（給 aiproot 對照綁定）</li>
+              </ul>
+            </div>
+            <button style="width:100%; padding:8px; background:var(--line-brand); color:#fff; border:none; border-radius:5px; font-size:12px; font-weight:600; margin-top:8px;">同意並授權</button>
+            <button style="width:100%; padding:8px; background:transparent; color:var(--ink-2); border:1px solid var(--line); border-radius:5px; font-size:12px; margin-top:6px;">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="flow-arrow">▼ 授權完 · 自動 redirect 回 aiproot · 直接登入</div>
+
+<!-- ============================================================ STAGE F -->
+<div class="stage" id="stage-f">
+  <div class="stage-hdr">
+    <span class="stage-num">F</span>
+    <span class="stage-title">Web · 我的日報 · Alice 大螢幕編輯</span>
+    <span class="stage-actor">員工 · 電腦瀏覽器 · 已登入</span>
+  </div>
+  <div class="screens">
+
+    <div class="screen actor-system">
+      <div class="screen-lbl"><b>F1 · 進 web · sidebar 只有「我的日報」</b><span class="screen-step">STEP 11</span></div>
+      <div class="screen-desc">Alice 是 employee role · sidebar 只顯她能用的 · 不會看到主管級功能</div>
+      <div class="web-frame">
+        <div class="web-bar">
+          <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <div class="url">ai-center-line-demo.onrender.com/#/my-daily-report</div>
+        </div>
+        <div class="web-page shell" style="padding:0;">
+          <div class="web-sidebar">
+            <div class="sb-brand">王 · 台灣福祉</div>
+            <div class="sb-group">戰情室</div>
+            <div class="sb-item active">📋 我的日報</div>
+            <div class="sb-group">資料 · 知識</div>
+            <div class="sb-item">智慧檢索</div>
+            <div class="sb-item">素材看板</div>
+            <div class="sb-item">知識庫</div>
+          </div>
+          <div class="web-content">
+            <h3 style="margin:0 0 4px; font-size:15px;">我的日報 · 2026 年 7 月 23 日</h3>
+            <div style="font-size:11px; color:var(--ink-3); margin-bottom:12px;">✨ AI 已於 17:30 整理 · 請確認或微調</div>
+
+            <div style="background:#fff; border:1px solid var(--line); border-radius:5px; padding:10px; margin-bottom:8px;">
+              <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:4px;">
+                <span style="background:var(--primary); color:#fff; width:18px; height:18px; border-radius:50%; font-size:10px; display:inline-flex; align-items:center; justify-content:center;">1</span>
+                <span style="background:var(--well); padding:1px 5px; border-radius:2px; font-family:var(--mono); font-size:9.5px;">09:00-10:30</span>
+                <b style="font-size:11.5px;">A 客戶 Q3 交期討論</b>
+                <span style="margin-left:auto; display:flex; gap:4px;">
+                  <button style="padding:2px 6px; border:1px solid var(--line); background:#fff; font-size:9.5px; border-radius:3px;">編輯</button>
+                  <button style="padding:2px 6px; border:1px solid var(--line); background:#fff; font-size:9.5px; border-radius:3px;">刪除</button>
+                </span>
+              </div>
+              <div style="font-size:10.5px; color:var(--ink-2); padding-left:22px;">客戶要求提早 15 天 · 品保確認可配合</div>
+              <div style="font-size:10px; color:var(--warn-600); padding-left:22px; margin-top:3px;">追蹤 · 明日 09:00 跟人資申請 2 名檢驗</div>
+            </div>
+
+            <div style="background:#fff; border:1px solid var(--line); border-radius:5px; padding:10px; margin-bottom:8px;">
+              <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:4px;">
+                <span style="background:var(--primary); color:#fff; width:18px; height:18px; border-radius:50%; font-size:10px; display:inline-flex; align-items:center; justify-content:center;">2</span>
+                <span style="background:var(--well); padding:1px 5px; border-radius:2px; font-family:var(--mono); font-size:9.5px;">15:00</span>
+                <b style="font-size:11.5px;">人資申請</b>
+              </div>
+              <div style="font-size:10.5px; color:var(--ink-2); padding-left:22px;">下午 3 點跟人資申請 2 名檢驗</div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; margin-top:12px; padding-top:8px; border-top:1px solid var(--line-2);">
+              <span style="font-size:10.5px; color:var(--ink-3);">今日私訊 2 則 · 2 項待送出</span>
+              <div style="display:flex; gap:5px;">
+                <button style="padding:5px 10px; border:1px solid var(--line); background:#fff; font-size:10.5px; border-radius:3px;">儲存草稿</button>
+                <button style="padding:5px 10px; background:var(--primary); color:#fff; border:none; font-size:10.5px; border-radius:3px; font-weight:600;">送出日報</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen actor-bot">
+      <div class="screen-lbl"><b>F2 · Alice 送出 · 主管 LINE 收 push</b><span class="screen-step">STEP 12</span></div>
+      <div class="screen-desc">Notify service 立即推 group_owner + tenant_admin · fire-and-forget</div>
+      <div class="line-phone">
+        <div class="line-phone-body">
+          <div class="line-app-bar">
+            <span class="line-back">◀</span>
+            <span class="line-avatar" style="background:#3B82F6;">王</span>
+            <span>台灣福祉 AI 助手</span>
+          </div>
+          <div class="line-chat" style="min-height:200px;">
+            <div class="msg-meta">下午 5:35</div>
+            <div class="msg-out">
+              📋 <b>王愛麗絲</b> 已送出 2026-07-23 個人日報 · 2 項<br><br>
+              進「戰情室 → 部門日報」查看
+            </div>
+            <div style="text-align:center; font-size:10px; color:#666; padding:8px;">
+              (王主管收到 LINE 通知)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ NOTE -->
+<div class="note">
+  <b>💡 設計要點</b>
+  <ul>
+    <li><b>Alice 主線只用 LIFF 路（Stage A→B→C→D）</b> · 全程手機 LINE 內 · 60 秒完成</li>
+    <li><b>Web 路是選配（Stage E→F）</b> · 大螢幕編輯 / 週報回顧場景才用 · 一鍵 LINE 登入免密碼</li>
+    <li><b>「一次綁定 · 兩處識別」</b> · 一次 Stage B 綁定完 · 之後 LIFF (Stage D) + Web (Stage F) + 群組訊息識別全通</li>
+    <li><b>Auth 統一走 user_line_binding 表</b> · lineUserId 是 LINE 服務端簽發 · 不能偽造</li>
+    <li><b>Alice role = employee</b> · Web sidebar 只有「我的日報」· 不會誤看主管級功能</li>
+    <li><b>主管級（tenant_admin / group_owner）走 email + 密碼</b> · 有 2FA · 可管人事看戰情室</li>
+  </ul>
+</div>
+
+<div style="max-width:1400px; margin:24px auto; padding:14px 18px; background:var(--primary-tint); border-radius:var(--r); font-size:12px; color:var(--ink-2);">
+  <b>本 mockup 對應實作：</b><br>
+  · Backend: <code>server/src/employee-binding/</code> + <code>server/src/auth/line-oauth.service.ts</code> + <code>server/src/personal-daily-report/</code><br>
+  · Frontend: <code>web/public/liff/binding.html</code> + <code>web/public/liff/my-daily-report.html</code> + <code>web/src/Login.tsx</code><br>
+  · DB: migration 0016 (binding) + 0018 (personal_daily_report) + 0020 (employee role)<br>
+  · Docs: <code>docs/sop/liff-setup.md</code> · <code>docs/sop/line-login-oauth-setup.md</code>
+</div>
+
+</body>
+</html>
