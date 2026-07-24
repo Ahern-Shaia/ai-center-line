@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LINE 應用範圍 · 完整流程（含實作現況）</title>
+<style>
+:root{
+  --ground:#E8ECEF; --panel:#FFF; --ink:#16232E; --muted:#5D6E7A; --hair:#C3CDD4;
+  --order:#1D5FA8; --log:#1F6F5C; --geo:#7A5AA6; --cost:#A63A52; --pend:#B07A12;
+  --st-live:#1F6F5C; --st-dev:#B07A12; --st-design:#1D5FA8; --st-plan:#9AA7B0;
+  --mono:ui-monospace,"SFMono-Regular","JetBrains Mono","Consolas",monospace;
+  --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.6;padding:28px 18px 60px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto}
+
+.masthead{border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:8px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;justify-content:space-between}
+.masthead h1{font-size:26px;font-weight:800;letter-spacing:-.01em}
+.masthead .sub{font-family:var(--mono);font-size:11.5px;color:var(--muted);letter-spacing:.04em}
+
+.legend{display:flex;flex-wrap:wrap;gap:8px 20px;padding:11px 0 12px;font-family:var(--mono);font-size:11.5px;color:var(--muted);border-bottom:1px solid var(--hair);margin-bottom:12px}
+.legend b{font-weight:400;color:var(--ink)}
+.swatch{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:1px}
+.dashkey{display:inline-block;width:16px;border-top:2px dashed var(--pend);margin-right:5px;vertical-align:4px}
+
+.statleg{display:flex;flex-wrap:wrap;gap:8px 14px;padding:0 0 18px;border-bottom:1px solid var(--hair);margin-bottom:20px;font-size:11.5px;color:var(--muted)}
+.stat{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;padding:2px 7px;border-radius:2px;color:#fff;white-space:nowrap;font-weight:700}
+.stat.live{background:var(--st-live)} .stat.dev{background:var(--st-dev)} .stat.design{background:var(--st-design)} .stat.plan{background:var(--st-plan)}
+
+.gatebar{background:#1E3040;color:#DCE4EA;border-radius:3px;padding:14px 17px;margin-bottom:22px}
+.gatebar .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.09em;color:#8FA3B1;display:block;margin-bottom:4px}
+.gatebar .txt{font-size:13.5px}
+.gatebar .txt b{color:#fff}
+.gatebar .eg{font-size:12px;color:#9DB2C0;margin-top:7px;border-top:1px solid #34495B;padding-top:8px}
+
+h2.sec{font-size:12px;font-family:var(--mono);letter-spacing:.12em;color:var(--muted);border-bottom:1px solid var(--hair);padding-bottom:7px;margin:32px 0 15px}
+
+.fc{background:var(--panel);border:1px solid var(--hair);border-left:5px solid var(--c);border-radius:3px;margin-bottom:14px;overflow:hidden}
+.fc.new{border-style:dashed;border-left-style:solid;border-color:var(--pend);border-left-color:var(--c)}
+.fc>header{padding:14px 18px 12px;border-bottom:1px solid var(--hair);display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
+.fc .num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--c);letter-spacing:.08em}
+.fc h3{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.fc .path{font-family:var(--mono);font-size:11.5px;color:var(--c);flex-basis:100%;letter-spacing:.02em}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;padding:2px 7px;border-radius:2px;border:1px solid currentColor;color:var(--muted)}
+.tag.warn{color:var(--pend);background:#FBF3DE;border-color:#E3CE95}
+
+.fc ol{list-style:none;counter-reset:s;padding:6px 18px 4px}
+.fc ol li{counter-increment:s;position:relative;padding:11px 0 11px 40px;border-bottom:1px dotted var(--hair)}
+.fc ol li:last-child{border-bottom:0}
+.fc ol li::before{content:counter(s);position:absolute;left:0;top:11px;width:25px;height:25px;border-radius:50%;background:var(--c);color:#fff;font-family:var(--mono);font-size:11.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.fc .t{font-size:14px;font-weight:700;margin-bottom:2px}
+.fc .d{font-size:12.5px;color:var(--muted)}
+.fc .d b{color:var(--ink)}
+.fc .meta{font-family:var(--mono);font-size:10.5px;color:var(--c);letter-spacing:.05em;margin-top:4px}
+.gm{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;background:var(--c);color:#fff;padding:1px 6px;border-radius:2px;margin-left:7px;vertical-align:2px}
+
+.eg{margin:0 18px 15px;background:#F5F7F8;border:1px solid var(--hair);border-radius:3px;padding:12px 14px}
+.eg .h{font-family:var(--mono);font-size:10px;letter-spacing:.09em;color:var(--c);margin-bottom:7px}
+.eg .line{font-size:12.5px;color:#3C4E59;line-height:1.75;padding-left:15px;position:relative}
+.eg .line::before{content:"›";position:absolute;left:0;color:var(--hair);font-weight:700}
+.eg .out{margin-top:8px;padding-top:8px;border-top:1px dotted var(--hair);font-size:12.5px;color:var(--ink)}
+.eg .out b{color:var(--c)}
+
+.note{margin:0 18px 15px;padding-top:10px;border-top:1px dotted var(--hair);font-size:12.5px;color:var(--muted)}
+.note b{color:var(--ink)}
+
+.now{margin:0 18px 15px;background:#EDF4F1;border:1px solid #B9D4C9;border-left:4px solid var(--st-live);border-radius:3px;padding:11px 14px;font-size:12.5px}
+.now.design{background:#EDF1F7;border-color:#B7C8DE;border-left-color:var(--st-design)}
+.now.dev{background:#FBF5E5;border-color:#E3CE95;border-left-color:var(--st-dev)}
+.now b.h{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;margin-bottom:4px;color:var(--muted)}
+.now a{color:var(--st-design)}
+
+.callout{background:#FDFAF2;border:1px solid #E3CE95;border-left:4px solid var(--pend);border-radius:3px;padding:13px 16px;margin:14px 0;font-size:13px}
+.callout b.h{display:block;margin-bottom:4px;font-size:13.5px;color:var(--ink)}
+.callout.red{background:#FBF2F4;border-color:#DDB6BF;border-left-color:var(--cost)}
+
+.gates{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.gates section{background:var(--panel);border:1px solid var(--hair);border-top:4px solid var(--g);border-radius:3px;padding:13px 15px}
+.gates h4{font-size:14px;margin-bottom:3px}
+.gates .who{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--g);margin-bottom:7px}
+.gates p{font-size:12.5px;color:var(--muted);line-height:1.6}
+.gates ul{margin:7px 0 0 15px;font-size:12px;color:var(--muted)}
+
+.gauge{display:flex;border:1px solid var(--hair);border-radius:3px;overflow:hidden;margin:12px 0;font-size:12.5px;background:var(--panel)}
+.gauge div{padding:10px 13px;flex:1}
+.gauge .hi{background:#EEF5F2;border-right:1px solid var(--hair)}
+.gauge .lo{background:#FDF7EA}
+.gauge b{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;margin-bottom:3px}
+.gauge .hi b{color:var(--log)} .gauge .lo b{color:var(--pend)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:12px 0}
+.split section{background:var(--panel);border:1px solid var(--hair);border-radius:3px;padding:12px 13px}
+.split .ok2{border-left:3px solid var(--log)}
+.split .no2{border-left:3px solid var(--cost)}
+.split h4{font-size:13px;margin-bottom:5px}
+.split p{font-size:12px;color:var(--muted);line-height:1.6}
+
+.sn{background:var(--panel);border:1px solid var(--hair);border-radius:3px;margin-bottom:11px;padding:15px 17px}
+.sn h4{font-size:14.5px;font-weight:700;margin-bottom:3px}
+.sn .story{font-size:12.5px;color:#3C4E59;background:#F5F7F8;border-left:3px solid var(--hair);padding:9px 12px;margin:8px 0 11px;border-radius:0 2px 2px 0;line-height:1.7}
+.sn dl{display:grid;grid-template-columns:70px 1fr;gap:6px 12px;font-size:12.5px}
+.sn dt{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--muted);padding-top:3px}
+.sn dd{color:var(--ink)}
+
+table{width:100%;border-collapse:collapse;background:var(--panel);font-size:12.5px;border:1px solid var(--hair);border-radius:3px;overflow:hidden}
+th{background:#F2F5F6;text-align:left;padding:9px 12px;font-size:11px;font-family:var(--mono);letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--hair);font-weight:400}
+td{padding:9px 12px;border-bottom:1px solid #E7ECEE;vertical-align:top}
+tr:last-child td{border-bottom:0}
+td .stat{margin-right:6px}
+
+.base{margin-top:24px;background:var(--ink);color:#DCE4EA;border-radius:3px;padding:16px 18px}
+.base h3{font-size:13px;margin-bottom:3px;color:#FFF}
+.base .cap{font-family:var(--mono);font-size:10.5px;color:#8FA3B1;letter-spacing:.05em;margin-bottom:12px}
+.base ul{list-style:none;display:flex;flex-wrap:wrap;gap:8px}
+.base li{border:1px solid #34495B;border-radius:2px;padding:6px 11px;font-size:12.5px;background:#1E3040}
+.base li span{display:block;font-family:var(--mono);font-size:10px;color:#8FA3B1;margin-top:1px}
+.base li .stat{font-size:8.5px;padding:1px 5px;margin-right:5px}
+
+.open{margin-top:24px;border:1.5px dashed var(--pend);border-radius:3px;background:#FDFAF2;padding:16px 18px}
+.open h3{font-size:14px;margin-bottom:9px}
+.open ul{margin-left:17px;font-size:12.5px;color:#4A5A66;line-height:1.75}
+.open ul b{color:var(--ink)}
+
+.foot{margin-top:22px;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+
+@media(max-width:700px){
+  .gates,.split{grid-template-columns:1fr}
+  .sn dl{grid-template-columns:1fr;gap:1px 0}
+  .sn dd{margin-bottom:7px}
+  .gauge{flex-direction:column}
+  .gauge .hi{border-right:0;border-bottom:1px solid var(--hair)}
+  table,thead,tbody,th,td,tr{display:block}
+  thead{display:none}
+  td{border-bottom:1px dotted var(--hair)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="masthead">
+  <h1>LINE 應用範圍 · 完整流程</h1>
+  <div class="sub">四條功能線 · 含實作現況　│　現況標註 2026/07/24（by 開發端 · 待 review）</div>
+</div>
+
+<div class="legend">
+  <div><span class="swatch" style="background:var(--order)"></span><b>01 訂單</b></div>
+  <div><span class="swatch" style="background:var(--log)"></span><b>02 日誌與日報</b></div>
+  <div><span class="swatch" style="background:var(--geo)"></span><b>03 定位</b></div>
+  <div><span class="swatch" style="background:var(--cost)"></span><b>04 費用支出</b></div>
+  <div><span class="dashkey"></span><b>虛線＝新增，尚未納入需求文件</b></div>
+</div>
+
+<div class="statleg">
+  <span>實作現況：</span>
+  <div><span class="stat live">✅ 已上線</span> 已開發並部署、可用</div>
+  <div><span class="stat dev">🔧 開發中/部分</span> 底層已備或部分完成</div>
+  <div><span class="stat design">📋 設計完成</span> M0 設計文件已寫、待開發</div>
+  <div><span class="stat plan">○ 規劃中</span> 僅方向、未設計</div>
+</div>
+
+<div class="gatebar">
+  <span class="lbl">前置 · 四條線共同依賴</span>
+  <div class="txt"><b>員工加機器人好友 → 完成身分綁定</b>　　綁定後，同一個人在所有群組的發言、私訊回報、定位打卡、上傳單據，全部歸戶到同一人。<b>全員必要</b>，不是選配。　<span class="stat live">✅ 已上線</span></div>
+  <div class="eg">舉例：業務 B 綁定後，他在「售後服務二部」講的話、私訊機器人的日報回報、外出打卡、月底上傳的加油發票，系統都知道是同一個人，不需要他每次自報姓名。<br>現況：綁定走 LINE 內 LIFF（React）＋ access token 後端驗證，已含安全強化與版本自動更新；「以 LINE 登入」網頁亦已上線。</div>
+</div>
+
+<h2 class="sec">一 · 四條功能線</h2>
+
+<!-- 01 -->
+<article class="fc" style="--c:var(--order)">
+  <header><span class="num">01</span><h3>訂單</h3><span class="tag">已定案</span><span class="stat dev">🔧 底層已備 · pilot</span>
+    <div class="path">LINE 群組 → 辨識文字與檔案 → 產出訂單 → 同步 ERP</div></header>
+  <ol>
+    <li><div class="t">機器人加入群組，客戶直接丟資料</div>
+      <div class="d">不限形式：對話文字、PDF、Word、Excel、照片截圖都收。<b>只有這一條路</b>，不另設人工輸入或系統端觸發的第二條路徑。</div></li>
+    <li><div class="t">辨識並轉成結構化訂單</div>
+      <div class="d">抽出品號、品名、數量、單價、交期、客戶等欄位。</div></li>
+    <li><div class="t">逐欄位判斷信心度<span class="gm">把關點</span></div>
+      <div class="d">高於門檻自動帶入；低於門檻的<b>單一欄位</b>標記待確認，不整份退回。</div></li>
+    <li><div class="t">確認後同步 ERP</div>
+      <div class="d">寫入訂單表單。</div></li>
+  </ol>
+  <div class="now dev"><b class="h">實作現況</b>「對話分析 pilot」已可跑：LINE 匯出/上傳 → Claude 結構化抽取（zod schema）→ 產出記錄（tickets）→ 戰情室簽核 → Ragic 同步狀態欄位。**訂單專用**的欄位對應與寫入端待 ERP 表 fieldId（見文末阻擋項）。多模態（PDF/影像）辨識底層待接上（現以文字為主）。</div>
+</article>
+
+<!-- 02 -->
+<article class="fc" style="--c:var(--log)">
+  <header><span class="num">02a</span><h3>群組 → 工作日誌 → 任務</h3><span class="tag">已定案</span><span class="stat live">✅ 大致上線</span>
+    <div class="path">GROUP → DAILY LOG → TASK</div></header>
+  <ol>
+    <li><div class="t">被動收集群組訊息</div>
+      <div class="d">全程只收不回。記錄發言者、時間、內容、附件、來源群組，依綁定換算成員工身分。</div>
+      <div class="meta">即時收集，不做分析</div></li>
+    <li><div class="t">每日固定時間，逐群組產出工作日誌</div>
+      <div class="d">每個群組各自處理，不把多群組混在一起送進模型。</div>
+      <div class="meta">每日排程（例如 20:00）· 批次，不逐則分析</div></li>
+    <li><div class="t">萃取任務</div>
+      <div class="d">只挑有明確待辦性質的內容。輸出：事項、來源群組、來源訊息 ID、AI 建議負責人、優先度、分類。分類前先比對既有分類，語意相近就歸入。</div></li>
+    <li><div class="t">任務同時走兩條路（互不阻擋）</div>
+      <div class="d">→ <b>進負責人的日報草稿</b>，不需等主管確認<br>→ <b>進待確認池等主管確認</b>，確認後才寫入 ERP</div>
+      <div class="meta">兩道關平行，日報不會因為主管沒空而延誤</div></li>
+    <li><div class="t">主管於看板確認後寫入 ERP<span class="gm">把關點</span></div>
+      <div class="d">確認事項是否成立、負責人是否正確，可改派。寫入異常通知單、QRQC 主表或專案表單。</div></li>
+  </ol>
+  <div class="now"><b class="h">實作現況</b>群組訊息即收即存、批次分析、tickets 分類、戰情室任務看板（待簽核/逾時/已簽核）、單筆簽核、每日日誌檢視都已上線。寫入 ERP（Ragic）的欄位對應待 fieldId。</div>
+</article>
+
+<article class="fc" style="--c:var(--log)">
+  <header><span class="num">02b</span><h3>私訊 → 個人日報 → 本人確認</h3><span class="tag">已定案</span><span class="stat live">✅ 已上線（含 LIFF）</span>
+    <div class="path">DIRECT MESSAGE ＋ TASK → DAILY REPORT → SELF CONFIRM → ERP</div></header>
+  <ol>
+    <li><div class="t">員工工作中隨手回報</div>
+      <div class="d">私訊說明「開始做什麼」與「這件事結束了」。不需格式、不需一次講完、<b>不需要自己打時間</b>。</div>
+      <div class="meta">系統取訊息送出時間作為時間戳記</div></li>
+    <li><div class="t">系統計算各事項時長</div>
+      <div class="d">以開始與結束兩筆相減得出時長。<b>只有開始沒有結束時</b>，當天最後一筆以下班時間收尾並標記為系統推定，不與實際回報混同。</div>
+      <div class="meta">工時要兩個點才算得出來，引導語須設計成一頭一尾都回報</div></li>
+    <li><div class="t">草擬日報：私訊回報 ＋ 群組任務 合併</div>
+      <div class="d">同一人在多個群組被指派的任務全部集中進來，並標示來源群組。</div>
+      <div class="meta">每日排程（例如 17:30）</div></li>
+    <li><div class="t">推送給員工本人確認<span class="gm">把關點</span></div>
+      <div class="d">可增刪項目、修改時間、移除不是自己的任務。<b>確認前不是正式紀錄。</b>修改過的欄位標記為手動修正，保留系統原始值。</div></li>
+    <li><div class="t">確認後寫入 ERP 日報表單</div>
+      <div class="d">日報屬語意整理，不設信心度分數，一律經本人確認。</div></li>
+  </ol>
+  <div class="now"><b class="h">實作現況</b>已上線：私訊落庫、17:30 排程草擬、LIFF「我的日報」可增刪/編輯/存草稿/送出、送出後通知主管。<b>本週剛完成 LIFF 收斂</b>——LIFF 與網頁共用同一份 React 元件（單一實作、不再發散），時間欄位已加格式驗證。寫入 ERP 日報表單待 fieldId。</div>
+</article>
+
+<!-- 03 -->
+<article class="fc new" style="--c:var(--geo)">
+  <header><span class="num">03</span><h3>定位</h3><span class="tag warn">新增</span><span class="stat design">📋 設計完成 · 待開發</span>
+    <div class="path">圖文選單打卡 → LIFF ＋ GPS → 客戶選單 → 路徑里程 → 併入日報</div></header>
+  <ol>
+    <li><div class="t">出發與抵達各打卡一次（可多站）</div>
+      <div class="d">從圖文選單點進去，出發打一次，抵達下一站再打一次。<b>一天多站逐段各記一趟</b>。</div></li>
+    <li><div class="t">LIFF 開頁自動抓 GPS</div>
+      <div class="d">在 LINE 內開網頁，自動取得座標與精度值。<b>不用 LINE 內建的位置訊息</b>——它沒辦法同時挑客戶，圖釘還能用手拖。</div></li>
+    <li><div class="t">客戶選單指定地點</div>
+      <div class="d">打第一個字即篩選客戶主檔，查無則手動輸入地址。</div></li>
+    <li><div class="t">計算路徑里程（只記距離、不算費率）</div>
+      <div class="d">兩點間<b>實際行駛距離</b>，非直線距離（直線會低估兩三成）。<b>費率/報銷金額不在本線</b>，在 04 費用線核算。</div></li>
+    <li><div class="t">併入當日移動紀錄，供 04 費用核算</div></li>
+  </ol>
+  <div class="eg">
+    <div class="h">具體情境</div>
+    <div class="line">09:50　業務 B 在公司點圖文選單「出發」→ LIFF 自動抓到公司座標 → 選「A 客戶」→ 送出</div>
+    <div class="line">10:35　抵達 A 客戶，點「抵達」→ GPS 座標與客戶主檔登記的座標相距 30 公尺，系統自動核對通過</div>
+    <div class="line">13:00　點「出發」→ 選「B 客戶」</div>
+    <div class="line">13:40　抵達 B 客戶，點「抵達」</div>
+    <div class="out"><b>結果：</b>當日移動紀錄 — 公司→A 客戶 12.4 km、A 客戶→B 客戶 8.7 km，合計 21.1 km，自動併入當天日報的移動紀錄欄。</div>
+  </div>
+  <div class="now design"><b class="h">設計裁定（docs/modules/attendance-location-mileage.md）</b>
+    取座標用 <b>navigator.geolocation</b>（LIFF 無 getLocation；含 iOS 16.4 定位 timeout 處理）；距離用<b>雙 provider 可插拔</b>（Google Routes ＋ OpenRouteService，管理員前端選用，aiproot 全域設定）；<b>只記距離不算費率</b>；上班打卡＋多次到點、逐段各記；打卡拍照建議<b>智慧升級式</b>（可疑才補拍＋開關）；前端座標零信任、後端速度/精度檢查。<b>geofence（現場核對）與客戶座標核對需「客戶主檔含經緯度」</b>——見文末阻擋項；MVP 可先不做 geofence。</div>
+  <div class="note"><b>需要一張客戶主檔：</b>客戶名稱、地址、<b>經緯度</b>。存座標才能自動核對員工是否真的在客戶現場，以及計算兩點距離。</div>
+</article>
+
+<!-- 04 -->
+<article class="fc new" style="--c:var(--cost)">
+  <header><span class="num">04</span><h3>費用支出</h3><span class="tag warn">新增</span><span class="stat design">📋 設計完成 · 待開發</span>
+    <div class="path">私訊/LIFF 拍照 → 單據辨識 → 比對當月行程 → 核算 → 本人確認 → Ragic</div></header>
+  <ol>
+    <li><div class="t">上傳單據照片</div>
+      <div class="d">發票、收據、停車證明、計程車收據。走與日報回報同一個私訊/LIFF 管道，即收即存。</div></li>
+    <li><div class="t">單據辨識（Claude 視覺）</div>
+      <div class="d">抽出金額、日期、品項、統編、發票號。每欄回信心度，缺漏填 null。</div></li>
+    <li><div class="t">比對當月行程紀錄</div>
+      <div class="d">調出該月所有出發／抵達紀錄與里程（來自 03 定位線）。</div></li>
+    <li><div class="t">依該公司設定的規則核算</div>
+      <div class="d">費率、計算方式、上限、單據要求，<b>全部是每個客戶各自的設定值，不寫死在程式裡</b>。<b>里程 × 每公里費率</b>的油資核算在此。</div></li>
+    <li><div class="t">本人確認後回寫 Ragic「費用支出」表<span class="gm">把關點</span></div>
+      <div class="d">客戶方自建 Ragic 費用支出表，透過 API 回寫，<b>比照既有「訂單」確認流程</b>（客戶語）。</div></li>
+  </ol>
+  <div class="eg">
+    <div class="h">具體情境</div>
+    <div class="line">月底　業務 B 上傳 3 張照片：加油發票 1,200 元、停車費 60 元、計程車收據 350 元</div>
+    <div class="line">系統　辨識金額與日期，三張信心度都在 0.95 以上，自動帶入</div>
+    <div class="line">系統　調出當月行程：外出 21 天，總里程 486 km</div>
+    <div class="line">系統　依該公司設定「每公里 5 元」核算差旅補助 2,430 元；停車與計程車依設定另計</div>
+    <div class="line">系統　同時列出 2 天行程缺漏（有出發無抵達），該 2 天里程不予採計</div>
+    <div class="out"><b>結果：</b>業務 B 看到核算明細與缺漏提示，補登其中一天後確認回寫 Ragic。</div>
+  </div>
+  <div class="now design"><b class="h">設計裁定（docs/modules/expense-receipt-ai.md）＋ 客戶語</b>
+    Claude 視覺抽取（temp 0＋zod 鎖 schema＋影像 ≤1568px）；台灣特殊性＝<b>民國日期正規化、二聯式/收據無統編＝不可扣抵</b>；去重鍵＝發票號＋統編＋金額。<b>客戶裁定</b>：客戶方自建 Ragic「費用支出」表、透過 API 回寫、<b>像訂單一樣讓他確認、不需戰情室檢視</b>。待釐清：既有「訂單」確認流程長怎樣（要做「一模一樣」）＋ 費用支出表 fieldId。</div>
+  <div class="note"><b>這條線靠前兩條餵資料。</b>單據月底才傳，行程資料整個月累積。油資按里程算，所以定位（03）沒做就沒有里程。<b>辨識底層與 01 同一條管線</b>，辨識對象換成單據而已，可沿用同一套辨識底層與信心度機制。</div>
+</article>
+
+<h2 class="sec">二 · 三道把關點</h2>
+
+<div class="gates">
+  <section style="--g:var(--order)">
+    <h4>信心度門檻 <span class="stat live" style="font-size:8px">✅</span></h4>
+    <div class="who">機器判斷</div>
+    <p>用於 01 訂單、04 單據。OCR 一定會錯，差別只在有沒有被攔下來。</p>
+    <ul><li>逐欄位，不整份退回</li><li>門檻可調，初期從嚴</li><li>分數要留存供稽核</li></ul>
+  </section>
+  <section style="--g:var(--log)">
+    <h4>本人確認 <span class="stat live" style="font-size:8px">✅</span></h4>
+    <div class="who">員工</div>
+    <p>用於 02b 日報（已上線）、04 費用（設計）。確認前都不是正式紀錄。</p>
+    <ul><li>可增刪、可改時間</li><li>可移除不是自己的任務</li><li>修改須留軌跡</li></ul>
+  </section>
+  <section style="--g:var(--geo)">
+    <h4>主管確認 <span class="stat live" style="font-size:8px">✅</span></h4>
+    <div class="who">主管</div>
+    <p>用於 02a 任務寫入 ERP。<b>不影響日報</b>，兩道關平行。戰情室簽核已上線。</p>
+    <ul><li>確認事項是否成立</li><li>確認或改派負責人</li><li>處理員工退回的任務</li></ul>
+  </section>
+</div>
+
+<h2 class="sec">三 · 信心度是什麼</h2>
+
+<p style="font-size:13px">AI 辨識時除了讀出內容，也會給出「有多確定」的分數（0～1）。印刷工整分數高；模糊、手寫、被印章蓋住的分數低。</p>
+
+<div class="gauge">
+  <div class="hi"><b>分數 ≥ 門檻</b>自動寫入，不打擾使用者。九成清楚的資料直接過。</div>
+  <div class="lo"><b>分數 &lt; 門檻</b>標記待人工確認，先呈現辨識結果供快速修正，確認後才寫入。</div>
+</div>
+
+<p style="font-size:13px;color:var(--muted)"><b style="color:var(--ink)">門檻的意義是分配人力。</b>全部都要人確認，功能就沒價值；全部都不確認，遲早出事。</p>
+
+<div class="split">
+  <section class="ok2">
+    <h4>可以用信心度分數</h4>
+    <p>OCR、表格辨識、影像辨識。這類模型的分數有實質統計意義，可直接當門檻依據。<br><b>用於 01 訂單、04 單據。</b></p>
+  </section>
+  <section class="no2">
+    <h4>不能用模型自評分數</h4>
+    <p>「這句算不算任務」「該歸哪一類」這種語意判斷。語言模型很擅長用很有把握的語氣講錯的事。<br><b>用於 02a 任務萃取與分類。</b></p>
+  </section>
+</div>
+
+<p style="font-size:13px"><b>語意判斷改用結構性檢查</b>，任一項不過就走人工確認：必填欄位有無抓到、金額與日期格式是否合法、客戶或料號能否在主檔對應到、小計與總計是否相符。</p>
+
+<h2 class="sec">四 · 補登機制：五個情境　<span class="stat plan" style="font-size:9px">○ 規劃中</span></h2>
+
+<div class="callout red">
+  <b class="h">補登為什麼要嚴謹</b>
+  客戶已確認日報的起訖時間與時長<b>會作為出勤與工時依據</b>。因此所有補登都必須留下軌跡：誰補的、什麼時候補的、原本是什麼、改成什麼。<b>系統絕不可靜默補上任何時間。</b>（現況：個人日報已有 aiItems/finalItems 雙軌與手動修正基礎；下列五情境的完整補登流程尚未實作。）
+</div>
+
+<article class="sn">
+  <h4>情境 1　忘記回報結束</h4>
+  <div class="story">員工 09:15 私訊「開始處理 A 客戶報價」，之後沒回報結束，直到 14:00 才傳「開始拜訪 B 客戶」。系統無法判斷報價做到幾點。</div>
+  <dl>
+    <dt>偵測</dt><dd>同一人有「開始」無對應「結束」，且已出現下一筆開始。</dd>
+    <dt>提醒</dt><dd>收到下一筆開始回報時即時反問「A 客戶報價是幾點結束的？」附快捷鈕（接續到剛才／自行輸入）。</dd>
+    <dt>補登</dt><dd>員工回覆，或在當日日報確認畫面補填。</dd>
+    <dt>未補登</dt><dd>該項時長顯示「未回報結束」，<b>不自行推估</b>。日報送出前必須選定一個時間。</dd>
+    <dt>標記</dt><dd>標示為手動補登，與即時回報區分。</dd>
+  </dl>
+</article>
+
+<article class="sn">
+  <h4>情境 2　忘記打卡抵達</h4>
+  <div class="story">員工 10:00 從公司打卡出發前往 C 客戶，抵達後忘記打卡，直到 12:30 才在 D 客戶打卡。中間 C 客戶那段完全沒紀錄，里程算不出來。</div>
+  <dl>
+    <dt>偵測</dt><dd>兩次打卡間隔超過設定值（例如 90 分鐘），或有出發無抵達。</dd>
+    <dt>提醒</dt><dd>下次打卡時反問「10:00 出發後中間有去哪裡嗎？」提供客戶清單快速補選。</dd>
+    <dt>補登</dt><dd>補選地點與抵達／離開時間。查無客戶則手動輸入地址。</dd>
+    <dt>未補登</dt><dd>該段標記缺漏，里程不予採計，日報與費用單上顯示。</dd>
+    <dt>標記</dt><dd>補登的定位無 GPS 座標，標示為「事後補登、無定位驗證」。</dd>
+  </dl>
+</article>
+
+<article class="sn">
+  <h4>情境 3　一整天完全沒回報</h4>
+  <div class="story">員工整天外出，忙到完全忘記回報，當天日報草稿是空白的。</div>
+  <dl>
+    <dt>偵測</dt><dd>草擬時點該員工當日零筆回報，且非請假或休假。</dd>
+    <dt>提醒</dt><dd>推送空白日報並提示補填，附上他當日在群組的發言時間點作為回憶線索（<b>僅供參考，不自動轉成日報內容</b>）。</dd>
+    <dt>期限</dt><dd>建議次一工作日內完成，逾期須主管核准並填寫理由。</dd>
+    <dt>標記</dt><dd>整份標示為事後補填。</dd>
+  </dl>
+</article>
+
+<article class="sn">
+  <h4>情境 4　單據遺失</h4>
+  <div class="story">月底報帳時發現三週前的停車費收據弄丟，但定位紀錄顯示他當天確實去了客戶那裡並停留兩小時。</div>
+  <dl>
+    <dt>偵測</dt><dd>行程紀錄存在但無對應單據，且該類費用依該公司規則需附單據。</dd>
+    <dt>提醒</dt><dd>費用彙整時列為「缺單據」，不自動剔除也不自動通過。</dd>
+    <dt>補登</dt><dd>可提出無單據申請，填金額與說明，系統附上該日行程紀錄作為佐證。</dd>
+    <dt>核准</dt><dd>一律需主管核准，是否受理與上限依各公司設定。</dd>
+    <dt>標記</dt><dd>標示為無單據核銷，與有單據項目分開統計。</dd>
+  </dl>
+</article>
+
+<article class="sn">
+  <h4>情境 5　月底才發現三週前有缺漏</h4>
+  <div class="story">月底核算時發現本月有四天行程不完整，最早一筆已是三週前，員工早想不起細節。</div>
+  <dl>
+    <dt>根源</dt><dd>缺漏偵測若只在月底跑，這種情況必然發生，而且必然補不回來。</dd>
+    <dt>正解</dt><dd><b>缺漏偵測必須每日執行</b>，當天或次日就提醒，不要累積到月底。</dd>
+    <dt>期限</dt><dd>設補登截止日（例如次月 3 日前），逾期需主管核准。</dd>
+    <dt>月底</dt><dd>核算前先產出「本月缺漏清單」給員工與主管，處理完才進入請款。</dd>
+    <dt>標記</dt><dd>超過設定天數才補登的紀錄，標示補登延遲天數。</dd>
+  </dl>
+</article>
+
+<h2 class="sec">五 · 時間具出勤效力後的額外要求　<span class="stat dev" style="font-size:9px">🔧 部分</span></h2>
+
+<div class="callout red">
+  <b class="h">這一項改變了日報的性質</b>
+  客戶已確認日報時間<b>會作為出勤與工時依據</b>。日報因此不再只是管理工具，而是具法定效力的出勤紀錄，適用勞動法規對出勤紀錄的保存、正確性與可查閱要求。以下設計請勿省略。
+</div>
+
+<table>
+  <thead><tr><th style="width:150px">要求</th><th>設計內容</th></tr></thead>
+  <tbody>
+    <tr><td><span class="stat dev">🔧</span><b>原始值不可覆蓋</b></td><td>系統抓取的原始時間永久保留。員工修改時寫入一筆修正紀錄，不是覆蓋原值。日報顯示最終值，可展開看原始值。（現況：已有 aiItems 原始 vs finalItems 最終雙軌；完整逐欄修正軌跡待補。）</td></tr>
+    <tr><td><span class="stat plan">○</span><b>完整修改軌跡</b></td><td>記錄修改者、修改時間、修改前後值、修改原因（建議必填）。主管代改須另外標示。</td></tr>
+    <tr><td><span class="stat dev">🔧</span><b>系統推定要標示</b></td><td>非員工實際回報、由系統推估的時間（例如以下班時間收尾）必須明確標示，不得與實際回報混為一談。</td></tr>
+    <tr><td><span class="stat plan">○</span><b>員工可查閱</b></td><td>提供員工隨時查詢自己歷史出勤與工時紀錄的入口，並可申請匯出。</td></tr>
+    <tr><td><span class="stat plan">○</span><b>保存年限</b></td><td>出勤紀錄依法有保存年限要求，須確認客戶所在地規定並據以設定資料保存政策。</td></tr>
+    <tr><td><span class="stat plan">○</span><b>告知義務</b></td><td>員工須被明確告知「LINE 回報的時間將作為出勤依據」。這與先前 AI 加入群組的告知是兩件事，需另外完成並留存書面紀錄。</td></tr>
+    <tr><td><span class="stat dev">🔧</span><b>異常不自動裁決</b></td><td>缺漏、逾時補登、時間異常，系統只標示與提醒，<b>不自動認定為遲到、早退或加班</b>，一律由主管判斷。</td></tr>
+  </tbody>
+</table>
+
+<h2 class="sec">六 · 費用規則為租戶參數　<span class="stat design" style="font-size:9px">📋 設計</span></h2>
+
+<p style="font-size:13px;margin-bottom:12px">客戶已確認費用核算規則<b>依各合作公司自行規定</b>，因此不得寫死在程式裡，須做成每個客戶各自的設定。這與平台多租戶的設計方向一致（租戶設定框架已上線，費用規則參數待擴充）。</p>
+
+<table>
+  <thead><tr><th style="width:180px">設定項目</th><th>說明</th></tr></thead>
+  <tbody>
+    <tr><td>油資計算方式</td><td>按里程計費／按單據實報實銷／兩者並行</td></tr>
+    <tr><td>每公里費率</td><td>金額與幣別；可依車種或職級分級</td></tr>
+    <tr><td>里程取得方式</td><td>地圖服務計算路徑（雙 provider 可選）／員工填里程表／兩者比對</td></tr>
+    <tr><td>計程車與停車費</td><td>是否併入油資／是否另計／是否須附單據</td></tr>
+    <tr><td>金額上限</td><td>每筆／每日／每月；超過是否需額外簽核</td></tr>
+    <tr><td>單據要求</td><td>哪些類別必須附單據；無單據是否可申請</td></tr>
+    <tr><td>補登期限</td><td>行程與單據的補登截止日；逾期是否需主管核准</td></tr>
+    <tr><td>簽核層級</td><td>直屬主管／部門主管／財務，及各自金額門檻</td></tr>
+  </tbody>
+</table>
+
+<div class="base">
+  <h3>四條線共用的底層</h3>
+  <div class="cap">SHARED INFRASTRUCTURE — 各線不得各自兜一套</div>
+  <ul>
+    <li><span class="stat live">✅</span>員工身分綁定<span>全員必要 · 已上線(LIFF+驗證)</span></li>
+    <li><span class="stat live">✅</span>批次處理排程<span>不做即時逐則分析 · 已上線</span></li>
+    <li><span class="stat dev">🔧</span>AI 模型層<span>可替換 · 語言模型設定頁已備</span></li>
+    <li><span class="stat dev">🔧</span>多模態辨識<span>文字已上線 · 影像(vision)待接</span></li>
+    <li><span class="stat live">✅</span>信心度門檻<span>confidence 欄位 · 已上線</span></li>
+    <li><span class="stat plan">○</span>客戶主檔<span>名稱/地址/經緯度 · 待建</span></li>
+    <li><span class="stat dev">🔧</span>租戶參數設定<span>租戶設定已上線 · 費用規則待擴充</span></li>
+    <li><span class="stat dev">🔧</span>修改軌跡與稽核<span>audit log 有 · 出勤效力全套待補</span></li>
+  </ul>
+</div>
+
+<div class="open">
+  <h3>仍未確認，會擋住開發</h3>
+  <ul>
+    <li><b>ERP（Ragic）表單欄位定義未取得</b>：日報表單、<b>費用支出表</b>、客戶主檔的欄位與 fieldId 都還沒有——訂單/日報/費用三條線的寫入端全部無法實作。<b>目前最主要的阻擋項。</b>（費用支出表客戶已答應自建，待給欄位；既有「訂單」確認流程也需說明，費用要做「一模一樣」。）</li>
+    <li><b>客戶主檔（含經緯度）是否已存在</b>：03 定位的現場核對/距離、04 費用的里程都依賴。若已有需現有欄位；若沒有需確認由誰建、經緯度如何取得（既有地址批次轉換或人工補）。</li>
+    <li><b>地圖 API 金鑰</b>：定位里程用雙 provider（Google Routes 需綁卡帳號的 API key／或用免卡的 OpenRouteService）。要提供哪一把 key。</li>
+    <li><b>出勤紀錄保存年限</b>：依客戶所在地法規確認，影響資料保存政策設計。</li>
+    <li><b>員工告知</b>：「回報時間將作為出勤依據」的告知是否已完成，須取得書面紀錄。</li>
+  </ul>
+</div>
+
+<div class="foot">虛線框為新增項目。實作現況標註由開發端於 2026/07/24 加上，供客戶 review；細部設計見 docs/modules/attendance-location-mileage.md、expense-receipt-ai.md。狀態若有出入請指正。</div>
+
+</div>
+</body>
+</html>
