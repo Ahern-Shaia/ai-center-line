@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<link rel="stylesheet" href="_shared.css">
+<style>
+  /* 欄位勾選清單 */
+  .flds{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
+  .fld{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line-2);}
+  .fld:last-child{border-bottom:none;}
+  .fld.on{background:var(--primary-tint);}
+  .cb{width:18px;height:18px;border-radius:var(--r-sm);border:1.5px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface);}
+  .fld.on .cb{background:var(--primary);border-color:var(--primary);}
+  .cb svg{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.5;}
+  .fld-name{font-weight:500;flex:1;}
+  .fld-id{font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+  .fld-ord{width:26px;height:22px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:11px;color:var(--ink-2);display:flex;align-items:center;justify-content:center;background:var(--surface);}
+  .grip{color:var(--ink-3);cursor:grab;}
+  /* 事件 toggle */
+  .evs{display:flex;gap:10px;}
+  .ev{flex:1;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;align-items:center;gap:8px;font-size:13px;}
+  .ev.on{border-color:var(--primary);background:var(--primary-tint);color:var(--primary-2);font-weight:600;}
+  .sw{width:32px;height:18px;border-radius:999px;background:var(--line);position:relative;flex-shrink:0;}
+  .ev.on .sw{background:var(--primary);}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.15s;}
+  .ev.on .sw::after{left:16px;}
+  /* webhook url box */
+  .url-box{background:#0F172A;border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:12px;}
+  .url-box code{font-family:var(--mono);font-size:12.5px;color:#A5B4FC;flex:1;word-break:break-all;}
+  .url-copy{background:#334155;color:#fff;border:none;border-radius:var(--r-sm);padding:6px 12px;font-size:12px;cursor:pointer;}
+  .callout{background:var(--warn-tint);border:1px solid #FDE68A;border-radius:var(--r);padding:10px 14px;font-size:12.5px;color:#92400E;line-height:1.6;margin-top:12px;}
+</style></head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="sb-brand"><div class="sb-mark">a</div><div><div class="sb-name">aiproot</div><div class="sb-sub">戰情室</div></div></div>
+    <div class="sb-scroll">
+      <div class="sb-group">戰情室</div>
+      <a class="sb-link">總覽儀表</a>
+      <a class="sb-link">每日簽核</a>
+      <div class="sb-group">AI 對話分析</div>
+      <a class="sb-link">分析列表</a>
+      <a class="sb-link">語言模型設定</a>
+      <div class="sb-group">通訊接頭層</div>
+      <a class="sb-link">LINE 機器人</a>
+      <div class="sb-group">AIPROOT 管理</div>
+      <a class="sb-link">開通新租戶</a>
+      <a class="sb-link">AI 成本管理</a>
+      <a class="sb-link">地圖里程設定</a>
+      <a class="sb-link active">通知設定</a>
+      <a class="sb-link">權限管理</a>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="topbar"><div class="topbar-inner">
+      <span class="crumb">AIPROOT 管理 › <b>通知設定</b></span>
+      <span class="spacer"></span>
+      <span class="chip">AD</span>
+    </div></div>
+    <div class="body"><div class="pane">
+      <div class="pane-hdr"><div>
+        <h1>新增通知設定</h1>
+        <div class="sub">設定「Ragic 表單異動 → LINE 通知」· 免找欄位編號、免寫程式</div>
+      </div>
+      <div><button class="btn">取消</button></div>
+      </div>
+
+      <!-- Step 1 · Ragic 帳號 -->
+      <div class="card">
+        <div class="card-h"><span class="step-n">1</span>選擇 Ragic 帳號</div>
+        <div class="card-sub">要監看哪家公司的 Ragic 表單</div>
+        <div class="row">
+          <div class="field" style="margin:0;"><label>Ragic 帳號</label>
+            <div class="select">台灣福祉（ap16 · aitode）<span class="car">▾</span></div>
+          </div>
+          <div style="flex:0 0 auto;display:flex;align-items:flex-end;"><button class="btn btn-sm">＋ 新增帳號 / 換金鑰</button></div>
+        </div>
+        <div class="hint">金鑰加密儲存、不回明碼；用來自動讀取表單欄位。僅具「通知設定」權限的 aiproot 員工可設。</div>
+      </div>
+
+      <!-- Step 2 · 表單 -->
+      <div class="card">
+        <div class="card-h"><span class="step-n">2</span>選擇表單</div>
+        <div class="card-sub">輸入 Ragic 表單路徑，系統自動抓出欄位</div>
+        <div class="row">
+          <div class="field" style="margin:0;flex:2;"><label>表單路徑</label>
+            <input class="tf" value="/service-tickets/10"></div>
+          <div style="flex:0 0 auto;display:flex;align-items:flex-end;"><button class="btn btn-primary btn-sm">抓取欄位</button></div>
+        </div>
+        <div class="hint" style="color:var(--ok);">✓ 已讀取「TB-P71 維修保養單-中部」· 16 個欄位</div>
+      </div>
+
+      <!-- Step 3 · 勾選欄位 -->
+      <div class="card">
+        <div class="card-h"><span class="step-n">3</span>選擇要通知的欄位</div>
+        <div class="card-sub">勾選 + 拖曳排序 · 訊息會依此順序逐行列出</div>
+        <div class="flds">
+          <div class="fld on"><span class="cb"><svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg></span><span class="fld-name">單據編號</span><span class="fld-id">#1031954</span><span class="fld-ord">1</span><span class="grip">⋮⋮</span></div>
+          <div class="fld on"><span class="cb"><svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg></span><span class="fld-name">維修保養狀況</span><span class="fld-id">#1031986</span><span class="fld-ord">2</span><span class="grip">⋮⋮</span></div>
+          <div class="fld on"><span class="cb"><svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg></span><span class="fld-name">車牌號碼</span><span class="fld-id">#1031978</span><span class="fld-ord">3</span><span class="grip">⋮⋮</span></div>
+          <div class="fld on"><span class="cb"><svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg></span><span class="fld-name">維修人員姓名</span><span class="fld-id">#1031959</span><span class="fld-ord">4</span><span class="grip">⋮⋮</span></div>
+          <div class="fld"><span class="cb"></span><span class="fld-name">車型</span><span class="fld-id">#1031980</span><span class="fld-ord" style="opacity:.3">–</span><span class="grip">⋮⋮</span></div>
+          <div class="fld"><span class="cb"></span><span class="fld-name">車身號碼</span><span class="fld-id">#1031987</span><span class="fld-ord" style="opacity:.3">–</span><span class="grip">⋮⋮</span></div>
+        </div>
+        <div class="field" style="margin:16px 0 0;"><label>自訂訊息標題（選填 · 留空用表單名）</label>
+          <input class="tf" placeholder="例：維修保養通知"></div>
+      </div>
+
+      <!-- Step 4 · 事件 + LINE 群 -->
+      <div class="card">
+        <div class="card-h"><span class="step-n">4</span>觸發時機與通知對象</div>
+        <div class="card-sub">哪些異動要通知、發到哪個 LINE 群</div>
+        <div class="field" style="margin-bottom:14px;"><label>觸發事件</label>
+          <div class="evs">
+            <div class="ev on"><span class="sw"></span>新增資料</div>
+            <div class="ev on"><span class="sw"></span>更新資料</div>
+            <div class="ev"><span class="sw"></span>刪除資料</div>
+          </div>
+        </div>
+        <div class="field" style="margin:0;"><label>LINE 目標群</label>
+          <div class="select">台灣福祉 · 業助群<span class="car">▾</span></div>
+        </div>
+      </div>
+
+      <!-- Step 5 · webhook url -->
+      <div class="card">
+        <div class="card-h"><span class="step-n">5</span>接上 Ragic（存檔後產生）</div>
+        <div class="card-sub">把下面網址貼進 Ragic 該表單的「Webhook」設定 · 一次即可</div>
+        <div class="url-box">
+          <code>https://ai-center-line.onrender.com/notify/webhook/8Kd2p…Xq9zR</code>
+          <button class="url-copy">複製</button>
+        </div>
+        <div class="callout">在 Ragic：該表單 → 工具 → <b>Webhook</b> → 貼上此網址 → 儲存。之後每次符合條件的異動就會自動通知，<b>不用再貼任何程式碼</b>。</div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px;">
+        <button class="btn">取消</button>
+        <button class="btn btn-primary">儲存設定</button>
+      </div>
+    </div></div>
+  </div>
+</div>
+</body></html>
