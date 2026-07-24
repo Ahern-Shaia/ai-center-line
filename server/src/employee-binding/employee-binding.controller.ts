@@ -7,6 +7,7 @@ import { withTenant } from "../db/client.js";
 import { EmployeeBindingService } from "./employee-binding.service.js";
 import { UserLineBindingRepository } from "./user-line-binding.repository.js";
 import { NudgeService } from "./nudge.service.js";
+import { verifyLiffAccessToken } from "../auth/liff-verify.js";
 
 /**
  * Employee Binding Controller · 方向 8 LIFF Zero-Config
@@ -56,19 +57,21 @@ export class EmployeeBindingController {
   async liffSetPassword(@Body() body: {
     botId?: string;
     lineUserId?: string;
+    accessToken?: string;
     email?: string;
     password?: string;
   }) {
     // Option C · Alice 綁定後可自設 email + 密碼 · 提供 email 登入備援
-    if (!body?.botId || !body?.lineUserId || !body?.email || !body?.password) {
-      throw new BadRequestException("botId, lineUserId, email, password 必要");
+    if (!body?.botId || !body?.email || !body?.password) {
+      throw new BadRequestException("botId, email, password 必要");
     }
     if (!isValidUuid(body.botId)) {
       throw new BadRequestException("botId 格式錯 · 需為 UUID");
     }
+    const lineUserId = await this.resolveLiffUserId(body);
     return this.svc.setPasswordViaLiff({
       botId: body.botId,
-      lineUserId: body.lineUserId,
+      lineUserId,
       email: body.email,
       password: body.password,
     });
@@ -79,22 +82,31 @@ export class EmployeeBindingController {
   async liffComplete(@Body() body: {
     botId?: string;
     lineUserId?: string;
+    accessToken?: string;
     displayName?: string;
     metadata?: Record<string, unknown>;
   }) {
     // v2 · 只需 botId + lineUserId + displayName · 部門由後端 derive (不接受 primaryGroupId)
-    if (!body?.botId || !body?.lineUserId || !body?.displayName) {
-      throw new BadRequestException("botId, lineUserId, displayName 必要");
+    if (!body?.botId || !body?.displayName) {
+      throw new BadRequestException("botId, displayName 必要");
     }
     if (!isValidUuid(body.botId)) {
       throw new BadRequestException("botId 格式錯 · 需為 UUID");
     }
+    const lineUserId = await this.resolveLiffUserId(body);
     return this.svc.completeLiffBinding({
       botId: body.botId,
-      lineUserId: body.lineUserId,
+      lineUserId,
       displayName: body.displayName,
       metadata: body.metadata ?? {},
     });
+  }
+
+  // 寫入操作取可信 lineUserId：優先驗 access token（新 React LIFF · 修 IDOR）· 無則 legacy lineUserId（舊 binding.html · 過渡）
+  private async resolveLiffUserId(body: { accessToken?: string; lineUserId?: string }): Promise<string> {
+    if (body.accessToken) return verifyLiffAccessToken(body.accessToken);
+    if (body.lineUserId) return body.lineUserId;
+    throw new BadRequestException("需 accessToken 或 lineUserId");
   }
 
   /**

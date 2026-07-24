@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import { withTenant } from "../db/client.js";
 import { EmployeeBindingService } from "../employee-binding/employee-binding.service.js";
+import { verifyLiffAccessToken } from "./liff-verify.js";
 import type { JwtUser } from "./jwt-user.js";
 
 /**
@@ -111,35 +112,8 @@ export class LineOauthService {
    * · 前提：LIFF app 掛在 LINE_LOGIN_CHANNEL_ID 這支 LINE Login channel 下（verify 的 client_id 才會相符）
    */
   async handleLiffToken(accessToken: string): Promise<{ access_token: string; role: string; tenant_id: string | null }> {
-    // 允許清單：web OAuth 那支 LINE Login channel + LIFF 額外掛的幾支（LIFF app 可在不同 channel 下）
-    // LIFF_CHANNEL_IDS 逗號分隔 · 例："2010833378,2010900000"
-    const allowed = new Set(
-      [process.env.LINE_LOGIN_CHANNEL_ID, ...(process.env.LIFF_CHANNEL_IDS?.split(",") ?? [])]
-        .map((s) => s?.trim())
-        .filter((s): s is string => !!s),
-    );
-    if (allowed.size === 0) throw new Error("LINE_LOGIN_CHANNEL_ID / LIFF_CHANNEL_IDS 未設");
-
-    // Step 1 · verify access token（確認是發給我們允許的 channel 的、且未過期）
-    const verifyRes = await fetch(`https://api.line.me/oauth2/v2.1/verify?access_token=${encodeURIComponent(accessToken)}`);
-    if (!verifyRes.ok) {
-      const body = await verifyRes.text().catch(() => "");
-      this.logger.warn(`LIFF token verify failed · ${verifyRes.status} · ${body.slice(0, 200)}`);
-      throw new UnauthorizedException("LIFF 登入憑證無效 · 請重開頁面");
-    }
-    const verify = await verifyRes.json() as { client_id?: string; expires_in?: number };
-    if (!verify.client_id || !allowed.has(verify.client_id)) throw new UnauthorizedException("LIFF 憑證 channel 不符");
-    if (!verify.expires_in || verify.expires_in <= 0) throw new UnauthorizedException("LIFF 登入憑證已過期 · 請重開頁面");
-
-    // Step 2 · access token → profile（拿可信 userId）
-    const profileRes = await fetch("https://api.line.me/v2/profile", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!profileRes.ok) throw new UnauthorizedException("拿不到 LINE profile");
-    const profile = await profileRes.json() as { userId?: string };
-    if (!profile.userId) throw new UnauthorizedException("LINE profile 無 userId");
-
-    return this.issueJwtForLineUserId(profile.userId);
+    const lineUserId = await verifyLiffAccessToken(accessToken);
+    return this.issueJwtForLineUserId(lineUserId);
   }
 
   /**
