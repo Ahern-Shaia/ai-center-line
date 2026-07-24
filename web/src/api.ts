@@ -266,6 +266,19 @@ export const liffSetPassword = (args: { botId: string; accessToken: string; emai
     "/binding/liff/set-password",
     { method: "POST", body: JSON.stringify(args) },
   );
+
+// === 外勤打卡 + 里程（JWT）===
+export interface PunchResult {
+  punchId: string;
+  suspicious: Record<string, number> | null;
+  trip: { distanceM: number | null; routeProvider: string | null } | null;
+}
+export const attendancePunch = (body: { punchType: "clock_in" | "arrive_site" | "clock_out"; lat?: number; lng?: number; accuracyM?: number; customerName?: string }) =>
+  req<PunchResult>("/attendance/punch", { method: "POST", body: JSON.stringify(body) });
+
+export interface TripRow { tripId: string; distanceM: number | null; routeProvider: string | null; createdAt: string }
+export const getTodayTrips = () =>
+  req<{ trips: TripRow[] }>("/attendance/trips/today");
 export const getWarroom = () => req<Warroom>("/warroom");
 export const getPending = () => req<{ pending: PendingTicket[] }>("/signoff");
 export const confirmSignoff = (ticket_ids: string[]) =>

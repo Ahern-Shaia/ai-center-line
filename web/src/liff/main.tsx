@@ -5,6 +5,7 @@ import { ToastProvider } from "../Toast";
 import { applyLiffToken, ApiError } from "../api";
 import BindingView from "./BindingView";
 import SetPasswordView from "./SetPasswordView";
+import PunchView from "./PunchView";
 import type { LiffCtx } from "./types";
 import "../styles.css";
 
@@ -35,7 +36,7 @@ function resolveQuery(key: string): string | null {
   return null;
 }
 
-type Phase = "init" | "binding" | "set-password" | "mine" | "unbound" | "error";
+type Phase = "init" | "binding" | "set-password" | "mine" | "punch" | "unbound" | "error";
 
 const CENTER: React.CSSProperties = { minHeight: "70vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" };
 
@@ -61,10 +62,11 @@ function LiffApp() {
         if (!accessToken) { setPhase("error"); setMsg("拿不到 LINE 憑證 · 請重開頁面"); return; }
         const profile = await liff.getProfile();
 
-        if (page === "mine") {
+        // JWT 流程（需已綁定）：我的日報、外勤打卡
+        if (page === "mine" || page === "punch") {
           try {
             await applyLiffToken(accessToken);   // 驗證 → JWT
-            setPhase("mine");
+            setPhase(page);
           } catch (e) {
             if (e instanceof ApiError && e.status === 401) { setPhase("unbound"); setMsg(e.message); }
             else throw e;
@@ -90,6 +92,7 @@ function LiffApp() {
     return <div style={CENTER} className="dm-empty"><div style={{ fontWeight: 600, marginBottom: 6 }}>尚未完成綁定</div><div className="dm-empty-hint">請先私訊公司 LINE 官方帳號、點「開始綁定」完成後再開啟本頁。</div></div>;
   }
   if (phase === "mine") return <MyDailyReport />;
+  if (phase === "punch") return <PunchView />;
   if (phase === "binding" && ctx) return <BindingView ctx={ctx} />;
   if (phase === "set-password" && ctx) return <SetPasswordView ctx={ctx} liff={window.liff} />;
   return null;
