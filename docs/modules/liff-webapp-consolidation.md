@@ -1,8 +1,31 @@
 # 設計文件 · LIFF 網頁動態化與收斂（M0）
 
-> 狀態：**M0 · 開放問題待用戶裁定**（依 CLAUDE.md R6）
+> 狀態：**M0 已裁定 → 進 M1**（依 CLAUDE.md R6）
 > 對象：`web/public/liff/binding.html`（LIFF 靜態頁）、`web/src/personal-report/MyDailyReport.tsx`（web SPA）、`server/src/personal-daily-report/*`。
 > 日期：2026-07-24 · 作者：ahern + Claude
+
+---
+
+## 0. 裁定（2026-07-24 · 用戶：「完全根除不同步問題，工程/時間可忽略」）
+
+**採方案 B（全收斂）** —— 目標是**根除發散源**，不做治標。落地決定（OQ 全數解）：
+
+| OQ | 裁定 | 理由 |
+|---|---|---|
+| 1 範圍 | **B 全收斂**：LIFF 三視圖（binding / set-password / 我的日報）全部 React 化，砍掉 `binding.html` vanilla 版 | 只要還有第二份實作就會再度發散；根除＝單一程式碼 |
+| 2 認證 | **LIFF access token → 後端 `oauth2/v2.1/verify`（驗 channel_id + 效期）+ `/v2/profile` → 換發 JWT**；一併修 IDOR | 不再信任前端 lineUserId；與 web 版統一走 JWT `mine*` 端點 |
+| 3 路由 | **HashRouter** LIFF entry | 符合 `liff.init` scope 限制，最省事 |
+| 4 打包 | **獨立 lean LIFF entry**（Vite 第二 entry）·**import 同一份** `MyDailyReport` 等元件 | 單一來源 + 首載小；不是複製元件 |
+| 5 外部瀏覽器 | web 版本來就支援（LINE OAuth→JWT→MyDailyReport）；LIFF entry 專攻 LINE 內 | 同一套元件兩情境共用，零額外分支 |
+| 6 安全時程 | **併入本次**（M1 認證地基即修 IDOR） | 「根除」含安全根除 |
+
+### 里程碑
+- **M1 · 認證地基**：`POST /auth/liff/token`（收 access token → LINE verify + profile → 對照 binding → 發 JWT）。**含單元/整合測試（R2）**：合法→JWT、錯 channel→401、未綁定→明確錯、過期→401。舊 `liff/*` 端點暫留（灰度）。
+- **M2 · LIFF entry React 化**：Vite 加 `liff.html` + `web/src/liff/`（HashRouter · binding / set-password / mine 三 route）。liff.init→getAccessToken→`/auth/liff/token`→存 JWT→掛**同一份** `MyDailyReport`＋綁定元件。繼承 `UpdateBanner` 版本偵測。
+- **M3 · 切換**：bot 按鈕 URL 指向新 LIFF entry；`binding.html` 保留一版 fallback。
+- **M4 · 收斂**：確認穩定後移除 `binding.html` 與 `liff/*` 重複端點；MODULES.md 標 ✅。
+
+> 以下 §1–§6 為 M0 分析原文（保留供回溯）。§6 OQ 已於本節全數裁定。
 
 ---
 
