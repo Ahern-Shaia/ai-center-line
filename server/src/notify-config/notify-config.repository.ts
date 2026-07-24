@@ -35,21 +35,37 @@ export class NotifyConfigRepository {
   }
 
   async create(tx: Db, c: {
-    ragicAccountId: string; tenantId: string | null; sheetPath: string; sheetName: string;
+    ragicAccountId: string; sheetPath: string; sheetName: string;
     webhookToken: string; title: string | null; fields: NotifyConfigField[];
     notifyCreate: boolean; notifyUpdate: boolean; notifyDelete: boolean; lineGroupId: string; createdBy: string;
   }): Promise<{ configId: string }> {
+    // tenant_id 由 account 帶出（不信任前端）
     const res = await tx.execute<{ config_id: string }>(sql`
       INSERT INTO notify_config
         (ragic_account_id, tenant_id, sheet_path, sheet_name, webhook_token, title, fields,
          notify_create, notify_update, notify_delete, line_group_id, created_by)
       VALUES
-        (${c.ragicAccountId}::uuid, ${c.tenantId}, ${c.sheetPath}, ${c.sheetName}, ${c.webhookToken},
+        (${c.ragicAccountId}::uuid,
+         (SELECT tenant_id FROM ragic_account WHERE account_id = ${c.ragicAccountId}::uuid),
+         ${c.sheetPath}, ${c.sheetName}, ${c.webhookToken},
          ${c.title}, ${JSON.stringify(c.fields)}::jsonb,
          ${c.notifyCreate}, ${c.notifyUpdate}, ${c.notifyDelete}, ${c.lineGroupId}, ${c.createdBy}::uuid)
       RETURNING config_id
     `);
     return { configId: res.rows[0].config_id };
+  }
+
+  // 該 Ragic 帳號對應租戶的 LINE 群（供設定 UI 下拉）· 沿用 line-ingest 的 line_group
+  async listLineGroupsForAccount(tx: Db, accountId: string): Promise<Array<{ groupId: string; displayName: string | null }>> {
+    const res = await tx.execute<{ group_id: string; display_name: string | null }>(sql`
+      SELECT g.group_id, g.display_name
+      FROM ragic_account a
+      JOIN line_bot b   ON b.tenant_id = a.tenant_id AND b.status = 'active'
+      JOIN line_group g ON g.bot_id = b.bot_id
+      WHERE a.account_id = ${accountId}::uuid
+      ORDER BY g.display_name NULLS LAST
+    `);
+    return res.rows.map((r) => ({ groupId: r.group_id, displayName: r.display_name }));
   }
 
   async list(tx: Db): Promise<Array<NotifyConfigRow & { accountDisplayName: string }>> {

@@ -19,8 +19,12 @@ export class NotifyConfigService {
     return this.repo.list(currentTx());
   }
 
+  listLineGroupsForAccount(accountId: string) {
+    return this.repo.listLineGroupsForAccount(currentTx(), accountId);
+  }
+
   async createConfig(user: JwtUser, input: {
-    ragicAccountId: string; tenantId: string | null; sheetPath: string; sheetName: string;
+    ragicAccountId: string; sheetPath: string; sheetName: string;
     title: string | null; fields: NotifyConfigField[];
     notifyCreate: boolean; notifyUpdate: boolean; notifyDelete: boolean; lineGroupId: string;
   }): Promise<{ configId: string; webhookToken: string }> {

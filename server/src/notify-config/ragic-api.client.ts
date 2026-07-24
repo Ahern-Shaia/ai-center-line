@@ -12,6 +12,10 @@ export interface RagicSchemaField {
   fieldName: string;
   type: string;
 }
+export interface RagicSchemaResult {
+  sheetName: string;
+  fields: RagicSchemaField[];
+}
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -39,17 +43,19 @@ export class RagicApiClient {
   }
 
   // 抓表單欄位定義（metadata/schema · 需帳號管理者 key）→ 供前端勾選
-  async fetchSchemaFields(acc: RagicAccountRef, sheetPath: string): Promise<RagicSchemaField[]> {
+  async fetchSchemaFields(acc: RagicAccountRef, sheetPath: string): Promise<RagicSchemaResult> {
     const url = `${this.baseUrl(acc, sheetPath)}/metadata/schema?api`;
     const d = (await this.fetchJson(url, acc.apiKey)) as {
+      sheet?: { sheetName?: string };
       fields?: Array<{ fieldId?: number; fieldName?: string; type?: string }>;
     };
     if (!Array.isArray(d.fields)) {
       throw new Error("Ragic schema 回應無 fields（API key 權限不足？需帳號管理者）");
     }
-    return d.fields
+    const fields = d.fields
       .filter((f) => typeof f.fieldId === "number" && typeof f.fieldName === "string")
       .map((f) => ({ fieldId: f.fieldId as number, fieldName: f.fieldName as string, type: f.type ?? "" }));
+    return { sheetName: d.sheet?.sheetName ?? "", fields };
   }
 
   // 抓單筆完整 record → { fieldId(字串): 值 }

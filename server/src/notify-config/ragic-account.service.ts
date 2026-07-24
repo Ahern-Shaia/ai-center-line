@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { currentTx } from "../db/client.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { RagicAccountRepository, type RagicAccountRow } from "./ragic-account.repository.js";
-import { RagicApiClient, type RagicSchemaField } from "./ragic-api.client.js";
+import { RagicApiClient, type RagicSchemaResult } from "./ragic-api.client.js";
 
 // Ragic 帳號管理 + 抓欄位（供前端勾選）· 走 aiproot 上下文（currentTx · RLS 允 aiproot/consultant）
 @Injectable()
@@ -40,7 +40,7 @@ export class RagicAccountService {
   }
 
   // 抓某表單欄位（前端勾選用）· 同時驗證 key 是否有效
-  async fetchSheetFields(accountId: string, sheetPath: string): Promise<RagicSchemaField[]> {
+  async fetchSheetFields(accountId: string, sheetPath: string): Promise<RagicSchemaResult> {
     const acc = await this.repo.getWithKey(currentTx(), accountId);
     if (!acc) throw new NotFoundException("Ragic 帳號不存在");
     if (!acc.apiKey) throw new BadRequestException("此帳號尚未設定 API key");
