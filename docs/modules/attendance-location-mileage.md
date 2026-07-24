@@ -7,7 +7,9 @@
 ---
 
 ## 1. 需求
-業務性質員工：在 **A 點打卡上班** → 移動到 **B 點（案場）開始執行工作** → 系統算 **A→B 開車最佳路線公里數**並記錄，供**里程報銷**。
+業務性質員工：在 **A 點打卡上班** → 移動到 **B 點（案場）開始執行工作** → 系統算 **A→B 開車最佳路線公里數**並記錄。
+
+> **裁定（2026-07-24）**：**只算並記錄「A→B 距離」（按地圖路線）**。**不算里程費率、不算報銷金額**（費率/報銷不在本模組範圍）。單程 A→B，不含回程。
 
 ## 2. 建在什麼之上（既有可複用）
 - **LIFF React app 已就緒**（本次收斂）：打卡視圖直接加一個 `?page=punch` route，複用 `liff-verify`（access token → 可信 userId）認證 —— **不需信任前端 lineUserId**。
@@ -27,9 +29,9 @@
 ### 3.2 A→B 里程計算
 - **已有 A、B 兩組 GPS 座標 → 不需 geocoding**，直接丟路線 API 算開車距離。
 - **首選 Google Routes API `computeRoutes`（DRIVE）**：回 `distanceMeters`（**實際道路距離非直線**）；`X-Goog-FieldMask` 只取距離控成本；**免費 10,000 次/月**（每次打卡=1 request，外勤量級通常實質 $0）。
-- **為可稽核/可重現**：用 **`routingPreference: TRAFFIC_UNAWARE`**（不含即時路況）→ 同一 A→B 里程固定，報銷不會浮動。
+- **為可稽核/可重現**：用 **`routingPreference: TRAFFIC_UNAWARE`**（不含即時路況）→ 同一 A→B 距離固定、可重算、可稽核。
 - **備案**：OpenRouteService（免信用卡、全免費）；量大再評估 **OSRM 自架**（per-call $0，換運維）。
-- **台灣里程費率**：政府標準汽車 **3 元/km**、機車 2 元/km（不得另報油料/過路/停車）；民間常見 **7–10 元/km**。依公司政策設定。
+- **費率／報銷金額不算**（用戶裁定）→ 只存 `distance_m`（公里 = distance_m/1000）。
 
 ## 4. 資料流（建議）
 ```
@@ -44,7 +46,7 @@ LIFF 打卡頁(?page=punch)
 
 ## 5. 資料模型（新增，待 OQ 定案）
 - **`attendance_punch`**：punch_id, tenant_id, user_id, type(`clock_in`/`arrive_site`/`clock_out`), lat, lng, accuracy_m, address(nullable, 選配反查), punched_at, source(`liff_geo`/`location_msg`), photo_media_id(nullable), suspicious jsonb(旗標明細)。
-- **`attendance_trip`**：trip_id, tenant_id, user_id, from_punch_id, to_punch_id, distance_m, route_source(`google_routes`/…), computed_at, reimburse_amount(nullable), confirm_status(`pending`/`confirmed`/`rejected`), ragic_sync_status。
+- **`attendance_trip`**：trip_id, tenant_id, user_id, from_punch_id, to_punch_id, distance_m, route_source(`google_routes`/…), computed_at, confirm_status(`pending`/`confirmed`/`rejected`), ragic_sync_status。（不含費率/金額）
 - RLS：比照 tickets（tenant_admin 自租戶、group_owner 自部門）。R5 audit log 寫入。
 
 ## 6. 反作弊（前端零信任 · 後端多層）
@@ -62,8 +64,8 @@ LIFF 打卡頁(?page=punch)
 - 單程 vs 來回定義錯 → 報銷金額爭議（見 OQ）。**P1**
 
 ## 8. 開放問題（OQ · 待裁定才進 M1）
-- **OQ-ATT-1 里程口徑**：報銷算**單程 A→B** 還是**含回程**？一天多站（A→B→C）逐段算還是路線加總？
-- **OQ-ATT-2 費率**：用政府 3 元/km、還是公司自訂（7–10 元/km）？誰設定（租戶設定頁）？
+- ~~OQ-ATT-1 里程口徑~~ · ~~OQ-ATT-2 費率~~ → **已裁定**：只算並記錄**單程 A→B 距離**、不算費率/金額。
+- **OQ-ATT-1b 多站**（殘留）：一天多站（A→B→C）要**逐段各記一趟**，還是只記「上班點 → 第一個到點」一段？
 - **OQ-ATT-3 地圖 API**：Google Routes（精度最佳、免費 1 萬/月）還是 OpenRouteService（免信用卡）/ OSRM 自架？**需要一把 Google Maps API key（付費帳號綁卡）嗎？**
 - **OQ-ATT-4 案場座標來源**：geofence 的「案場/打卡點」座標從 Ragic 哪張表拿？還是首次打卡自動建點？
 - **OQ-ATT-5 現場拍照**：打卡要不要**強制拍照**佐證（防偽 vs 員工麻煩，見 memory「算所有 stakeholder friction」）？
