@@ -68,6 +68,9 @@
 - RLS：tenant 隔離（比照 attendance_trip）；WITH CHECK 同。
 - 每（user, report_date, trip_id）僅一筆 `pending`（防洗版，見 FMEA）。
 
+**map_routing_config（tile 設定前端化 · §4-bis）**
+- 加 `tile_provider text default 'osm'`、`tile_api_key_enc bytea null`（pgcrypto 加密 · 比照 routing key）。
+
 **回溯**：M1/M2 已產生、無 `route_geometry` 的 trip **不回溯重算**（R11）；該段地圖只畫兩端圖釘 + 直線並標「路線未記錄」。
 
 ---
@@ -119,14 +122,24 @@
 
 ---
 
-## 7. 開放問題（OQ-MT-N · 待裁定才進 M1）
+## 7. 開放問題（OQ-MT-N）— 全數裁定 2026-07-24（用戶「全採建議」＋「配置一律前端」）
 
-- **OQ-MT-1 圖磚來源**：(a) OSM 公共圖磚（免費、需 attribution、有公平使用上限）／(b) MapTiler 等免費額度含金鑰／(c) 沿用已設 routing provider 的地圖圖磚（Google 需綁卡）。**建議**：pilot 先 (a) OSM + attribution，量大再換 (b)。
-- **OQ-MT-2 路線幾何**：(a) 存 provider 道路 polyline（真實路徑、最準）／(b) 只畫打卡點直線（最省、非真路）。**建議**：(a) 存 polyline（正是消黑箱的關鍵）。
-- **OQ-MT-3 反向地理編碼時機**：(a) 開頁即時反查（可能慢/限流）／(b) 打卡後背景 job 補／(c) 不做、只用員工填的地點名。**建議**：(b) 背景補 + 前端先顯員工填的名。
-- **OQ-MT-4 申訴通知**：(a) 只進戰情室清單 + 側欄紅點／(b) 另推 LINE 給主管。**建議**：(a) 先不主動推 LINE（省 push 計費）。
-- **OQ-MT-5 位置 PII 可見層級**：address/座標誰可見？**建議**：本人 + 該租戶主管；aiproot 平台端預設不看座標明細（只看聚合/里程）。是否保留完整精度？
-- **OQ-MT-6 舊資料**：M1/M2 無 polyline 的 trip 是否補算？**建議**：不回溯（R11 不改歷史），只新資料有圖。
+- ~~OQ-MT-1 圖磚來源~~ → **已裁定**：pilot 先 **OSM 公共圖磚 + attribution**，量大再換含金鑰的 tile provider（如 MapTiler）。**tile provider + 金鑰一律走 aiproot 前端設定（見 §4-bis），不走 env**。
+- ~~OQ-MT-2 路線幾何~~ → **已裁定**：**存 provider 道路 polyline**（消黑箱關鍵）。
+- ~~OQ-MT-3 反向地理編碼時機~~ → **已裁定**：**打卡後背景補**；前端先顯員工填的地點名，address 補上後才顯。反查沿用已設的 routing provider（ORS Pelias `/geocode/reverse` 或 Google geocoding），**無新金鑰**。
+- ~~OQ-MT-4 申訴通知~~ → **已裁定**：**只進戰情室清單 + 側欄紅點**，不主動推 LINE（省 push 計費）。
+- ~~OQ-MT-5 位置 PII 可見層級~~ → **已裁定**：address/座標**僅本人 + 該租戶主管**可見（RLS + audit）；aiproot 平台端預設不看座標明細（只看聚合/里程）。精度保留完整（供主管核對），但顯示層以 role 收斂。
+- ~~OQ-MT-6 舊資料~~ → **已裁定**：**不回溯**（R11 不改歷史），只新資料有折線。
+
+## 4-bis. 配置原則 · 一律前端操作（用戶鐵則 2026-07-24）
+
+> 本模組任何可配置項一律在 **aiproot 前端**操作、加密存 DB，不走 env/CLI/手動 SQL（延續 [[feedback_tenant_self_governance]] 與地圖 key 前端化的既有 pattern）。
+
+- **擴充現有「地圖里程設定」頁**（`aiproot-console/MapConfig` + `/aiproot-console/map-config`）：
+  - 既有：routing provider（ORS/Google）+ routing key。
+  - 新增：**tile provider**（osm / maptiler / …）+ **tile 金鑰**（加密存 `map_routing_config`，比照 routing key 的 pgcrypto 欄位）。
+  - 反查沿用 routing provider，不另設欄位。
+- migration 0025 於 `map_routing_config` 加 `tile_provider`、`tile_api_key_enc`（nullable；osm 無需金鑰）。
 
 ---
 

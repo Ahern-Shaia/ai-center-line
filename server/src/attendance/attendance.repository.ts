@@ -64,13 +64,24 @@ export class AttendanceRepository {
     toPunchId: string;
     distanceM: number | null;
     routeProvider: string | null;
+    routeGeometry: string | null;
+    straightDistanceM: number | null;
   }): Promise<void> {
     await tx.execute(sql`
       INSERT INTO attendance_trip
-        (tenant_id, user_id, from_punch_id, to_punch_id, distance_m, route_provider, computed_at)
+        (tenant_id, user_id, from_punch_id, to_punch_id, distance_m, route_provider, route_geometry, straight_distance_m, computed_at)
       VALUES
         (${t.tenantId}::uuid, ${t.userId}::uuid, ${t.fromPunchId}::uuid, ${t.toPunchId}::uuid,
-         ${t.distanceM}, ${t.routeProvider}, ${t.distanceM != null ? sql`now()` : sql`NULL`})
+         ${t.distanceM}, ${t.routeProvider}, ${t.routeGeometry}, ${t.straightDistanceM},
+         ${t.distanceM != null ? sql`now()` : sql`NULL`})
+    `);
+  }
+
+  // 背景反查地址回填（best-effort · 不阻擋打卡）
+  async updatePunchAddress(tx: Db, punchId: string, address: string): Promise<void> {
+    await tx.execute(sql`
+      UPDATE attendance_punch SET address = ${address}, geocoded_at = now()
+      WHERE punch_id = ${punchId}::uuid
     `);
   }
 

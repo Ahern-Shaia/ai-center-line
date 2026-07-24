@@ -11,9 +11,15 @@ const FETCH_TIMEOUT_MS = 8000;
 
 export interface LatLng { lat: number; lng: number; }
 
+export interface RouteResult {
+  distanceM: number;
+  polyline: string | null;   // encoded polyline（道路折線）· 供地圖繪製 · 取不到為 null
+}
+
 export interface RoutingProvider {
   readonly name: string;
-  computeDistanceMeters(from: LatLng, to: LatLng): Promise<number>;
+  computeRoute(from: LatLng, to: LatLng): Promise<RouteResult>;
+  reverseGeocode(point: LatLng): Promise<string | null>;   // best-effort · 失敗回 null
 }
 
 async function fetchJson(url: string, init: RequestInit): Promise<unknown> {
@@ -31,13 +37,13 @@ async function fetchJson(url: string, init: RequestInit): Promise<unknown> {
 class GoogleRoutesProvider implements RoutingProvider {
   readonly name = "google_routes";
   constructor(private readonly key: string) {}
-  async computeDistanceMeters(from: LatLng, to: LatLng): Promise<number> {
+  async computeRoute(from: LatLng, to: LatLng): Promise<RouteResult> {
     const d = await fetchJson("https://routes.googleapis.com/directions/v2:computeRoutes", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": this.key,
-        "X-Goog-FieldMask": "routes.distanceMeters",
+        "X-Goog-FieldMask": "routes.distanceMeters,routes.polyline.encodedPolyline",
       },
       body: JSON.stringify({
         origin: { location: { latLng: { latitude: from.lat, longitude: from.lng } } },
@@ -45,26 +51,56 @@ class GoogleRoutesProvider implements RoutingProvider {
         travelMode: "DRIVE",
         routingPreference: "TRAFFIC_UNAWARE",
       }),
-    }) as { routes?: Array<{ distanceMeters?: number }> };
+    }) as { routes?: Array<{ distanceMeters?: number; polyline?: { encodedPolyline?: string } }> };
     const m = d.routes?.[0]?.distanceMeters;
     if (typeof m !== "number") throw new Error("Google Routes 回應無 distanceMeters");
-    return m;
+    return { distanceM: Math.round(m), polyline: d.routes?.[0]?.polyline?.encodedPolyline ?? null };
+  }
+  async reverseGeocode(point: LatLng): Promise<string | null> {
+    try {
+      const u = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+      u.searchParams.set("latlng", `${point.lat},${point.lng}`);
+      u.searchParams.set("language", "zh-TW");
+      u.searchParams.set("key", this.key);
+      const d = await fetchJson(u.toString(), { method: "GET" }) as { results?: Array<{ formatted_address?: string }> };
+      return d.results?.[0]?.formatted_address ?? null;
+    } catch (e) {
+      logger.warn(`Google 反查地址失敗 · ${(e as Error).message}`);
+      return null;
+    }
   }
 }
 
 class OpenRouteServiceProvider implements RoutingProvider {
   readonly name = "openrouteservice";
   constructor(private readonly key: string) {}
-  async computeDistanceMeters(from: LatLng, to: LatLng): Promise<number> {
-    // ORS 座標順序為 [lng, lat]
+  async computeRoute(from: LatLng, to: LatLng): Promise<RouteResult> {
+    // ORS 座標順序為 [lng, lat] · 預設回 encoded polyline geometry + summary.distance
     const d = await fetchJson("https://api.openrouteservice.org/v2/directions/driving-car", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: this.key },
       body: JSON.stringify({ coordinates: [[from.lng, from.lat], [to.lng, to.lat]] }),
-    }) as { routes?: Array<{ summary?: { distance?: number } }> };
+    }) as { routes?: Array<{ summary?: { distance?: number }; geometry?: string }> };
     const m = d.routes?.[0]?.summary?.distance;
     if (typeof m !== "number") throw new Error("ORS 回應無 summary.distance");
-    return m;
+    return { distanceM: Math.round(m), polyline: d.routes?.[0]?.geometry ?? null };
+  }
+  async reverseGeocode(point: LatLng): Promise<string | null> {
+    try {
+      const u = new URL("https://api.openrouteservice.org/geocode/reverse");
+      u.searchParams.set("api_key", this.key);
+      u.searchParams.set("point.lon", String(point.lng));
+      u.searchParams.set("point.lat", String(point.lat));
+      u.searchParams.set("size", "1");
+      const d = await fetchJson(u.toString(), { method: "GET" }) as {
+        features?: Array<{ properties?: { label?: string; name?: string } }>;
+      };
+      const p = d.features?.[0]?.properties;
+      return p?.label ?? p?.name ?? null;
+    } catch (e) {
+      logger.warn(`ORS 反查地址失敗 · ${(e as Error).message}`);
+      return null;
+    }
   }
 }
 

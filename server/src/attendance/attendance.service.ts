@@ -86,12 +86,16 @@ export class AttendanceService {
     if (input.punchType === "arrive_site" && prev?.lat != null && prev.lng != null && input.lat != null && input.lng != null) {
       const from: LatLng = { lat: prev.lat, lng: prev.lng };
       const to: LatLng = { lat: input.lat, lng: input.lng };
+      const straightDistanceM = haversineMeters(from, to);
       const provider = await this.resolveProvider();
       let distanceM: number | null = null;
       let routeProvider: string | null = null;
+      let routeGeometry: string | null = null;
       if (provider) {
         try {
-          distanceM = Math.round(await provider.computeDistanceMeters(from, to));
+          const r = await provider.computeRoute(from, to);
+          distanceM = r.distanceM;
+          routeGeometry = r.polyline;
           routeProvider = provider.name;
         } catch (e) {
           this.logger.warn(`里程計算失敗（${provider.name}）· ${(e as Error).message}`);
@@ -104,11 +108,35 @@ export class AttendanceService {
         toPunchId: punchId,
         distanceM,
         routeProvider,
+        routeGeometry,
+        straightDistanceM,
       });
       trip = { distanceM, routeProvider };
     }
 
+    // 背景反查此打卡點地址（best-effort · 不阻擋打卡 · 見透明化 doc OQ-MT-3）
+    if (input.lat != null && input.lng != null) {
+      this.scheduleGeocode(punchId, { lat: input.lat, lng: input.lng });
+    }
+
     return { punchId, suspicious, trip };
+  }
+
+  // 背景反查地址 · setImmediate 脫離 request tx · 用 withSystemTx 回填 · 失敗靜默（address 保持 null 可日後補）
+  private scheduleGeocode(punchId: string, point: LatLng): void {
+    setImmediate(() => {
+      void (async () => {
+        try {
+          const provider = await this.resolveProvider();
+          if (!provider) return;
+          const address = await provider.reverseGeocode(point);
+          if (!address) return;
+          await withSystemTx((tx) => this.repo.updatePunchAddress(tx, punchId, address));
+        } catch (e) {
+          this.logger.warn(`背景反查地址失敗 · ${(e as Error).message}`);
+        }
+      })();
+    });
   }
 
   // 指定台北日期的行程（dateStr = null → 當日）· 員工只看自己（以 JWT user_id 限定）

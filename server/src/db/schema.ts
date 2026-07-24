@@ -382,6 +382,8 @@ export const attendancePunch = pgTable("attendance_punch", {
   source: text("source").$type<"liff_geo" | "location_msg" | "manual">().notNull().default("liff_geo"),
   photoMediaId: uuid("photo_media_id"),
   suspicious: jsonb("suspicious").$type<Record<string, unknown>>(),
+  address: text("address"),                                          // 反向地理編碼結果（背景補）· migration 0025
+  geocodedAt: timestamp("geocoded_at", { withTimezone: true }),
   punchedAt: timestamp("punched_at", { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -394,14 +396,32 @@ export const attendanceTrip = pgTable("attendance_trip", {
   toPunchId: uuid("to_punch_id").notNull().references(() => attendancePunch.punchId, { onDelete: "cascade" }),
   distanceM: integer("distance_m"),
   routeProvider: text("route_provider"),
+  routeGeometry: text("route_geometry"),                             // encoded polyline（道路折線）· migration 0025
+  straightDistanceM: integer("straight_distance_m"),                 // haversine 直線距離對照
   computedAt: timestamp("computed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// 地圖路線 provider 平台設定（aiproot 全域）· migration 0024
+// 里程申訴（員工回報里程有誤 → 主管複核）· migration 0025
+export const attendanceMileageDispute = pgTable("attendance_mileage_dispute", {
+  disputeId: uuid("dispute_id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.userId, { onDelete: "cascade" }),
+  tripId: uuid("trip_id").references(() => attendanceTrip.tripId, { onDelete: "set null" }),
+  reportDate: date("report_date").notNull(),
+  reason: text("reason").notNull(),
+  status: text("status").$type<"pending" | "reviewing" | "resolved" | "rejected">().notNull().default("pending"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  reviewedBy: uuid("reviewed_by").references(() => users.userId, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  resolution: text("resolution"),
+});
+
+// 地圖路線 provider 平台設定（aiproot 全域）· migration 0024 · tile 欄位 0025
 export const mapRoutingConfig = pgTable("map_routing_config", {
   singleton: boolean("singleton").primaryKey().default(true),
   provider: text("provider").$type<"openrouteservice" | "google_routes">().notNull().default("openrouteservice"),
+  tileProvider: text("tile_provider").notNull().default("osm"),
   updatedBy: uuid("updated_by").references(() => users.userId, { onDelete: "set null" }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
