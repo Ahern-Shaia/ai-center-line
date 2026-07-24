@@ -3,25 +3,45 @@ import { createRoot } from "react-dom/client";
 import MyDailyReport from "../personal-report/MyDailyReport";
 import { ToastProvider } from "../Toast";
 import { applyLiffToken, ApiError } from "../api";
+import BindingView from "./BindingView";
+import SetPasswordView from "./SetPasswordView";
+import type { LiffCtx } from "./types";
 import "../styles.css";
 
-// LIFF「我的日報」React entry（M2 · 收斂方案 B）
-// liff.init → getAccessToken → /auth/liff/token 換 JWT → 復用同一份 MyDailyReport（走 JWT mine* 端點）
-// 徹底根除與 web 版的雙實作發散：單一元件、單一端點、單一資料路徑。
+// LIFF 統一入口（M2 · 收斂方案 B）· 取代 binding.html 三視圖
+// 綁定 / 設密碼 / 我的日報 都在此 React 應用，讀 ?page + ?botId 路由。
+// 「我的日報」復用同一份 MyDailyReport（走 JWT）· 徹底根除雙實作發散。
 //
-// ⚠️ M3 切換前置：本頁的 LIFF endpoint 必須是 .../liff.html（liff.init scope 限制）。
-// 因 binding.html 已佔用現有 LIFF(2010801742-WBQkAv5t) 的 endpoint，"我的日報"需要
-// 「同一支 LINE Login channel 下、endpoint 指向 /liff.html 的 LIFF app」。
-// 下方 LIFF_ID 為佔位（先填現有的以利本機/型別）· M3 拿到新 LIFF app id 後更新此值 + 改 bot「日報」按鈕 URL。
+// ⚠️ M3 切換：把「現有」LIFF(2010801742-WBQkAv5t) 的 Endpoint URL 改成 .../liff.html 即可，
+// bot 按鈕 URL 不用改（同一支 LIFF · 只是背後頁面換 React 版）。
 const LIFF_ID = "2010801742-WBQkAv5t";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare global { interface Window { liff: any } }
 
-type Phase = "init" | "ready" | "unbound" | "error";
+// botId 在 liff.login 導向來回可能被剝掉/搬進 liff.state → 登入前先持久化（同 binding.html 修正）
+function resolveQuery(key: string): string | null {
+  const q = new URLSearchParams(location.search);
+  let v = q.get(key);
+  if (v) return v;
+  const liffState = q.get("liff.state");
+  if (liffState) {
+    const s = new URLSearchParams(liffState.startsWith("?") ? liffState.slice(1) : liffState);
+    v = s.get(key);
+    if (v) return v;
+  }
+  const hash = location.hash.replace(/^#/, "");
+  if (hash) { const h = new URLSearchParams(hash); v = h.get(key); if (v) return v; }
+  return null;
+}
 
-function LiffMyDailyReport() {
+type Phase = "init" | "binding" | "set-password" | "mine" | "unbound" | "error";
+
+const CENTER: React.CSSProperties = { minHeight: "70vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" };
+
+function LiffApp() {
   const [phase, setPhase] = useState<Phase>("init");
+  const [ctx, setCtx] = useState<LiffCtx | null>(null);
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
@@ -30,44 +50,55 @@ function LiffMyDailyReport() {
         const liff = window.liff;
         if (!liff) { setPhase("error"); setMsg("LIFF SDK 未載入 · 請重開頁面"); return; }
         await liff.init({ liffId: LIFF_ID });
+
+        // 登入前先解析並持久化 botId/page（否則導向來回後抓不到）
+        const botId = resolveQuery("botId") || sessionStorage.getItem("liff_bot_id") || "";
+        const page = resolveQuery("page") || sessionStorage.getItem("liff_page") || "binding";
+        if (botId) { sessionStorage.setItem("liff_bot_id", botId); sessionStorage.setItem("liff_page", page); }
+
         if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
         const accessToken = liff.getAccessToken();
         if (!accessToken) { setPhase("error"); setMsg("拿不到 LINE 憑證 · 請重開頁面"); return; }
-        await applyLiffToken(accessToken);   // 後端驗證 → 存 JWT
-        setPhase("ready");
+        const profile = await liff.getProfile();
+
+        if (page === "mine") {
+          try {
+            await applyLiffToken(accessToken);   // 驗證 → JWT
+            setPhase("mine");
+          } catch (e) {
+            if (e instanceof ApiError && e.status === 401) { setPhase("unbound"); setMsg(e.message); }
+            else throw e;
+          }
+          return;
+        }
+
+        // 綁定 / 設密碼需要 botId
+        if (!botId) { setPhase("error"); setMsg("缺 botId · 請透過 bot 私訊的按鈕開啟"); return; }
+        setCtx({ botId, lineUserId: profile.userId, displayName: profile.displayName, pictureUrl: profile.pictureUrl ?? null, accessToken });
+        setPhase(page === "set-password" ? "set-password" : "binding");
       } catch (e) {
-        // 未綁定 · /auth/liff/token 回 401 帶「尚未綁定」真實訊息
-        if (e instanceof ApiError && e.status === 401) { setPhase("unbound"); setMsg(e.message); }
-        else { setPhase("error"); setMsg(e instanceof Error ? e.message : "初始化失敗"); }
+        setPhase("error"); setMsg(e instanceof Error ? e.message : "初始化失敗");
       }
     })();
   }, []);
 
-  const center: React.CSSProperties = { minHeight: "70vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" };
-  if (phase === "init") return <div style={center} className="dm-empty">載入中…</div>;
-  if (phase === "unbound") {
-    return (
-      <div style={center} className="dm-empty">
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>尚未完成綁定</div>
-        <div className="dm-empty-hint">請先私訊公司 LINE 官方帳號、點「開始綁定」完成綁定後再開啟本頁。</div>
-      </div>
-    );
-  }
+  if (phase === "init") return <div style={CENTER} className="dm-empty">載入中…</div>;
   if (phase === "error") {
-    return (
-      <div style={center} className="dm-empty">
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>無法開啟</div>
-        <div className="dm-empty-hint">{msg}</div>
-      </div>
-    );
+    return <div style={CENTER} className="dm-empty"><div style={{ fontWeight: 600, marginBottom: 6 }}>無法開啟</div><div className="dm-empty-hint">{msg}</div></div>;
   }
-  return <MyDailyReport />;
+  if (phase === "unbound") {
+    return <div style={CENTER} className="dm-empty"><div style={{ fontWeight: 600, marginBottom: 6 }}>尚未完成綁定</div><div className="dm-empty-hint">請先私訊公司 LINE 官方帳號、點「開始綁定」完成後再開啟本頁。</div></div>;
+  }
+  if (phase === "mine") return <MyDailyReport />;
+  if (phase === "binding" && ctx) return <BindingView ctx={ctx} />;
+  if (phase === "set-password" && ctx) return <SetPasswordView ctx={ctx} liff={window.liff} />;
+  return null;
 }
 
 createRoot(document.getElementById("liff-root")!).render(
   <React.StrictMode>
     <ToastProvider>
-      <LiffMyDailyReport />
+      <LiffApp />
     </ToastProvider>
   </React.StrictMode>,
 );

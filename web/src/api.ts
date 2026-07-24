@@ -241,6 +241,31 @@ export async function applyLiffToken(accessToken: string): Promise<{ role: strin
   localStorage.removeItem(EXPIRES_AT_KEY);
   return { role: d.role, tenant_id: d.tenant_id };
 }
+
+// === LIFF 綁定 / 設密碼（@Public 端點 · 無 JWT）===
+export interface LiffPrefill {
+  status: "new" | "already_bound";
+  existing?: { userDisplayName: string; boundAt: string };
+  prefill?: {
+    displayName: string | null;
+    pictureUrl: string | null;
+    candidateGroups: Array<{ groupId: string; displayName: string | null; departmentName: string | null; messageCount: number }>;
+  };
+}
+export const liffGetPrefill = (botId: string, lineUserId: string) =>
+  req<LiffPrefill>(`/binding/liff/prefill?botId=${botId}&lineUserId=${encodeURIComponent(lineUserId)}`);
+
+// complete / set-password 走 accessToken（後端驗證取可信 userId · 修 IDOR）
+export const liffCompleteBinding = (args: { botId: string; accessToken: string; displayName: string; metadata?: Record<string, unknown> }) =>
+  req<{ displayName: string; departmentName: string | null; departmentSource: string }>(
+    "/binding/liff/complete",
+    { method: "POST", body: JSON.stringify(args) },
+  );
+export const liffSetPassword = (args: { botId: string; accessToken: string; email: string; password: string }) =>
+  req<{ success: boolean; email: string }>(
+    "/binding/liff/set-password",
+    { method: "POST", body: JSON.stringify(args) },
+  );
 export const getWarroom = () => req<Warroom>("/warroom");
 export const getPending = () => req<{ pending: PendingTicket[] }>("/signoff");
 export const confirmSignoff = (ticket_ids: string[]) =>
