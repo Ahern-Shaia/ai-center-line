@@ -144,13 +144,15 @@ export class NudgeService {
           AND b.binding_id IS NULL
         GROUP BY lm.sender_line_id
       )
-      SELECT a.sender_line_id, mem.display_name,
+      SELECT a.sender_line_id,
+             -- 純量子查詢取單一名字：line_member 一人多群會有多列 · 用 JOIN 會把 activity 乘出重複列
+             (SELECT m.display_name FROM line_member m
+               WHERE m.user_id = a.sender_line_id AND m.fetch_error IS NULL
+               ORDER BY m.display_name NULLS LAST
+               LIMIT 1) AS display_name,
              a.message_count, a.last_active_at, a.top_group_name,
-             (SELECT count(*)::int FROM activity) AS total_count   -- 真實總數（不受 LIMIT 限制 · 不受 line_member JOIN 重複膨脹）
+             (SELECT count(*)::int FROM activity) AS total_count   -- 真實總數（不受 LIMIT · 去重人數）
       FROM activity a
-      LEFT JOIN line_member mem
-        ON mem.user_id = a.sender_line_id
-       AND mem.fetch_error IS NULL
       ORDER BY a.message_count::int DESC
       LIMIT 100
     `);
