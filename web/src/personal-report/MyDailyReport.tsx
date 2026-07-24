@@ -259,6 +259,20 @@ export default function MyDailyReport() {
   );
 }
 
+// 時間格式：24 小時制 HH:MM 或區間 HH:MM-HH:MM（空字串＝未填 · 允許）
+const TIME_RE = /^([01]?\d|2[0-3]):[0-5]\d(\s*[-~]\s*([01]?\d|2[0-3]):[0-5]\d)?$/;
+// 輸入時即擋掉非時間字元（數字/冒號/連字號/波浪號/空白以外一律去掉 · 例如「1ww」→「1」）
+const cleanTimeInput = (s: string) => s.replace(/[^\d:\-~\s]/g, "");
+// 失焦時自動補冒號：純數字 830→08:30、0830→08:30、0830-1000→08:30-10:00（藍領少打冒號）
+function normalizeTimeOnBlur(s: string): string {
+  const t = s.trim();
+  const colon = (d: string) => (d.length === 3 ? `0${d[0]}:${d.slice(1)}` : `${d.slice(0, 2)}:${d.slice(2)}`);
+  if (/^\d{3,4}$/.test(t)) return colon(t);
+  const m = t.match(/^(\d{3,4})\s*[-~]\s*(\d{3,4})$/);
+  if (m) return `${colon(m[1])}-${colon(m[2])}`;
+  return t;
+}
+
 function ItemCard({
   item, idx, onChange, onDelete, readonly,
 }: {
@@ -269,6 +283,18 @@ function ItemCard({
   readonly: boolean;
 }) {
   const [editing, setEditing] = useState(false);
+  const [timeErr, setTimeErr] = useState("");
+
+  function finishEdit() {
+    const t = (item.time ?? "").trim();
+    if (t && !TIME_RE.test(t)) {
+      setTimeErr("時間請填 HH:MM 或 HH:MM-HH:MM（例 08:30、08:30-10:00）· 不填也可以");
+      return;
+    }
+    setTimeErr("");
+    setEditing(false);
+  }
+
   if (editing && !readonly) {
     return (
       <div className="pdr-item pdr-item-edit">
@@ -277,7 +303,8 @@ function ItemCard({
             className="tf pdr-time"
             placeholder="時間 · 例 08:30 或 08:30-10:00"
             value={item.time ?? ""}
-            onChange={(e) => onChange({ ...item, time: e.target.value })}
+            onChange={(e) => { onChange({ ...item, time: cleanTimeInput(e.target.value) }); if (timeErr) setTimeErr(""); }}
+            onBlur={() => { const v = normalizeTimeOnBlur(item.time ?? ""); if (v !== (item.time ?? "")) onChange({ ...item, time: v }); }}
           />
           <input
             className="tf pdr-title"
@@ -299,8 +326,9 @@ function ItemCard({
           value={item.followup ?? ""}
           onChange={(e) => onChange({ ...item, followup: e.target.value })}
         />
+        {timeErr && <div style={{ color: "var(--danger)", fontSize: 12, lineHeight: 1.5 }}>{timeErr}</div>}
         <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-          <button className="btn small" onClick={() => setEditing(false)}>完成</button>
+          <button className="btn small btn-primary" onClick={finishEdit}>完成</button>
         </div>
       </div>
     );
