@@ -148,12 +148,20 @@
 
 ---
 
-## 12. 里程碑（待 OQ 裁定後定案）
-| 里程碑 | 內容 |
-|---|---|
-| **M1** | migration（ragic_account / notify_config）+ 新增 `notify-config:view/manage` 權限（role_permissions 給 aiproot_admin+consultant）+ RagicAccountService（key 加密 + metadata/schema fetch + record fetch）+ 動態 composer |
-| **M2** | `POST /notify/webhook/:configToken` 接收 + signature/dedup/事件過濾 + LINE push + audit（config_id）|
-| **M3** | aiproot 前端設定 UI（加帳號 → 選 sheet → 欄位勾選 → 模板 → LINE 群 → 產 webhook URL）|
-| **M4** | docs 收尾 + FMEA + SOP（含「如何在 Ragic 設 Webhook」圖解）+ MODULES |
+## 12. 里程碑
+| 里程碑 | 內容 | 狀態 |
+|---|---|---|
+| **M1** | migration 0026（ragic_account / notify_config）+ `notify-config:view/manage` 權限（給 aiproot_admin+consultant）+ RagicApiClient（metadata/schema + fetch record）+ RagicAccount/NotifyConfig service + 動態 composer | ✅ 本地 SHIPPED |
+| **M2** | `POST /notify/webhook/:token` 接收 + 事件過濾 + dedup + fetch record（best-effort）+ 動態 compose + LINE token 解析（line_bot/env）+ audit | ✅ 本地 SHIPPED |
+| **M3** | aiproot 前端「通知設定」（列表 + wizard：加帳號 → 抓欄位 → 勾選 → 事件/LINE群 → 產 webhook URL）+ controller（@RequirePermission）| ✅ 本地 SHIPPED |
+| **M4** | docs 收尾 + FMEA + 使用 SOP + MODULES | ✅ 本文 |
 
-> 相關：[`docs/ragic-http-api-手冊.md`](../ragic-http-api-手冊.md)（metadata/schema §13 · Webhook §14 · fetch record §3）、[`docs/sop/notify-ragic-line-操作流程.md`](../sop/notify-ragic-line-操作流程.md)（v1 現行流程）。
+> **實作 caveat（需真 Ragic 才驗得到）**：
+> - **Webhook 認證＝token only**（不可猜 24-byte token）；Ragic **簽章驗證未做**（OQ-NSP-1 縱深部分列後續 hardening）。
+> - **Ragic webhook 實際 payload 形狀**（recordId 欄位、data 結構）以 `parseRagicWebhook` 防禦式解析，接第一個真 webhook 時需驗證/微調。
+> - **metadata/schema 抓欄位** 需該帳號 key 具帳號管理者權限（OQ-NSP-8 備援：手動輸欄位尚未做，目前 key 不足會報錯）。
+> - **編輯既有 config** 尚未做（M3 v1 只有新增 + 啟停 + 刪除）；改設定＝刪掉重建。
+
+**部署順序（push 時）**：先在 prod 跑 **migration 0026**（含權限 seed），再讓 Render 部署，否則 `/notify-config*` 端點會 500。
+
+> 相關：[`docs/sop/notify-selfserve-使用指南.md`](../sop/notify-selfserve-使用指南.md)（v2 UI 操作）、[`docs/ragic-http-api-手冊.md`](../ragic-http-api-手冊.md)、[`docs/sop/notify-ragic-line-操作流程.md`](../sop/notify-ragic-line-操作流程.md)（v1 手貼 JS 流程）。

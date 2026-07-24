@@ -197,7 +197,8 @@ Solo dev 不走 PR ceremony（見 memory `feedback_no_pr_workflow.md`）；上�
 | 前端設計原則（核心 + 美學 profile） | `docs/frontend-design-principles.md` |
 | 計畫書技術章節素材 | `docs/計畫書-系統架構文件.md` |
 | Ragic HTTP API 手冊（離線查閱） | `docs/ragic-http-api-手冊.md` |
-| Ragic → LINE 通知 · 操作流程手冊 | `docs/sop/notify-ragic-line-操作流程.md` |
+| Ragic → LINE 通知 · 操作流程手冊（v1 手貼 JS） | `docs/sop/notify-ragic-line-操作流程.md` |
+| 通知設定（自助 v2）· UI 使用指南 | `docs/sop/notify-selfserve-使用指南.md` |
 
 ---
 
