@@ -425,3 +425,40 @@ export const mapRoutingConfig = pgTable("map_routing_config", {
   updatedBy: uuid("updated_by").references(() => users.userId, { onDelete: "set null" }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// notify v2 自助設定平台（config-driven）· migration 0026
+export const ragicAccount = pgTable("ragic_account", {
+  accountId: uuid("account_id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.tenantId, { onDelete: "cascade" }),
+  server: text("server").notNull().default("www"),
+  apname: text("apname").notNull(),
+  displayName: text("display_name").notNull(),
+  createdBy: uuid("created_by").references(() => users.userId, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export interface NotifyConfigField {
+  fieldId: number;
+  label: string;
+  order: number;
+}
+
+export const notifyConfig = pgTable("notify_config", {
+  configId: uuid("config_id").primaryKey().defaultRandom(),
+  ragicAccountId: uuid("ragic_account_id").notNull().references(() => ragicAccount.accountId, { onDelete: "cascade" }),
+  tenantId: uuid("tenant_id").references(() => tenants.tenantId, { onDelete: "cascade" }),
+  sheetPath: text("sheet_path").notNull(),
+  sheetName: text("sheet_name").notNull(),
+  webhookToken: text("webhook_token").notNull().unique(),
+  title: text("title"),
+  fields: jsonb("fields").$type<NotifyConfigField[]>().notNull().default([]),
+  notifyCreate: boolean("notify_create").notNull().default(true),
+  notifyUpdate: boolean("notify_update").notNull().default(true),
+  notifyDelete: boolean("notify_delete").notNull().default(false),
+  lineGroupId: text("line_group_id").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  createdBy: uuid("created_by").references(() => users.userId, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

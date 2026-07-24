@@ -33,6 +33,7 @@ import { WarroomTaskBoardModule } from "./warroom-task-board/warroom-task-board.
 import { PersonalDailyReportModule } from "./personal-daily-report/personal-daily-report.module.js";
 import { SchedulerConfigModule } from "./scheduler-config/scheduler-config.module.js";
 import { AttendanceModule } from "./attendance/attendance.module.js";
+import { NotifyConfigModule } from "./notify-config/notify-config.module.js";
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { AttendanceModule } from "./attendance/attendance.module.js";
     PersonalDailyReportModule,
     SchedulerConfigModule,
     AttendanceModule,
+    NotifyConfigModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [
