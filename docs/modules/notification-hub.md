@@ -105,23 +105,36 @@
 | PII 跨管道 | email 外洩地址/個資 | **P1** | 管道級遮罩策略；email 屬 Phase 2 再定 |
 
 ## 9. 里程碑
-| 里程碑 | 內容 |
-|---|---|
-| **M1** | 核心：`notification_rule` + `NotificationEvent` + pipeline + 通用 template renderer；**v2 遷移**（notify_config→rule、webhook 改查 rule）；LINE push 收斂成單一 client |
-| **M2** | 第一個 internal_event 來源（NotificationBus + 1 個領域事件當試金石）+ 該來源的規則設定 UI（source_type 選擇 → 動態表單）|
-| **M3** | 第二個管道（LINE 私訊 or email 擇一）+ 前端多來源/多管道 UI 收斂 |
-| **M4** | 漸進收斂 PDR/warroom/v1 進 hub（選做）+ docs/FMEA/SOP |
+| 里程碑 | 內容 | 狀態 |
+|---|---|---|
+| **M1** | 核心：`notification_rule`（migration 0027）+ `NotificationEvent` + pipeline + 通用 renderer + in-process `NotificationBus`；**v2 遷移**（資料 + 程式路徑，webhook 改查 rule、設定 API 改寫 rule）；Ragic 降級為 source adapter | ✅ 本地 SHIPPED |
+| **M2** | 第一個 internal_event 來源（`attendance.suspicious` 試金石：attendance 發事件 + 規則設定 UI 支援 source_type 切換）| ⬜ |
+| **M3** | 第二個管道（`line_user` 私訊：對象解析 user_line_binding）+ 前端多來源/多管道 UI | ⬜ |
+| **M4** | 漸進收斂 PDR/warroom/v1 進 hub（OQ-NH-7）+ docs/FMEA/SOP | ⬜ |
+
+### M1 實際落地與偏差（誠實記錄）
+- ✅ `notification_rule` 建立、**v2 兩筆設定一次性搬入**（items/token/事件旗標對帳正確）· webhook token 保留 → 已貼進 Ragic 的 URL 不失效。
+- ✅ webhook 改「依 token 查 **rule**」；**設定 API 也改寫入 rule**（否則 UI 新建的設定 webhook 讀不到——此為重構必須一起做的整合點）。前端契約（config 形狀）不變。
+- ✅ 端到端驗證：POST 遷移後 token → 命中 rule → 事件過濾 → 正確 render 訊息 → 寫入 audit（`source_type`/`channel`/`rule_id`）。
+- ✅ 移除死碼：v2 `webhook.service/controller`、`dynamic-composer`（由 `template.renderer` 取代）。
+- ⚠️ **「LINE push client 收斂」只做到一半**：hub 內以單一 `LineSender` 同時服務 `line_group`/`line_user`（LINE push API `to` 兩者通吃）；但 **notify v1 的 `LineClient` 與 line-ingest 的 `LineApiClient` 仍在**。
+  - `LineApiClient` 職責更廣（reply/profile/group summary），**合理續存**；
+  - v1 `LineClient` 待 v1 四個 hardcoded endpoint 收斂進 hub（M4）後才會消失。
+  - 現況＝短期內存在多個 LINE 呼叫點，屬 OQ-NH-7「Phase 後漸進」的已知殘留。
+- ⚠️ `notify_config` 表**保留未刪**（遷移對帳用）；確認 v3 穩定後另開 migration 清除。
+
+**部署順序（push 時）**：先在 prod 跑 **0026**（若尚未跑）→ 再跑 **0027**（建 rule 表 + 搬資料）→ 才讓 Render 部署新 code。順序顛倒會使 webhook/設定頁 500。
 
 ---
 
-## 10. 開放問題（OQ-NH-N · 待裁定才進 M1）
-- **OQ-NH-1 事件匯流機制**：in-process（`@nestjs/event-emitter` 需加依賴 / 自寫簡易 bus）vs 持久化 outbox？**建議**：Phase 1 自寫簡易 in-process bus（不加依賴、crash-lost 可忍）；關鍵/量大再上 outbox。
-- **OQ-NH-2 第一批「來源」**：Ragic ✅ + 哪個內部事件當試金石？**建議**：`attendance.suspicious`（可疑里程）或 `signoff.overdue`（簽核逾時）挑一。
-- **OQ-NH-3 第一批「管道」**：LINE 群 ✅ + LINE 私訊？email/in-app 延後？**建議**：群 + 私訊先做（都已有基礎）；email/in-app Phase 2。
-- **OQ-NH-4 v2 遷移**：一次性搬進 rule / v2·v3 並存？**建議**：一次性搬（v2 剛上、量少）。
-- **OQ-NH-5 模板模型**：`{label,path}` 清單 / 自由文字 `{{path}}` 插值？**建議**：清單起步（沿用 v2），自由模板 Phase 2。
-- **OQ-NH-6 規則過濾複雜度**：只相等/門檻 vs 條件運算式？**建議**：相等 + 數值門檻起步。
-- **OQ-NH-7 收斂既有**：PDR/warroom/v1 私訊要不要改發 internal_event 進 hub？**建議**：Phase 後漸進，M1-M3 先並存。
-- **OQ-NH-8 前端多來源 UI**：一個 wizard 依 source_type 動態換表單 vs 各來源各頁？**建議**：一頁、source_type 選擇 → 動態表單（Ragic 沿用 v2 wizard 當 ragic_form 分支）。
+## 10. 開放問題（OQ-NH-N）— 全數裁定 2026-07-25（用戶「全採建議」· 未上線故可重構）
+- ~~OQ-NH-1 事件匯流機制~~ → **已裁定**：**自寫簡易 in-process bus**（不加第三方依賴；crash-lost 可忍，通知非交易關鍵）。關鍵/量大再上持久化 outbox。
+- ~~OQ-NH-2 第一批來源~~ → **已裁定**：`ragic_form` ✅ + **`attendance.suspicious`（可疑里程）當內部事件試金石**（attendance 已有 `computeSuspicious` 旗標、資料現成，改動面最小）。
+- ~~OQ-NH-3 第一批管道~~ → **已裁定**：**`line_group` + `line_user`（私訊）**先做（皆有既有基礎）；`email` / `in_app` Phase 2。
+- ~~OQ-NH-4 v2 遷移~~ → **已裁定**：**一次性搬**（v2 剛上、資料量少）· 保留 `webhook_token` 不變（已貼進 Ragic 的 URL 不失效）。
+- ~~OQ-NH-5 模板模型~~ → **已裁定**：`{label, path}` **清單**起步（沿用 v2 `composeFromConfig` 演進）；自由插值 Phase 2。
+- ~~OQ-NH-6 規則過濾~~ → **已裁定**：**相等 + 數值門檻**起步（`{path, op: eq|gte|lte, value}`）。
+- ~~OQ-NH-7 收斂既有~~ → **已裁定**：**Phase 後漸進**（M1-M3 期間 v1 / PDR / warroom 私訊並存不動）。
+- ~~OQ-NH-8 前端多來源 UI~~ → **已裁定**：**一頁 · source_type 選擇 → 動態表單**（Ragic 沿用 v2 wizard 當 `ragic_form` 分支）。
 
 > 相關：[notify-selfserve-platform.md](notify-selfserve-platform.md)（v2 · 被本文演進）、[`../ragic-http-api-手冊.md`](../ragic-http-api-手冊.md)、`server/src/notify/line.client.ts` + `server/src/line-ingest/line-api.client.ts`（待收斂的兩套 push client）。
