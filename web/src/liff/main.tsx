@@ -6,7 +6,7 @@ import { applyLiffToken, ApiError } from "../api";
 import BindingView from "./BindingView";
 import SetPasswordView from "./SetPasswordView";
 import PunchView from "./PunchView";
-import TripsView from "./TripsView";
+import MyTrips from "../personal-report/MyTrips";
 import type { LiffCtx } from "./types";
 import "../styles.css";
 
@@ -94,7 +94,7 @@ function LiffApp() {
   }
   if (phase === "mine") return <MyDailyReport />;
   if (phase === "punch") return <PunchView />;
-  if (phase === "trips") return <TripsView />;
+  if (phase === "trips") return <MyTrips />;
   if (phase === "binding" && ctx) return <BindingView ctx={ctx} />;
   if (phase === "set-password" && ctx) return <SetPasswordView ctx={ctx} liff={window.liff} />;
   return null;

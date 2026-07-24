@@ -25,8 +25,9 @@ const NAV: Array<{
   {
     group: "戰情室",
     items: [
-      // 我的日報 · 全角色可見 · 是 employee 唯一功能 · 主管也自己填
+      // 我的日報 / 我的行程 · 全角色可見 · employee 也看得到 · 主管也自己填/跑外勤
       { key: "my-daily-report", label: "我的日報", ic: iconBook, done: true },
+      { key: "my-trips", label: "我的行程", ic: iconMap, done: true },
       // 總覽儀表 / 每日簽核 · 主管級才顯 (employee 只看得到我的日報)
       { key: "warroom", label: "總覽儀表", ic: iconGauge, done: true, perm: "warroom-tasks:view" },
       { key: "signoff", label: "每日簽核", ic: iconCheck, done: true, perm: "signoff:action" },

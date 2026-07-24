@@ -25,6 +25,7 @@ import BindingAudit from "./aiproot-console/BindingAudit";
 import CategoryManagement from "./aiproot-console/CategoryManagement";
 import MapConfig from "./aiproot-console/MapConfig";
 import MyDailyReport from "./personal-report/MyDailyReport";
+import MyTrips from "./personal-report/MyTrips";
 import RolesManagement from "./aiproot-console/RolesManagement";
 import FirstLoginChangePassword from "./auth/FirstLoginChangePassword";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
@@ -56,6 +57,7 @@ type Route =
   | { page: "map-config" }
   | { page: "category-mgmt" }
   | { page: "my-daily-report" }
+  | { page: "my-trips" }
   | { page: "roles-mgmt" };
 
 // crumb 顯示上層分類（非當前頁名），避免與 pane h1 重複。
@@ -85,6 +87,7 @@ const CRUMB: Record<Route["page"], string> = {
   "map-config": "AIPROOT 管理",
   "category-mgmt": "AIPROOT 管理",
   "my-daily-report": "戰情室",
+  "my-trips": "戰情室",
   "roles-mgmt": "AIPROOT 管理",
 };
 
@@ -113,6 +116,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "map-config": "地圖里程設定",
   "category-mgmt": "分類管理",
   "my-daily-report": "我的日報",
+  "my-trips": "我的行程",
   "roles-mgmt": "權限管理",
 };
 
@@ -239,6 +243,8 @@ export default function App() {
       setRoute({ page: "category-mgmt" });
     } else if (key === "my-daily-report") {
       setRoute({ page: "my-daily-report" });
+    } else if (key === "my-trips") {
+      setRoute({ page: "my-trips" });
     } else if (key === "roles-mgmt") {
       if (session.role !== "aiproot_admin") return;
       setRoute({ page: "roles-mgmt" });
@@ -303,6 +309,7 @@ export default function App() {
           {route.page === "map-config" && <MapConfig />}
           {route.page === "category-mgmt" && <CategoryManagement />}
           {route.page === "my-daily-report" && <MyDailyReport />}
+          {route.page === "my-trips" && <MyTrips />}
           {route.page === "roles-mgmt" && <RolesManagement />}
         </div>
       </Shell>

@@ -1803,6 +1803,17 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .pdr-raw-time { font-family:var(--mono, ui-monospace, monospace); color:var(--ink-3); font-size:12px; flex-shrink:0; min-width:44px; padding-top:2px; }
 .pdr-raw-text { color:var(--ink); flex:1; white-space:pre-wrap; word-break:break-word; }
 
+/* 我的行程 · 外勤逐段里程 */
+.trip-list { margin-top:4px; }
+.trip-row { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--line-2); }
+.trip-idx { font-size:12px; color:var(--ink-3); flex-shrink:0; min-width:48px; }
+.trip-body { min-width:0; flex:1; }
+.trip-dest { font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.trip-time { font-size:12px; color:var(--ink-3); margin-top:2px; }
+.trip-km { font-family:var(--mono, ui-monospace, monospace); font-size:13.5px; color:var(--ink); white-space:nowrap; flex-shrink:0; }
+.trip-total { display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding:12px 14px; background:var(--well); border-radius:var(--r-sm, 6px); font-weight:700; color:var(--ink); }
+.trip-total span:last-child { font-family:var(--mono, ui-monospace, monospace); }
+
 /* ==============================================
    PE-M5 · 權限管理 UI
    ============================================== */
