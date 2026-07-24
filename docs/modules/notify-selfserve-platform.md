@@ -32,12 +32,26 @@
 
 ---
 
-## 3. 已裁定方向（2026-07-25 · 用戶選「選項 A」三格全取）
+## 3. 已裁定方向（2026-07-25）
+「選項 A」三格全取 + OQ-NSP-1..8 全採建議（§11）+ 權限控管（§4-bis）。
+
 | 決策 | 裁定 |
 |---|---|
 | **觸發機制** | **Ragic 原生 Webhook**（sheet → 工具 → Webhook 貼一個 URL；免貼 workflow JS）|
 | **操作者** | **Phase 1 僅 aiproot**（我方顧問/業助幫客戶設；日後再評估開放 tenant 自助）|
 | **訊息模板** | **通用「逐行 欄位：值」+ 標題 + Ragic 連結**（勾欄位 + 排序 + 自訂標題，不做拖拉版面）|
+| **權限控管** | 走 permission-engine · 新增 `notify-config` 權限 · **分配給 aiproot 側員工**（見 §4-bis）|
+
+## 4-bis. 權限控管（2026-07-25 用戶要求）
+
+> 本功能操作權**不是全體皆可**，要能分配給 aiproot 的員工。走既有 [permission-engine](permission-engine.md)（RBAC · @RequirePermission + PermGate）。
+
+- **新增權限**：`notify-config:view`（看設定列表）、`notify-config:manage`（新增/改/停用 config、管 Ragic 帳號 key）。
+- **預設分配**（`role_permissions`）：`aiproot_admin` + `consultant`（＝ aiproot 側員工/顧問角色）。**tenant_admin / group_owner 不給**（Phase 1 僅 aiproot 操作）。
+- **後端**：notify-config 相關 endpoint 全掛 `@RequirePermission("notify-config:manage")`（讀列表用 `:view`）。
+- **前端**：側欄「AIPROOT 管理」下的「通知設定」入口 + 頁面用 `PermGate` / `usePermissions("notify-config:*")` 過濾。
+- **粒度**：Phase 1 以角色分配（aiproot_admin/consultant）。要「指定某幾位員工」的更細粒度＝permission-engine Phase 2 自訂 role（未來需求再上）。
+- **Ragic API key 存取**：只有具 `notify-config:manage` 者能設/換 key；key 一律加密、不回明碼（呼應 OQ-NSP-6）。
 
 ---
 
@@ -113,6 +127,7 @@
 |---|---|---|---|---|
 | webhook 認證 | 有人猜/偽造 URL 灌通知 | 假通知 | **P1** | configToken 不可猜 + （選）Ragic signature 驗（OQ-NSP-1）|
 | Ragic API key | 外洩 | 可讀該公司整個 Ragic | **P1** | pgcrypto 加密 · aiproot-only · 不回明碼 · audit · 每帳號獨立 |
+| 未授權存取設定 | 無權者改 config / 看/換 key | 亂發通知 · key 曝險 | **P1** | permission-engine 掛 `notify-config:manage`（僅 aiproot_admin+consultant）· 前後端雙擋（§4-bis）|
 | 全 CRUD 噪音 | 每次存都通知 | 業助被洗版 | P2 | events 設定（可只 update）+ dedup 30s；條件過濾 Phase 2（OQ-NSP-4）|
 | schema 漂移 | 欄位改名/刪 | 訊息缺欄位 | P2 | 缺值→（未填）· UI 可 re-fetch schema |
 | fetch record 失敗/限流 | Ragic 慢或 429 | 訊息延遲/失敗 | P2 | 記 line_failed/skipped、不 retry；> 5 req/s Ragic 會人工審 |
@@ -121,7 +136,7 @@
 
 ---
 
-## 11. 開放問題（OQ-NSP-N · 待裁定才進 M1）
+## 11. 開放問題（OQ-NSP-N）— 全數裁定 2026-07-25（用戶「全採建議」，以下建議即裁定）
 - **OQ-NSP-1 webhook 認證**：configToken URL only／+ Ragic signature 驗？**建議**：token 為主 + signature 縱深。
 - **OQ-NSP-2 資料來源**：直接用 webhook payload data／收到後 API fetch 完整 record？**建議**：fetch 完整 record（保證欄位齊、值最新）。
 - **OQ-NSP-3 事件**：預設通知哪些？**建議**：create + update；delete 預設關可開。
@@ -136,7 +151,7 @@
 ## 12. 里程碑（待 OQ 裁定後定案）
 | 里程碑 | 內容 |
 |---|---|
-| **M1** | migration（ragic_account / notify_config）+ RagicAccountService（key 加密 + metadata/schema fetch + record fetch）+ 動態 composer |
+| **M1** | migration（ragic_account / notify_config）+ 新增 `notify-config:view/manage` 權限（role_permissions 給 aiproot_admin+consultant）+ RagicAccountService（key 加密 + metadata/schema fetch + record fetch）+ 動態 composer |
 | **M2** | `POST /notify/webhook/:configToken` 接收 + signature/dedup/事件過濾 + LINE push + audit（config_id）|
 | **M3** | aiproot 前端設定 UI（加帳號 → 選 sheet → 欄位勾選 → 模板 → LINE 群 → 產 webhook URL）|
 | **M4** | docs 收尾 + FMEA + SOP（含「如何在 Ragic 設 Webhook」圖解）+ MODULES |
