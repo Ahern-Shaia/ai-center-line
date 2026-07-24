@@ -25,17 +25,24 @@
 
 ---
 
-## Part A · 設定地圖里程 key（aiproot 端，一次性）
+## Part A · 設定里程 key（aiproot 端，一次性）
 
-外勤 A→B 里程要靠地圖服務算。**建議用 OpenRouteService（免綁信用卡、免費額度夠）**。
+外勤逐段里程＝**真實道路路線距離**（沿實際道路，像 Google Maps 點到點），由「里程計算 provider」算。**本專案採 Google Routes**（2026-07-25 用戶裁定）。
 
-1. 申請免費 key：到 **openrouteservice.org** 註冊 → Dashboard → 建立 API key（Token）。
+1. **Google Cloud 設定**（一次性）：
+   - 到 console.cloud.google.com 建立/選專案 → **啟用計費**（綁信用卡帳號）。
+   - API 與服務 → 啟用 **Routes API**（算道路距離 + 路線折線）。
+   - 選配：啟用 **Geocoding API**（把打卡座標反查成地址，顯示在行程明細；不啟用則只顯客戶名+座標）。
+   - 憑證 → 建立 **API 金鑰**（建議加 API 限制：只允許 Routes API + Geocoding API）。
 2. aiproot 登入戰情室 → 側欄 **AIPROOT 管理 → 地圖里程設定**。
-3. provider 選 **OpenRouteService** → API Key 貼上剛拿到的 token → **儲存**。
+3. **里程計算 provider** 選 **Google Routes** → API Key 貼上金鑰 → **儲存 provider**。
    - key 會**加密存 DB**，只顯示「已設定」不回明碼。
-   - 要改用 Google Routes：provider 選 Google Routes + 貼 Google Cloud 的 Routes API key（需綁卡帳號）。
+   - 之後每次「到點打卡」自動算前一點→此點的**真實道路里程**並畫在「我的行程」地圖上。
 
-> 沒設 key 也能打卡，`distance_m` 先記空白、之後可補算。
+> 替代方案：不想綁卡可改 **OpenRouteService**（openrouteservice.org 免費申請、免綁卡、約 2000 次/天）——同樣回真實道路路線，provider 選 OpenRouteService 貼 token 即可。
+> 沒設 key 也能打卡，`distance_m` 先記空白（顯示「里程計算中」）、設好 key 後的新打卡才會算。
+>
+> 註：**地圖底圖**（CARTO light）不需金鑰，與此里程 key 無關；上面設的是「算公里數」用的 key。
 
 ---
 
