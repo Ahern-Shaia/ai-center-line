@@ -19,6 +19,7 @@ import {
 } from "../api";
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
+import UnboundActiveAlert from "../shared/UnboundActiveAlert";
 
 // AIPROOT 管理 → LINE 綁定 audit
 // 依 employee-line-binding v1.0.1 §7-quinque + §6.9 nudge
@@ -128,24 +129,9 @@ export default function BindingAudit() {
         </div>
       </div>
 
-      {/* Unbound nudge alert */}
-      {selectedTenantUnbound && selectedTenantUnbound.unboundCount > 0 && (
-        <div className="dm-empty" style={{ background: "var(--warn-tint)", border: "1px solid #F5D5A6", textAlign: "left", padding: 14, marginBottom: 16 }}>
-          <b style={{ color: "#7A4E1B" }}>⚠ 未綁定活躍者 · {selectedTenantUnbound.unboundCount} 位</b>
-          <div style={{ marginTop: 6, fontSize: 12 }}>
-            這些 LINE 用戶近 7 天在群組發訊 · 但未完成綁定 · 建議追人請他們加 bot 好友：
-          </div>
-          <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {selectedTenantUnbound.top.slice(0, 5).map((u) => (
-              <span key={u.senderLineId} style={{ padding: "4px 10px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 4, fontSize: 12 }}>
-                <b>{u.displayName ?? u.senderLineId.slice(-6)}</b> · {u.messageCount} 則{u.topGroupName ? ` · ${u.topGroupName}` : ""}
-              </span>
-            ))}
-            {selectedTenantUnbound.top.length > 5 && (
-              <span style={{ fontSize: 12, color: "var(--ink-3)" }}>+ {selectedTenantUnbound.top.length - 5} 位</span>
-            )}
-          </div>
-        </div>
+      {/* 未綁定活躍者 · 折疊清單 */}
+      {selectedTenantUnbound && (
+        <UnboundActiveAlert unboundCount={selectedTenantUnbound.unboundCount} top={selectedTenantUnbound.top} />
       )}
 
       {loading ? (
