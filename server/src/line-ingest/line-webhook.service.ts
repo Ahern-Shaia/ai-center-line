@@ -255,30 +255,46 @@ export class LineWebhookService {
       return;
     }
 
-    // 1-on-1 message · 個人日報素材
-    if (event.type === "message" && event.message?.type === "text") {
-      // 查 binding · 若未綁定 · bot reply「請先綁定」(OQ-PDR-8)
+    // 1-on-1 message
+    if (event.type === "message") {
+      // 查 binding · 未綁定一律回綁定提示（不論訊息型別 · 貼圖/照片/文字皆可）
+      // gap A · 原本只在 text 才回 · 藍領員工常先傳貼圖/照片 → 會收到沉默 · 此處補齊
       const senderUserId = await this.bindingService.resolveUserByLineUserId(bot.botId, userId);
-      const msg = event.message;
-      const textContent = typeof msg.text === "string" ? truncate(msg.text, 5000) : null;
 
       if (!senderUserId) {
-        // 未綁定 · bot 提示
+        // 未綁定 · 不論型別回一次綁定提示 · 有 LIFF_URL 給按鈕 · 無則 fallback 文字（比照 follow）
         if (event.replyToken) {
+          const liffUrl = process.env.LIFF_URL;
           try {
-            const liffUrl = process.env.LIFF_URL;
-            const hint = liffUrl
-              ? `請先完成綁定才能記錄個人日報\n${liffUrl}?botId=${bot.botId}`
-              : "請先完成綁定才能記錄個人日報 · 聯繫公司資訊窗口";
-            await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
-              { type: "text", text: hint },
-            ]);
+            if (liffUrl) {
+              await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
+                { type: "text", text: "看起來還沒完成綁定 · 點下方按鈕即可（綁定後才能記錄日報）" },
+                {
+                  type: "template",
+                  altText: "完成綁定",
+                  template: {
+                    type: "buttons",
+                    text: "點按鈕開始綁定",
+                    actions: [{ type: "uri", label: "開始綁定", uri: `${liffUrl}?botId=${bot.botId}` }],
+                  },
+                },
+              ]);
+            } else {
+              await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
+                { type: "text", text: "請先完成綁定才能記錄個人日報 · 聯繫公司資訊窗口" },
+              ]);
+            }
           } catch (err) {
             this.logger.warn(`unbound reply 失敗 · ${(err as Error).message}`);
           }
         }
         return;
       }
+
+      // 已綁定 · 以下只處理文字（關鍵字 / 落庫 / ack）· 非文字暫不處理
+      const msg = event.message;
+      if (!msg || msg.type !== "text") return;
+      const textContent = typeof msg.text === "string" ? truncate(msg.text, 5000) : null;
 
       // v2 · 「設密碼」關鍵字 · bot 推設密碼 LIFF 按鈕 (Option C · 選配)
       // 3 頁共用同一 LIFF endpoint (binding.html) · 用 ?page=set-password 切 view
