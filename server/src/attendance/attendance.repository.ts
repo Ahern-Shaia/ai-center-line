@@ -12,10 +12,28 @@ export interface PunchLite {
 export interface TripDetail {
   tripId: string;
   distanceM: number | null;
+  straightDistanceM: number | null;
   routeProvider: string | null;
+  routeGeometry: string | null;
   destination: string | null;
+  fromLat: number | null;
+  fromLng: number | null;
+  toLat: number | null;
+  toLng: number | null;
+  fromAddress: string | null;
+  toAddress: string | null;
   departedAt: string;
   arrivedAt: string;
+}
+
+export interface PunchDetail {
+  punchId: string;
+  punchType: string;
+  customerName: string | null;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  punchedAt: string;
 }
 
 @Injectable()
@@ -85,16 +103,20 @@ export class AttendanceRepository {
     `);
   }
 
-  // 指定台北日期的移動紀錄（dateStr = null → 當日）· 併 from/to 打卡點取目的地與出發/到點時間
+  // 指定台北日期的移動紀錄（dateStr = null → 當日）· 併 from/to 打卡點取目的地/座標/地址/時間/折線
   async listTripsByDate(tx: Db, userId: string, dateStr: string | null): Promise<TripDetail[]> {
     const res = await tx.execute<{
-      trip_id: string; distance_m: number | null; route_provider: string | null;
-      destination: string | null; departed_at: string; arrived_at: string;
+      trip_id: string; distance_m: number | null; straight_distance_m: number | null;
+      route_provider: string | null; route_geometry: string | null; destination: string | null;
+      from_lat: number | null; from_lng: number | null; to_lat: number | null; to_lng: number | null;
+      from_address: string | null; to_address: string | null; departed_at: string; arrived_at: string;
     }>(sql`
-      SELECT t.trip_id, t.distance_m, t.route_provider,
+      SELECT t.trip_id, t.distance_m, t.straight_distance_m, t.route_provider, t.route_geometry,
              tp.customer_name AS destination,
-             fp.punched_at::text AS departed_at,
-             tp.punched_at::text AS arrived_at
+             fp.lat::float8 AS from_lat, fp.lng::float8 AS from_lng,
+             tp.lat::float8 AS to_lat, tp.lng::float8 AS to_lng,
+             fp.address AS from_address, tp.address AS to_address,
+             fp.punched_at::text AS departed_at, tp.punched_at::text AS arrived_at
       FROM attendance_trip t
       JOIN attendance_punch fp ON fp.punch_id = t.from_punch_id
       JOIN attendance_punch tp ON tp.punch_id = t.to_punch_id
@@ -106,10 +128,33 @@ export class AttendanceRepository {
     return res.rows.map((r) => ({
       tripId: r.trip_id,
       distanceM: r.distance_m,
+      straightDistanceM: r.straight_distance_m,
       routeProvider: r.route_provider,
+      routeGeometry: r.route_geometry,
       destination: r.destination,
-      departedAt: r.departed_at,
-      arrivedAt: r.arrived_at,
+      fromLat: r.from_lat, fromLng: r.from_lng, toLat: r.to_lat, toLng: r.to_lng,
+      fromAddress: r.from_address, toAddress: r.to_address,
+      departedAt: r.departed_at, arrivedAt: r.arrived_at,
+    }));
+  }
+
+  // 指定台北日期的打卡序列（供時間軸 + 段數自明 + 地圖圖釘）
+  async listPunchesByDate(tx: Db, userId: string, dateStr: string | null): Promise<PunchDetail[]> {
+    const res = await tx.execute<{
+      punch_id: string; punch_type: string; customer_name: string | null; address: string | null;
+      lat: number | null; lng: number | null; punched_at: string;
+    }>(sql`
+      SELECT punch_id, punch_type, customer_name, address,
+             lat::float8 AS lat, lng::float8 AS lng, punched_at::text AS punched_at
+      FROM attendance_punch
+      WHERE user_id = ${userId}::uuid
+        AND (punched_at AT TIME ZONE 'Asia/Taipei')::date
+            = COALESCE(${dateStr}::date, (now() AT TIME ZONE 'Asia/Taipei')::date)
+      ORDER BY punched_at ASC
+    `);
+    return res.rows.map((r) => ({
+      punchId: r.punch_id, punchType: r.punch_type, customerName: r.customer_name,
+      address: r.address, lat: r.lat, lng: r.lng, punchedAt: r.punched_at,
     }));
   }
 }

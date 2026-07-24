@@ -35,10 +35,16 @@ export class AttendanceController {
     });
   }
 
-  // date 選填（YYYY-MM-DD，台北日）· 省略＝當日 · 只回自己的行程
+  // date 選填（YYYY-MM-DD，台北日）· 省略＝當日 · 只回自己的行程 + 打卡序列
   @Get("trips")
   async trips(@CurrentUser() user: JwtUser, @Query("date") date?: string) {
     const d = typeof date === "string" && date ? date : null;
-    return { trips: await this.svc.tripsByDate(user, d) };
+    return this.svc.tripsByDate(user, d);
+  }
+
+  // 地圖圖磚設定（前端 Leaflet 用）· tileApiKey 為 client-side key（osm 為 null）· 任何登入者可讀
+  @Get("map-tile-config")
+  async mapTileConfig() {
+    return this.svc.tileConfig();
   }
 }

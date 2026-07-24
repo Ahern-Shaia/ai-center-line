@@ -139,11 +139,21 @@ export class AttendanceService {
     });
   }
 
-  // 指定台北日期的行程（dateStr = null → 當日）· 員工只看自己（以 JWT user_id 限定）
+  // 指定台北日期的行程 + 打卡序列（dateStr = null → 當日）· 員工只看自己（以 JWT user_id 限定）
   async tripsByDate(user: JwtUser, dateStr: string | null) {
     if (dateStr !== null && !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       throw new BadRequestException("date 格式需為 YYYY-MM-DD");
     }
-    return this.repo.listTripsByDate(currentTx(), user.user_id, dateStr);
+    const tx = currentTx();
+    const [trips, punches] = await Promise.all([
+      this.repo.listTripsByDate(tx, user.user_id, dateStr),
+      this.repo.listPunchesByDate(tx, user.user_id, dateStr),
+    ]);
+    return { trips, punches };
+  }
+
+  // 地圖圖磚設定（前端 Leaflet 用 · tile key 屬 client-side）· 平台全域設定走 withSystemTx
+  async tileConfig(): Promise<{ tileProvider: string; tileApiKey: string | null }> {
+    return withSystemTx((tx) => this.mapConfig.getTileConfig(tx));
   }
 }

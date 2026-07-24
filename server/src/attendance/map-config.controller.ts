@@ -6,9 +6,11 @@ import { currentTx } from "../db/client.js";
 import { MapRoutingConfigRepository } from "./map-routing-config.repository.js";
 
 const PROVIDERS = ["openrouteservice", "google_routes"] as const;
+const TILE_PROVIDERS = ["osm", "maptiler"] as const;
 
-// aiproot 全域地圖 provider 設定（前端可設 · key 加密存 DB）
-// GET 回 { provider, hasKey }（不回 key 明碼）· POST 設 provider(+選填 apiKey)
+// aiproot 全域地圖設定（前端可設 · key 加密存 DB）
+// GET 回 { provider, hasKey, tileProvider, hasTileKey }（不回 key 明碼）
+// POST 設 routing provider(+選填 apiKey)；POST /tile 設 tile provider(+選填 tileApiKey)
 @Controller("aiproot-console/map-config")
 export class MapConfigController {
   constructor(private readonly repo: MapRoutingConfigRepository) {}
@@ -16,7 +18,9 @@ export class MapConfigController {
   @Get()
   @Roles("aiproot_admin", "consultant")
   async get() {
-    return this.repo.getStatus(currentTx());
+    const tx = currentTx();
+    const [routing, tile] = await Promise.all([this.repo.getStatus(tx), this.repo.getTileStatus(tx)]);
+    return { ...routing, ...tile };
   }
 
   @Post()
@@ -32,5 +36,17 @@ export class MapConfigController {
       await this.repo.updateProviderOnly(tx, body.provider, user.user_id);
     }
     return { status: "ok", ...(await this.repo.getStatus(tx)) };
+  }
+
+  @Post("tile")
+  @Roles("aiproot_admin")
+  async setTile(@CurrentUser() user: JwtUser, @Body() body: { tileProvider?: string; tileApiKey?: string }) {
+    if (!body?.tileProvider || !(TILE_PROVIDERS as readonly string[]).includes(body.tileProvider)) {
+      throw new BadRequestException("tileProvider 必要 · 需為 osm | maptiler");
+    }
+    const tx = currentTx();
+    const tileKey = typeof body.tileApiKey === "string" && body.tileApiKey.trim() ? body.tileApiKey.trim() : null;
+    await this.repo.upsertTile(tx, body.tileProvider, tileKey, user.user_id);
+    return { status: "ok", ...(await this.repo.getTileStatus(tx)) };
   }
 }
