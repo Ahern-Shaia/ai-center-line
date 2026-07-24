@@ -32,6 +32,7 @@ import { EmployeeBindingModule } from "./employee-binding/employee-binding.modul
 import { WarroomTaskBoardModule } from "./warroom-task-board/warroom-task-board.module.js";
 import { PersonalDailyReportModule } from "./personal-daily-report/personal-daily-report.module.js";
 import { SchedulerConfigModule } from "./scheduler-config/scheduler-config.module.js";
+import { AttendanceModule } from "./attendance/attendance.module.js";
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { SchedulerConfigModule } from "./scheduler-config/scheduler-config.modul
     WarroomTaskBoardModule,
     PersonalDailyReportModule,
     SchedulerConfigModule,
+    AttendanceModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [

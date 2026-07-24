@@ -368,3 +368,32 @@ export const userLineBinding = pgTable("user_line_binding", {
   revokedReason: text("revoked_reason"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 });
+
+// 外勤定位打卡 · migration 0023（docs/modules/attendance-location-mileage.md）
+export const attendancePunch = pgTable("attendance_punch", {
+  punchId: uuid("punch_id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.userId, { onDelete: "cascade" }),
+  punchType: text("punch_type").$type<"clock_in" | "arrive_site" | "clock_out">().notNull(),
+  lat: numeric("lat"),
+  lng: numeric("lng"),
+  accuracyM: numeric("accuracy_m"),
+  customerName: text("customer_name"),
+  source: text("source").$type<"liff_geo" | "location_msg" | "manual">().notNull().default("liff_geo"),
+  photoMediaId: uuid("photo_media_id"),
+  suspicious: jsonb("suspicious").$type<Record<string, unknown>>(),
+  punchedAt: timestamp("punched_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const attendanceTrip = pgTable("attendance_trip", {
+  tripId: uuid("trip_id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.userId, { onDelete: "cascade" }),
+  fromPunchId: uuid("from_punch_id").notNull().references(() => attendancePunch.punchId, { onDelete: "cascade" }),
+  toPunchId: uuid("to_punch_id").notNull().references(() => attendancePunch.punchId, { onDelete: "cascade" }),
+  distanceM: integer("distance_m"),
+  routeProvider: text("route_provider"),
+  computedAt: timestamp("computed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
