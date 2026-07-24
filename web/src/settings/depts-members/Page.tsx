@@ -32,8 +32,9 @@ export default function DepartmentsMembers() {
     "departments:manage-tenant", "departments:manage",
     "users:create-group-owner", "users:manage",
   );
-  // Tenant selector · 有 tenants:view 才能選 (aiproot / consultant)
-  const canSwitchTenant = perms.has("tenants:view");
+  // 跨租戶切換是 aiproot / consultant 專屬 · 用角色判（對照矩陣 §5.2）
+  // 不可用 perms.has("tenants:view") · tenant_admin 也有該 perm（看自租戶設定）· 會被誤當 aiproot
+  const canSwitchTenant = session?.role === "aiproot_admin" || session?.role === "consultant";
 
   const [tenants, setTenants] = useState<Array<{ tenantId: string; tenantName: string }>>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
