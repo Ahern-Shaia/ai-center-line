@@ -50,4 +50,13 @@ export class AuthController {
     if (!body?.code) throw new BadRequestException("缺 code");
     return this.lineOauth.handleCallback(body.code);
   }
+
+  // LIFF · 前端送 access token（liff.getAccessToken）· backend 驗證 channel+效期+profile 後換 JWT
+  // 取代舊「信任前端 lineUserId」的 @Public LIFF 端點（修 IDOR）· 見 docs/modules/liff-webapp-consolidation.md
+  @Public()
+  @Post("liff/token")
+  async liffToken(@Body() body: { accessToken?: string }) {
+    if (!body?.accessToken) throw new BadRequestException("缺 accessToken");
+    return this.lineOauth.handleLiffToken(body.accessToken);
+  }
 }

@@ -100,15 +100,54 @@ export class LineOauthService {
     const profile = await profileRes.json() as { userId?: string; displayName?: string };
     if (!profile.userId) throw new UnauthorizedException("LINE profile 無 userId");
 
-    // Step 3 · lineUserId → 查所有 active binding (可能多 bot)
-    //          走 aiproot_admin 上下文跨租戶讀
+    // Step 3 · lineUserId → binding → JWT（與 LIFF token 路徑共用）
+    return this.issueJwtForLineUserId(profile.userId);
+  }
+
+  /**
+   * LIFF access token → 驗證（channel + 效期）→ 可信 userId → JWT
+   * · 安全：不信任前端送來的 lineUserId · 走 LINE verify + profile 取可信身分
+   *   （對照 https://developers.line.biz/en/docs/liff/using-user-profile/）
+   * · 前提：LIFF app 掛在 LINE_LOGIN_CHANNEL_ID 這支 LINE Login channel 下（verify 的 client_id 才會相符）
+   */
+  async handleLiffToken(accessToken: string): Promise<{ access_token: string; role: string; tenant_id: string | null }> {
+    const channelId = process.env.LINE_LOGIN_CHANNEL_ID;
+    if (!channelId) throw new Error("LINE_LOGIN_CHANNEL_ID env 未設");
+
+    // Step 1 · verify access token（確認是發給我們 channel 的、且未過期）
+    const verifyRes = await fetch(`https://api.line.me/oauth2/v2.1/verify?access_token=${encodeURIComponent(accessToken)}`);
+    if (!verifyRes.ok) {
+      const body = await verifyRes.text().catch(() => "");
+      this.logger.warn(`LIFF token verify failed · ${verifyRes.status} · ${body.slice(0, 200)}`);
+      throw new UnauthorizedException("LIFF 登入憑證無效 · 請重開頁面");
+    }
+    const verify = await verifyRes.json() as { client_id?: string; expires_in?: number };
+    if (verify.client_id !== channelId) throw new UnauthorizedException("LIFF 憑證 channel 不符");
+    if (!verify.expires_in || verify.expires_in <= 0) throw new UnauthorizedException("LIFF 登入憑證已過期 · 請重開頁面");
+
+    // Step 2 · access token → profile（拿可信 userId）
+    const profileRes = await fetch("https://api.line.me/v2/profile", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!profileRes.ok) throw new UnauthorizedException("拿不到 LINE profile");
+    const profile = await profileRes.json() as { userId?: string };
+    if (!profile.userId) throw new UnauthorizedException("LINE profile 無 userId");
+
+    return this.issueJwtForLineUserId(profile.userId);
+  }
+
+  /**
+   * lineUserId → user_line_binding → JWT（OAuth callback 與 LIFF token 共用）
+   * · 走 aiproot_admin 上下文跨租戶讀；多 bot 取最新 active
+   */
+  private async issueJwtForLineUserId(lineUserId: string): Promise<{ access_token: string; role: string; tenant_id: string | null }> {
     const bindings = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{
-      user_id: string; bot_id: string; role: string; tenant_id: string | null; department_id: string | null;
+      user_id: string; role: string; tenant_id: string | null; department_id: string | null;
     }>(sql`
-      SELECT b.user_id::text, b.bot_id::text, u.role, u.tenant_id::text, u.department_id::text
+      SELECT b.user_id::text, u.role, u.tenant_id::text, u.department_id::text
       FROM user_line_binding b
       JOIN users u ON u.user_id = b.user_id
-      WHERE b.line_user_id = ${profile.userId}
+      WHERE b.line_user_id = ${lineUserId}
         AND b.status = 'active'
       ORDER BY b.bound_at DESC
       LIMIT 1
@@ -119,7 +158,6 @@ export class LineOauthService {
       throw new UnauthorizedException("此 LINE 帳號尚未綁定 aiproot · 請先加 bot 好友完成綁定");
     }
 
-    // Step 4 · 發 JWT
     const payload: JwtUser = {
       user_id: binding.user_id,
       role: binding.role as JwtUser["role"],
@@ -127,11 +165,7 @@ export class LineOauthService {
       department_id: binding.department_id,
     };
     const token = await this.jwt.signAsync(payload);
-    this.logger.log(`LINE OAuth login OK · userId=${binding.user_id.slice(-6)} · role=${binding.role}`);
-    return {
-      access_token: token,
-      role: binding.role,
-      tenant_id: binding.tenant_id,
-    };
+    this.logger.log(`LINE JWT issued · userId=${binding.user_id.slice(-6)} · role=${binding.role}`);
+    return { access_token: token, role: binding.role, tenant_id: binding.tenant_id };
   }
 }
