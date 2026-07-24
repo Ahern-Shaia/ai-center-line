@@ -56,7 +56,7 @@ export class NudgeService {
         tenantId: t.tenant_id,
         tenantName: t.tenant_name,
         unboundCount: unbound.length,
-        top: unbound.slice(0, 10).map((r) => ({
+        top: unbound.slice(0, 100).map((r) => ({
           senderLineId: r.senderLineId,
           displayName: r.displayName,
           messageCount: r.messageCount,
@@ -87,7 +87,7 @@ export class NudgeService {
       tenantId,
       tenantName: nameRes.rows[0]?.tenant_name ?? "",
       unboundCount: unbound.length,
-      top: unbound.slice(0, 10).map((r) => ({
+      top: unbound.slice(0, 100).map((r) => ({
         senderLineId: r.senderLineId,
         displayName: r.displayName,
         messageCount: r.messageCount,
