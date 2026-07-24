@@ -279,6 +279,12 @@ export const attendancePunch = (body: { punchType: "clock_in" | "arrive_site" | 
 export interface TripRow { tripId: string; distanceM: number | null; routeProvider: string | null; createdAt: string }
 export const getTodayTrips = () =>
   req<{ trips: TripRow[] }>("/attendance/trips/today");
+
+// 地圖 provider 平台設定（aiproot）
+export const getMapConfig = () =>
+  req<{ provider: string; hasKey: boolean }>("/aiproot-console/map-config");
+export const setMapConfig = (body: { provider: string; apiKey?: string }) =>
+  req<{ status: string; provider: string; hasKey: boolean }>("/aiproot-console/map-config", { method: "POST", body: JSON.stringify(body) });
 export const getWarroom = () => req<Warroom>("/warroom");
 export const getPending = () => req<{ pending: PendingTicket[] }>("/signoff");
 export const confirmSignoff = (ticket_ids: string[]) =>

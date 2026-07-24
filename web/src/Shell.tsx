@@ -80,6 +80,7 @@ const NAV: Array<{
       { key: "cost-dashboard", label: "AI 成本管理", ic: iconGauge, done: true },
       { key: "batch-history", label: "對話分析歷程", ic: iconChat, done: true },
       { key: "binding-audit", label: "LINE 綁定稽核", ic: iconTeam, done: true },
+      { key: "map-config", label: "地圖里程設定", ic: iconCog, done: true },
       { key: "category-mgmt", label: "分類管理", ic: iconBook, done: true },
       { key: "roles-mgmt", label: "權限管理", ic: iconShield, done: true, perm: "roles:view" },
     ],
