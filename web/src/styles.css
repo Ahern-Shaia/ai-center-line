@@ -1835,6 +1835,57 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .trip-total span:last-child { font-family:var(--mono, ui-monospace, monospace); }
 
 /* ==============================================
+   notify v2 · 通知設定 UI
+   ============================================== */
+.nc-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:18px 20px; margin-bottom:16px; }
+.nc-card-h { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--ink); margin-bottom:4px; }
+.nc-step-n { width:20px; height:20px; border-radius:50%; background:var(--primary); color:#fff; font-size:11px; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
+.nc-card-sub { font-size:12px; color:var(--ink-3); margin:0 0 14px 28px; }
+.nc-row { display:flex; gap:12px; align-items:flex-end; }
+.nc-ok { font-size:12px; color:var(--ok); margin-top:8px; }
+/* 欄位勾選 */
+.nc-flds { border:1px solid var(--line); border-radius:var(--r); overflow:hidden; }
+.nc-fld { display:flex; align-items:center; gap:12px; padding:10px 14px; border-bottom:1px solid var(--line-2); cursor:pointer; background:var(--surface); width:100%; text-align:left; font:inherit; color:inherit; }
+.nc-fld:last-child { border-bottom:none; }
+.nc-fld:hover { background:var(--well); }
+.nc-fld.on { background:var(--primary-tint); }
+.nc-cb { width:18px; height:18px; border-radius:var(--r-sm); border:1.5px solid var(--line); flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--surface); }
+.nc-fld.on .nc-cb { background:var(--primary); border-color:var(--primary); }
+.nc-cb svg { width:12px; height:12px; stroke:#fff; fill:none; stroke-width:2.5; }
+.nc-fld-name { font-weight:500; flex:1; }
+.nc-fld-id { font-family:var(--mono, monospace); font-size:11px; color:var(--ink-3); }
+.nc-fld-ord { min-width:24px; text-align:center; font-size:11px; color:var(--ink-2); }
+/* 事件 toggle */
+.nc-evs { display:flex; gap:10px; }
+.nc-ev { flex:1; border:1px solid var(--line); border-radius:var(--r); padding:10px 12px; display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; background:var(--surface); color:var(--ink); }
+.nc-ev.on { border-color:var(--primary); background:var(--primary-tint); color:var(--primary-2); font-weight:600; }
+.nc-sw { width:32px; height:18px; border-radius:999px; background:var(--line); position:relative; flex-shrink:0; }
+.nc-ev.on .nc-sw { background:var(--primary); }
+.nc-sw::after { content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:left .15s; }
+.nc-ev.on .nc-sw::after { left:16px; }
+/* webhook url */
+.nc-url-box { background:#0F172A; border-radius:var(--r); padding:12px 14px; display:flex; align-items:center; gap:12px; }
+.nc-url-box code { font-family:var(--mono, monospace); font-size:12.5px; color:#A5B4FC; flex:1; word-break:break-all; }
+.nc-url-copy { background:#334155; color:#fff; border:none; border-radius:var(--r-sm); padding:6px 12px; font-size:12px; cursor:pointer; }
+.nc-callout { background:var(--warn-tint); border:1px solid #FDE68A; border-radius:var(--r); padding:10px 14px; font-size:12.5px; color:#92400E; line-height:1.6; margin-top:12px; }
+/* 列表 */
+.nc-tbl { width:100%; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden; border-collapse:collapse; }
+.nc-tbl th { text-align:left; font-size:11px; color:var(--ink-3); font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding:11px 16px; border-bottom:1px solid var(--line); background:var(--well); }
+.nc-tbl td { padding:13px 16px; border-bottom:1px solid var(--line-2); font-size:13.5px; vertical-align:middle; }
+.nc-tbl tr:last-child td { border-bottom:none; }
+.nc-t-name { font-weight:600; color:var(--ink); }
+.nc-t-sub { font-size:11.5px; color:var(--ink-3); margin-top:2px; }
+.nc-t-mono { font-family:var(--mono, monospace); }
+.nc-pill { display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:2px 8px; border-radius:999px; font-weight:600; }
+.nc-pill.on { background:var(--ok-tint); color:var(--ok); }
+.nc-pill.off { background:var(--well); color:var(--ink-3); }
+.nc-pill.ev { background:var(--primary-tint); color:var(--primary-2); margin-right:4px; }
+.nc-act { display:flex; gap:10px; }
+.nc-lnk { color:var(--primary-2); font-size:12.5px; cursor:pointer; background:none; border:none; padding:0; font:inherit; }
+.nc-lnk.mut { color:var(--ink-3); }
+.nc-lnk.danger { color:var(--danger); }
+
+/* ==============================================
    PE-M5 · 權限管理 UI
    ============================================== */
 .rm-layout { display:grid; grid-template-columns:280px 1fr; gap:16px; min-height:calc(100vh - 260px); }

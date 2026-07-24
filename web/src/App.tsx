@@ -24,6 +24,7 @@ import BatchHistory from "./aiproot-console/BatchHistory";
 import BindingAudit from "./aiproot-console/BindingAudit";
 import CategoryManagement from "./aiproot-console/CategoryManagement";
 import MapConfig from "./aiproot-console/MapConfig";
+import NotifyConfigPage from "./notify-config/Page";
 import MyDailyReport from "./personal-report/MyDailyReport";
 import MyTrips from "./personal-report/MyTrips";
 import RolesManagement from "./aiproot-console/RolesManagement";
@@ -55,6 +56,7 @@ type Route =
   | { page: "batch-history" }
   | { page: "binding-audit" }
   | { page: "map-config" }
+  | { page: "notify-config" }
   | { page: "category-mgmt" }
   | { page: "my-daily-report" }
   | { page: "my-trips" }
@@ -85,6 +87,7 @@ const CRUMB: Record<Route["page"], string> = {
   "batch-history": "AIPROOT 管理",
   "binding-audit": "AIPROOT 管理",
   "map-config": "AIPROOT 管理",
+  "notify-config": "AIPROOT 管理",
   "category-mgmt": "AIPROOT 管理",
   "my-daily-report": "戰情室",
   "my-trips": "戰情室",
@@ -114,6 +117,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "batch-history": "對話分析歷程",
   "binding-audit": "LINE 綁定稽核",
   "map-config": "地圖里程設定",
+  "notify-config": "通知設定",
   "category-mgmt": "分類管理",
   "my-daily-report": "我的日報",
   "my-trips": "我的行程",
@@ -133,7 +137,7 @@ const AIPROOT_ONLY_PAGES = new Set([
   "convo-list", "convo-upload", "convo-detail",
   "llm-settings", "line-bots",
   "onboard-tenant", "cost-dashboard", "batch-history",
-  "binding-audit", "map-config", "category-mgmt", "roles-mgmt",
+  "binding-audit", "map-config", "notify-config", "category-mgmt", "roles-mgmt",
 ]);
 
 function isPageAllowedForRole(page: string, role: string): boolean {
@@ -238,6 +242,9 @@ export default function App() {
     } else if (key === "map-config") {
       if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
       setRoute({ page: "map-config" });
+    } else if (key === "notify-config") {
+      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
+      setRoute({ page: "notify-config" });
     } else if (key === "category-mgmt") {
       if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
       setRoute({ page: "category-mgmt" });
@@ -307,6 +314,7 @@ export default function App() {
           )}
           {route.page === "binding-audit" && <BindingAudit />}
           {route.page === "map-config" && <MapConfig />}
+          {route.page === "notify-config" && <NotifyConfigPage />}
           {route.page === "category-mgmt" && <CategoryManagement />}
           {route.page === "my-daily-report" && <MyDailyReport />}
           {route.page === "my-trips" && <MyTrips />}

@@ -311,6 +311,41 @@ export const setMapConfig = (body: { provider: string; apiKey?: string }) =>
   req<{ status: string; provider: string; hasKey: boolean }>("/aiproot-console/map-config", { method: "POST", body: JSON.stringify(body) });
 export const setMapTileConfig = (body: { tileProvider: string; tileApiKey?: string }) =>
   req<{ status: string; tileProvider: string; hasTileKey: boolean }>("/aiproot-console/map-config/tile", { method: "POST", body: JSON.stringify(body) });
+
+// === notify v2 · 自助通知設定（aiproot）===
+export interface RagicAccountRow { accountId: string; tenantId: string | null; server: string; apname: string; displayName: string; hasKey: boolean }
+export interface RagicSchemaField { fieldId: number; fieldName: string; type: string }
+export interface NotifyConfigFieldSel { fieldId: number; label: string; order: number }
+export interface NotifyConfigRow {
+  configId: string; ragicAccountId: string; sheetPath: string; sheetName: string; webhookToken: string;
+  title: string | null; fields: NotifyConfigFieldSel[]; notifyCreate: boolean; notifyUpdate: boolean; notifyDelete: boolean;
+  lineGroupId: string; enabled: boolean; accountDisplayName: string;
+}
+export interface LineGroupOption { groupId: string; displayName: string | null }
+
+// Ragic webhook 要打 prod backend；dev 顯示也用 prod URL（Ragic 必須連得到）
+export const notifyWebhookUrl = (token: string) =>
+  `${API_BASE || "https://ai-center-line.onrender.com"}/notify/webhook/${token}`;
+
+export const ncListAccounts = () => req<RagicAccountRow[]>("/notify-config/accounts");
+export const ncCreateAccount = (body: { tenantId?: string | null; server: string; apname: string; displayName: string; apiKey?: string }) =>
+  req<{ accountId: string }>("/notify-config/accounts", { method: "POST", body: JSON.stringify(body) });
+export const ncUpdateKey = (accountId: string, apiKey: string) =>
+  req<{ status: string }>(`/notify-config/accounts/${accountId}/key`, { method: "POST", body: JSON.stringify({ apiKey }) });
+export interface RagicSchemaResult { sheetName: string; fields: RagicSchemaField[] }
+export const ncFetchFields = (accountId: string, sheetPath: string) =>
+  req<RagicSchemaResult>(`/notify-config/accounts/${accountId}/fields?sheetPath=${encodeURIComponent(sheetPath)}`);
+export const ncLineGroups = (accountId: string) =>
+  req<LineGroupOption[]>(`/notify-config/accounts/${accountId}/line-groups`);
+export const ncListConfigs = () => req<NotifyConfigRow[]>("/notify-config");
+export const ncCreateConfig = (body: {
+  ragicAccountId: string; sheetPath: string; sheetName: string; title: string | null;
+  fields: NotifyConfigFieldSel[]; notifyCreate: boolean; notifyUpdate: boolean; notifyDelete: boolean; lineGroupId: string;
+}) => req<{ configId: string; webhookToken: string }>("/notify-config", { method: "POST", body: JSON.stringify(body) });
+export const ncSetEnabled = (configId: string, enabled: boolean) =>
+  req<{ status: string }>(`/notify-config/${configId}/enabled`, { method: "PATCH", body: JSON.stringify({ enabled }) });
+export const ncRemove = (configId: string) =>
+  req<{ status: string }>(`/notify-config/${configId}`, { method: "DELETE" });
 export const getWarroom = () => req<Warroom>("/warroom");
 export const getPending = () => req<{ pending: PendingTicket[] }>("/signoff");
 export const confirmSignoff = (ticket_ids: string[]) =>
