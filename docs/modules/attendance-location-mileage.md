@@ -50,7 +50,7 @@ LIFF 打卡頁(?page=punch)
               後端：抓該員工「當日前一個打卡點」→ 算 前點→此點（Routes API TRAFFIC_UNAWARE）→ distance_m
               落一筆 attendance_trip（逐段各一趟）· 反作弊旗標（速度/時間/精度/mock）
   ⇒ 一天多站 = A→B、B→C … 每段各一筆 trip（distance_m 各自算）
-主管簽核（戰情室 · 選配）→ 確認 → 寫 Ragic 出勤/里程表（POST URLEncoded · 逐趟或彙總）
+落 DB → 戰情室檢視（打卡點 + 逐段距離）· （是否另同步 Ragic 之後再議 · 非本模組核心）
 ```
 
 ## 5. 資料模型（新增，待 OQ 定案）
@@ -75,12 +75,11 @@ LIFF 打卡頁(?page=punch)
 ## 8. 開放問題（OQ · 待裁定才進 M1）
 - ~~OQ-ATT-1 里程口徑~~ · ~~OQ-ATT-2 費率~~ · ~~OQ-ATT-1b 多站~~ → **已裁定**：只算並記錄**單程距離**、不算費率/金額；**一天多站逐段各記一趟**（A→B 一趟、B→C 一趟…，每段各自算距離）。
 - ~~OQ-ATT-3 地圖 API~~ → **已裁定**：**Google Routes + OpenRouteService 兩個都做**，做成**可插拔 provider**、**管理員在前端設定頁選用**（見 §3.3）。
-- **OQ-ATT-3b 設定層級 + 金鑰**（殘留）：provider 選擇 + API key 是 **aiproot 全域設定**（像語言模型設定，keys 屬平台）還是 **per-tenant**（各租戶自帶）？API key 存 env / secret manager / 設定表？
-- **OQ-ATT-4 案場座標來源**：geofence 的「案場/打卡點」座標從 Ragic 哪張表拿？還是首次打卡自動建點？
-- **OQ-ATT-5 現場拍照**：打卡要不要**強制拍照**佐證（防偽 vs 員工麻煩，見 memory「算所有 stakeholder friction」）？
-- **OQ-ATT-6 簽核**：里程要不要主管簽核才寫 Ragic？還是自動寫、事後稽核？
-- **OQ-ATT-7 Ragic 目標表**：寫到哪張 Ragic 表、欄位對應（出勤表？里程表？出差申請單？）。
-- **OQ-ATT-8 打卡類型**：只有「上班(A)/到點(B)」還是也要下班打卡、多次到點？
+- ~~OQ-ATT-3b 設定層級~~ → **已裁定：aiproot 全域設定**（比照語言模型設定 · provider + API key 屬平台層）。key 存放 secret/env（實作時定）。
+- **OQ-ATT-4 案場座標來源**（部分裁定）：定位為**確認的客戶需求**；geofence 案場座標來源待客戶提供（推測 Ragic 案場/客戶表）。→ **MVP 先不做 geofence**（只記打卡點 + 距離 + 後端速度/精度檢查），拿到案場資料再加。
+- ~~OQ-ATT-5 現場拍照~~ → **建議裁定（待點頭）**：**不每次強制拍照**；後端判定**可疑時才要求補拍**（智慧升級）+ **設定開關**（可切「一律拍照」）。
+- ~~OQ-ATT-6 簽核 · OQ-ATT-7 Ragic 目標表~~ → **移至費用 doc（feature 2）**：用戶澄清「寫 Ragic + 確認」是費用拍照功能的需求，非本模組。**本模組里程資料先記 DB + 戰情室檢視**；是否另同步 Ragic 之後再議。
+- ~~OQ-ATT-8 打卡類型~~ → **已裁定：上班打卡(A) + 多次到點打卡(B/C/D…)**；每次到點＝一趟（承 OQ-ATT-1b）。下班打卡選配。
 
 ## 附錄 · 來源
 - [LIFF API reference（無 getLocation）](https://developers.line.biz/en/reference/liff/) · [LINE webhook location event](https://developers.line.biz/en/reference/messaging-api/#wh-location)
