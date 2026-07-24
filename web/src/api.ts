@@ -135,7 +135,7 @@ const GENERIC_SERVER_MSG = /^(internal server error|bad request|not found|forbid
 // 登入流程本身的端點：這裡回 401 = 這次登入嘗試失敗（帳密錯 / LINE 未綁定 /
 // LINE 授權失敗），不是「既有 session 過期」。不可清 token、也不可用「工作階段已過期」
 // 蓋掉 server 的真實原因，否則使用者（尤其 LINE 登入）會看到誤導訊息。
-const PRE_AUTH_PATHS = new Set(["/auth/login", "/auth/line/callback", "/auth/line/oauth-url"]);
+const PRE_AUTH_PATHS = new Set(["/auth/login", "/auth/line/callback", "/auth/line/oauth-url", "/auth/liff/token"]);
 
 // API base URL：
 // - dev（本機）：不設 VITE_API_BASE_URL → 空字串 → `/api${path}` 走 Vite proxy 到 localhost:3000
@@ -226,6 +226,20 @@ export async function completeLineOauth(code: string): Promise<void> {
   localStorage.setItem(EMAIL_KEY, `line-user@${d.tenant_id ?? "aiproot"}`);
   localStorage.removeItem(MUST_CHANGE_KEY);
   localStorage.removeItem(EXPIRES_AT_KEY);
+}
+
+// LIFF · 用 liff.getAccessToken() 換 JWT（後端驗 channel+效期+profile · 見 /auth/liff/token）
+// 401 未綁定會以 ApiError 拋出真實訊息（/auth/liff/token 在 PRE_AUTH_PATHS · 不被蓋成「工作階段過期」）
+export async function applyLiffToken(accessToken: string): Promise<{ role: string; tenant_id: string | null }> {
+  const d = await req<{ access_token: string; role: string; tenant_id: string | null }>("/auth/liff/token", {
+    method: "POST",
+    body: JSON.stringify({ accessToken }),
+  });
+  setToken(d.access_token);
+  localStorage.setItem(EMAIL_KEY, `line-user@${d.tenant_id ?? "aiproot"}`);
+  localStorage.removeItem(MUST_CHANGE_KEY);
+  localStorage.removeItem(EXPIRES_AT_KEY);
+  return { role: d.role, tenant_id: d.tenant_id };
 }
 export const getWarroom = () => req<Warroom>("/warroom");
 export const getPending = () => req<{ pending: PendingTicket[] }>("/signoff");
