@@ -397,3 +397,11 @@ export const attendanceTrip = pgTable("attendance_trip", {
   computedAt: timestamp("computed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// 地圖路線 provider 平台設定（aiproot 全域）· migration 0024
+export const mapRoutingConfig = pgTable("map_routing_config", {
+  singleton: boolean("singleton").primaryKey().default(true),
+  provider: text("provider").$type<"openrouteservice" | "google_routes">().notNull().default("openrouteservice"),
+  updatedBy: uuid("updated_by").references(() => users.userId, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

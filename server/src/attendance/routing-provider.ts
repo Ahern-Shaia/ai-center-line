@@ -68,17 +68,21 @@ class OpenRouteServiceProvider implements RoutingProvider {
   }
 }
 
-// 依 env 取當前 provider · 無 key 回 null（呼叫端把 distance 存 null，不阻擋打卡）
+// 依 provider 名 + key 建 provider（給 DB 設定用）· 無 key 回 null
+export function buildRoutingProvider(name: string, key: string | null): RoutingProvider | null {
+  if (!key) return null;
+  if (name === "google_routes" || name === "google") return new GoogleRoutesProvider(key);
+  return new OpenRouteServiceProvider(key);
+}
+
+// env fallback（DB 未設 provider/key 時）· 無 key 回 null（呼叫端把 distance 存 null，不阻擋打卡）
 export function getRoutingProvider(): RoutingProvider | null {
   const which = (process.env.MAP_ROUTING_PROVIDER ?? "openrouteservice").trim();
-  if (which === "google_routes" || which === "google") {
-    const k = process.env.GOOGLE_ROUTES_API_KEY;
-    if (!k) { logger.warn("MAP_ROUTING_PROVIDER=google 但 GOOGLE_ROUTES_API_KEY 未設"); return null; }
-    return new GoogleRoutesProvider(k);
-  }
-  const k = process.env.OPENROUTESERVICE_API_KEY;
-  if (!k) { logger.warn("OPENROUTESERVICE_API_KEY 未設 · 里程暫不計算"); return null; }
-  return new OpenRouteServiceProvider(k);
+  const key = which === "google_routes" || which === "google"
+    ? process.env.GOOGLE_ROUTES_API_KEY
+    : process.env.OPENROUTESERVICE_API_KEY;
+  if (!key) { logger.warn(`地圖 provider(${which}) 未設 key（DB 設定或 env）· 里程暫不計算`); return null; }
+  return buildRoutingProvider(which, key);
 }
 
 // 直線距離（Haversine）· provider 失敗時的 fallback / 反作弊速度粗算用

@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
-import { currentTx } from "../db/client.js";
+import { currentTx, withSystemTx } from "../db/client.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { AttendanceRepository, type PunchLite } from "./attendance.repository.js";
-import { getRoutingProvider, haversineMeters, type LatLng } from "./routing-provider.js";
+import { MapRoutingConfigRepository } from "./map-routing-config.repository.js";
+import { buildRoutingProvider, getRoutingProvider, haversineMeters, type LatLng, type RoutingProvider } from "./routing-provider.js";
 
 export interface PunchInput {
   punchType: "clock_in" | "arrive_site" | "clock_out";
@@ -40,7 +41,22 @@ export function computeSuspicious(
 @Injectable()
 export class AttendanceService {
   private readonly logger = new Logger(AttendanceService.name);
-  constructor(private readonly repo: AttendanceRepository) {}
+  constructor(
+    private readonly repo: AttendanceRepository,
+    private readonly mapConfig: MapRoutingConfigRepository,
+  ) {}
+
+  // 先讀 DB 平台設定（aiproot 前端設的 provider + key）· 無則 fallback env
+  private async resolveProvider(): Promise<RoutingProvider | null> {
+    try {
+      const cfg = await withSystemTx((tx) => this.mapConfig.get(tx));
+      const p = buildRoutingProvider(cfg.provider, cfg.apiKey);
+      if (p) return p;
+    } catch (e) {
+      this.logger.warn(`讀地圖設定失敗 · fallback env · ${(e as Error).message}`);
+    }
+    return getRoutingProvider();
+  }
 
   async punch(user: JwtUser, input: PunchInput): Promise<{
     punchId: string;
@@ -70,7 +86,7 @@ export class AttendanceService {
     if (input.punchType === "arrive_site" && prev?.lat != null && prev.lng != null && input.lat != null && input.lng != null) {
       const from: LatLng = { lat: prev.lat, lng: prev.lng };
       const to: LatLng = { lat: input.lat, lng: input.lng };
-      const provider = getRoutingProvider();
+      const provider = await this.resolveProvider();
       let distanceM: number | null = null;
       let routeProvider: string | null = null;
       if (provider) {
