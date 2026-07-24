@@ -1,4 +1,4 @@
-import type { NotifyEventType } from "./dynamic-composer.js";
+export type NotifyEventType = "CREATE" | "UPDATE" | "DELETE";
 
 // 解析 Ragic 原生 Webhook payload（防禦式 · 因實際 shape 需真 webhook 驗證，見 doc caveat）
 // 完整模式：{ data:[{fieldId:value, _ragicId?}], apname, path, sheetIndex, eventType }

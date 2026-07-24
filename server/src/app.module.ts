@@ -34,6 +34,7 @@ import { PersonalDailyReportModule } from "./personal-daily-report/personal-dail
 import { SchedulerConfigModule } from "./scheduler-config/scheduler-config.module.js";
 import { AttendanceModule } from "./attendance/attendance.module.js";
 import { NotifyConfigModule } from "./notify-config/notify-config.module.js";
+import { NotificationHubModule } from "./notification-hub/notification-hub.module.js";
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { NotifyConfigModule } from "./notify-config/notify-config.module.js";
     PersonalDailyReportModule,
     SchedulerConfigModule,
     AttendanceModule,
+    NotificationHubModule,
     NotifyConfigModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],

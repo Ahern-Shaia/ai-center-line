@@ -444,6 +444,30 @@ export interface NotifyConfigField {
   order: number;
 }
 
+// 通知中心 v3（notification-hub）· migration 0027 · 來源/管道可插拔
+export type NotificationSourceType = "ragic_form" | "internal_event" | "schedule";
+export type NotificationChannelType = "line_group" | "line_user" | "email" | "in_app";
+
+export interface NotificationTemplateItem { path: string; label: string; order: number }
+export interface NotificationTemplate { title: string; items: NotificationTemplateItem[] }
+
+export const notificationRule = pgTable("notification_rule", {
+  ruleId: uuid("rule_id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.tenantId, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  sourceType: text("source_type").$type<NotificationSourceType>().notNull(),
+  sourceConfig: jsonb("source_config").$type<Record<string, unknown>>().notNull().default({}),
+  webhookToken: text("webhook_token").unique(),
+  template: jsonb("template").$type<NotificationTemplate>().notNull(),
+  channelType: text("channel_type").$type<NotificationChannelType>().notNull(),
+  channelTarget: text("channel_target"),
+  createdBy: uuid("created_by").references(() => users.userId, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// v2（保留作遷移對帳 · v3 穩定後另開 migration 清除）
 export const notifyConfig = pgTable("notify_config", {
   configId: uuid("config_id").primaryKey().defaultRandom(),
   ragicAccountId: uuid("ragic_account_id").notNull().references(() => ragicAccount.accountId, { onDelete: "cascade" }),
