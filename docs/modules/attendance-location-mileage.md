@@ -33,6 +33,14 @@
 - **備案**：OpenRouteService（免信用卡、全免費）；量大再評估 **OSRM 自架**（per-call $0，換運維）。
 - **費率／報銷金額不算**（用戶裁定）→ 只存 `distance_m`（公里 = distance_m/1000）。
 
+### 3.3 可插拔路線 provider（OQ-ATT-3 裁定：兩個都做 · 管理員前端選用）
+後端定義 `RoutingProvider` 介面 `computeDistance(from, to) → { distanceMeters, provider }`，兩個實作：
+- `GoogleRoutesProvider`：`computeRoutes`（DRIVE + `TRAFFIC_UNAWARE` + fieldMask 只取 `distanceMeters`）。
+- `OpenRouteServiceProvider`：`directions/driving-car`（免信用卡、全免費）。
+
+**選用由設定決定**（層級見 OQ-ATT-3b）；**前端設定頁比照「語言模型設定」**：管理員切 provider + 填該 provider 的 API key。`attendance_trip.route_source` 記實際用的 provider（可稽核）。
+**好處**：Google 額度爆/停用可即時切 ORS、不綁死 vendor、不同租戶可用不同 provider。
+
 ## 4. 資料流（建議）
 ```
 LIFF 打卡頁(?page=punch)
@@ -66,7 +74,8 @@ LIFF 打卡頁(?page=punch)
 
 ## 8. 開放問題（OQ · 待裁定才進 M1）
 - ~~OQ-ATT-1 里程口徑~~ · ~~OQ-ATT-2 費率~~ · ~~OQ-ATT-1b 多站~~ → **已裁定**：只算並記錄**單程距離**、不算費率/金額；**一天多站逐段各記一趟**（A→B 一趟、B→C 一趟…，每段各自算距離）。
-- **OQ-ATT-3 地圖 API**：Google Routes（精度最佳、免費 1 萬/月）還是 OpenRouteService（免信用卡）/ OSRM 自架？**需要一把 Google Maps API key（付費帳號綁卡）嗎？**
+- ~~OQ-ATT-3 地圖 API~~ → **已裁定**：**Google Routes + OpenRouteService 兩個都做**，做成**可插拔 provider**、**管理員在前端設定頁選用**（見 §3.3）。
+- **OQ-ATT-3b 設定層級 + 金鑰**（殘留）：provider 選擇 + API key 是 **aiproot 全域設定**（像語言模型設定，keys 屬平台）還是 **per-tenant**（各租戶自帶）？API key 存 env / secret manager / 設定表？
 - **OQ-ATT-4 案場座標來源**：geofence 的「案場/打卡點」座標從 Ragic 哪張表拿？還是首次打卡自動建點？
 - **OQ-ATT-5 現場拍照**：打卡要不要**強制拍照**佐證（防偽 vs 員工麻煩，見 memory「算所有 stakeholder friction」）？
 - **OQ-ATT-6 簽核**：里程要不要主管簽核才寫 Ragic？還是自動寫、事後稽核？
