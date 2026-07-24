@@ -1652,7 +1652,11 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .kb-card-summary { font-size:13px; color:var(--ink); line-height:1.5; }
 .kb-card-meta { display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:11.5px; color:var(--ink-3); }
 .kb-tag { background:var(--surface-2, #F5F6F8); padding:2px 8px; border-radius:3px; border:1px solid var(--line); color:var(--ink-2); font-size:11px; }
-.kb-assignee, .kb-due { color:var(--ink-3); }
+.kb-conf { padding:2px 7px; border-radius:3px; border:1px solid currentColor; background:transparent; font-size:11px; font-weight:500; line-height:1.4; }
+.kb-conf-mid { color:var(--warn); }
+.kb-conf-low { color:var(--danger); }
+.kb-assignee, .kb-due { display:inline-flex; align-items:center; gap:3px; color:var(--ink-3); }
+.kb-ic { flex-shrink:0; opacity:.7; }
 .kb-card-dept { font-size:11px; color:var(--ink-3); margin-top:2px; }
 
 /* Column tone · left border accent */

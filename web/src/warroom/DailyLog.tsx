@@ -3,6 +3,7 @@ import { ApiError, getWarroomDailyReports, getWarroomGroupMessages, triggerWarro
 import { usePermissions } from "../permission/PermissionContext";
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
+import { catLabel } from "../shared/categoryLabel";
 
 // WTB-M4 · 日誌 view · 按天列 · 每 upload 一 card
 // scheduler-config M4 · 加「立即分析」按鈕（tenant_admin / aiproot 可觸發）
@@ -246,7 +247,7 @@ function formatTime(iso: string): string {
 // AI 抽的分類記錄 (records) · daily_reports 空時 fallback view
 // 對應 schema · category / title / detail / status / person / machine_code / work_order
 function RecordItem({ r }: { r: Record<string, unknown> }) {
-  const category = (r.category as string) || "未分類";
+  const category = r.category ? catLabel(r.category as string) : "未分類";
   const title = (r.title as string) || "";
   const detail = (r.detail as string) || "";
   const status = r.status as string | null;
