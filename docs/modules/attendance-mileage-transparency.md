@@ -4,7 +4,7 @@
 > 手段：把「數字怎麼來的」攤開給員工自己核對＝**地圖依據 + 打卡時間軸 + 方法透明 + 申訴出口**。
 >
 > 對照 [attendance-location-mileage.md](attendance-location-mileage.md)（M1/M2 已上 prod）。本文＝該模組的可信度增補（M3+）。
-> 狀態：M0 設計待裁定（見 §7 OQ）。工程量非限制（用戶裁定「要真正完整方案」）。
+> 狀態（2026-07-25）：**M1+M2 本地 SHIPPED**（地圖折線 + 打卡時間軸/段數自明 + 每段方法依據）· **M3 申訴延後**（用戶裁定先暫存、表已建閒置）· 待 push + prod 跑 migration 0025。OQ-MT-1..6 全裁定（§7）。
 
 ---
 
@@ -95,15 +95,17 @@
 
 ## 5. 前端
 
-### 5.1 員工「我的行程」升級（平台 Shell + LIFF 共用 MyTrips）
-- 頂部**當日地圖**（Leaflet）：圖釘 + 逐段折線；點列表某段 → 地圖高亮。
-- **時間軸**：打卡序列 + 「N 打卡點 ＝ N-1 段」。
-- 每段可展開：方法說明 + provider + 直線/道路對照 + 「回報有誤」。
-- Leaflet **動態 import**（只在 MyTrips 載入，不灌大主 bundle）。
+### 5.1 員工「我的行程」升級（平台 Shell + LIFF 共用 MyTrips）✅ M2 已落地
+- 頂部**當日地圖**（react-leaflet + CARTO light · 對齊 `kb/CustomerMap` 慣例）：圖釘（出發 teal／到點 indigo）+ 逐段折線（route_geometry 解碼；無則直線虛線標「路線未記錄」）。
+- **時間軸**：打卡序列 + 「共 N 打卡點 · M 段里程（少一段通常是漏打了一次卡）」。
+- 每段可展開：出發/到點地址 + 道路 vs 直線距離 + 方法說明 + provider。
+- 地圖以 `React.lazy` 動態載入（Leaflet 獨立 chunk ~44KB gz · 不灌主 bundle）。
+- 〔M3 延後〕「回報有誤」按鈕暫未加。
 
-### 5.2 主管「里程申訴」複核（戰情室）
+### 5.2 主管「里程申訴」複核（戰情室）· 🔒 M3 延後（2026-07-25 用戶裁定先暫存）
 - 新頁：列自租戶 pending 申訴（員工/日期/段/理由）→ 標記處理（resolved/rejected + 說明）。
 - 側欄紅點提示未處理（見 OQ-MT-4）。
+- `attendance_mileage_dispute` 表已於 0025 建好、目前閒置；有需求再接。
 
 ---
 
@@ -111,20 +113,21 @@
 
 | 路徑 | 失效模式 | 影響 | 嚴重度 | 緩解 |
 |---|---|---|---|---|
+| **部署順序** | 0025 未先跑就部署 M1 code | `insertTrip` 寫不存在欄位 → **到點打卡 500** | **P0** | push 時**先在 prod 跑 0025、再讓 Render 部署**；本地已驗欄位齊 ✅（🔒 靠人工照順序） |
 | 圖磚 provider | 當機/限流 | 地圖空白 | P2 | 數字仍在；地圖降級不擋頁 ✅ |
-| 舊 trip 無 polyline | M1/M2 資料無幾何 | 地圖畫不出路線 | P2 | 只畫兩端+直線+標「路線未記錄」；不回溯（R11）✅ |
+| 舊 trip 無 polyline | M1/M2 前資料無幾何 | 地圖畫不出路線 | P2 | 只畫兩端+直線虛線+標「路線未記錄」；不回溯（R11）✅ |
 | 反向地理編碼 | 失敗/限流 | address 空 | P2 | 顯員工填的地點名 + 座標；address 為加分非必需 ✅ |
-| 申訴 | 洗版濫用 | 主管被灌爆 | P2 | 每(user,date,trip)限一 pending + 節流 ✅ |
-| 位置 address | 住址等敏感 PII | 隱私外洩 | **P1** | 僅本人 + 該租戶主管可見（RLS+audit）；aiproot 預設不看座標明細（OQ-MT-5）⚠️ 待裁定 |
-| OSM 公共圖磚 | product 量級直連違反公平使用政策 | 被封/服務中斷 | **P1** | pilot 量小+attribution 可撐；量大換 tile provider（OQ-MT-1）🔒 政策 gate |
+| 位置 address | 住址等敏感 PII | 隱私外洩 | **P1** | 僅本人（JWT user_id 限定自己）；主管視圖屬 M3、延後；aiproot 平台端預設不看座標明細 ✅ |
+| CARTO/OSM 圖磚 | product 量級直連違反公平使用政策 | 被封/服務中斷 | P2 | 預設 CARTO light（OSM 資料·較寬鬆）+ attribution；量大換 MapTiler（前端可設）🔒 政策 gate |
+| 申訴洗版 | 主管被灌爆 | — | — | 〔M3 延後〕表已加唯一鍵 uq_mileage_dispute_pending（每 user/date/trip 限一 pending）備用 |
 
-> P1「位置 PII」與「圖磚政策」需 OQ 裁定後才收斂；其餘 P2 已有降級策略。
+> **P0 部署順序**是本次唯一必守的上線 gate（0025 先於 code）。位置 PII 因 M2 僅「員工看自己」而收斂為可控；主管視圖到 M3 再處理層級。
 
 ---
 
 ## 7. 開放問題（OQ-MT-N）— 全數裁定 2026-07-24（用戶「全採建議」＋「配置一律前端」）
 
-- ~~OQ-MT-1 圖磚來源~~ → **已裁定**：pilot 先 **OSM 公共圖磚 + attribution**，量大再換含金鑰的 tile provider（如 MapTiler）。**tile provider + 金鑰一律走 aiproot 前端設定（見 §4-bis），不走 env**。
+- ~~OQ-MT-1 圖磚來源~~ → **已裁定**：pilot 免金鑰 + attribution，量大再換含金鑰的 tile provider（如 MapTiler）。**實作微調**：預設底圖用 **CARTO light**（OSM 資料、較乾淨、與既有「客戶地圖」一致），非 raw OSM 圖磚；MapTiler 為前端可設的升級選項。**tile provider + 金鑰一律走 aiproot 前端設定（見 §4-bis），不走 env**。
 - ~~OQ-MT-2 路線幾何~~ → **已裁定**：**存 provider 道路 polyline**（消黑箱關鍵）。
 - ~~OQ-MT-3 反向地理編碼時機~~ → **已裁定**：**打卡後背景補**；前端先顯員工填的地點名，address 補上後才顯。反查沿用已設的 routing provider（ORS Pelias `/geocode/reverse` 或 Google geocoding），**無新金鑰**。
 - ~~OQ-MT-4 申訴通知~~ → **已裁定**：**只進戰情室清單 + 側欄紅點**，不主動推 LINE（省 push 計費）。
@@ -145,12 +148,14 @@
 
 ## 8. 里程碑
 
-| 里程碑 | 內容 | commit |
+| 里程碑 | 內容 | 狀態 |
 |---|---|---|
-| **M1** | schema 0025（trip geometry/straight + punch address + dispute 表）+ 打卡流程存 polyline/straight + provider `computeRoute` 擴充 + geocode 背景補 | 1 |
-| **M2** | GET trips 擴充（幾何/端點/address/punches）+ MyTrips 升級（Leaflet 地圖 + 時間軸 + 段數自明 + 方法展開） | 2 |
-| **M3** | 申訴端到端：員工回報 + 主管戰情室複核頁 + 側欄紅點 | 2 |
-| **M4** | docs 收尾 + FMEA 補全 + MODULES.md 標 ✅ | 1 |
+| **M1** | schema 0025（trip geometry/straight + punch address + dispute 表 + tile 欄位）+ 打卡流程存 polyline/straight + provider `computeRoute`/`reverseGeocode` + geocode 背景補 | ✅ 本地 SHIPPED（ec62837）|
+| **M2** | GET trips 擴充（幾何/端點/address/punches）+ MyTrips 升級（react-leaflet 地圖 + 時間軸 + 段數自明 + 方法展開）+ aiproot tile 設定 | ✅ 本地 SHIPPED（8c984ae/9ef5ac7）|
+| **M3** | 申訴端到端：員工回報 + 主管戰情室複核頁 + 側欄紅點 | 🔒 延後（2026-07-25 用戶裁定 · 表已建閒置）|
+| **M4** | docs 收尾 + FMEA 補全（+P0 部署順序）+ MODULES.md 標狀態 | ✅ 本文 |
+
+> 待辦（push 時）：**先跑 prod migration 0025 再部署**（P0）· 之後 push 8+ commits · 地圖 key 非必需（預設 CARTO light 免金鑰）。
 
 ---
 
