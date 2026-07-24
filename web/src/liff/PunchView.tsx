@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, attendancePunch, getTodayTrips, type TripRow } from "../api";
+import { ApiError, attendancePunch, getTrips, type TripRow } from "../api";
 import { useToast } from "../Toast";
 
 // LIFF 外勤打卡（M2）· JWT 已由 main.tsx applyLiffToken 換好
@@ -25,7 +25,7 @@ export default function PunchView() {
   const [trips, setTrips] = useState<TripRow[]>([]);
 
   const refresh = useCallback(async () => {
-    try { setTrips((await getTodayTrips()).trips); } catch { /* 靜默 · 非核心 */ }
+    try { setTrips((await getTrips()).trips); } catch { /* 靜默 · 非核心 */ }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
 

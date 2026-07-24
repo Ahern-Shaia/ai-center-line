@@ -276,9 +276,17 @@ export interface PunchResult {
 export const attendancePunch = (body: { punchType: "clock_in" | "arrive_site" | "clock_out"; lat?: number; lng?: number; accuracyM?: number; customerName?: string }) =>
   req<PunchResult>("/attendance/punch", { method: "POST", body: JSON.stringify(body) });
 
-export interface TripRow { tripId: string; distanceM: number | null; routeProvider: string | null; createdAt: string }
-export const getTodayTrips = () =>
-  req<{ trips: TripRow[] }>("/attendance/trips/today");
+export interface TripRow {
+  tripId: string;
+  distanceM: number | null;
+  routeProvider: string | null;
+  destination: string | null;
+  departedAt: string;
+  arrivedAt: string;
+}
+// date 選填（YYYY-MM-DD，台北日）· 省略＝當日
+export const getTrips = (date?: string) =>
+  req<{ trips: TripRow[] }>(`/attendance/trips${date ? `?date=${encodeURIComponent(date)}` : ""}`);
 
 // 地圖 provider 平台設定（aiproot）
 export const getMapConfig = () =>

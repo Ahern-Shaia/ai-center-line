@@ -6,6 +6,7 @@ import { applyLiffToken, ApiError } from "../api";
 import BindingView from "./BindingView";
 import SetPasswordView from "./SetPasswordView";
 import PunchView from "./PunchView";
+import TripsView from "./TripsView";
 import type { LiffCtx } from "./types";
 import "../styles.css";
 
@@ -36,7 +37,7 @@ function resolveQuery(key: string): string | null {
   return null;
 }
 
-type Phase = "init" | "binding" | "set-password" | "mine" | "punch" | "unbound" | "error";
+type Phase = "init" | "binding" | "set-password" | "mine" | "punch" | "trips" | "unbound" | "error";
 
 const CENTER: React.CSSProperties = { minHeight: "70vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" };
 
@@ -62,8 +63,8 @@ function LiffApp() {
         if (!accessToken) { setPhase("error"); setMsg("拿不到 LINE 憑證 · 請重開頁面"); return; }
         const profile = await liff.getProfile();
 
-        // JWT 流程（需已綁定）：我的日報、外勤打卡
-        if (page === "mine" || page === "punch") {
+        // JWT 流程（需已綁定）：我的日報、外勤打卡、我的行程
+        if (page === "mine" || page === "punch" || page === "trips") {
           try {
             await applyLiffToken(accessToken);   // 驗證 → JWT
             setPhase(page);
@@ -93,6 +94,7 @@ function LiffApp() {
   }
   if (phase === "mine") return <MyDailyReport />;
   if (phase === "punch") return <PunchView />;
+  if (phase === "trips") return <TripsView />;
   if (phase === "binding" && ctx) return <BindingView ctx={ctx} />;
   if (phase === "set-password" && ctx) return <SetPasswordView ctx={ctx} liff={window.liff} />;
   return null;
