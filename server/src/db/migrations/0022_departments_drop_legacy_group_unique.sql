@@ -1,0 +1,15 @@
+-- 0022 · 移除 departments 的 legacy UNIQUE (tenant_id, line_group_id)
+--
+-- 背景：v2 起「群 → 部門」對應改走 line_group.department_id（反向 FK）。
+-- departments.line_group_id 成為廢欄位（NOT NULL），tenant_admin 建部門時被塞 '-' 佔位符。
+-- 舊的 UNIQUE (tenant_id, line_group_id) 讓「第二個沒綁 legacy 群的部門」也塞 '-'
+-- → 撞唯一鍵（Postgres 23505 duplicate key）→ 建第二個部門就 500。
+--
+-- v2 不再需要「一部門對一群」的唯一性（群的歸屬由 line_group.department_id 決定），drop 之。
+--
+-- 影響範圍（R1）：
+--   · departments 可存在多個 line_group_id='-'（沒綁 legacy 群）的部門 —— 正是 v2 要的。
+--   · idx_departments_group 索引保留（無害）。
+--   · 全庫無 ON CONFLICT (tenant_id, line_group_id) 依賴此 constraint（已查）。
+--   · 無資料異動、無欄位變更、不影響既有 rows。
+ALTER TABLE departments DROP CONSTRAINT IF EXISTS departments_tenant_id_line_group_id_key;
