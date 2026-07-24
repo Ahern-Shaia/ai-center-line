@@ -252,7 +252,7 @@ export function EditBotDrawer({
           <ul>
             <li>該機器人底下所有群組的「分派部門」將自動清空</li>
             <li>群組本身保留 · 只是需要重新分派到新租戶的部門</li>
-            <li>webhook / channel secret / access token 等 LINE 端設定不變</li>
+            <li>Webhook / Channel Secret / Access Token 等 LINE 端設定不變</li>
             <li>此操作可透過再次遷移還原</li>
           </ul>
           <div className="llm-form-actions">

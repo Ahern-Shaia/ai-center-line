@@ -65,7 +65,7 @@ export function BotDetail({
           <span>·</span>
           <span>{bot.groupCount} 群</span>
           <span>·</span>
-          <span>{verified ? `已驗證 ${formatRelative(bot.webhookVerifiedAt!)}` : "尚未收到 webhook"}</span>
+          <span>{verified ? `已驗證 ${formatRelative(bot.webhookVerifiedAt!)}` : "尚未收到 Webhook"}</span>
         </div>
 
         {expanded && (
@@ -97,10 +97,10 @@ export function BotDetail({
           <thead>
             <tr>
               <th>群顯示名稱</th>
-              <th>Group ID</th>
+              <th>群組 ID</th>
               <th>分派部門</th>
               <th className="num">事件</th>
-              <th>最近 event</th>
+              <th>最近事件</th>
               <th></th>
             </tr>
           </thead>
