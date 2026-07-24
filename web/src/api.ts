@@ -279,20 +279,38 @@ export const attendancePunch = (body: { punchType: "clock_in" | "arrive_site" | 
 export interface TripRow {
   tripId: string;
   distanceM: number | null;
+  straightDistanceM: number | null;
   routeProvider: string | null;
+  routeGeometry: string | null;         // encoded polyline · null = 未記錄
   destination: string | null;
+  fromLat: number | null; fromLng: number | null;
+  toLat: number | null; toLng: number | null;
+  fromAddress: string | null; toAddress: string | null;
   departedAt: string;
   arrivedAt: string;
 }
-// date 選填（YYYY-MM-DD，台北日）· 省略＝當日
+export interface PunchRow {
+  punchId: string;
+  punchType: string;
+  customerName: string | null;
+  address: string | null;
+  lat: number | null; lng: number | null;
+  punchedAt: string;
+}
+// date 選填（YYYY-MM-DD，台北日）· 省略＝當日 · 回行程 + 打卡序列
 export const getTrips = (date?: string) =>
-  req<{ trips: TripRow[] }>(`/attendance/trips${date ? `?date=${encodeURIComponent(date)}` : ""}`);
+  req<{ trips: TripRow[]; punches: PunchRow[] }>(`/attendance/trips${date ? `?date=${encodeURIComponent(date)}` : ""}`);
+// 地圖圖磚設定（前端 Leaflet 用 · tileApiKey 為 client-side key · osm 為 null）
+export const getMapTileConfig = () =>
+  req<{ tileProvider: string; tileApiKey: string | null }>("/attendance/map-tile-config");
 
-// 地圖 provider 平台設定（aiproot）
+// 地圖設定（aiproot）· routing provider + tile provider
 export const getMapConfig = () =>
-  req<{ provider: string; hasKey: boolean }>("/aiproot-console/map-config");
+  req<{ provider: string; hasKey: boolean; tileProvider: string; hasTileKey: boolean }>("/aiproot-console/map-config");
 export const setMapConfig = (body: { provider: string; apiKey?: string }) =>
   req<{ status: string; provider: string; hasKey: boolean }>("/aiproot-console/map-config", { method: "POST", body: JSON.stringify(body) });
+export const setMapTileConfig = (body: { tileProvider: string; tileApiKey?: string }) =>
+  req<{ status: string; tileProvider: string; hasTileKey: boolean }>("/aiproot-console/map-config/tile", { method: "POST", body: JSON.stringify(body) });
 export const getWarroom = () => req<Warroom>("/warroom");
 export const getPending = () => req<{ pending: PendingTicket[] }>("/signoff");
 export const confirmSignoff = (ticket_ids: string[]) =>

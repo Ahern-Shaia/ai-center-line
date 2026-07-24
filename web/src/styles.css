@@ -1803,14 +1803,34 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .pdr-raw-time { font-family:var(--mono, ui-monospace, monospace); color:var(--ink-3); font-size:12px; flex-shrink:0; min-width:44px; padding-top:2px; }
 .pdr-raw-text { color:var(--ink); flex:1; white-space:pre-wrap; word-break:break-word; }
 
-/* 我的行程 · 外勤逐段里程 */
+/* 我的行程 · 外勤逐段里程 + 三層依據 */
+.trip-map { height:300px; border-radius:8px; border:1px solid var(--line); margin:6px 0 18px; overflow:hidden; }
+.trip-map-loading { display:flex; align-items:center; justify-content:center; color:var(--ink-3); font-size:13px; background:var(--well); }
+
+.trip-tl-hd, .trip-seg-hd { font-size:12px; color:var(--ink-3); font-weight:600; margin:0 0 8px; letter-spacing:.02em; }
+.trip-seg-hd { margin-top:18px; }
+.trip-tl { display:flex; flex-direction:column; gap:2px; }
+.trip-tl-row { display:flex; align-items:center; gap:10px; padding:5px 0; font-size:13.5px; }
+.trip-tl-time { font-family:var(--mono, ui-monospace, monospace); color:var(--ink-3); font-size:12px; min-width:44px; flex-shrink:0; }
+.trip-tl-badge { font-size:11px; padding:1px 8px; border-radius:999px; font-weight:600; flex-shrink:0; }
+.trip-tl-badge.start { background:#ECFBFA; color:#0F766E; }
+.trip-tl-badge.arrive { background:#EEF0FD; color:#4338CA; }
+.trip-tl-place { color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.trip-tl-foot { font-size:12px; color:var(--ink-3); margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); }
+
 .trip-list { margin-top:4px; }
 .trip-row { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--line-2); }
+.trip-row.clickable { width:100%; background:none; border-top:none; border-left:none; border-right:none; font:inherit; color:inherit; cursor:pointer; text-align:left; }
+.trip-row.clickable:hover { background:var(--well); }
 .trip-idx { font-size:12px; color:var(--ink-3); flex-shrink:0; min-width:48px; }
-.trip-body { min-width:0; flex:1; }
+.trip-body { min-width:0; flex:1; display:flex; flex-direction:column; }
 .trip-dest { font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .trip-time { font-size:12px; color:var(--ink-3); margin-top:2px; }
 .trip-km { font-family:var(--mono, ui-monospace, monospace); font-size:13.5px; color:var(--ink); white-space:nowrap; flex-shrink:0; }
+.trip-detail { background:var(--well); border-radius:var(--r-sm,6px); padding:10px 14px; margin:2px 0 6px; }
+.trip-detail-row { display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-2); padding:3px 0; }
+.trip-detail-row span:last-child { color:var(--ink); }
+.trip-method { font-size:12px; color:var(--ink-3); margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); line-height:1.5; }
 .trip-total { display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding:12px 14px; background:var(--well); border-radius:var(--r-sm, 6px); font-weight:700; color:var(--ink); }
 .trip-total span:last-child { font-family:var(--mono, ui-monospace, monospace); }
 
