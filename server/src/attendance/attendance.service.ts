@@ -111,7 +111,11 @@ export class AttendanceService {
     return { punchId, suspicious, trip };
   }
 
-  async todayTrips(user: JwtUser) {
-    return this.repo.listTripsToday(currentTx(), user.user_id);
+  // 指定台北日期的行程（dateStr = null → 當日）· 員工只看自己（以 JWT user_id 限定）
+  async tripsByDate(user: JwtUser, dateStr: string | null) {
+    if (dateStr !== null && !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      throw new BadRequestException("date 格式需為 YYYY-MM-DD");
+    }
+    return this.repo.listTripsByDate(currentTx(), user.user_id, dateStr);
   }
 }

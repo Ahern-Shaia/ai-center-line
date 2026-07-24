@@ -51,6 +51,11 @@ LIFF 打卡頁(?page=punch)
               落一筆 attendance_trip（逐段各一趟）· 反作弊旗標（速度/時間/精度/mock）
   ⇒ 一天多站 = A→B、B→C … 每段各一筆 trip（distance_m 各自算）
 落 DB → 戰情室檢視（打卡點 + 逐段距離）· （是否另同步 Ragic 之後再議 · 非本模組核心）
+
+員工自看行程(?page=trips)
+  GET /attendance/trips?date=YYYY-MM-DD（省略＝當日 · 台北日）
+  後端 currentTx（RLS tenant 隔離）+ user_id 限定自己 → 逐段 trip 併 from/to 打卡點
+  → 回 [{ 目的地(to_punch.customer_name), 到點時間, distance_m }] · 前端算當日合計
 ```
 
 ## 5. 資料模型（新增，待 OQ 定案）

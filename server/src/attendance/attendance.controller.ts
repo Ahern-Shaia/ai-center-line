@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Post, Query } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { AttendanceService } from "./attendance.service.js";
@@ -35,8 +35,10 @@ export class AttendanceController {
     });
   }
 
-  @Get("trips/today")
-  async todayTrips(@CurrentUser() user: JwtUser) {
-    return { trips: await this.svc.todayTrips(user) };
+  // date 選填（YYYY-MM-DD，台北日）· 省略＝當日 · 只回自己的行程
+  @Get("trips")
+  async trips(@CurrentUser() user: JwtUser, @Query("date") date?: string) {
+    const d = typeof date === "string" && date ? date : null;
+    return { trips: await this.svc.tripsByDate(user, d) };
   }
 }

@@ -9,6 +9,15 @@ export interface PunchLite {
   punchedAtMs: number;
 }
 
+export interface TripDetail {
+  tripId: string;
+  distanceM: number | null;
+  routeProvider: string | null;
+  destination: string | null;
+  departedAt: string;
+  arrivedAt: string;
+}
+
 @Injectable()
 export class AttendanceRepository {
   // 同一員工「當日、此刻之前」最近一筆打卡（算里程與速度的前一點）
@@ -65,17 +74,31 @@ export class AttendanceRepository {
     `);
   }
 
-  // 當日移動紀錄（供戰情室/日報檢視）
-  async listTripsToday(tx: Db, userId: string): Promise<Array<{
-    tripId: string; distanceM: number | null; routeProvider: string | null; createdAt: string;
-  }>> {
-    const res = await tx.execute<{ trip_id: string; distance_m: number | null; route_provider: string | null; created_at: string }>(sql`
-      SELECT trip_id, distance_m, route_provider, created_at::text
-      FROM attendance_trip
-      WHERE user_id = ${userId}::uuid
-        AND (created_at AT TIME ZONE 'Asia/Taipei')::date = (now() AT TIME ZONE 'Asia/Taipei')::date
-      ORDER BY created_at ASC
+  // 指定台北日期的移動紀錄（dateStr = null → 當日）· 併 from/to 打卡點取目的地與出發/到點時間
+  async listTripsByDate(tx: Db, userId: string, dateStr: string | null): Promise<TripDetail[]> {
+    const res = await tx.execute<{
+      trip_id: string; distance_m: number | null; route_provider: string | null;
+      destination: string | null; departed_at: string; arrived_at: string;
+    }>(sql`
+      SELECT t.trip_id, t.distance_m, t.route_provider,
+             tp.customer_name AS destination,
+             fp.punched_at::text AS departed_at,
+             tp.punched_at::text AS arrived_at
+      FROM attendance_trip t
+      JOIN attendance_punch fp ON fp.punch_id = t.from_punch_id
+      JOIN attendance_punch tp ON tp.punch_id = t.to_punch_id
+      WHERE t.user_id = ${userId}::uuid
+        AND (tp.punched_at AT TIME ZONE 'Asia/Taipei')::date
+            = COALESCE(${dateStr}::date, (now() AT TIME ZONE 'Asia/Taipei')::date)
+      ORDER BY tp.punched_at ASC
     `);
-    return res.rows.map((r) => ({ tripId: r.trip_id, distanceM: r.distance_m, routeProvider: r.route_provider, createdAt: r.created_at }));
+    return res.rows.map((r) => ({
+      tripId: r.trip_id,
+      distanceM: r.distance_m,
+      routeProvider: r.route_provider,
+      destination: r.destination,
+      departedAt: r.departed_at,
+      arrivedAt: r.arrived_at,
+    }));
   }
 }
