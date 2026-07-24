@@ -51,12 +51,12 @@ export class NudgeService {
     }> = [];
 
     for (const t of tenantsRes.rows) {
-      const unbound = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.findUnboundActiveUsers(tx, t.tenant_id, 7));
+      const { rows, total } = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.findUnboundActiveUsers(tx, t.tenant_id, 7));
       results.push({
         tenantId: t.tenant_id,
         tenantName: t.tenant_name,
-        unboundCount: unbound.length,
-        top: unbound.slice(0, 100).map((r) => ({
+        unboundCount: total,
+        top: rows.map((r) => ({
           senderLineId: r.senderLineId,
           displayName: r.displayName,
           messageCount: r.messageCount,
@@ -82,12 +82,12 @@ export class NudgeService {
     const nameRes = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{ tenant_name: string }>(sql`
       SELECT tenant_name FROM tenants WHERE tenant_id = ${tenantId}::uuid
     `));
-    const unbound = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.findUnboundActiveUsers(tx, tenantId, 7));
+    const { rows, total } = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.findUnboundActiveUsers(tx, tenantId, 7));
     return {
       tenantId,
       tenantName: nameRes.rows[0]?.tenant_name ?? "",
-      unboundCount: unbound.length,
-      top: unbound.slice(0, 100).map((r) => ({
+      unboundCount: total,
+      top: rows.map((r) => ({
         senderLineId: r.senderLineId,
         displayName: r.displayName,
         messageCount: r.messageCount,
@@ -104,13 +104,16 @@ export class NudgeService {
     tx: Parameters<Parameters<typeof withTenant>[1]>[0],
     tenantId: string,
     lookbackDays: number,
-  ): Promise<Array<{
-    senderLineId: string;
-    displayName: string | null;
-    messageCount: number;
-    lastActiveAt: string;
-    topGroupName: string | null;
-  }>> {
+  ): Promise<{
+    rows: Array<{
+      senderLineId: string;
+      displayName: string | null;
+      messageCount: number;
+      lastActiveAt: string;
+      topGroupName: string | null;
+    }>;
+    total: number;
+  }> {
     // v2 · 加 lg.department_id IS NOT NULL filter
     // 修跨租戶洩漏：若 bot A 被誤加進 tenant B 的群 · tenant B 端 line_group.department_id 應為 null
     // (aiproot 未分派 · 因該群不屬 tenant B) · 有這 filter 就能擋掉未正確配置的資料
@@ -121,6 +124,7 @@ export class NudgeService {
       message_count: string;
       last_active_at: string;
       top_group_name: string | null;
+      total_count: number;
     }>(sql`
       WITH activity AS (
         SELECT lm.sender_line_id,
@@ -141,7 +145,8 @@ export class NudgeService {
         GROUP BY lm.sender_line_id
       )
       SELECT a.sender_line_id, mem.display_name,
-             a.message_count, a.last_active_at, a.top_group_name
+             a.message_count, a.last_active_at, a.top_group_name,
+             (SELECT count(*)::int FROM activity) AS total_count   -- 真實總數（不受 LIMIT 限制 · 不受 line_member JOIN 重複膨脹）
       FROM activity a
       LEFT JOIN line_member mem
         ON mem.user_id = a.sender_line_id
@@ -149,12 +154,15 @@ export class NudgeService {
       ORDER BY a.message_count::int DESC
       LIMIT 100
     `);
-    return res.rows.map((r) => ({
-      senderLineId: r.sender_line_id,
-      displayName: r.display_name,
-      messageCount: parseInt(r.message_count, 10),
-      lastActiveAt: r.last_active_at,
-      topGroupName: r.top_group_name,
-    }));
+    return {
+      rows: res.rows.map((r) => ({
+        senderLineId: r.sender_line_id,
+        displayName: r.display_name,
+        messageCount: parseInt(r.message_count, 10),
+        lastActiveAt: r.last_active_at,
+        topGroupName: r.top_group_name,
+      })),
+      total: res.rows[0]?.total_count ?? 0,
+    };
   }
 }
