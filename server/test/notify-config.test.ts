@@ -3,6 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { composeFromConfig } from "../src/notify-config/dynamic-composer.js";
+import { parseRagicWebhook } from "../src/notify-config/ragic-webhook.parser.js";
 
 const fields = [
   { fieldId: 1001, label: "單據編號", order: 0 },
@@ -60,4 +61,34 @@ test("composer · DELETE label + 無 recordUrl 不加連結", () => {
 test("composer · title 空 → （未填）保底", () => {
   const msg = composeFromConfig({ title: "", eventType: "UPDATE", fields: [], record: {} });
   assert.ok(msg.startsWith("【（未填）｜已更新】"));
+});
+
+test("webhook parser · 完整模式（data 物件 + _ragicId）", () => {
+  const p = parseRagicWebhook({
+    eventType: "UPDATE",
+    apname: "aitode", path: "/service-tickets/10", sheetIndex: 10,
+    data: [{ _ragicId: 41, "1001": "TB-0001" }],
+  });
+  assert.equal(p.eventType, "UPDATE");
+  assert.equal(p.recordId, 41);
+  assert.equal(p.recordData["1001"], "TB-0001");
+});
+
+test("webhook parser · 精簡模式（data 為 id 陣列）", () => {
+  const p = parseRagicWebhook({ eventType: "CREATE", data: [7, 8, 9] });
+  assert.equal(p.eventType, "CREATE");
+  assert.equal(p.recordId, 7);
+  assert.deepEqual(p.recordData, {});
+});
+
+test("webhook parser · eventType 缺 → 預設 UPDATE · recordId 取不到 → null", () => {
+  const p = parseRagicWebhook({ data: [] });
+  assert.equal(p.eventType, "UPDATE");
+  assert.equal(p.recordId, null);
+});
+
+test("webhook parser · DELETE + top-level recordId", () => {
+  const p = parseRagicWebhook({ eventType: "DELETE", recordId: 55, data: [] });
+  assert.equal(p.eventType, "DELETE");
+  assert.equal(p.recordId, 55);
 });

@@ -99,6 +99,17 @@ export class NotifyConfigRepository {
     };
   }
 
+  // 解析該租戶 LINE push token（reuse line_bot 表加密 token · 同 LINE_CONFIG_ENC_KEY）
+  async getLineTokenForTenant(tx: Db, tenantId: string): Promise<string | null> {
+    const key = this.encKey();
+    const res = await tx.execute<{ token: string | null }>(sql`
+      SELECT pgp_sym_decrypt(channel_access_token_enc, ${key})::text AS token
+      FROM line_bot WHERE tenant_id = ${tenantId}::uuid AND status = 'active'
+      ORDER BY created_at DESC LIMIT 1
+    `);
+    return res.rows[0]?.token ?? null;
+  }
+
   async setEnabled(tx: Db, configId: string, enabled: boolean): Promise<void> {
     await tx.execute(sql`UPDATE notify_config SET enabled = ${enabled}, updated_at = now() WHERE config_id = ${configId}::uuid`);
   }
