@@ -316,9 +316,19 @@
   async function init() {
     try {
       await liff.init({ liffId: LIFF_ID });
-      if (!liff.isLoggedIn()) { liff.login(); return; }
-      BOT_ID = resolveFromQuery("botId");
-      PAGE = resolveFromQuery("page") || "binding";
+      // 先解析並持久化 botId/page —— 必須在 liff.login() 之前。
+      // 否則首次一定未登入 → 直接 liff.login() 導向 LINE Login，botId 從沒被讀到；
+      // 且登入來回後原始 ?botId= 常被剝掉或搬進 liff.state → 回來抓不到 → 「缺 botId」。
+      // sessionStorage 同源同分頁在 OAuth 導向來回間會保留，是最穩的還原來源。
+      const resolvedBot = resolveFromQuery("botId") || sessionStorage.getItem("liff_bot_id");
+      const resolvedPage = resolveFromQuery("page") || sessionStorage.getItem("liff_page") || "binding";
+      if (resolvedBot) {
+        sessionStorage.setItem("liff_bot_id", resolvedBot);
+        sessionStorage.setItem("liff_page", resolvedPage);
+      }
+      if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+      BOT_ID = resolvedBot;
+      PAGE = resolvedPage;
       if (!BOT_ID) return showError("缺 botId 參數 · 請透過 bot 私訊的按鈕開啟");
       const profile = await liff.getProfile();
       lineUserId = profile.userId;
