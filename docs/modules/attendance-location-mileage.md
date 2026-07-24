@@ -36,12 +36,13 @@
 ## 4. 資料流（建議）
 ```
 LIFF 打卡頁(?page=punch)
-  ├─ 上班打卡(A)：getLocation → POST /attendance/punch {accessToken, type:'clock_in', lat,lng,accuracy}
-  │                         後端 liff-verify → userId · 落 attendance_punch · geofence 檢查
-  └─ 到點打卡(B)：getLocation → POST /attendance/punch {..., type:'arrive_site'}
-                            後端算 A→B（Routes API TRAFFIC_UNAWARE）→ distance_m
-                            落 attendance_trip · 反作弊旗標（速度/時間/精度/mock）
-主管簽核（戰情室）→ 確認里程 → 寫 Ragic 里程/出勤表（POST URLEncoded）
+  上班打卡(A)：getLocation → POST /attendance/punch {accessToken, type:'clock_in', lat,lng,accuracy}
+              後端 liff-verify → userId · 落 attendance_punch · geofence 檢查
+  到點打卡(B、C…)：getLocation → POST /attendance/punch {..., type:'arrive_site'}
+              後端：抓該員工「當日前一個打卡點」→ 算 前點→此點（Routes API TRAFFIC_UNAWARE）→ distance_m
+              落一筆 attendance_trip（逐段各一趟）· 反作弊旗標（速度/時間/精度/mock）
+  ⇒ 一天多站 = A→B、B→C … 每段各一筆 trip（distance_m 各自算）
+主管簽核（戰情室 · 選配）→ 確認 → 寫 Ragic 出勤/里程表（POST URLEncoded · 逐趟或彙總）
 ```
 
 ## 5. 資料模型（新增，待 OQ 定案）
@@ -64,8 +65,7 @@ LIFF 打卡頁(?page=punch)
 - 單程 vs 來回定義錯 → 報銷金額爭議（見 OQ）。**P1**
 
 ## 8. 開放問題（OQ · 待裁定才進 M1）
-- ~~OQ-ATT-1 里程口徑~~ · ~~OQ-ATT-2 費率~~ → **已裁定**：只算並記錄**單程 A→B 距離**、不算費率/金額。
-- **OQ-ATT-1b 多站**（殘留）：一天多站（A→B→C）要**逐段各記一趟**，還是只記「上班點 → 第一個到點」一段？
+- ~~OQ-ATT-1 里程口徑~~ · ~~OQ-ATT-2 費率~~ · ~~OQ-ATT-1b 多站~~ → **已裁定**：只算並記錄**單程距離**、不算費率/金額；**一天多站逐段各記一趟**（A→B 一趟、B→C 一趟…，每段各自算距離）。
 - **OQ-ATT-3 地圖 API**：Google Routes（精度最佳、免費 1 萬/月）還是 OpenRouteService（免信用卡）/ OSRM 自架？**需要一把 Google Maps API key（付費帳號綁卡）嗎？**
 - **OQ-ATT-4 案場座標來源**：geofence 的「案場/打卡點」座標從 Ragic 哪張表拿？還是首次打卡自動建點？
 - **OQ-ATT-5 現場拍照**：打卡要不要**強制拍照**佐證（防偽 vs 員工麻煩，見 memory「算所有 stakeholder friction」）？
