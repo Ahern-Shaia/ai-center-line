@@ -90,8 +90,8 @@ export default function DepartmentsMembers() {
           <h1>部門 / 成員</h1>
           <div className="sub">
             {canSwitchTenant
-              ? "aiproot 側維護所有客戶方組織 · 部門建立後可在「LINE 機器人管理」綁定群組"
-              : "管理本公司部門與部門主管 · 部門建立後 aiproot 或本頁可分派 LINE 群組"}
+              ? "aiproot 側維護所有客戶方組織 · 部門建立後於「LINE 機器人管理」把群組分派到部門"
+              : "管理本公司部門與部門主管 · 部門建立後，到左側「LINE 群組」頁把各群組分派到對應部門（一個部門可含多個群）"}
           </div>
         </div>
       </div>
