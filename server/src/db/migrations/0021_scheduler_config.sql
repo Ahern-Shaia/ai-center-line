@@ -44,7 +44,9 @@ CREATE INDEX IF NOT EXISTS ix_scheduler_config_tenant
 INSERT INTO scheduler_config (scheduler_id, tenant_id, cron_expr, time_zone, min_source_count, lookback_days, concurrency)
 VALUES
   ('pdr',         NULL, '30 17 * * *', 'Asia/Taipei', 2, 1, 3),   -- OQ-SCH-3 A · PDR 17:30 default
-  ('group_batch', NULL, '0 0 * * *',   'Asia/Taipei', 0, 2, 3)    -- 群組日誌 08:00 Taipei (00 UTC = 08 Taipei)
+  -- ⚠️ cron 由 time_zone 欄位解讀（此處＝Asia/Taipei），不要用 UTC 思維換算。
+  --    舊版曾寫 '0 0 * * *' 並註解「08:00 Taipei (00 UTC)」→ 實際跑在台北半夜 00:00（見 0028 修正）
+  ('group_batch', NULL, '0 8 * * *',   'Asia/Taipei', 0, 2, 3)    -- 群組日誌 · 台北 08:00
 ON CONFLICT DO NOTHING;
 
 -- ============================================================

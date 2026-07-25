@@ -24,8 +24,10 @@ export class SchedulerConfigService {
     this.manager = manager;
   }
 
-  async list(user: JwtUser): Promise<SchedulerConfigRow[]> {
-    return this.repo.list(currentTx(), user.tenant_id);
+  async list(user: JwtUser): Promise<Array<SchedulerConfigRow & { nextRunAt: string | null }>> {
+    const rows = await this.repo.list(currentTx(), user.tenant_id);
+    // 下次觸發時間：讓使用者不必看懂 cron 也能確認自己設對（見 scheduler-config UI 小白化）
+    return rows.map((r) => ({ ...r, nextRunAt: nextRunOf(r.cronExpr, r.timeZone, r.enabled) }));
   }
 
   async upsert(user: JwtUser, args: {
@@ -78,5 +80,16 @@ export class SchedulerConfigService {
     }
 
     return row;
+  }
+}
+
+/** 依 cron + 時區算下次觸發時間（停用或 cron 壞 → null）*/
+export function nextRunOf(cronExpr: string, timeZone: string, enabled: boolean): string | null {
+  if (!enabled) return null;
+  try {
+    const job = CronJob.from({ cronTime: cronExpr, onTick: () => undefined, timeZone, start: false });
+    return job.nextDate().toISO();
+  } catch {
+    return null;
   }
 }
