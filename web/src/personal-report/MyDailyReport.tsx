@@ -34,9 +34,12 @@ export default function MyDailyReport() {
       setPendingMessageCount(res.pendingMessageCount ?? 0);
       setPendingMessages(res.pendingMessages ?? []);
       setUserDisplayName(res.userDisplayName ?? "");
-      // 若已有 final_items · load · 否則 load ai_items 供編輯
-      if (res.report?.finalItems) setItems(res.report.finalItems);
-      else if (res.report?.aiItems) setItems(res.report.aiItems);
+      // 已送出後若又重新整理過（ai_generated_at 晚於 sent_at）→ 顯示新的 AI 結果，
+      // 否則員工按「重新生成」也看不到送出後新增的訊息（final_items 永遠蓋掉 ai_items）。
+      const r = res.report;
+      if (r && hasNewerAi(r)) setItems(r.aiItems ?? []);
+      else if (r?.finalItems) setItems(r.finalItems);
+      else if (r?.aiItems) setItems(r.aiItems);
       else setItems([]);
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
@@ -79,8 +82,10 @@ export default function MyDailyReport() {
   const isSent = report?.status === "sent";
   const isEmpty = report?.status === "empty" || (!report && !loading);
   const isFailed = report?.status === "failed";
+  // 送出後又重新整理過 → 有未送出的新版本（可再編輯、再次送出）
+  const hasUnsentUpdate = report ? hasNewerAi(report) : false;
 
-  const canEdit = !isSent && !busy;
+  const canEdit = (!isSent || hasUnsentUpdate) && !busy;
   const hasItems = items.length > 0;
 
   const displayDate = useMemo(() => formatDay(date), [date]);
@@ -104,7 +109,12 @@ export default function MyDailyReport() {
             {report?.aiGeneratedAt && !isSent && !isFailed && (
               <>AI 已於 {formatDateTime(report.aiGeneratedAt)} 整理 · 請確認或微調</>
             )}
-            {isSent && <>已於 {formatDateTime(report.sentAt!)} 送出</>}
+            {isSent && !hasUnsentUpdate && <>已於 {formatDateTime(report.sentAt!)} 送出</>}
+            {isSent && hasUnsentUpdate && (
+              <span style={{ color: "var(--warn)" }}>
+                已於 {formatDateTime(report.sentAt!)} 送出 · <b>送出後有新訊息，AI 已重新整理</b> · 確認後可再次送出給主管
+              </span>
+            )}
             {isEmpty && <>今日尚未記錄 · 私訊 bot 一些內容後可按重新生成</>}
             {isFailed && <>AI 整理失敗 · 可重新生成 or 聯繫業助</>}
           </div>
@@ -208,8 +218,8 @@ export default function MyDailyReport() {
               items={items}
               userDisplayName={userDisplayName}
               displayDate={displayDate}
-              isSent={isSent}
-              live={!isSent}
+              isSent={isSent && !hasUnsentUpdate}
+              live={!isSent || hasUnsentUpdate}
             />
           )}
         </>
@@ -219,19 +229,21 @@ export default function MyDailyReport() {
         <div className="pdr-foot">
           <div style={{ fontSize: 12, color: "var(--ink-3)" }}>
             {report.messageCount > 0 && <>今日私訊 {report.messageCount} 則 · </>}
-            {isSent
+            {isSent && !hasUnsentUpdate
               ? <span style={{ color: "var(--ok-600)" }}>已送出 · 主管已收到通知</span>
-              : items.length > 0
-                ? `${items.length} 項待送出`
-                : "尚無項目"}
+              : hasUnsentUpdate
+                ? <span style={{ color: "var(--warn)" }}>{items.length} 項 · 含送出後的新內容，尚未再次送出</span>
+                : items.length > 0
+                  ? `${items.length} 項待送出`
+                  : "尚無項目"}
           </div>
-          {!isSent && (
+          {(!isSent || hasUnsentUpdate) && (
             <div style={{ display: "flex", gap: 8 }}>
               <button className="btn" onClick={() => void doSave("save_draft")} disabled={busy || !hasItems}>
                 儲存草稿
               </button>
               <button className="btn btn-primary" onClick={() => setConfirmSend(true)} disabled={busy || !hasItems}>
-                送出日報
+                {hasUnsentUpdate ? "再次送出" : "送出日報"}
               </button>
             </div>
           )}
@@ -387,6 +399,12 @@ function ReportPreview({
       <div className="pdr-preview-foot">共 {items.length} 項 · {isSent ? "已送出" : "未送出"}</div>
     </div>
   );
+}
+
+/** 已送出、但之後又重新整理過 → 有尚未送出的新版本（例如送出後又私訊了新內容）*/
+function hasNewerAi(r: PersonalDailyReportRow): boolean {
+  if (r.status !== "sent" || !r.sentAt || !r.aiGeneratedAt) return false;
+  return new Date(r.aiGeneratedAt).getTime() > new Date(r.sentAt).getTime();
 }
 
 function getTaipeiDate(): string {
