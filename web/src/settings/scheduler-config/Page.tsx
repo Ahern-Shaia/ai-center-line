@@ -209,6 +209,10 @@ function SchedulerCard({
 
   // Cron 到人類可讀 (簡易)
   const cronHuman = useMemo(() => humanCron(cronExpr), [cronExpr]);
+  // 「每天 HH:MM」型 → 給時間選擇器；其他（每週/每月…）→ 只走進階 cron
+  const dailyTime = useMemo(() => timeFromCron(cronExpr), [cronExpr]);
+  const [showAdvanced, setShowAdvanced] = useState(dailyTime === null);
+  const nextRun = cfg.nextRunAt ? new Date(cfg.nextRunAt) : null;
 
   const lastRun = cfg.lastRunAt ? new Date(cfg.lastRunAt) : null;
   const lastResult = cfg.lastRunResult as { status?: string; errorMessage?: string } | null;
@@ -239,19 +243,65 @@ function SchedulerCard({
 
       <div className="sc-row">
         <div className="sc-row-lbl">
-          Cron 表達式
-          <span className="sc-row-hint">e.g. "30 17 * * *" = 每天 17:30</span>
+          執行時間
+          <span className="sc-row-hint">每天固定時間執行</span>
         </div>
         <div className="sc-row-val">
-          <input
-            className="tf"
-            value={cronExpr}
-            onChange={(e) => setCronExpr(e.target.value)}
-            disabled={busy || !canEditBasic}
-            style={{ width: 160, fontFamily: "var(--mono, ui-monospace, monospace)" }}
-          />
+          {dailyTime !== null ? (
+            <input
+              className="tf"
+              type="time"
+              value={dailyTime}
+              onChange={(e) => { if (e.target.value) setCronExpr(cronFromTime(e.target.value)); }}
+              disabled={busy || !canEditBasic}
+              style={{ width: 130 }}
+            />
+          ) : (
+            <span style={{ fontSize: 13, color: "var(--ink-2)" }}>使用進階排程（見下方）</span>
+          )}
           <span className="sc-code-tz">{cfg.timeZone}</span>
           <span style={{ fontSize: 12, color: "var(--ink-3)" }}>· {cronHuman}</span>
+        </div>
+      </div>
+
+      <div className="sc-row">
+        <div className="sc-row-lbl">下次執行</div>
+        <div className="sc-row-val">
+          {isDirty ? (
+            <span style={{ fontSize: 12.5, color: "var(--warn)" }}>設定尚未儲存 · 儲存後重算</span>
+          ) : nextRun ? (
+            <span style={{ fontSize: 13 }}>
+              {formatNextRun(nextRun)}
+              <span style={{ fontSize: 12, color: "var(--ink-3)" }}>（{nextRun.toLocaleString("zh-TW", { hour12: false })}）</span>
+            </span>
+          ) : (
+            <span style={{ fontSize: 12.5, color: "var(--ink-3)" }}>{cfg.enabled ? "—" : "已停用 · 不會自動執行"}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="sc-row">
+        <div className="sc-row-lbl">
+          <button className="nc-lnk mut" style={{ padding: 0 }} onClick={() => setShowAdvanced((v) => !v)}>
+            {showAdvanced ? "▾" : "▸"} 進階排程設定
+          </button>
+          <span className="sc-row-hint">非「每天固定時間」才需要</span>
+        </div>
+        <div className="sc-row-val">
+          {showAdvanced ? (
+            <>
+              <input
+                className="tf"
+                value={cronExpr}
+                onChange={(e) => setCronExpr(e.target.value)}
+                disabled={busy || !canEditBasic}
+                style={{ width: 160, fontFamily: "var(--mono, ui-monospace, monospace)" }}
+              />
+              <span style={{ fontSize: 12, color: "var(--ink-3)" }}>Cron 表達式 · e.g. 30 17 * * * ＝每天 17:30</span>
+            </>
+          ) : (
+            <span style={{ fontSize: 12, color: "var(--ink-3)" }}>目前：<code>{cronExpr}</code></span>
+          )}
         </div>
       </div>
 
@@ -341,6 +391,35 @@ function SchedulerCard({
       )}
     </div>
   );
+}
+
+/** cron → "HH:MM"（僅「每天固定時間」型）· 其他型別回 null，改走進階 cron */
+function timeFromCron(expr: string): string | null {
+  const p = expr.trim().split(/\s+/);
+  if (p.length !== 5) return null;
+  const [min, hr, dom, mon, dow] = p;
+  if (dom !== "*" || mon !== "*" || dow !== "*") return null;
+  if (!/^\d{1,2}$/.test(min) || !/^\d{1,2}$/.test(hr)) return null;
+  const h = Number(hr), m = Number(min);
+  if (h > 23 || m > 59) return null;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/** "HH:MM" → 每天該時間的 cron */
+function cronFromTime(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  return `${m} ${h} * * *`;
+}
+
+/** 下次執行的口語說明（今天 / 明天 / 日期）*/
+function formatNextRun(d: Date): string {
+  const hhmm = d.toLocaleTimeString("zh-TW", { hour12: false, hour: "2-digit", minute: "2-digit" });
+  const day = (x: Date) => x.toLocaleDateString("en-CA");
+  const now = new Date();
+  const tomorrow = new Date(now.getTime() + 86400000);
+  if (day(d) === day(now)) return `今天 ${hhmm} `;
+  if (day(d) === day(tomorrow)) return `明天 ${hhmm} `;
+  return `${d.toLocaleDateString("zh-TW", { month: "numeric", day: "numeric" })} ${hhmm} `;
 }
 
 function humanCron(expr: string): string {

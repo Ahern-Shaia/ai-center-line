@@ -1107,6 +1107,7 @@ export interface SchedulerConfigRow {
   lookbackDays: number;
   concurrency: number;
   lastRunAt: string | null;
+  nextRunAt?: string | null;      // 後端依 cron 算出的下次觸發時間（停用/cron 壞 → null）
   lastRunResult: Record<string, unknown> | null;
   updatedBy: string | null;
   updatedAt: string;
