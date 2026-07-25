@@ -315,13 +315,20 @@ export const setMapTileConfig = (body: { tileProvider: string; tileApiKey?: stri
 // === notify v2 · 自助通知設定（aiproot）===
 export interface RagicAccountRow { accountId: string; tenantId: string | null; server: string; apname: string; displayName: string; hasKey: boolean }
 export interface RagicSchemaField { fieldId: number; fieldName: string; type: string }
-export interface NotifyConfigFieldSel { fieldId: number; label: string; order: number }
-export interface NotifyConfigRow {
-  configId: string; ragicAccountId: string; sheetPath: string; sheetName: string; webhookToken: string;
-  title: string | null; fields: NotifyConfigFieldSel[]; notifyCreate: boolean; notifyUpdate: boolean; notifyDelete: boolean;
-  lineGroupId: string; enabled: boolean; accountDisplayName: string;
+export type NotifySourceType = "ragic_form" | "internal_event";
+export type NotifyChannelType = "line_group" | "line_user";
+export interface NotifyFieldSel { path: string; label: string; order: number }
+/** 通知規則（來源/管道無關）*/
+export interface NotifyRuleRow {
+  ruleId: string; name: string; enabled: boolean;
+  sourceType: NotifySourceType; sourceLabel: string;
+  channelType: NotifyChannelType; channelTarget: string | null; channelLabel: string;
+  fieldCount: number; webhookToken: string | null; accountDisplayName: string | null; eventsLabel: string;
 }
+export interface EventFieldDef { path: string; label: string; numeric?: boolean }
+export interface EventDef { eventType: string; label: string; description: string; fields: EventFieldDef[] }
 export interface LineGroupOption { groupId: string; displayName: string | null }
+export interface NotifiableUser { userId: string; name: string }
 
 // Ragic webhook 要打 prod backend；dev 顯示也用 prod URL（Ragic 必須連得到）
 export const notifyWebhookUrl = (token: string) =>
@@ -337,15 +344,22 @@ export const ncFetchFields = (accountId: string, sheetPath: string) =>
   req<RagicSchemaResult>(`/notify-config/accounts/${accountId}/fields?sheetPath=${encodeURIComponent(sheetPath)}`);
 export const ncLineGroups = (accountId: string) =>
   req<LineGroupOption[]>(`/notify-config/accounts/${accountId}/line-groups`);
-export const ncListConfigs = () => req<NotifyConfigRow[]>("/notify-config");
-export const ncCreateConfig = (body: {
-  ragicAccountId: string; sheetPath: string; sheetName: string; title: string | null;
-  fields: NotifyConfigFieldSel[]; notifyCreate: boolean; notifyUpdate: boolean; notifyDelete: boolean; lineGroupId: string;
-}) => req<{ configId: string; webhookToken: string }>("/notify-config", { method: "POST", body: JSON.stringify(body) });
-export const ncSetEnabled = (configId: string, enabled: boolean) =>
-  req<{ status: string }>(`/notify-config/${configId}/enabled`, { method: "PATCH", body: JSON.stringify({ enabled }) });
-export const ncRemove = (configId: string) =>
-  req<{ status: string }>(`/notify-config/${configId}`, { method: "DELETE" });
+export const ncEventCatalog = () => req<EventDef[]>("/notify-config/event-catalog");
+export const ncNotifiableUsers = (tenantId?: string) =>
+  req<NotifiableUser[]>(`/notify-config/notifiable-users${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
+export const ncListRules = () => req<NotifyRuleRow[]>("/notify-config");
+export const ncCreateRule = (body: {
+  name: string; sourceType: NotifySourceType;
+  ragicAccountId?: string; sheetPath?: string; sheetName?: string;
+  notifyCreate?: boolean; notifyUpdate?: boolean; notifyDelete?: boolean;
+  eventType?: string; filters?: Array<{ path: string; op: "eq" | "gte" | "lte"; value: string | number }>;
+  title: string | null; fields: NotifyFieldSel[];
+  channelType: NotifyChannelType; channelTarget: string;
+}) => req<{ ruleId: string; webhookToken: string | null }>("/notify-config", { method: "POST", body: JSON.stringify(body) });
+export const ncSetEnabled = (ruleId: string, enabled: boolean) =>
+  req<{ status: string }>(`/notify-config/${ruleId}/enabled`, { method: "PATCH", body: JSON.stringify({ enabled }) });
+export const ncRemove = (ruleId: string) =>
+  req<{ status: string }>(`/notify-config/${ruleId}`, { method: "DELETE" });
 export const getWarroom = () => req<Warroom>("/warroom");
 export const getPending = () => req<{ pending: PendingTicket[] }>("/signoff");
 export const confirmSignoff = (ticket_ids: string[]) =>
