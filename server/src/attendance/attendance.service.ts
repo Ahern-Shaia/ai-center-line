@@ -194,19 +194,20 @@ export class AttendanceService {
   // 用於地圖服務曾中斷/未啟用的情況；只填原本是 null 的欄位，不改打卡原始資料。
   // 逐筆序列處理（避免打爆 provider 配額）· 單次上限 limit。
   async backfillMileage(limit = 100): Promise<{
-    pendingBefore: number; processed: number; succeeded: number; failed: number;
-    remaining: number; firstError?: string;
+    pendingBefore: number; attempted: number; succeeded: number; failed: number;
+    remaining: number; stoppedEarly: boolean; errors: string[];
   }> {
     const pendingBefore = await this.pendingBackfillCount();
     const provider = await this.resolveProvider();
     if (!provider) {
-      return { pendingBefore, processed: 0, succeeded: 0, failed: 0, remaining: pendingBefore, firstError: "尚未設定里程 provider 或 API 金鑰" };
+      return { pendingBefore, attempted: 0, succeeded: 0, failed: 0, remaining: pendingBefore, stoppedEarly: false, errors: ["尚未設定里程 provider 或 API 金鑰"] };
     }
     const targets = await withSystemTx((tx) => this.repo.listTripsMissingDistance(tx, Math.max(1, Math.min(limit, 500))));
 
-    let succeeded = 0, failed = 0;
-    let firstError: string | undefined;
+    let attempted = 0, succeeded = 0, failed = 0, consecutiveFailures = 0, stoppedEarly = false;
+    const errors: string[] = [];
     for (const t of targets) {
+      attempted++;
       try {
         const r = await provider.computeRoute(
           { lat: t.fromLat, lng: t.fromLng },
@@ -216,16 +217,18 @@ export class AttendanceService {
           distanceM: r.distanceM, routeProvider: provider.name, routeGeometry: r.polyline,
         }));
         succeeded++;
+        consecutiveFailures = 0;
       } catch (e) {
         failed++;
-        if (!firstError) firstError = (e as Error).message.slice(0, 300);
-        // provider 整體不可用時就別continue 硬打（省配額/時間）
-        if (failed >= 3 && succeeded === 0) break;
+        consecutiveFailures++;
+        if (errors.length < 3) errors.push((e as Error).message.slice(0, 300));
+        // 連續多筆失敗 → 視為 provider 層問題（認證/配額），停止以免空燒
+        if (consecutiveFailures >= 5) { stoppedEarly = true; break; }
       }
     }
     const remaining = await this.pendingBackfillCount();
-    this.logger.log(`里程補算 · 處理 ${targets.length} 筆 · 成功 ${succeeded} · 失敗 ${failed} · 剩餘 ${remaining}`);
-    return { pendingBefore, processed: targets.length, succeeded, failed, remaining, firstError };
+    this.logger.log(`里程補算 · 嘗試 ${attempted} · 成功 ${succeeded} · 失敗 ${failed} · 剩餘 ${remaining}${stoppedEarly ? " · 連續失敗提前中止" : ""}`);
+    return { pendingBefore, attempted, succeeded, failed, remaining, stoppedEarly, errors };
   }
 
   // 連線測試：用固定兩點（台北車站 → 松山機場，約 7-9 km）實打一次 provider

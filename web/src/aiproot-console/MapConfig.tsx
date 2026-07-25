@@ -73,11 +73,11 @@ export default function MapConfig() {
       const r = await backfillMileage(100);
       setPendingBackfill(r.remaining);
       if (r.succeeded > 0) {
-        toast.show(`已補算 ${r.succeeded} 段${r.remaining > 0 ? ` · 尚餘 ${r.remaining} 段` : ""}`, "ok");
-      } else if (r.processed === 0) {
+        toast.show(`已補算 ${r.succeeded} 段${r.failed > 0 ? ` · ${r.failed} 段算不出` : ""}${r.remaining > 0 ? ` · 尚餘 ${r.remaining} 段` : ""}`, "ok");
+      } else if (r.attempted === 0) {
         toast.show("沒有待補算的段落", "ok");
       } else {
-        toast.show(r.firstError ? `補算失敗 · ${r.firstError}` : "補算失敗", "danger");
+        toast.show(r.errors?.[0] ? `補算失敗 · ${r.errors[0].slice(0, 120)}` : "補算失敗", "danger");
       }
     } catch (e) {
       toast.show(e instanceof ApiError ? e.message : "補算失敗", "danger");

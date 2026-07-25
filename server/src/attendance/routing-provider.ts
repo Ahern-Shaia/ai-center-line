@@ -53,7 +53,14 @@ class GoogleRoutesProvider implements RoutingProvider {
       }),
     }) as { routes?: Array<{ distanceMeters?: number; polyline?: { encodedPolyline?: string } }> };
     const m = d.routes?.[0]?.distanceMeters;
-    if (typeof m !== "number") throw new Error("Google Routes 回應無 distanceMeters");
+    if (typeof m !== "number") {
+      // 帶上原始回應片段 · 否則「算不出來」無從診斷（常見：routes:[] ＝該兩點找不到行車路線）
+      const raw = JSON.stringify(d).slice(0, 200);
+      const hint = Array.isArray(d.routes) && d.routes.length === 0
+        ? "Google 找不到行車路線（兩點過近／不在道路網／座標異常）"
+        : "回應缺 distanceMeters";
+      throw new Error(`${hint} · from=${from.lat},${from.lng} to=${to.lat},${to.lng} · raw=${raw}`);
+    }
     return { distanceM: Math.round(m), polyline: d.routes?.[0]?.polyline?.encodedPolyline ?? null };
   }
   async reverseGeocode(point: LatLng): Promise<string | null> {

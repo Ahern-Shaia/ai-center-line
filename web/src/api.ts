@@ -309,7 +309,7 @@ export const getMapConfig = () =>
   req<{ provider: string; hasKey: boolean; tileProvider: string; hasTileKey: boolean; pendingBackfill: number }>("/aiproot-console/map-config");
 // 補算里程（地圖服務中斷期間沒算出來的段落）
 export const backfillMileage = (limit = 100) =>
-  req<{ pendingBefore: number; processed: number; succeeded: number; failed: number; remaining: number; firstError?: string }>(
+  req<{ pendingBefore: number; attempted: number; succeeded: number; failed: number; remaining: number; stoppedEarly: boolean; errors: string[] }>(
     "/aiproot-console/map-config/backfill", { method: "POST", body: JSON.stringify({ limit }) });
 export const setMapConfig = (body: { provider: string; apiKey?: string }) =>
   req<{ status: string; provider: string; hasKey: boolean }>("/aiproot-console/map-config", { method: "POST", body: JSON.stringify(body) });
