@@ -21,6 +21,11 @@ const PUNCH_TYPE_LABEL: Record<string, string> = {
   clock_out: "下班打卡",
 };
 
+// 原地打卡判定：兩點距離小於此值視為「沒有移動」（GPS 靜止誤差約 5-20m）
+// 這種段落不該去問路由服務——Google/ORS 找不到「同一點到同一點」的路線，
+// 會被誤判成「算不出來」而永遠留 null、卡在待補算清單。
+const SAME_LOCATION_THRESHOLD_M = 20;
+
 const SPEED_LIMIT_KMH = 150;   // 直線速度上限（保守）· 超過視為不合理（瞬移/偽造）
 const ACCURACY_LIMIT_M = 100;  // GPS 精度上限 · 超過標低信心
 
@@ -95,19 +100,26 @@ export class AttendanceService {
       const from: LatLng = { lat: prev.lat, lng: prev.lng };
       const to: LatLng = { lat: input.lat, lng: input.lng };
       const straightDistanceM = haversineMeters(from, to);
-      const provider = await this.resolveProvider();
       let distanceM: number | null = null;
       let routeProvider: string | null = null;
       let routeGeometry: string | null = null;
-      if (provider) {
-        try {
-          const r = await provider.computeRoute(from, to);
-          distanceM = r.distanceM;
-          routeGeometry = r.polyline;
-          // 記下實際模式（drive 算不出時會退步行）→ 行程明細可標示，里程來源可稽核
-          routeProvider = r.mode === "walk" ? `${provider.name}:walk` : provider.name;
-        } catch (e) {
-          this.logger.warn(`里程計算失敗（${provider.name}）· ${(e as Error).message}`);
+
+      if (straightDistanceM < SAME_LOCATION_THRESHOLD_M) {
+        // 原地打卡（同點/GPS 誤差內）· 直接記位移、不呼叫路由服務（省配額且避免誤判為失敗）
+        distanceM = straightDistanceM;
+        routeProvider = "same_location";
+      } else {
+        const provider = await this.resolveProvider();
+        if (provider) {
+          try {
+            const r = await provider.computeRoute(from, to);
+            distanceM = r.distanceM;
+            routeGeometry = r.polyline;
+            // 記下實際模式（drive 算不出時會退步行）→ 行程明細可標示，里程來源可稽核
+            routeProvider = r.mode === "walk" ? `${provider.name}:walk` : provider.name;
+          } catch (e) {
+            this.logger.warn(`里程計算失敗（${provider.name}）· ${(e as Error).message}`);
+          }
         }
       }
       await this.repo.insertTrip(tx, {
@@ -209,11 +221,20 @@ export class AttendanceService {
     const errors: string[] = [];
     for (const t of targets) {
       attempted++;
+      const from: LatLng = { lat: t.fromLat, lng: t.fromLng };
+      const to: LatLng = { lat: t.toLat, lng: t.toLng };
       try {
-        const r = await provider.computeRoute(
-          { lat: t.fromLat, lng: t.fromLng },
-          { lat: t.toLat, lng: t.toLng },
-        );
+        // 原地打卡（同點/GPS 誤差內）：路由服務永遠算不出來，直接記位移
+        const straight = haversineMeters(from, to);
+        if (straight < SAME_LOCATION_THRESHOLD_M) {
+          await withSystemTx((tx) => this.repo.fillTripDistance(tx, t.tripId, {
+            distanceM: straight, routeProvider: "same_location", routeGeometry: null,
+          }));
+          succeeded++;
+          consecutiveFailures = 0;
+          continue;
+        }
+        const r = await provider.computeRoute(from, to);
         await withSystemTx((tx) => this.repo.fillTripDistance(tx, t.tripId, {
           distanceM: r.distanceM,
           routeProvider: r.mode === "walk" ? `${provider.name}:walk` : provider.name,

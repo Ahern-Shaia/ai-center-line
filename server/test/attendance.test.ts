@@ -12,6 +12,23 @@ test("haversine · 赤道 1 經度 ≈ 111 km", () => {
   assert.ok(Math.abs(m - 111_195) < 500, `實際 ${m}`);
 });
 
+// 原地打卡：路由服務找不到「同點→同點」的路線，必須先用距離門檻判定
+// （2026-07-25 prod 實測：6 段補算失敗全屬此類）· 門檻見 attendance.service SAME_LOCATION_THRESHOLD_M
+test("原地打卡 · 完全相同座標 → 0 公尺", () => {
+  const p = { lat: 24.978206, lng: 121.54738 };
+  assert.equal(haversineMeters(p, p), 0);
+});
+
+test("原地打卡 · GPS 誤差級微差（prod 實際案例）→ 遠小於 20m 門檻", () => {
+  const d = haversineMeters({ lat: 24.957144, lng: 121.335688 }, { lat: 24.957145, lng: 121.335692 });
+  assert.ok(d < 20, `期望 <20m，實得 ${d}m`);
+});
+
+test("真實移動（台北車站→松山機場）→ 遠大於門檻，應走路由服務", () => {
+  const d = haversineMeters({ lat: 25.0478, lng: 121.5170 }, { lat: 25.0697, lng: 121.5516 });
+  assert.ok(d > 1000, `期望 >1km，實得 ${d}m`);
+});
+
 test("反作弊 · 精度佳 + 合理速度 → 無旗標", () => {
   const prev = { punchId: "p", lat: 25.03, lng: 121.56, punchedAtMs: now - 30 * 60_000 }; // 30 分前
   // 台北市內移動約 3km · 30 分 → 6 km/h

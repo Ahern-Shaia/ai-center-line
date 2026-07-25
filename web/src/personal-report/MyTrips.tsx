@@ -99,7 +99,14 @@ export default function MyTrips() {
                       <span className="trip-dest">{t.destination || "未填地點"}</span>
                       <span className="trip-time">{formatTimeHM(t.arrivedAt)} 到點 · 點開看依據</span>
                     </span>
-                    {roadKm != null ? (
+                    {t.routeProvider === "same_location" ? (
+                      <span className="trip-km" style={{ textAlign: "right" }}>
+                        0.0 km
+                        <span style={{ display: "block", fontSize: 10.5, color: "var(--ink-3)", fontFamily: "var(--sans)" }}>
+                          原地打卡
+                        </span>
+                      </span>
+                    ) : roadKm != null ? (
                       <span className="trip-km">{roadKm} km</span>
                     ) : (
                       // 道路里程算不出來時 → 誠實顯示直線距離，不用「計算中」誤導成系統還在跑
@@ -118,7 +125,9 @@ export default function MyTrips() {
                       <div className="trip-detail-row"><span>道路里程</span><span>{roadKm != null ? `${roadKm} km` : "未取得"}</span></div>
                       <div className="trip-detail-row"><span>直線距離</span><span>{straightKm != null ? `${straightKm} km` : "—"}</span></div>
                       <div className="trip-method">
-                        {roadKm != null
+                        {t.routeProvider === "same_location"
+                          ? <>這兩次打卡在<b>同一位置</b>（未移動，或距離在 GPS 誤差內），因此沒有里程。</>
+                          : roadKm != null
                           ? <>依你的出發／到點打卡、走實際道路路線計算
                               {t.routeProvider?.endsWith(":walk")
                                 ? "（此段距離短，採步行路線）"
