@@ -309,6 +309,10 @@ export const getMapConfig = () =>
   req<{ provider: string; hasKey: boolean; tileProvider: string; hasTileKey: boolean }>("/aiproot-console/map-config");
 export const setMapConfig = (body: { provider: string; apiKey?: string }) =>
   req<{ status: string; provider: string; hasKey: boolean }>("/aiproot-console/map-config", { method: "POST", body: JSON.stringify(body) });
+// 連線測試 · 實打一次 provider · 回真實錯誤供診斷
+export const testMapRouting = () =>
+  req<{ ok: boolean; provider: string | null; distanceM?: number; hasPolyline?: boolean; error?: string }>(
+    "/aiproot-console/map-config/test", { method: "POST" });
 export const setMapTileConfig = (body: { tileProvider: string; tileApiKey?: string }) =>
   req<{ status: string; tileProvider: string; hasTileKey: boolean }>("/aiproot-console/map-config/tile", { method: "POST", body: JSON.stringify(body) });
 

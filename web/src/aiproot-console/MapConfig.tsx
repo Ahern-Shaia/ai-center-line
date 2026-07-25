@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ApiError, getMapConfig, setMapConfig, setMapTileConfig } from "../api";
+import { ApiError, getMapConfig, setMapConfig, setMapTileConfig, testMapRouting } from "../api";
 import { useToast } from "../Toast";
 import StyledSelect from "../shared/StyledSelect";
 
@@ -24,6 +24,8 @@ export default function MapConfig() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [tileBusy, setTileBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; provider: string | null; distanceM?: number; hasPolyline?: boolean; error?: string } | null>(null);
 
   useEffect(() => {
     getMapConfig()
@@ -46,6 +48,18 @@ export default function MapConfig() {
       toast.show(e instanceof ApiError ? e.message : "儲存失敗", "danger");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function runTest() {
+    if (testing) return;
+    setTesting(true); setTestResult(null);
+    try {
+      setTestResult(await testMapRouting());
+    } catch (e) {
+      setTestResult({ ok: false, provider: null, error: e instanceof ApiError ? e.message : "測試失敗" });
+    } finally {
+      setTesting(false);
     }
   }
 
@@ -92,9 +106,34 @@ export default function MapConfig() {
             <b>Google Routes</b>：Google Cloud 啟用 Routes API、建立 API key（需綁卡帳號）。<br />
             沒設 key 也能打卡，只是里程先留空白、之後可補算。
           </div>
-          <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => void save()} disabled={busy}>
-            {busy ? "儲存中…" : "儲存 provider"}
-          </button>
+          <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+            <button className="btn btn-primary" onClick={() => void save()} disabled={busy}>
+              {busy ? "儲存中…" : "儲存 provider"}
+            </button>
+            <button className="btn" onClick={() => void runTest()} disabled={testing}>
+              {testing ? "測試中…" : "測試連線"}
+            </button>
+          </div>
+          {testResult && (
+            <div style={{
+              marginTop: 12, padding: "10px 14px", borderRadius: 6, fontSize: 12.5, lineHeight: 1.6,
+              background: testResult.ok ? "var(--ok-tint)" : "var(--danger-tint)",
+              color: testResult.ok ? "var(--ok)" : "var(--danger)",
+              border: `1px solid ${testResult.ok ? "var(--ok)" : "var(--danger)"}22`,
+            }}>
+              {testResult.ok ? (
+                <>✓ 連線正常（{testResult.provider}）· 測試路線台北車站→松山機場 ={" "}
+                  <b>{((testResult.distanceM ?? 0) / 1000).toFixed(1)} km</b>
+                  {testResult.hasPolyline ? " · 已取得道路路線（地圖可畫實際路徑）" : " · ⚠️ 未取得路線幾何，地圖只能畫直線"}
+                </>
+              ) : (
+                <>✗ 連線失敗{testResult.provider ? `（${testResult.provider}）` : ""}<br />
+                  <span style={{ fontFamily: "var(--mono, monospace)", fontSize: 11.5, wordBreak: "break-all" }}>{testResult.error}</span><br />
+                  <span style={{ color: "var(--ink-3)" }}>常見原因：Google Cloud 未啟用 Routes API／未開啟計費／金鑰有來源限制（伺服器呼叫需允許無 referrer）。</span>
+                </>
+              )}
+            </div>
+          )}
 
           <h2 style={{ fontSize: 14, marginTop: 32, marginBottom: 8, color: "var(--ink-3)" }}>地圖圖磚（畫「我的行程」地圖）</h2>
           <div className="field">

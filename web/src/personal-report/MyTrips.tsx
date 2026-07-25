@@ -33,7 +33,9 @@ export default function MyTrips() {
   useEffect(() => { void load(date); }, [date, load]);
 
   const displayDate = useMemo(() => formatDay(date), [date]);
-  const totalKm = trips.reduce((s, t) => s + (t.distanceM ?? 0), 0) / 1000;
+  // 合計：道路里程優先，取不到時用直線距離頂替（並標示），避免顯示成 0 km 誤導
+  const totalKm = trips.reduce((s, t) => s + (t.distanceM ?? t.straightDistanceM ?? 0), 0) / 1000;
+  const hasEstimated = trips.some((t) => t.distanceM == null && t.straightDistanceM != null);
   const hasGeo = punches.some((p) => p.lat != null && p.lng != null);
 
   return (
@@ -97,22 +99,36 @@ export default function MyTrips() {
                       <span className="trip-dest">{t.destination || "未填地點"}</span>
                       <span className="trip-time">{formatTimeHM(t.arrivedAt)} 到點 · 點開看依據</span>
                     </span>
-                    <span className="trip-km">{roadKm != null ? `${roadKm} km` : "里程計算中"}</span>
+                    {roadKm != null ? (
+                      <span className="trip-km">{roadKm} km</span>
+                    ) : (
+                      // 道路里程算不出來時 → 誠實顯示直線距離，不用「計算中」誤導成系統還在跑
+                      <span className="trip-km" style={{ textAlign: "right" }}>
+                        {straightKm != null ? `直線 ${straightKm} km` : "—"}
+                        <span style={{ display: "block", fontSize: 10.5, color: "var(--warn)", fontFamily: "var(--sans)" }}>
+                          道路里程未取得
+                        </span>
+                      </span>
+                    )}
                   </button>
                   {open && (
                     <div className="trip-detail">
                       <div className="trip-detail-row"><span>出發</span><span>{formatTimeHM(t.departedAt)}{t.fromAddress ? ` · ${t.fromAddress}` : ""}</span></div>
                       <div className="trip-detail-row"><span>到點</span><span>{formatTimeHM(t.arrivedAt)}{t.toAddress ? ` · ${t.toAddress}` : ""}</span></div>
-                      <div className="trip-detail-row"><span>道路里程</span><span>{roadKm != null ? `${roadKm} km` : "未計算"}</span></div>
+                      <div className="trip-detail-row"><span>道路里程</span><span>{roadKm != null ? `${roadKm} km` : "未取得"}</span></div>
                       <div className="trip-detail-row"><span>直線距離</span><span>{straightKm != null ? `${straightKm} km` : "—"}</span></div>
-                      <div className="trip-method">依你的出發／到點打卡、走實際道路路線計算{t.routeProvider ? `（${t.routeProvider}）` : ""}。地圖上該段折線即此里程的依據。</div>
+                      <div className="trip-method">
+                        {roadKm != null
+                          ? <>依你的出發／到點打卡、走實際道路路線計算{t.routeProvider ? `（${t.routeProvider}）` : ""}。地圖上該段折線即此里程的依據。</>
+                          : <>本段<b>道路路線暫時取不到</b>（地圖服務未回應），上方顯示的是兩點<b>直線距離</b>、地圖以虛線示意，非實際行駛距離。請聯繫管理員檢查地圖服務設定。</>}
+                      </div>
                     </div>
                   )}
                 </div>
               );
             })}
             <div className="trip-total">
-              <span>當日合計</span>
+              <span>當日合計{hasEstimated && <span style={{ fontSize: 11, fontWeight: 400, color: "var(--warn)" }}>（部分為直線估算）</span>}</span>
               <span>{totalKm.toFixed(1)} km</span>
             </div>
           </div>
