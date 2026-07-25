@@ -369,7 +369,8 @@ export class LineWebhookService {
         if (event.replyToken) {
           try {
             await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
-              { type: "text", text: "✓ 已記錄\n\n下班前 17:30 自動整理成日報 · 或隨時傳「日報」二字查看" },
+              // 文案要誠實：訊息是「立刻記錄、立刻看得到」；AI 整理是另一件事（17:30 或手動）
+              { type: "text", text: "✓ 已記錄\n\n傳「日報」可隨時查看今日記錄 · 17:30 由 AI 整理成日報" },
             ]);
           } catch (err) {
             this.logger.warn(`personal msg ack reply 失敗 · ${(err as Error).message}`);

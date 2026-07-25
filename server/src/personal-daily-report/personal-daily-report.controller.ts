@@ -64,7 +64,9 @@ export class PersonalDailyReportController {
     const row = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.repo.getByUserDate(tx, userId, date));
     // 今日私訊筆數 + 原始 list · empty state 展開讓使用者確認 bot 有收到什麼
     const pendingMessageCount = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.repo.countPersonalMessagesForDate(tx, userId, date));
-    const pendingMessages = row ? [] : await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.repo.listPersonalMessagesForDate(tx, userId, date));
+    // 一律回傳當日原始訊息（不再「有日報就不回」）：
+    // bot 收到就該立刻看得到，AI 整理只是輔助 —— 否則日報生成後的新訊息會完全隱形。
+    const pendingMessages = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.repo.listPersonalMessagesForDate(tx, userId, date));
 
     // 撈員工姓名 · 顯示用
     const info = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{ display_name: string; tenant_name: string }>(sql_import`
@@ -160,7 +162,8 @@ export class PersonalDailyReportController {
     const tx = currentTx();
     const row = await this.repo.getByUserDate(tx, user.user_id, date);
     const pendingMessageCount = await this.repo.countPersonalMessagesForDate(tx, user.user_id, date);
-    const pendingMessages = row ? [] : await this.repo.listPersonalMessagesForDate(tx, user.user_id, date);
+    // 同上 · 一律回傳當日原始訊息（bot 收到即可見 · 不必等 AI）
+    const pendingMessages = await this.repo.listPersonalMessagesForDate(tx, user.user_id, date);
     // 撈員工姓名 · preview 用（主管將看到的 header）
     const info = await tx.execute<{ display_name: string; tenant_name: string }>(sql_import`
       SELECT u.display_name, t.tenant_name
