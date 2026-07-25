@@ -104,8 +104,10 @@ export class AttendanceService {
       let routeProvider: string | null = null;
       let routeGeometry: string | null = null;
 
+      // 防中斷機制：距離一律要有值，永不留白。
+      // 依可信度降級：道路路線 → 步行路線 → 直線距離（各自標記來源，可稽核）
       if (straightDistanceM < SAME_LOCATION_THRESHOLD_M) {
-        // 原地打卡（同點/GPS 誤差內）· 直接記位移、不呼叫路由服務（省配額且避免誤判為失敗）
+        // 原地打卡（同點/GPS 誤差內）· 路由服務算不出「同點到同點」· 直接記位移、省配額
         distanceM = straightDistanceM;
         routeProvider = "same_location";
       } else {
@@ -118,8 +120,13 @@ export class AttendanceService {
             // 記下實際模式（drive 算不出時會退步行）→ 行程明細可標示，里程來源可稽核
             routeProvider = r.mode === "walk" ? `${provider.name}:walk` : provider.name;
           } catch (e) {
-            this.logger.warn(`里程計算失敗（${provider.name}）· ${(e as Error).message}`);
+            this.logger.warn(`里程計算失敗（${provider.name}）· 改記直線距離 · ${(e as Error).message}`);
           }
+        }
+        if (distanceM == null) {
+          // 地圖服務未設定/中斷/算不出 → 退直線距離（標記來源，之後可用補算升級為道路路線）
+          distanceM = straightDistanceM;
+          routeProvider = "straight_fallback";
         }
       }
       await this.repo.insertTrip(tx, {
@@ -246,6 +253,12 @@ export class AttendanceService {
         failed++;
         consecutiveFailures++;
         if (errors.length < 3) errors.push((e as Error).message.slice(0, 300));
+        // 防中斷：這段道路路線算不出來 → 至少確保有直線距離（下次補算仍會嘗試升級）
+        try {
+          await withSystemTx((tx) => this.repo.fillTripDistance(tx, t.tripId, {
+            distanceM: haversineMeters(from, to), routeProvider: "straight_fallback", routeGeometry: null,
+          }));
+        } catch { /* 寫入失敗就算了 · 不因補救動作再拋錯 */ }
         // 連續多筆失敗 → 視為 provider 層問題（認證/配額），停止以免空燒
         if (consecutiveFailures >= 5) { stoppedEarly = true; break; }
       }

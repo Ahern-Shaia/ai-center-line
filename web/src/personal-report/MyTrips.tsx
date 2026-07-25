@@ -35,7 +35,7 @@ export default function MyTrips() {
   const displayDate = useMemo(() => formatDay(date), [date]);
   // 合計：道路里程優先，取不到時用直線距離頂替（並標示），避免顯示成 0 km 誤導
   const totalKm = trips.reduce((s, t) => s + (t.distanceM ?? t.straightDistanceM ?? 0), 0) / 1000;
-  const hasEstimated = trips.some((t) => t.distanceM == null && t.straightDistanceM != null);
+  const hasEstimated = trips.some((t) => t.routeProvider === "straight_fallback" || (t.distanceM == null && t.straightDistanceM != null));
   const hasGeo = punches.some((p) => p.lat != null && p.lng != null);
 
   return (
@@ -106,10 +106,17 @@ export default function MyTrips() {
                           原地打卡
                         </span>
                       </span>
+                    ) : t.routeProvider === "straight_fallback" ? (
+                      // 防中斷：道路路線取不到時退直線 · 明確標示來源，不假裝是行駛距離
+                      <span className="trip-km" style={{ textAlign: "right" }}>
+                        {roadKm ?? straightKm ?? "—"} km
+                        <span style={{ display: "block", fontSize: 10.5, color: "var(--warn)", fontFamily: "var(--sans)" }}>
+                          直線估算
+                        </span>
+                      </span>
                     ) : roadKm != null ? (
                       <span className="trip-km">{roadKm} km</span>
                     ) : (
-                      // 道路里程算不出來時 → 誠實顯示直線距離，不用「計算中」誤導成系統還在跑
                       <span className="trip-km" style={{ textAlign: "right" }}>
                         {straightKm != null ? `直線 ${straightKm} km` : "—"}
                         <span style={{ display: "block", fontSize: 10.5, color: "var(--warn)", fontFamily: "var(--sans)" }}>
@@ -127,6 +134,8 @@ export default function MyTrips() {
                       <div className="trip-method">
                         {t.routeProvider === "same_location"
                           ? <>這兩次打卡在<b>同一位置</b>（未移動，或距離在 GPS 誤差內），因此沒有里程。</>
+                          : t.routeProvider === "straight_fallback"
+                          ? <>本段當時<b>取不到道路路線</b>（地圖服務未回應），先以兩點<b>直線距離</b>計算、地圖以虛線示意。待地圖服務恢復後，管理員可執行補算升級為實際道路里程。</>
                           : roadKm != null
                           ? <>依你的出發／到點打卡、走實際道路路線計算
                               {t.routeProvider?.endsWith(":walk")

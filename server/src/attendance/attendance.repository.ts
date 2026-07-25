@@ -97,16 +97,24 @@ export class AttendanceRepository {
 
   // ===== 里程補算（provider 當時失敗 → distance_m 留 null）=====
 
-  /** 待補算筆數：有兩端座標、但沒有道路里程 */
+  // 待補算＝「尚未取得真實道路路線」的段落：
+  //   · distance_m IS NULL（舊資料 / 早期失敗）
+  //   · 或 route_provider = 'straight_fallback'（當時服務不通、先記直線，可升級為道路路線）
+  // 不含 same_location（原地打卡本來就沒有路線可算，補算也不會變）
+  private readonly BACKFILL_WHERE = sql`
+    (t.distance_m IS NULL OR t.route_provider = 'straight_fallback')
+    AND fp.lat IS NOT NULL AND fp.lng IS NOT NULL
+    AND tp.lat IS NOT NULL AND tp.lng IS NOT NULL
+  `;
+
+  /** 待補算筆數 */
   async countTripsMissingDistance(tx: Db): Promise<number> {
     const res = await tx.execute<{ n: number }>(sql`
       SELECT count(*)::int AS n
       FROM attendance_trip t
       JOIN attendance_punch fp ON fp.punch_id = t.from_punch_id
       JOIN attendance_punch tp ON tp.punch_id = t.to_punch_id
-      WHERE t.distance_m IS NULL
-        AND fp.lat IS NOT NULL AND fp.lng IS NOT NULL
-        AND tp.lat IS NOT NULL AND tp.lng IS NOT NULL
+      WHERE ${this.BACKFILL_WHERE}
     `);
     return res.rows[0]?.n ?? 0;
   }
@@ -124,9 +132,7 @@ export class AttendanceRepository {
       FROM attendance_trip t
       JOIN attendance_punch fp ON fp.punch_id = t.from_punch_id
       JOIN attendance_punch tp ON tp.punch_id = t.to_punch_id
-      WHERE t.distance_m IS NULL
-        AND fp.lat IS NOT NULL AND fp.lng IS NOT NULL
-        AND tp.lat IS NOT NULL AND tp.lng IS NOT NULL
+      WHERE ${this.BACKFILL_WHERE}
       ORDER BY t.created_at DESC
       LIMIT ${limit}
     `);
@@ -135,7 +141,8 @@ export class AttendanceRepository {
     }));
   }
 
-  /** 補算結果寫回（只補當初沒算出來的那筆 · 不動已有值）*/
+  // 補算結果寫回：只動「還沒有真實道路路線」的段落（null 或直線估算），
+  // 已經有道路路線的不覆蓋（避免重跑改動已確定的里程）。
   async fillTripDistance(tx: Db, tripId: string, d: {
     distanceM: number; routeProvider: string; routeGeometry: string | null;
   }): Promise<void> {
@@ -143,7 +150,8 @@ export class AttendanceRepository {
       UPDATE attendance_trip
       SET distance_m = ${d.distanceM}, route_provider = ${d.routeProvider},
           route_geometry = ${d.routeGeometry}, computed_at = now()
-      WHERE trip_id = ${tripId}::uuid AND distance_m IS NULL
+      WHERE trip_id = ${tripId}::uuid
+        AND (distance_m IS NULL OR route_provider = 'straight_fallback')
     `);
   }
 
