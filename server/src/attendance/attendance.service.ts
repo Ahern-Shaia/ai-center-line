@@ -184,4 +184,24 @@ export class AttendanceService {
   async tileConfig(): Promise<{ tileProvider: string; tileApiKey: string | null }> {
     return withSystemTx((tx) => this.mapConfig.getTileConfig(tx));
   }
+
+  // 連線測試：用固定兩點（台北車站 → 松山機場，約 7-9 km）實打一次 provider
+  // 目的：把 provider 的真實錯誤（未啟用 API / 未開計費 / 金鑰限制…）回給 aiproot 前端，
+  // 否則失敗只會靜默變成「沒有里程」，難以診斷。
+  async testRouting(): Promise<{
+    ok: boolean; provider: string | null; distanceM?: number; hasPolyline?: boolean; error?: string;
+  }> {
+    const provider = await this.resolveProvider();
+    if (!provider) {
+      return { ok: false, provider: null, error: "尚未設定里程 provider 或 API 金鑰" };
+    }
+    const from: LatLng = { lat: 25.0478, lng: 121.5170 };   // 台北車站
+    const to: LatLng = { lat: 25.0697, lng: 121.5516 };     // 松山機場
+    try {
+      const r = await provider.computeRoute(from, to);
+      return { ok: true, provider: provider.name, distanceM: r.distanceM, hasPolyline: !!r.polyline };
+    } catch (e) {
+      return { ok: false, provider: provider.name, error: (e as Error).message.slice(0, 400) };
+    }
+  }
 }

@@ -4,6 +4,7 @@ import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { currentTx } from "../db/client.js";
 import { MapRoutingConfigRepository } from "./map-routing-config.repository.js";
+import { AttendanceService } from "./attendance.service.js";
 
 const PROVIDERS = ["openrouteservice", "google_routes"] as const;
 const TILE_PROVIDERS = ["osm", "maptiler"] as const;
@@ -13,7 +14,10 @@ const TILE_PROVIDERS = ["osm", "maptiler"] as const;
 // POST 設 routing provider(+選填 apiKey)；POST /tile 設 tile provider(+選填 tileApiKey)
 @Controller("aiproot-console/map-config")
 export class MapConfigController {
-  constructor(private readonly repo: MapRoutingConfigRepository) {}
+  constructor(
+    private readonly repo: MapRoutingConfigRepository,
+    private readonly svc: AttendanceService,
+  ) {}
 
   @Get()
   @Roles("aiproot_admin", "consultant")
@@ -36,6 +40,13 @@ export class MapConfigController {
       await this.repo.updateProviderOnly(tx, body.provider, user.user_id);
     }
     return { status: "ok", ...(await this.repo.getStatus(tx)) };
+  }
+
+  // 連線測試 · 用固定兩點實打一次 provider，把真實錯誤回給前端（診斷 Google/ORS 設定問題）
+  @Post("test")
+  @Roles("aiproot_admin", "consultant")
+  async test() {
+    return this.svc.testRouting();
   }
 
   @Post("tile")
