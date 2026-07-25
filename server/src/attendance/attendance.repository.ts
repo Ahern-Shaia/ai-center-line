@@ -95,6 +95,58 @@ export class AttendanceRepository {
     `);
   }
 
+  // ===== 里程補算（provider 當時失敗 → distance_m 留 null）=====
+
+  /** 待補算筆數：有兩端座標、但沒有道路里程 */
+  async countTripsMissingDistance(tx: Db): Promise<number> {
+    const res = await tx.execute<{ n: number }>(sql`
+      SELECT count(*)::int AS n
+      FROM attendance_trip t
+      JOIN attendance_punch fp ON fp.punch_id = t.from_punch_id
+      JOIN attendance_punch tp ON tp.punch_id = t.to_punch_id
+      WHERE t.distance_m IS NULL
+        AND fp.lat IS NOT NULL AND fp.lng IS NOT NULL
+        AND tp.lat IS NOT NULL AND tp.lng IS NOT NULL
+    `);
+    return res.rows[0]?.n ?? 0;
+  }
+
+  /** 取待補算清單（新到舊 · 有上限，避免一次打爆 provider 配額）*/
+  async listTripsMissingDistance(tx: Db, limit: number): Promise<Array<{
+    tripId: string; fromLat: number; fromLng: number; toLat: number; toLng: number;
+  }>> {
+    const res = await tx.execute<{
+      trip_id: string; from_lat: number; from_lng: number; to_lat: number; to_lng: number;
+    }>(sql`
+      SELECT t.trip_id,
+             fp.lat::float8 AS from_lat, fp.lng::float8 AS from_lng,
+             tp.lat::float8 AS to_lat,   tp.lng::float8 AS to_lng
+      FROM attendance_trip t
+      JOIN attendance_punch fp ON fp.punch_id = t.from_punch_id
+      JOIN attendance_punch tp ON tp.punch_id = t.to_punch_id
+      WHERE t.distance_m IS NULL
+        AND fp.lat IS NOT NULL AND fp.lng IS NOT NULL
+        AND tp.lat IS NOT NULL AND tp.lng IS NOT NULL
+      ORDER BY t.created_at DESC
+      LIMIT ${limit}
+    `);
+    return res.rows.map((r) => ({
+      tripId: r.trip_id, fromLat: r.from_lat, fromLng: r.from_lng, toLat: r.to_lat, toLng: r.to_lng,
+    }));
+  }
+
+  /** 補算結果寫回（只補當初沒算出來的那筆 · 不動已有值）*/
+  async fillTripDistance(tx: Db, tripId: string, d: {
+    distanceM: number; routeProvider: string; routeGeometry: string | null;
+  }): Promise<void> {
+    await tx.execute(sql`
+      UPDATE attendance_trip
+      SET distance_m = ${d.distanceM}, route_provider = ${d.routeProvider},
+          route_geometry = ${d.routeGeometry}, computed_at = now()
+      WHERE trip_id = ${tripId}::uuid AND distance_m IS NULL
+    `);
+  }
+
   // 通知用 · 取員工顯示名（無則 email）
   async getUserDisplayName(tx: Db, userId: string): Promise<string | null> {
     const res = await tx.execute<{ name: string | null }>(sql`

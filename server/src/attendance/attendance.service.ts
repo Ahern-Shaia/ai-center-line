@@ -185,6 +185,49 @@ export class AttendanceService {
     return withSystemTx((tx) => this.mapConfig.getTileConfig(tx));
   }
 
+  /** 待補算筆數（provider 當時失敗留 null 的段落）*/
+  async pendingBackfillCount(): Promise<number> {
+    return withSystemTx((tx) => this.repo.countTripsMissingDistance(tx));
+  }
+
+  // 補算里程：把「有座標但當初沒算出道路里程」的段落重跑一次 provider。
+  // 用於地圖服務曾中斷/未啟用的情況；只填原本是 null 的欄位，不改打卡原始資料。
+  // 逐筆序列處理（避免打爆 provider 配額）· 單次上限 limit。
+  async backfillMileage(limit = 100): Promise<{
+    pendingBefore: number; processed: number; succeeded: number; failed: number;
+    remaining: number; firstError?: string;
+  }> {
+    const pendingBefore = await this.pendingBackfillCount();
+    const provider = await this.resolveProvider();
+    if (!provider) {
+      return { pendingBefore, processed: 0, succeeded: 0, failed: 0, remaining: pendingBefore, firstError: "尚未設定里程 provider 或 API 金鑰" };
+    }
+    const targets = await withSystemTx((tx) => this.repo.listTripsMissingDistance(tx, Math.max(1, Math.min(limit, 500))));
+
+    let succeeded = 0, failed = 0;
+    let firstError: string | undefined;
+    for (const t of targets) {
+      try {
+        const r = await provider.computeRoute(
+          { lat: t.fromLat, lng: t.fromLng },
+          { lat: t.toLat, lng: t.toLng },
+        );
+        await withSystemTx((tx) => this.repo.fillTripDistance(tx, t.tripId, {
+          distanceM: r.distanceM, routeProvider: provider.name, routeGeometry: r.polyline,
+        }));
+        succeeded++;
+      } catch (e) {
+        failed++;
+        if (!firstError) firstError = (e as Error).message.slice(0, 300);
+        // provider 整體不可用時就別continue 硬打（省配額/時間）
+        if (failed >= 3 && succeeded === 0) break;
+      }
+    }
+    const remaining = await this.pendingBackfillCount();
+    this.logger.log(`里程補算 · 處理 ${targets.length} 筆 · 成功 ${succeeded} · 失敗 ${failed} · 剩餘 ${remaining}`);
+    return { pendingBefore, processed: targets.length, succeeded, failed, remaining, firstError };
+  }
+
   // 連線測試：用固定兩點（台北車站 → 松山機場，約 7-9 km）實打一次 provider
   // 目的：把 provider 的真實錯誤（未啟用 API / 未開計費 / 金鑰限制…）回給 aiproot 前端，
   // 否則失敗只會靜默變成「沒有里程」，難以診斷。

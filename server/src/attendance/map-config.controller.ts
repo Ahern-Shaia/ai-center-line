@@ -23,8 +23,19 @@ export class MapConfigController {
   @Roles("aiproot_admin", "consultant")
   async get() {
     const tx = currentTx();
-    const [routing, tile] = await Promise.all([this.repo.getStatus(tx), this.repo.getTileStatus(tx)]);
-    return { ...routing, ...tile };
+    const [routing, tile, pendingBackfill] = await Promise.all([
+      this.repo.getStatus(tx),
+      this.repo.getTileStatus(tx),
+      this.svc.pendingBackfillCount(),
+    ]);
+    return { ...routing, ...tile, pendingBackfill };
+  }
+
+  // 補算里程 · 把地圖服務中斷期間沒算出來的段落重跑（只填 null，不改原始打卡）
+  @Post("backfill")
+  @Roles("aiproot_admin")
+  async backfill(@Body() body: { limit?: number }) {
+    return this.svc.backfillMileage(typeof body?.limit === "number" ? body.limit : 100);
   }
 
   @Post()
