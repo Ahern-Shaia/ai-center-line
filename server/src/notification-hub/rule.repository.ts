@@ -104,6 +104,28 @@ export class RuleRepository {
     return res.rows[0]?.token ?? null;
   }
 
+  /** line_user 管道 · 由本系統 user_id 解析出 LINE userId（存 user_id 而非 LINE id → 重新綁定仍有效）*/
+  async resolveLineUserId(tx: Db, userId: string): Promise<string | null> {
+    const res = await tx.execute<{ line_user_id: string }>(sql`
+      SELECT line_user_id FROM user_line_binding
+      WHERE user_id = ${userId}::uuid AND status = 'active'
+      ORDER BY bound_at DESC LIMIT 1
+    `);
+    return res.rows[0]?.line_user_id ?? null;
+  }
+
+  /** 設定 UI 用 · 該租戶可選的通知對象（已綁 LINE 的成員）*/
+  async listNotifiableUsers(tx: Db, tenantId: string): Promise<Array<{ userId: string; name: string }>> {
+    const res = await tx.execute<{ user_id: string; name: string }>(sql`
+      SELECT u.user_id, COALESCE(NULLIF(u.display_name, ''), u.email) AS name
+      FROM users u
+      JOIN user_line_binding b ON b.user_id = u.user_id AND b.status = 'active'
+      WHERE u.tenant_id = ${tenantId}::uuid
+      ORDER BY name
+    `);
+    return res.rows.map((r) => ({ userId: r.user_id, name: r.name }));
+  }
+
   /** ragic_form 來源用 · 取該帳號 server/apname/明碼 key */
   async getRagicAccount(tx: Db, accountId: string): Promise<{ server: string; apname: string; apiKey: string | null } | null> {
     const key = this.encKey();

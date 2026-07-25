@@ -30,7 +30,10 @@ export function renderTemplate(
   link?: string | null,
 ): string {
   const items = [...(template.items ?? [])].sort((a, b) => a.order - b.order);
-  const lines: string[] = [`【${s(template.title)}｜${eventLabel}】`];
+  // 標題與事件標籤相同時不重複（內部事件常見：標題即事件名）
+  const title = s(template.title);
+  const header = !eventLabel || eventLabel === title ? title : `${title}｜${eventLabel}`;
+  const lines: string[] = [`【${header}】`];
   for (const it of items) {
     lines.push(`${it.label}：${s(getByPath(payload, it.path))}`);
   }

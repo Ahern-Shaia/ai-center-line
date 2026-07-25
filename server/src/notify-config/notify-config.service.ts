@@ -1,51 +1,46 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
 import { currentTx } from "../db/client.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { NotifyConfigRepository } from "./notify-config.repository.js";
 import { RuleRepository } from "../notification-hub/rule.repository.js";
-import type { NotifyConfigField } from "../db/schema.js";
-import type { RagicSourceConfig, RuleRow } from "../notification-hub/types.js";
+import { EVENT_CATALOG, findEvent } from "../notification-hub/event-catalog.js";
+import type { NotificationTemplate } from "../db/schema.js";
+import type { NotificationChannelType, NotificationSourceType } from "../db/schema.js";
 
-// aiproot「通知設定」service · v3 起底層操作 notification_rule（來源無關）
-// 對外仍維持 v2 的 config 形狀，前端契約不變（notification-hub.md §7 遷移）
-export interface ConfigView {
-  configId: string;
-  ragicAccountId: string;
-  sheetPath: string;
-  sheetName: string;
-  webhookToken: string;
-  title: string | null;
-  fields: NotifyConfigField[];
-  notifyCreate: boolean;
-  notifyUpdate: boolean;
-  notifyDelete: boolean;
-  lineGroupId: string;
+export interface RuleView {
+  ruleId: string;
+  name: string;
   enabled: boolean;
-  accountDisplayName: string;
+  sourceType: NotificationSourceType;
+  sourceLabel: string;       // Ragic 表單路徑 or 事件中文名
+  channelType: NotificationChannelType;
+  channelTarget: string | null;
+  channelLabel: string;      // 群名 / 成員名 / 原值
+  fieldCount: number;
+  webhookToken: string | null;
+  accountDisplayName: string | null;
+  eventsLabel: string;       // ragic_form：新增/更新/刪除；internal_event：過濾摘要
 }
 
-function toView(r: RuleRow & { accountDisplayName: string | null }): ConfigView {
-  const cfg = r.sourceConfig as unknown as RagicSourceConfig;
-  return {
-    configId: r.ruleId,
-    ragicAccountId: cfg?.ragicAccountId ?? "",
-    sheetPath: cfg?.sheetPath ?? "",
-    sheetName: cfg?.sheetName ?? r.name,
-    webhookToken: r.webhookToken ?? "",
-    title: r.template?.title ?? null,
-    fields: (r.template?.items ?? []).map((it) => ({
-      fieldId: Number(it.path),
-      label: it.label,
-      order: it.order,
-    })),
-    notifyCreate: cfg?.events?.create ?? false,
-    notifyUpdate: cfg?.events?.update ?? false,
-    notifyDelete: cfg?.events?.delete ?? false,
-    lineGroupId: r.channelTarget ?? "",
-    enabled: r.enabled,
-    accountDisplayName: r.accountDisplayName ?? "",
-  };
+export interface CreateRuleInput {
+  name: string;
+  sourceType: NotificationSourceType;
+  // ragic_form
+  ragicAccountId?: string;
+  sheetPath?: string;
+  sheetName?: string;
+  notifyCreate?: boolean;
+  notifyUpdate?: boolean;
+  notifyDelete?: boolean;
+  // internal_event
+  eventType?: string;
+  filters?: Array<{ path: string; op: "eq" | "gte" | "lte"; value: string | number }>;
+  // 共用
+  title?: string | null;
+  fields: Array<{ path: string; label: string; order: number }>;
+  channelType: NotificationChannelType;
+  channelTarget: string;
 }
 
 @Injectable()
@@ -55,58 +50,126 @@ export class NotifyConfigService {
     private readonly rules: RuleRepository,
   ) {}
 
-  /** 不可猜隨機 token · 綁 webhook URL /notify/webhook/<token> */
   private newToken(): string {
     return randomBytes(24).toString("base64url");
   }
 
-  async listConfigs(): Promise<ConfigView[]> {
-    const all = await this.rules.list(currentTx());
-    return all.filter((r) => r.sourceType === "ragic_form").map(toView);
+  eventCatalog() {
+    return EVENT_CATALOG;
   }
 
   listLineGroupsForAccount(accountId: string) {
     return this.repo.listLineGroupsForAccount(currentTx(), accountId);
   }
 
-  async createConfig(user: JwtUser, input: {
-    ragicAccountId: string; sheetPath: string; sheetName: string;
-    title: string | null; fields: NotifyConfigField[];
-    notifyCreate: boolean; notifyUpdate: boolean; notifyDelete: boolean; lineGroupId: string;
-  }): Promise<{ configId: string; webhookToken: string }> {
-    const webhookToken = this.newToken();
-    const tx = currentTx();
-    // tenant 由 Ragic 帳號帶出（不信任前端）
-    const tenantId = await this.repo.getAccountTenantId(tx, input.ragicAccountId);
-    const { ruleId } = await this.rules.create(tx, {
-      tenantId,
-      name: input.sheetName,
-      sourceType: "ragic_form",
-      sourceConfig: {
-        ragicAccountId: input.ragicAccountId,
-        sheetPath: input.sheetPath,
-        sheetName: input.sheetName,
-        events: { create: input.notifyCreate, update: input.notifyUpdate, delete: input.notifyDelete },
-      },
-      webhookToken,
-      template: {
-        title: input.title || input.sheetName,
-        items: input.fields.map((f) => ({ path: String(f.fieldId), label: f.label, order: f.order })),
-      },
-      channelType: "line_group",
-      channelTarget: input.lineGroupId,
-      createdBy: user.user_id,
-    });
-    return { configId: ruleId, webhookToken };
+  listNotifiableUsers(tenantId: string) {
+    return this.rules.listNotifiableUsers(currentTx(), tenantId);
   }
 
-  async setEnabled(configId: string, enabled: boolean): Promise<{ status: string }> {
-    await this.rules.setEnabled(currentTx(), configId, enabled);
+  async listRules(): Promise<RuleView[]> {
+    const tx = currentTx();
+    const all = await this.rules.list(tx);
+    // 管道目標的可讀名稱（LINE 群名 / 成員名）
+    const groupNames = await this.repo.listAllLineGroupNames(tx);
+    const userNames = await this.repo.listAllUserNames(tx);
+    return all.map((r) => {
+      const cfg = r.sourceConfig as Record<string, unknown>;
+      const isRagic = r.sourceType === "ragic_form";
+      const ev = (cfg.events ?? {}) as { create?: boolean; update?: boolean; delete?: boolean };
+      const eventsLabel = isRagic
+        ? [ev.create && "新增", ev.update && "更新", ev.delete && "刪除"].filter(Boolean).join("・") || "（未選）"
+        : (() => {
+            const fs = (cfg.filters ?? []) as Array<{ path: string; op: string; value: unknown }>;
+            return fs.length ? `${fs.length} 個條件` : "全部";
+          })();
+      return {
+        ruleId: r.ruleId,
+        name: r.name,
+        enabled: r.enabled,
+        sourceType: r.sourceType,
+        sourceLabel: isRagic
+          ? String(cfg.sheetPath ?? "")
+          : findEvent(String(cfg.eventType ?? ""))?.label ?? String(cfg.eventType ?? ""),
+        channelType: r.channelType,
+        channelTarget: r.channelTarget,
+        channelLabel:
+          r.channelType === "line_group"
+            ? groupNames[r.channelTarget ?? ""] ?? r.channelTarget ?? ""
+            : r.channelType === "line_user"
+              ? userNames[r.channelTarget ?? ""] ?? r.channelTarget ?? ""
+              : r.channelTarget ?? "",
+        fieldCount: r.template?.items?.length ?? 0,
+        webhookToken: r.webhookToken,
+        accountDisplayName: r.accountDisplayName,
+        eventsLabel,
+      };
+    });
+  }
+
+  async createRule(user: JwtUser, input: CreateRuleInput): Promise<{ ruleId: string; webhookToken: string | null }> {
+    if (!input.fields?.length) throw new BadRequestException("至少勾選一個通知欄位");
+    if (!input.channelTarget?.trim()) throw new BadRequestException("請選擇通知對象");
+
+    const tx = currentTx();
+    const template: NotificationTemplate = {
+      title: input.title?.trim() || input.name,
+      items: input.fields.map((f) => ({ path: String(f.path), label: f.label, order: f.order })),
+    };
+
+    if (input.sourceType === "ragic_form") {
+      if (!input.ragicAccountId || !input.sheetPath?.trim() || !input.sheetName?.trim()) {
+        throw new BadRequestException("Ragic 來源需 ragicAccountId / sheetPath / sheetName");
+      }
+      const tenantId = await this.repo.getAccountTenantId(tx, input.ragicAccountId);
+      const webhookToken = this.newToken();
+      const { ruleId } = await this.rules.create(tx, {
+        tenantId,
+        name: input.name || input.sheetName,
+        sourceType: "ragic_form",
+        sourceConfig: {
+          ragicAccountId: input.ragicAccountId,
+          sheetPath: input.sheetPath.trim(),
+          sheetName: input.sheetName.trim(),
+          events: {
+            create: input.notifyCreate ?? true,
+            update: input.notifyUpdate ?? true,
+            delete: input.notifyDelete ?? false,
+          },
+        },
+        webhookToken,
+        template,
+        channelType: input.channelType,
+        channelTarget: input.channelTarget.trim(),
+        createdBy: user.user_id,
+      });
+      return { ruleId, webhookToken };
+    }
+
+    // internal_event
+    if (!input.eventType || !findEvent(input.eventType)) {
+      throw new BadRequestException("未知的事件型別");
+    }
+    const { ruleId } = await this.rules.create(tx, {
+      tenantId: user.tenant_id,
+      name: input.name || findEvent(input.eventType)!.label,
+      sourceType: "internal_event",
+      sourceConfig: { eventType: input.eventType, filters: input.filters ?? [] },
+      webhookToken: null,
+      template,
+      channelType: input.channelType,
+      channelTarget: input.channelTarget.trim(),
+      createdBy: user.user_id,
+    });
+    return { ruleId, webhookToken: null };
+  }
+
+  async setEnabled(ruleId: string, enabled: boolean): Promise<{ status: string }> {
+    await this.rules.setEnabled(currentTx(), ruleId, enabled);
     return { status: "ok" };
   }
 
-  async remove(configId: string): Promise<{ status: string }> {
-    await this.rules.remove(currentTx(), configId);
+  async remove(ruleId: string): Promise<{ status: string }> {
+    await this.rules.remove(currentTx(), ruleId);
     return { status: "ok" };
   }
 }

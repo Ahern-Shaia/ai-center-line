@@ -20,6 +20,26 @@ export class NotifyConfigRepository {
     return res.rows.map((r) => ({ groupId: r.group_id, displayName: r.display_name }));
   }
 
+  /** 列表顯示用 · groupId → 群名 */
+  async listAllLineGroupNames(tx: Db): Promise<Record<string, string>> {
+    const res = await tx.execute<{ group_id: string; display_name: string | null }>(sql`
+      SELECT group_id, display_name FROM line_group
+    `);
+    const out: Record<string, string> = {};
+    for (const r of res.rows) if (r.display_name) out[r.group_id] = r.display_name;
+    return out;
+  }
+
+  /** 列表顯示用 · userId → 成員名 */
+  async listAllUserNames(tx: Db): Promise<Record<string, string>> {
+    const res = await tx.execute<{ user_id: string; name: string }>(sql`
+      SELECT user_id, COALESCE(NULLIF(display_name, ''), email) AS name FROM users
+    `);
+    const out: Record<string, string> = {};
+    for (const r of res.rows) out[r.user_id] = r.name;
+    return out;
+  }
+
   /** 建規則時由帳號帶出 tenant（不信任前端）*/
   async getAccountTenantId(tx: Db, accountId: string): Promise<string | null> {
     const res = await tx.execute<{ tenant_id: string | null }>(sql`

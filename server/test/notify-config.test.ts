@@ -38,6 +38,11 @@ test("renderer · 依 order 排序（亂序輸入）", () => {
   assert.equal(lines[3], "客戶：C");
 });
 
+test("renderer · 標題與事件標籤相同 → 不重複顯示", () => {
+  const msg = renderTemplate({ title: "外勤打卡異常", items: [] }, {}, "外勤打卡異常");
+  assert.equal(msg.split("\n")[0], "【外勤打卡異常】");
+});
+
 test("renderer · 無連結不加尾段", () => {
   const msg = renderTemplate({ title: "單", items: [template.items[0]] }, { "1001": "X" }, "已刪除");
   assert.match(msg, /^【單｜已刪除】/);

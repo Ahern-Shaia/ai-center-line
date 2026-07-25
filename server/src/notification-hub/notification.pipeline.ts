@@ -68,11 +68,22 @@ export class NotificationPipeline {
     const token = rule.tenantId
       ? await withSystemTx((tx) => this.rules.getLineTokenForTenant(tx, rule.tenantId as string))
       : null;
-    const res = await this.line.pushText(
-      token ?? process.env.LINE_CHANNEL_ACCESS_TOKEN ?? "",
-      rule.channelTarget ?? "",
-      text,
-    );
+    // line_group → channel_target 即 groupId；line_user → channel_target 為本系統 user_id，需解析成 LINE userId
+    let to = rule.channelTarget ?? "";
+    if (rule.channelType === "line_user" && to) {
+      const lineUserId = await withSystemTx((tx) => this.rules.resolveLineUserId(tx, to));
+      if (!lineUserId) {
+        await this.audit.write({
+          ruleId: rule.ruleId, sourceType: rule.sourceType, channel: rule.channelType,
+          tenantId: rule.tenantId, sourceRef: event.sourceRef ?? null, recordId: event.recordId ?? 0,
+          status: "line_failed", lineStatus: 0, lineMessage: "通知對象尚未綁定 LINE",
+          latencyMs: Date.now() - startedAt, messageText: text,
+        });
+        return { status: "line_failed", lineStatus: 0, lineMessage: "通知對象尚未綁定 LINE" };
+      }
+      to = lineUserId;
+    }
+    const res = await this.line.pushText(token ?? process.env.LINE_CHANNEL_ACCESS_TOKEN ?? "", to, text);
 
     // 5) audit
     await this.audit.write({

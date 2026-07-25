@@ -95,6 +95,15 @@ export class AttendanceRepository {
     `);
   }
 
+  // 通知用 · 取員工顯示名（無則 email）
+  async getUserDisplayName(tx: Db, userId: string): Promise<string | null> {
+    const res = await tx.execute<{ name: string | null }>(sql`
+      SELECT COALESCE(NULLIF(display_name, ''), email) AS name
+      FROM users WHERE user_id = ${userId}::uuid LIMIT 1
+    `);
+    return res.rows[0]?.name ?? null;
+  }
+
   // 背景反查地址回填（best-effort · 不阻擋打卡）
   async updatePunchAddress(tx: Db, punchId: string, address: string): Promise<void> {
     await tx.execute(sql`

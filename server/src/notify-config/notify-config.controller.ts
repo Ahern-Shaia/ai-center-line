@@ -3,11 +3,11 @@ import { RequirePermission } from "../permission/require-permission.decorator.js
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { RagicAccountService } from "./ragic-account.service.js";
-import { NotifyConfigService } from "./notify-config.service.js";
-import type { NotifyConfigField } from "../db/schema.js";
+import { NotifyConfigService, type CreateRuleInput } from "./notify-config.service.js";
 
-// notify v2 aiproot 設定 API · 全掛 permission gate（notify-config:view/manage · 給 aiproot_admin+consultant）
-// 對照 docs/modules/notify-selfserve-platform.md §4-bis
+// aiproot「通知設定」API · 通用規則（來源/管道無關）
+// 全掛 permission gate（notify-config:view/manage · 給 aiproot_admin+consultant）
+// 對照 docs/modules/notification-hub.md
 @Controller("notify-config")
 export class NotifyConfigController {
   constructor(
@@ -15,7 +15,7 @@ export class NotifyConfigController {
     private readonly configs: NotifyConfigService,
   ) {}
 
-  // ===== Ragic 帳號 =====
+  // ===== 來源：Ragic 帳號 =====
   @Get("accounts")
   @RequirePermission("notify-config:view")
   listAccounts() {
@@ -42,48 +42,67 @@ export class NotifyConfigController {
     return this.accounts.updateKey(user, id, body.apiKey ?? "");
   }
 
-  // 抓表單欄位（給前端勾選）· 同時驗 key
+  /** Ragic 表單欄位（勾選用）· 同時驗 key */
   @Get("accounts/:id/fields")
   @RequirePermission("notify-config:manage")
   fields(@Param("id") id: string, @Query("sheetPath") sheetPath?: string) {
     return this.accounts.fetchSheetFields(id, sheetPath ?? "");
   }
 
+  // ===== 來源：內部事件型錄 =====
+  @Get("event-catalog")
+  @RequirePermission("notify-config:view")
+  eventCatalog() {
+    return this.configs.eventCatalog();
+  }
+
+  // ===== 管道對象 =====
   @Get("accounts/:id/line-groups")
   @RequirePermission("notify-config:view")
   lineGroups(@Param("id") id: string) {
     return this.configs.listLineGroupsForAccount(id);
   }
 
-  // ===== 通知設定 =====
+  /** 可私訊的成員（已綁 LINE）· tenantId 選填，未帶用自己的 */
+  @Get("notifiable-users")
+  @RequirePermission("notify-config:view")
+  notifiableUsers(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
+    const t = tenantId || user.tenant_id;
+    if (!t) throw new BadRequestException("需指定 tenantId");
+    return this.configs.listNotifiableUsers(t);
+  }
+
+  // ===== 規則 =====
   @Get()
   @RequirePermission("notify-config:view")
   list() {
-    return this.configs.listConfigs();
+    return this.configs.listRules();
   }
 
   @Post()
   @RequirePermission("notify-config:manage")
-  create(@CurrentUser() user: JwtUser, @Body() body: {
-    ragicAccountId?: string; sheetPath?: string; sheetName?: string; title?: string | null;
-    fields?: NotifyConfigField[]; notifyCreate?: boolean; notifyUpdate?: boolean; notifyDelete?: boolean; lineGroupId?: string;
-  }) {
-    if (!body.ragicAccountId || !body.sheetPath?.trim() || !body.sheetName?.trim() || !body.lineGroupId?.trim()) {
-      throw new BadRequestException("ragicAccountId / sheetPath / sheetName / lineGroupId 必填");
+  create(@CurrentUser() user: JwtUser, @Body() body: Partial<CreateRuleInput>) {
+    if (body.sourceType !== "ragic_form" && body.sourceType !== "internal_event") {
+      throw new BadRequestException("sourceType 需為 ragic_form | internal_event");
     }
-    if (!Array.isArray(body.fields) || body.fields.length === 0) {
-      throw new BadRequestException("至少勾選一個欄位");
+    if (!body.channelType || !["line_group", "line_user"].includes(body.channelType)) {
+      throw new BadRequestException("channelType 目前支援 line_group | line_user");
     }
-    return this.configs.createConfig(user, {
+    return this.configs.createRule(user, {
+      name: body.name?.trim() ?? "",
+      sourceType: body.sourceType,
       ragicAccountId: body.ragicAccountId,
-      sheetPath: body.sheetPath.trim(),
-      sheetName: body.sheetName.trim(),
-      title: body.title?.trim() || null,
-      fields: body.fields,
-      notifyCreate: body.notifyCreate ?? true,
-      notifyUpdate: body.notifyUpdate ?? true,
-      notifyDelete: body.notifyDelete ?? false,
-      lineGroupId: body.lineGroupId.trim(),
+      sheetPath: body.sheetPath,
+      sheetName: body.sheetName,
+      notifyCreate: body.notifyCreate,
+      notifyUpdate: body.notifyUpdate,
+      notifyDelete: body.notifyDelete,
+      eventType: body.eventType,
+      filters: body.filters,
+      title: body.title ?? null,
+      fields: body.fields ?? [],
+      channelType: body.channelType,
+      channelTarget: body.channelTarget ?? "",
     });
   }
 

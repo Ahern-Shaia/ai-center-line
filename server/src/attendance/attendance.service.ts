@@ -3,6 +3,7 @@ import { currentTx, withSystemTx } from "../db/client.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { AttendanceRepository, type PunchLite } from "./attendance.repository.js";
 import { MapRoutingConfigRepository } from "./map-routing-config.repository.js";
+import { NotificationBus } from "../notification-hub/notification.bus.js";
 import { buildRoutingProvider, getRoutingProvider, haversineMeters, type LatLng, type RoutingProvider } from "./routing-provider.js";
 
 export interface PunchInput {
@@ -13,6 +14,12 @@ export interface PunchInput {
   customerName: string | null;
   source: string;
 }
+
+const PUNCH_TYPE_LABEL: Record<string, string> = {
+  clock_in: "出發打卡",
+  arrive_site: "到點打卡",
+  clock_out: "下班打卡",
+};
 
 const SPEED_LIMIT_KMH = 150;   // 直線速度上限（保守）· 超過視為不合理（瞬移/偽造）
 const ACCURACY_LIMIT_M = 100;  // GPS 精度上限 · 超過標低信心
@@ -44,6 +51,7 @@ export class AttendanceService {
   constructor(
     private readonly repo: AttendanceRepository,
     private readonly mapConfig: MapRoutingConfigRepository,
+    private readonly bus: NotificationBus,
   ) {}
 
   // 先讀 DB 平台設定（aiproot 前端設的 provider + key）· 無則 fallback env
@@ -117,6 +125,26 @@ export class AttendanceService {
     // 背景反查此打卡點地址（best-effort · 不阻擋打卡 · 見透明化 doc OQ-MT-3）
     if (input.lat != null && input.lng != null) {
       this.scheduleGeocode(punchId, { lat: input.lat, lng: input.lng });
+    }
+
+    // 可疑打卡 → 發領域事件（要不要通知、通知誰，由 notification_rule 決定 · 本模組不管管道）
+    if (suspicious) {
+      const employeeName = (await this.repo.getUserDisplayName(tx, user.user_id)) ?? "（未知員工）";
+      this.bus.emit({
+        eventType: "attendance.suspicious",
+        tenantId: user.tenant_id,
+        eventLabel: "外勤打卡異常",
+        dedupKey: `attendance.suspicious:${punchId}`,
+        sourceRef: "attendance.suspicious",
+        payload: {
+          employeeName,
+          punchTypeLabel: PUNCH_TYPE_LABEL[input.punchType] ?? input.punchType,
+          customerName: input.customerName ?? "",
+          impossibleSpeedKmh: suspicious.impossible_speed_kmh ?? "",
+          lowAccuracyM: suspicious.low_accuracy_m ?? "",
+          punchedAt: new Date().toLocaleString("zh-TW", { hour12: false, timeZone: "Asia/Taipei" }),
+        },
+      });
     }
 
     return { punchId, suspicious, trip };
