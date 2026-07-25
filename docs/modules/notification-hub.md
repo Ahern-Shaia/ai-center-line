@@ -97,7 +97,7 @@
 ## 8. 失效場景反思（FMEA · R17）
 | 路徑 | 失效 | 嚴重度 | 緩解 |
 |---|---|---|---|
-| 過度抽象 | 抽象撐不起真實來源、變成空殼 | **P1** | Phase 1 只做 2 來源(ragic+1內部) × 1-2 管道，用「第二來源」當試金石驗證可插拔 |
+| 過度抽象 | 抽象撐不起真實來源、變成空殼 | ~~P1~~ | ✅ **已由 M2 試金石證偽**：attendance 僅發事件即完成接入（見 §9 實測），Ragic/內部事件在 UI 與資料模型上為平等來源 |
 | in-process event bus | crash 時 event 遺失（無持久化）| P2 | Phase 1 可接受（通知非交易關鍵）；量大/關鍵改 outbox（OQ-NH-1）|
 | 模板 path 取不到 | 欄位空/改名 | P2 | 缺值→（未填）；rule 建立時可預覽 |
 | 管道失敗 | LINE/email 掛 | P2 | 不 retry、audit line_failed（沿用 v2）|
@@ -108,9 +108,24 @@
 | 里程碑 | 內容 | 狀態 |
 |---|---|---|
 | **M1** | 核心：`notification_rule`（migration 0027）+ `NotificationEvent` + pipeline + 通用 renderer + in-process `NotificationBus`；**v2 遷移**（資料 + 程式路徑，webhook 改查 rule、設定 API 改寫 rule）；Ragic 降級為 source adapter | ✅ 本地 SHIPPED |
-| **M2** | 第一個 internal_event 來源（`attendance.suspicious` 試金石：attendance 發事件 + 規則設定 UI 支援 source_type 切換）| ⬜ |
-| **M3** | 第二個管道（`line_user` 私訊：對象解析 user_line_binding）+ 前端多來源/多管道 UI | ⬜ |
-| **M4** | 漸進收斂 PDR/warroom/v1 進 hub（OQ-NH-7）+ docs/FMEA/SOP | ⬜ |
+| **M2** | 第一個 internal_event 來源（`attendance.suspicious` 試金石）+ **事件型錄** + 型錄 API | ✅ 本地 SHIPPED |
+| **M3** | `line_user` 私訊管道（user_line_binding 解析）+ 前端多來源/多管道 UI + 規則 API 通用化 | ✅ 本地 SHIPPED |
+| **M4** | docs/FMEA/SOP 收尾（PDR/warroom/v1 收斂＝OQ-NH-7 Phase 後）| ✅ 本文 |
+
+### M2/M3 實測結果（抽象是否真的可插拔 — 試金石結論）
+**結論：抽象站得住。** attendance 模組只寫了「發事件」六行，**完全不知道 LINE 存在**；要不要通知、通知誰、發什麼欄位，全由 `notification_rule` 決定。
+
+實測（本地真實鏈路，非 mock）：
+1. aiproot 由 UI/API 建 internal_event 規則（事件＝`attendance.suspicious`、門檻 `impossibleSpeedKmh >= 150`、管道＝LINE 群、勾 4 欄位）。
+2. 打卡 API 連續兩次（台北 → 高雄／間隔 2 秒）→ `computeSuspicious` 出旗標 → bus 發事件。
+3. Pipeline 命中規則 → 過濾通過 → 正確渲染「員工：王總／打卡類型：到點打卡／推算時速：517653／時間」→ audit 記 `source_type=internal_event, channel=line_group`。
+4. **反向驗證**：只有 GPS 精度差（無超速）的可疑打卡 → 被門檻擋下、**未產生通知**（filter 正確）。
+
+**M2/M3 一併完成的設計改良**
+- **事件型錄**（`event-catalog.ts`）：讓 UI 對內部事件的操作與 Ragic 完全一致（選來源 → 得到可用欄位 → 勾選）。**日後加新事件只要在型錄加一筆，前端不需改動**。
+- **規則 API 通用化**：捨棄 v2 config 形狀的相容外衣（原本 `toView` facade），前後端統一用 rule 語彙 —— 避免長期維護兩套詞彙的設計債。
+- `line_user` 的 `channel_target` 存**本系統 user_id**（送出時才解析 LINE userId），成員換綁不會失效。
+- 渲染修正：標題與事件標籤相同時不重複（避免「【外勤打卡異常｜外勤打卡異常】」）。
 
 ### M1 實際落地與偏差（誠實記錄）
 - ✅ `notification_rule` 建立、**v2 兩筆設定一次性搬入**（items/token/事件旗標對帳正確）· webhook token 保留 → 已貼進 Ragic 的 URL 不失效。
