@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ApiError, getMapConfig, setMapConfig, setMapTileConfig, testMapRouting } from "../api";
+import { ApiError, backfillMileage, getMapConfig, setMapConfig, setMapTileConfig, testMapRouting } from "../api";
 import { useToast } from "../Toast";
 import StyledSelect from "../shared/StyledSelect";
 
@@ -24,6 +24,8 @@ export default function MapConfig() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [tileBusy, setTileBusy] = useState(false);
+  const [pendingBackfill, setPendingBackfill] = useState(0);
+  const [backfilling, setBackfilling] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; provider: string | null; distanceM?: number; hasPolyline?: boolean; error?: string } | null>(null);
 
@@ -32,6 +34,7 @@ export default function MapConfig() {
       .then((c) => {
         setProvider(c.provider); setHasKey(c.hasKey);
         setTileProvider(c.tileProvider); setHasTileKey(c.hasTileKey);
+        setPendingBackfill(c.pendingBackfill ?? 0);
       })
       .catch(() => undefined)
       .finally(() => setLoading(false));
@@ -60,6 +63,26 @@ export default function MapConfig() {
       setTestResult({ ok: false, provider: null, error: e instanceof ApiError ? e.message : "測試失敗" });
     } finally {
       setTesting(false);
+    }
+  }
+
+  async function runBackfill() {
+    if (backfilling) return;
+    setBackfilling(true);
+    try {
+      const r = await backfillMileage(100);
+      setPendingBackfill(r.remaining);
+      if (r.succeeded > 0) {
+        toast.show(`已補算 ${r.succeeded} 段${r.remaining > 0 ? ` · 尚餘 ${r.remaining} 段` : ""}`, "ok");
+      } else if (r.processed === 0) {
+        toast.show("沒有待補算的段落", "ok");
+      } else {
+        toast.show(r.firstError ? `補算失敗 · ${r.firstError}` : "補算失敗", "danger");
+      }
+    } catch (e) {
+      toast.show(e instanceof ApiError ? e.message : "補算失敗", "danger");
+    } finally {
+      setBackfilling(false);
     }
   }
 
@@ -132,6 +155,21 @@ export default function MapConfig() {
                   <span style={{ color: "var(--ink-3)" }}>常見原因：Google Cloud 未啟用 Routes API／未開啟計費／金鑰有來源限制（伺服器呼叫需允許無 referrer）。</span>
                 </>
               )}
+            </div>
+          )}
+
+          {pendingBackfill > 0 && (
+            <div style={{
+              marginTop: 16, padding: "12px 14px", borderRadius: 6, fontSize: 12.5, lineHeight: 1.6,
+              background: "var(--warn-tint)", border: "1px solid #FDE68A", color: "#92400E",
+            }}>
+              有 <b>{pendingBackfill}</b> 段外勤行程當初沒算出道路里程（地圖服務中斷或尚未啟用時打的卡）。
+              修好設定後可補算，員工的「我的行程」就會補上真實路線。
+              <div style={{ marginTop: 10 }}>
+                <button className="btn btn-sm" onClick={() => void runBackfill()} disabled={backfilling}>
+                  {backfilling ? "補算中…" : `補算未計算的里程（最多 100 段）`}
+                </button>
+              </div>
             </div>
           )}
 
