@@ -1,7 +1,7 @@
 import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { sql } from "drizzle-orm";
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { withTenant } from "../db/client.js";
 import { EmployeeBindingService } from "../employee-binding/employee-binding.service.js";
 import { verifyLiffAccessToken } from "./liff-verify.js";
@@ -24,6 +24,8 @@ import type { JwtUser } from "./jwt-user.js";
  *   LINE_LOGIN_CHANNEL_SECRET (機密 · 同上)
  *   LINE_LOGIN_CALLBACK_URL (前端 · e.g. https://ai-center-line-demo.onrender.com/auth/line/callback)
  */
+const STATE_TTL_MS = 10 * 60 * 1000;   // OAuth state 有效期 10 分鐘
+
 @Injectable()
 export class LineOauthService {
   private readonly logger = new Logger(LineOauthService.name);
@@ -33,9 +35,37 @@ export class LineOauthService {
     private readonly bindingService: EmployeeBindingService,
   ) {}
 
+  // ===== OAuth state（防 CSRF）· 無狀態簽章 =====
+  // 為何不靠前端 sessionStorage：手機上 LINE 內建瀏覽器常把 OAuth 導回交給系統瀏覽器（Safari），
+  // 兩者儲存空間不同 → state 讀不到、被誤判「state 不符」而完全登不進去。
+  // 改用 HMAC 簽章 + 有效期由後端驗：不依賴瀏覽器儲存，也不怕服務重啟／休眠。
+  private stateSecret(): string {
+    return process.env.JWT_SECRET ?? "dev-only-change-me";
+  }
+
+  private signState(): string {
+    const payload = `${randomBytes(8).toString("hex")}.${Date.now() + STATE_TTL_MS}`;
+    const sig = createHmac("sha256", this.stateSecret()).update(payload).digest("base64url");
+    return `${payload}.${sig}`;
+  }
+
+  /** 驗證 state 簽章與效期（格式錯／簽章錯／過期 → false）*/
+  verifyState(state: string | undefined): boolean {
+    if (!state) return false;
+    const parts = state.split(".");
+    if (parts.length !== 3) return false;
+    const [nonce, expStr, sig] = parts;
+    const expected = createHmac("sha256", this.stateSecret()).update(`${nonce}.${expStr}`).digest("base64url");
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
+    const exp = Number(expStr);
+    return Number.isFinite(exp) && exp > Date.now();
+  }
+
   /**
    * 產 OAuth URL · 前端拿去 redirect
-   * · state 用來防 CSRF · 前端記憶 · callback 時 verify
+   * · state 為簽章 token · callback 時由後端 verifyState
    */
   buildAuthUrl(state?: string): { url: string; state: string } {
     const clientId = process.env.LINE_LOGIN_CHANNEL_ID;
@@ -43,7 +73,7 @@ export class LineOauthService {
     if (!clientId || !callbackUrl) {
       throw new Error("LINE_LOGIN_CHANNEL_ID / CALLBACK_URL env 未設");
     }
-    const stateValue = state ?? randomBytes(16).toString("hex");
+    const stateValue = state ?? this.signState();
     const params = new URLSearchParams({
       response_type: "code",
       client_id: clientId,

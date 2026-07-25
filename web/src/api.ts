@@ -216,10 +216,10 @@ export async function getLineOauthUrl(): Promise<{ url: string; state: string }>
   return req<{ url: string; state: string }>("/auth/line/oauth-url");
 }
 
-export async function completeLineOauth(code: string): Promise<void> {
+export async function completeLineOauth(code: string, state?: string): Promise<void> {
   const d = await req<{ access_token: string; role: string; tenant_id: string | null }>("/auth/line/callback", {
     method: "POST",
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ code, state }),
   });
   setToken(d.access_token);
   // LINE 登入不走 email/密碼 · 記錄 email 用預設佔位

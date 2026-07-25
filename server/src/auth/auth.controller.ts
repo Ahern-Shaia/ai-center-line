@@ -46,8 +46,12 @@ export class AuthController {
   // LINE Login OAuth · callback · 前端把 code 傳來 · backend 換 JWT
   @Public()
   @Post("line/callback")
-  async lineOauthCallback(@Body() body: { code?: string }) {
+  async lineOauthCallback(@Body() body: { code?: string; state?: string }) {
     if (!body?.code) throw new BadRequestException("缺 code");
+    // CSRF 防護改由後端驗簽章 state · 前端 sessionStorage 在 LINE→系統瀏覽器交接時會遺失
+    if (!this.lineOauth.verifyState(body.state)) {
+      throw new BadRequestException("登入連結已失效 · 請重新點「以 LINE 登入」");
+    }
     return this.lineOauth.handleCallback(body.code);
   }
 

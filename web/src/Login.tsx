@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { ApiError, login, getLineOauthUrl, completeLineOauth } from "./api";
 
-// LINE OAuth state · 存 sessionStorage · callback 回來 verify
-const LINE_STATE_KEY = "line-oauth-state";
+// LINE OAuth state 由後端簽章並驗證（見 line-oauth.service）。
+// 早期版本存在 sessionStorage 前端自驗 → 手機上 LINE 內建瀏覽器把導回交給 Safari 時，
+// 兩者儲存空間不同、state 讀不到，員工會卡在「state 不符」完全登不進去。
 
 export default function Login({ onLogin }: { onLogin: () => void }) {
   const [email, setEmail] = useState("");
@@ -17,15 +18,8 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     const code = params.get("code");
     const state = params.get("state");
     if (!code) return;
-    const savedState = sessionStorage.getItem(LINE_STATE_KEY);
-    if (!savedState || savedState !== state) {
-      setErr("LINE 登入 state 不符 · 請重試（可能是 tab 過期）");
-      window.history.replaceState({}, "", window.location.pathname);
-      return;
-    }
-    sessionStorage.removeItem(LINE_STATE_KEY);
     setLineBusy(true);
-    completeLineOauth(code)
+    completeLineOauth(code, state ?? undefined)
       .then(() => {
         window.history.replaceState({}, "", window.location.pathname);
         onLogin();
@@ -59,8 +53,8 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     setLineBusy(true);
     setErr("");
     try {
-      const { url, state } = await getLineOauthUrl();
-      sessionStorage.setItem(LINE_STATE_KEY, state);
+      const { url } = await getLineOauthUrl();
+      // state 已編在 url 裡、由後端驗簽 · 前端不再存（跨瀏覽器交接會遺失）
       window.location.href = url;
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : "無法產生 LINE 登入連結 · 請確認 aiproot 端已配置");
