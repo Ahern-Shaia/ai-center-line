@@ -86,6 +86,14 @@ export default function MyDailyReport() {
   const hasUnsentUpdate = report ? hasNewerAi(report) : false;
 
   const canEdit = (!isSent || hasUnsentUpdate) && !busy;
+
+  // bot 已收到、但晚於上次 AI 整理時間的訊息 → 尚未被整理進日報
+  // （AI 是輔助：原始訊息立刻可見，不必每來一則就重跑 LLM 燒 token）
+  const unorganizedMessages = useMemo(() => {
+    if (!report?.aiGeneratedAt) return [];
+    const cut = new Date(report.aiGeneratedAt).getTime();
+    return pendingMessages.filter((m) => new Date(m.sentAt).getTime() > cut);
+  }, [pendingMessages, report?.aiGeneratedAt]);
   const hasItems = items.length > 0;
 
   const displayDate = useMemo(() => formatDay(date), [date]);
@@ -212,6 +220,29 @@ export default function MyDailyReport() {
               </button>
             )}
           </div>
+
+          {/* bot 已收到、但還沒被 AI 整理進上面項目的訊息 · 立刻可見（不必等 AI，也不浪費 token）*/}
+          {unorganizedMessages.length > 0 && (
+            <div className="pdr-raw-list" style={{ marginTop: 16, borderColor: "var(--warn)" }}>
+              <div className="pdr-raw-hdr" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <span>bot 已收到 <b>{unorganizedMessages.length}</b> 則新訊息 · 尚未整理進日報</span>
+                <button className="btn btn-sm" onClick={() => void doRegenerate()} disabled={regenerating}>
+                  {regenerating ? "整理中…" : "整理進日報"}
+                </button>
+              </div>
+              {unorganizedMessages.map((m) => (
+                <div key={m.messageId} className="pdr-raw-item">
+                  <div className="pdr-raw-time">{formatTimeHM(m.sentAt)}</div>
+                  <div className="pdr-raw-text">
+                    {m.messageType === "text" && m.textContent}
+                    {m.messageType === "sticker" && <span style={{ color: "var(--ink-3)" }}>[貼圖]</span>}
+                    {m.messageType === "image" && <span style={{ color: "var(--ink-3)" }}>[圖片]</span>}
+                    {!["text", "sticker", "image"].includes(m.messageType) && <span style={{ color: "var(--ink-3)" }}>[{m.messageType}]</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {items.length > 0 && (
             <ReportPreview
