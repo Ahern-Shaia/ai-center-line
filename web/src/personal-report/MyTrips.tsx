@@ -119,7 +119,11 @@ export default function MyTrips() {
                       <div className="trip-detail-row"><span>直線距離</span><span>{straightKm != null ? `${straightKm} km` : "—"}</span></div>
                       <div className="trip-method">
                         {roadKm != null
-                          ? <>依你的出發／到點打卡、走實際道路路線計算{t.routeProvider ? `（${t.routeProvider}）` : ""}。地圖上該段折線即此里程的依據。</>
+                          ? <>依你的出發／到點打卡、走實際道路路線計算
+                              {t.routeProvider?.endsWith(":walk")
+                                ? "（此段距離短，採步行路線）"
+                                : t.routeProvider ? `（${t.routeProvider}）` : ""}
+                              。地圖上該段折線即此里程的依據。</>
                           : <>本段<b>道路路線暫時取不到</b>（地圖服務未回應），上方顯示的是兩點<b>直線距離</b>、地圖以虛線示意，非實際行駛距離。請聯繫管理員檢查地圖服務設定。</>}
                       </div>
                     </div>

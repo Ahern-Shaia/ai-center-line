@@ -13,7 +13,8 @@ export interface LatLng { lat: number; lng: number; }
 
 export interface RouteResult {
   distanceM: number;
-  polyline: string | null;   // encoded polyline（道路折線）· 供地圖繪製 · 取不到為 null
+  polyline: string | null;      // encoded polyline（道路折線）· 供地圖繪製 · 取不到為 null
+  mode?: "drive" | "walk";      // 實際採用的路線模式（drive 算不出時退步行）
 }
 
 export interface RoutingProvider {
@@ -37,7 +38,16 @@ async function fetchJson(url: string, init: RequestInit): Promise<unknown> {
 class GoogleRoutesProvider implements RoutingProvider {
   readonly name = "google_routes";
   constructor(private readonly key: string) {}
-  async computeRoute(from: LatLng, to: LatLng): Promise<RouteResult> {
+
+  private async requestRoute(from: LatLng, to: LatLng, travelMode: "DRIVE" | "WALK"): Promise<RouteResult | null> {
+    const body: Record<string, unknown> = {
+      origin: { location: { latLng: { latitude: from.lat, longitude: from.lng } } },
+      destination: { location: { latLng: { latitude: to.lat, longitude: to.lng } } },
+      travelMode,
+    };
+    // routingPreference 只允許 DRIVE / TWO_WHEELER；WALK 帶了會直接被 Google 拒絕
+    if (travelMode === "DRIVE") body.routingPreference = "TRAFFIC_UNAWARE";
+
     const d = await fetchJson("https://routes.googleapis.com/directions/v2:computeRoutes", {
       method: "POST",
       headers: {
@@ -45,23 +55,24 @@ class GoogleRoutesProvider implements RoutingProvider {
         "X-Goog-Api-Key": this.key,
         "X-Goog-FieldMask": "routes.distanceMeters,routes.polyline.encodedPolyline",
       },
-      body: JSON.stringify({
-        origin: { location: { latLng: { latitude: from.lat, longitude: from.lng } } },
-        destination: { location: { latLng: { latitude: to.lat, longitude: to.lng } } },
-        travelMode: "DRIVE",
-        routingPreference: "TRAFFIC_UNAWARE",
-      }),
+      body: JSON.stringify(body),
     }) as { routes?: Array<{ distanceMeters?: number; polyline?: { encodedPolyline?: string } }> };
+
     const m = d.routes?.[0]?.distanceMeters;
-    if (typeof m !== "number") {
-      // 帶上原始回應片段 · 否則「算不出來」無從診斷（常見：routes:[] ＝該兩點找不到行車路線）
-      const raw = JSON.stringify(d).slice(0, 200);
-      const hint = Array.isArray(d.routes) && d.routes.length === 0
-        ? "Google 找不到行車路線（兩點過近／不在道路網／座標異常）"
-        : "回應缺 distanceMeters";
-      throw new Error(`${hint} · from=${from.lat},${from.lng} to=${to.lat},${to.lng} · raw=${raw}`);
-    }
+    if (typeof m !== "number") return null;   // 找不到該模式的路線
     return { distanceM: Math.round(m), polyline: d.routes?.[0]?.polyline?.encodedPolyline ?? null };
+  }
+
+  // 先試開車路線（外勤多為開車 · 里程較具意義）；算不出來（極短距離／人行區／單行道死角）
+  // 自動退回步行路線，確保仍有實際路徑距離，而不是完全沒有數字。
+  async computeRoute(from: LatLng, to: LatLng): Promise<RouteResult> {
+    const drive = await this.requestRoute(from, to, "DRIVE");
+    if (drive) return drive;
+    const walk = await this.requestRoute(from, to, "WALK");
+    if (walk) return { ...walk, mode: "walk" };
+    throw new Error(
+      `Google 找不到行車或步行路線 · from=${from.lat},${from.lng} to=${to.lat},${to.lng}`,
+    );
   }
   async reverseGeocode(point: LatLng): Promise<string | null> {
     try {
@@ -81,16 +92,25 @@ class GoogleRoutesProvider implements RoutingProvider {
 class OpenRouteServiceProvider implements RoutingProvider {
   readonly name = "openrouteservice";
   constructor(private readonly key: string) {}
-  async computeRoute(from: LatLng, to: LatLng): Promise<RouteResult> {
+  private async requestRoute(from: LatLng, to: LatLng, profile: "driving-car" | "foot-walking"): Promise<RouteResult | null> {
     // ORS 座標順序為 [lng, lat] · 預設回 encoded polyline geometry + summary.distance
-    const d = await fetchJson("https://api.openrouteservice.org/v2/directions/driving-car", {
+    const d = await fetchJson(`https://api.openrouteservice.org/v2/directions/${profile}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: this.key },
       body: JSON.stringify({ coordinates: [[from.lng, from.lat], [to.lng, to.lat]] }),
     }) as { routes?: Array<{ summary?: { distance?: number }; geometry?: string }> };
     const m = d.routes?.[0]?.summary?.distance;
-    if (typeof m !== "number") throw new Error("ORS 回應無 summary.distance");
+    if (typeof m !== "number") return null;
     return { distanceM: Math.round(m), polyline: d.routes?.[0]?.geometry ?? null };
+  }
+
+  // 同 Google：先開車、算不出退步行（極短距離／人行區）
+  async computeRoute(from: LatLng, to: LatLng): Promise<RouteResult> {
+    const drive = await this.requestRoute(from, to, "driving-car").catch(() => null);
+    if (drive) return drive;
+    const walk = await this.requestRoute(from, to, "foot-walking").catch(() => null);
+    if (walk) return { ...walk, mode: "walk" };
+    throw new Error(`ORS 找不到行車或步行路線 · from=${from.lat},${from.lng} to=${to.lat},${to.lng}`);
   }
   async reverseGeocode(point: LatLng): Promise<string | null> {
     try {

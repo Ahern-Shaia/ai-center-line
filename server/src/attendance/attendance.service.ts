@@ -104,7 +104,8 @@ export class AttendanceService {
           const r = await provider.computeRoute(from, to);
           distanceM = r.distanceM;
           routeGeometry = r.polyline;
-          routeProvider = provider.name;
+          // 記下實際模式（drive 算不出時會退步行）→ 行程明細可標示，里程來源可稽核
+          routeProvider = r.mode === "walk" ? `${provider.name}:walk` : provider.name;
         } catch (e) {
           this.logger.warn(`里程計算失敗（${provider.name}）· ${(e as Error).message}`);
         }
@@ -214,7 +215,9 @@ export class AttendanceService {
           { lat: t.toLat, lng: t.toLng },
         );
         await withSystemTx((tx) => this.repo.fillTripDistance(tx, t.tripId, {
-          distanceM: r.distanceM, routeProvider: provider.name, routeGeometry: r.polyline,
+          distanceM: r.distanceM,
+          routeProvider: r.mode === "walk" ? `${provider.name}:walk` : provider.name,
+          routeGeometry: r.polyline,
         }));
         succeeded++;
         consecutiveFailures = 0;
