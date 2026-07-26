@@ -1816,6 +1816,11 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .trip-tl-badge.start { background:#ECFBFA; color:#0F766E; }
 .trip-tl-badge.arrive { background:#EEF0FD; color:#4338CA; }
 .trip-tl-place { color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.trip-tl-place.editable { background:none; border:none; padding:0; font:inherit; cursor:pointer; text-align:left; border-bottom:1px dashed var(--line); }
+.trip-tl-place.editable:hover { border-bottom-color:var(--ink-3); }
+.trip-tl-place.empty { color:var(--ink-3); }
+.trip-tl-edit { display:flex; align-items:center; gap:6px; flex:1; min-width:0; flex-wrap:wrap; }
+.trip-tl-edit .tf { flex:1 1 110px; min-width:0; padding:4px 8px; font-size:13px; }
 .trip-tl-foot { font-size:12px; color:var(--ink-3); margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); }
 
 .trip-list { margin-top:4px; }

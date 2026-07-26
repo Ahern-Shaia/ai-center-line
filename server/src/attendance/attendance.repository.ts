@@ -75,6 +75,18 @@ export class AttendanceRepository {
     return { punchId: res.rows[0].punch_id };
   }
 
+  // 補填/修正地點名稱。只動 customer_name——座標、時間、里程是證據，一律不可改（R11 原始不可變）。
+  // WHERE 帶 user_id：員工只能改自己的（RLS 已擋跨租戶，這層再擋跨員工 IDOR）。
+  async updatePunchLabel(tx: Db, punchId: string, userId: string, customerName: string | null): Promise<boolean> {
+    const res = await tx.execute<{ punch_id: string }>(sql`
+      UPDATE attendance_punch
+         SET customer_name = ${customerName}
+       WHERE punch_id = ${punchId}::uuid AND user_id = ${userId}::uuid
+      RETURNING punch_id
+    `);
+    return res.rows.length > 0;
+  }
+
   async insertTrip(tx: Db, t: {
     tenantId: string;
     userId: string;

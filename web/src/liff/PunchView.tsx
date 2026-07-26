@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, attendancePunch, getTrips, type TripRow } from "../api";
 import { useToast } from "../Toast";
 
@@ -22,6 +22,7 @@ export default function PunchView() {
   const toast = useToast();
   const [busy, setBusy] = useState<"clock_in" | "arrive_site" | null>(null);
   const [customer, setCustomer] = useState("");
+  const custRef = useRef<HTMLInputElement>(null);
   const [trips, setTrips] = useState<TripRow[]>([]);
   const [punchCount, setPunchCount] = useState<number | null>(null);   // null = 尚未載入
 
@@ -37,6 +38,9 @@ export default function PunchView() {
   async function punch(type: "clock_in" | "arrive_site") {
     if (busy) return;
     setBusy(type);
+    // 以 input 的 DOM 實際值為準，不只信 React state：
+    // iOS 中文輸入法「組字中」直接點按鈕時，onChange 可能還沒送出最後一段文字 → state 是空的、地點就漏了。
+    const typed = (custRef.current?.value ?? customer).trim();
     try {
       const pos = await getPosition();
       const { latitude, longitude, accuracy } = pos.coords;
@@ -45,7 +49,7 @@ export default function PunchView() {
         lat: latitude,
         lng: longitude,
         accuracyM: accuracy,
-        customerName: type === "arrive_site" && customer.trim() ? customer.trim() : undefined,
+        customerName: type === "arrive_site" && typed ? typed : undefined,
       });
       // 樂觀更新：打完立刻切成「記錄這一站」，不必等 refresh 回來（避免按鈕短暫停在舊狀態）
       setPunchCount((n) => (n ?? 0) + 1);
@@ -53,7 +57,9 @@ export default function PunchView() {
         toast.show("已開始外勤", "ok");
       } else {
         const km = res.trip?.distanceM != null ? (res.trip.distanceM / 1000).toFixed(1) : null;
-        toast.show(km ? `已記錄這一站 · 本段 ${km} km` : "已記錄這一站", "ok");
+        const base = km ? `已記錄這一站 · 本段 ${km} km` : "已記錄這一站";
+        // 沒填地點不擋打卡（打卡有時效、地點沒有），但要讓他知道還補得回來
+        toast.show(typed ? base : `${base} · 未填地點，可到「我的行程」補填`, "ok");
         setCustomer("");
       }
       void refresh();
@@ -84,7 +90,8 @@ export default function PunchView() {
       {!notStarted && (
         <div className="field" style={{ marginBottom: 12 }}>
           <label htmlFor="punch-cust">這一站是哪裡？（選填）</label>
-          <input id="punch-cust" className="tf" value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="例：福特斗六廠" />
+          <input id="punch-cust" ref={custRef} className="tf" value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="例：福特斗六廠" />
+          <div className="dm-empty-hint" style={{ marginTop: 4 }}>沒填也沒關係 · 之後可到「我的行程」補填</div>
         </div>
       )}
 

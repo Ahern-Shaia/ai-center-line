@@ -1,9 +1,10 @@
-import { BadRequestException, Body, Controller, Get, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { AttendanceService } from "./attendance.service.js";
 
 const PUNCH_TYPES = ["clock_in", "arrive_site", "clock_out"] as const;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // 外勤打卡 · JWT 認證（LIFF 先 applyLiffToken 換 JWT）· 用 CurrentUser 的 user_id/tenant_id
 // 見 docs/modules/attendance-location-mileage.md M1
@@ -33,6 +34,17 @@ export class AttendanceController {
       customerName: typeof body.customerName === "string" ? body.customerName.slice(0, 200) : null,
       source: "liff_geo",
     });
+  }
+
+  // 補填/修正地點名稱（只改標籤，不動座標/時間/里程）· 員工只能改自己的
+  @Patch("punch/:punchId/label")
+  async relabel(
+    @CurrentUser() user: JwtUser,
+    @Param("punchId") punchId: string,
+    @Body() body: { customerName?: string | null },
+  ) {
+    if (!UUID_RE.test(punchId)) throw new BadRequestException("punchId 格式不正確");
+    return this.svc.relabelPunch(user, punchId, typeof body?.customerName === "string" ? body.customerName : null);
   }
 
   // date 選填（YYYY-MM-DD，台北日）· 省略＝當日 · 只回自己的行程 + 打卡序列

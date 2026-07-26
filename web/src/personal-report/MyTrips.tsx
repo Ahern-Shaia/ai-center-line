@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { ApiError, getMapTileConfig, getTrips, type PunchRow, type TripRow } from "../api";
+import { ApiError, getMapTileConfig, getTrips, relabelPunch, type PunchRow, type TripRow } from "../api";
 import { useToast } from "../Toast";
 
 const TripMap = lazy(() => import("./TripMap"));
@@ -17,17 +17,18 @@ export default function MyTrips() {
 
   useEffect(() => { getMapTileConfig().then(setTile).catch(() => setTile({ tileProvider: "osm", tileApiKey: null })); }, []);
 
-  const load = useCallback(async (d: string) => {
-    setLoading(true);
+  // quiet：補填地點後重抓，不要整頁閃「載入中」
+  const load = useCallback(async (d: string, quiet = false) => {
+    if (!quiet) setLoading(true);
     try {
       const res = await getTrips(d);
       setTrips(res.trips);
       setPunches(res.punches);
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
-      setTrips([]); setPunches([]);
+      if (!quiet) { setTrips([]); setPunches([]); }
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, [toast]);
   useEffect(() => { void load(date); }, [date, load]);
@@ -73,13 +74,7 @@ export default function MyTrips() {
           <div className="trip-tl-hd">打卡時間軸</div>
           <div className="trip-tl">
             {punches.map((p) => (
-              <div key={p.punchId} className="trip-tl-row">
-                <span className="trip-tl-time">{formatTimeHM(p.punchedAt)}</span>
-                <span className={`trip-tl-badge ${p.punchType === "clock_in" ? "start" : "arrive"}`}>
-                  {p.punchType === "clock_in" ? "開始外勤" : "抵達"}
-                </span>
-                <span className="trip-tl-place">{p.customerName || p.address || "（未填地點）"}</span>
-              </div>
+              <PunchRowItem key={p.punchId} punch={p} onSaved={() => void load(date, true)} />
             ))}
           </div>
           <div className="trip-tl-foot">共 {punches.length} 個打卡點 · {trips.length} 段里程（少一段通常是漏打了一次卡）</div>
@@ -155,6 +150,63 @@ export default function MyTrips() {
             </div>
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+// 打卡一列 · 地點名稱可事後補填/修正。
+// 為什麼可以改：地點名稱是「給人看的標籤」，座標/時間/里程才是證據（那些一律不可改）。
+// 起因：客戶回報「有填地點卻沒出現」——打卡當下沒填成功時，事後補得回來就不會變成爭議。
+function PunchRowItem({ punch, onSaved }: { punch: PunchRow; onSaved: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const toast = useToast();
+
+  const filled = punch.customerName?.trim() ?? "";
+
+  async function save() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const next = value.trim();
+      await relabelPunch(punch.punchId, next || null);
+      toast.show(next ? "地點已更新" : "已清除地點", "ok");
+      setEditing(false);
+      onSaved();
+    } catch (e) {
+      toast.show(e instanceof ApiError ? e.message : "更新失敗", "danger");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="trip-tl-row">
+      <span className="trip-tl-time">{formatTimeHM(punch.punchedAt)}</span>
+      <span className={`trip-tl-badge ${punch.punchType === "clock_in" ? "start" : "arrive"}`}>
+        {punch.punchType === "clock_in" ? "開始外勤" : "抵達"}
+      </span>
+      {editing ? (
+        <span className="trip-tl-edit">
+          <input
+            className="tf" autoFocus placeholder="例：光華商場" value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") void save(); if (e.key === "Escape") setEditing(false); }}
+          />
+          <button className="btn btn-sm btn-primary" onClick={() => void save()} disabled={saving}>
+            {saving ? "儲存中…" : "儲存"}
+          </button>
+          <button className="btn btn-sm" onClick={() => setEditing(false)} disabled={saving}>取消</button>
+        </span>
+      ) : (
+        <button
+          className={`trip-tl-place editable${filled ? "" : " empty"}`}
+          onClick={() => { setValue(filled); setEditing(true); }}
+        >
+          {filled || punch.address || "＋ 補填地點"}
+        </button>
       )}
     </div>
   );

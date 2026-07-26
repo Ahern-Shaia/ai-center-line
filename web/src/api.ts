@@ -297,6 +297,11 @@ export interface PunchRow {
   lat: number | null; lng: number | null;
   punchedAt: string;
 }
+// 補填/修正某次打卡的地點名稱（只改標籤 · 座標時間里程不可改）
+export const relabelPunch = (punchId: string, customerName: string | null) =>
+  req<{ punchId: string; customerName: string | null }>(`/attendance/punch/${punchId}/label`, {
+    method: "PATCH", body: JSON.stringify({ customerName }),
+  });
 // date 選填（YYYY-MM-DD，台北日）· 省略＝當日 · 回行程 + 打卡序列
 export const getTrips = (date?: string) =>
   req<{ trips: TripRow[]; punches: PunchRow[] }>(`/attendance/trips${date ? `?date=${encodeURIComponent(date)}` : ""}`);

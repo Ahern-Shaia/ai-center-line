@@ -187,6 +187,18 @@ export class AttendanceService {
     });
   }
 
+  // 補填/修正某次打卡的地點名稱。
+  // 為什麼允許事後改：地點名稱是「給人看的標籤」，不是打卡證據——證據是座標、時間、里程，那些一律不可改。
+  // 因此這不是「補打卡」（design doc attendance-trip-state-machine §9 明確禁止），不構成造假空間。
+  // 寫入 audit 由全域 TenantTxInterceptor 自動記錄（R5）。
+  async relabelPunch(user: JwtUser, punchId: string, customerName: string | null): Promise<{ punchId: string; customerName: string | null }> {
+    if (!user.tenant_id) throw new BadRequestException("此帳號無所屬租戶");
+    const name = customerName?.trim() ? customerName.trim().slice(0, 200) : null;
+    const ok = await this.repo.updatePunchLabel(currentTx(), punchId, user.user_id, name);
+    if (!ok) throw new BadRequestException("找不到這筆打卡紀錄 · 或不屬於你");
+    return { punchId, customerName: name };
+  }
+
   // 指定台北日期的行程 + 打卡序列（dateStr = null → 當日）· 員工只看自己（以 JWT user_id 限定）
   async tripsByDate(user: JwtUser, dateStr: string | null) {
     if (dateStr !== null && !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
