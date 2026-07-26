@@ -41,10 +41,25 @@ type Phase = "init" | "binding" | "set-password" | "mine" | "punch" | "trips" | 
 
 const CENTER: React.CSSProperties = { minHeight: "70vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" };
 
+// 三個 LIFF 頁共用 liff.html，其 <title> 只是預設值 → 依實際頁面切換，
+// 否則使用者從「我的行程」開啟卻看到標題寫「我的日報」。
+const PHASE_TITLE: Partial<Record<Phase, string>> = {
+  mine: "我的日報",
+  trips: "我的行程",
+  punch: "外勤打卡",
+  binding: "員工綁定",
+  "set-password": "設定密碼",
+};
+
 function LiffApp() {
   const [phase, setPhase] = useState<Phase>("init");
   const [ctx, setCtx] = useState<LiffCtx | null>(null);
   const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    const t = PHASE_TITLE[phase];
+    if (t) document.title = t;
+  }, [phase]);
 
   useEffect(() => {
     (async () => {
@@ -95,6 +110,7 @@ function LiffApp() {
   if (phase === "mine") return <MyDailyReport />;
   if (phase === "punch") return <PunchView />;
   if (phase === "trips") return <MyTrips />;
+  // 註：分頁標題由下方 useEffect 依 phase 切換（liff.html 的 <title> 是三頁共用的預設值）
   if (phase === "binding" && ctx) return <BindingView ctx={ctx} />;
   if (phase === "set-password" && ctx) return <SetPasswordView ctx={ctx} liff={window.liff} />;
   return null;

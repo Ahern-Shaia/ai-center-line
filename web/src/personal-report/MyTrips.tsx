@@ -43,7 +43,7 @@ export default function MyTrips() {
       <div className="pane-hdr">
         <div>
           <h1>我的行程 · {displayDate}</h1>
-          <div className="sub">外勤逐段路線里程 · 出發＋到點各打一次卡自動記錄 · 數字皆可對照下方地圖與打卡紀錄</div>
+          <div className="sub">外勤各段路程 · 依打卡自動記錄 · 數字皆可對照下方地圖與打卡紀錄</div>
         </div>
         <div className="hdr-toolbar">
           <div className="hdr-group">
@@ -59,7 +59,7 @@ export default function MyTrips() {
       ) : trips.length === 0 && punches.length === 0 ? (
         <div className="dm-empty">
           這天沒有外勤行程
-          <div className="dm-empty-hint">當天有「出發」＋「到點」打卡才會出現逐段行程</div>
+          <div className="dm-empty-hint">當天按過「開始外勤」與「記錄這一站」才會出現各段路程</div>
         </div>
       ) : (
         <>
@@ -76,7 +76,7 @@ export default function MyTrips() {
               <div key={p.punchId} className="trip-tl-row">
                 <span className="trip-tl-time">{formatTimeHM(p.punchedAt)}</span>
                 <span className={`trip-tl-badge ${p.punchType === "clock_in" ? "start" : "arrive"}`}>
-                  {p.punchType === "clock_in" ? "出發" : "到點"}
+                  {p.punchType === "clock_in" ? "開始外勤" : "抵達"}
                 </span>
                 <span className="trip-tl-place">{p.customerName || p.address || "（未填地點）"}</span>
               </div>
@@ -97,7 +97,7 @@ export default function MyTrips() {
                     <span className="trip-idx">第 {i + 1} 段</span>
                     <span className="trip-body">
                       <span className="trip-dest">{t.destination || "未填地點"}</span>
-                      <span className="trip-time">{formatTimeHM(t.arrivedAt)} 到點 · 點開看依據</span>
+                      <span className="trip-time">{formatTimeHM(t.arrivedAt)} 抵達 · 點開看依據</span>
                     </span>
                     {t.routeProvider === "same_location" ? (
                       <span className="trip-km" style={{ textAlign: "right" }}>
@@ -127,8 +127,8 @@ export default function MyTrips() {
                   </button>
                   {open && (
                     <div className="trip-detail">
-                      <div className="trip-detail-row"><span>出發</span><span>{formatTimeHM(t.departedAt)}{t.fromAddress ? ` · ${t.fromAddress}` : ""}</span></div>
-                      <div className="trip-detail-row"><span>到點</span><span>{formatTimeHM(t.arrivedAt)}{t.toAddress ? ` · ${t.toAddress}` : ""}</span></div>
+                      <div className="trip-detail-row"><span>起點時間</span><span>{formatTimeHM(t.departedAt)}{t.fromAddress ? ` · ${t.fromAddress}` : ""}</span></div>
+                      <div className="trip-detail-row"><span>抵達時間</span><span>{formatTimeHM(t.arrivedAt)}{t.toAddress ? ` · ${t.toAddress}` : ""}</span></div>
                       <div className="trip-detail-row"><span>道路里程</span><span>{roadKm != null ? `${roadKm} km` : "未取得"}</span></div>
                       <div className="trip-detail-row"><span>直線距離</span><span>{straightKm != null ? `${straightKm} km` : "—"}</span></div>
                       <div className="trip-method">
@@ -137,7 +137,7 @@ export default function MyTrips() {
                           : t.routeProvider === "straight_fallback"
                           ? <>本段當時<b>取不到道路路線</b>（地圖服務未回應），先以兩點<b>直線距離</b>計算、地圖以虛線示意。待地圖服務恢復後，管理員可執行補算升級為實際道路里程。</>
                           : roadKm != null
-                          ? <>依你的出發／到點打卡、走實際道路路線計算
+                          ? <>依你的兩次打卡位置、走實際道路路線計算
                               {t.routeProvider?.endsWith(":walk")
                                 ? "（此段距離短，採步行路線）"
                                 : t.routeProvider ? `（${t.routeProvider}）` : ""}

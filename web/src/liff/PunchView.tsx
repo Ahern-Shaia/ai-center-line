@@ -43,10 +43,10 @@ export default function PunchView() {
         customerName: type === "arrive_site" && customer.trim() ? customer.trim() : undefined,
       });
       if (type === "clock_in") {
-        toast.show("已出發打卡", "ok");
+        toast.show("已開始外勤", "ok");
       } else {
         const km = res.trip?.distanceM != null ? (res.trip.distanceM / 1000).toFixed(1) : null;
-        toast.show(km ? `已到點打卡 · 本段 ${km} km` : "已到點打卡", "ok");
+        toast.show(km ? `已記錄這一站 · 本段 ${km} km` : "已記錄這一站", "ok");
         setCustomer("");
       }
       void refresh();
@@ -63,19 +63,21 @@ export default function PunchView() {
   return (
     <div className="liff-wrap">
       <h2 className="liff-h">外勤打卡</h2>
-      <p className="liff-sub">出發打一次、到每個點再打一次，系統自動算路線里程（逐段記錄）。</p>
+      {/* 文案用員工視角：出門按一次「開始外勤」，之後每到一個地方按「記錄這一站」。
+          原本「出發／到點」是資料模型用語，且暗示每段要成對，與實際操作不符。 */}
+      <p className="liff-sub">出門時按一次「開始外勤」，之後每到一個地方就按「記錄這一站」，系統會自動算出各段路程。</p>
 
       <div className="field" style={{ marginBottom: 12 }}>
-        <label htmlFor="punch-cust">到點的客戶／地點（選填）</label>
+        <label htmlFor="punch-cust">這一站是哪裡？（選填）</label>
         <input id="punch-cust" className="tf" value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="例：福特斗六廠" />
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        <button className="btn" style={{ flex: 1, padding: 14, fontSize: 15 }} onClick={() => void punch("clock_in")} disabled={busy !== null}>
-          {busy === "clock_in" ? "定位中…" : "出發打卡"}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+        <button className="btn btn-primary" style={{ padding: 16, fontSize: 16 }} onClick={() => void punch("arrive_site")} disabled={busy !== null}>
+          {busy === "arrive_site" ? "定位中…" : "記錄這一站"}
         </button>
-        <button className="btn btn-primary" style={{ flex: 1, padding: 14, fontSize: 15 }} onClick={() => void punch("arrive_site")} disabled={busy !== null}>
-          {busy === "arrive_site" ? "定位中…" : "到點打卡"}
+        <button className="btn" style={{ padding: 12, fontSize: 14 }} onClick={() => void punch("clock_in")} disabled={busy !== null}>
+          {busy === "clock_in" ? "定位中…" : "開始外勤（出門時按一次）"}
         </button>
       </div>
 
@@ -83,7 +85,7 @@ export default function PunchView() {
       {trips.length === 0 ? (
         <div className="dm-empty" style={{ padding: "16px 0" }}>
           今天還沒有移動紀錄
-          <div className="dm-empty-hint">「出發」＋「到點」各打一次卡，就會出現逐段里程</div>
+          <div className="dm-empty-hint">按「開始外勤」後，每到一個地方按「記錄這一站」，就會出現各段路程</div>
         </div>
       ) : (
         <>
