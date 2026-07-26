@@ -23,9 +23,14 @@ export default function PunchView() {
   const [busy, setBusy] = useState<"clock_in" | "arrive_site" | null>(null);
   const [customer, setCustomer] = useState("");
   const [trips, setTrips] = useState<TripRow[]>([]);
+  const [punchCount, setPunchCount] = useState<number | null>(null);   // null = 尚未載入
 
   const refresh = useCallback(async () => {
-    try { setTrips((await getTrips()).trips); } catch { /* 靜默 · 非核心 */ }
+    try {
+      const res = await getTrips();
+      setTrips(res.trips);
+      setPunchCount(res.punches.length);
+    } catch { /* 靜默 · 非核心 */ }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -42,6 +47,8 @@ export default function PunchView() {
         accuracyM: accuracy,
         customerName: type === "arrive_site" && customer.trim() ? customer.trim() : undefined,
       });
+      // 樂觀更新：打完立刻切成「記錄這一站」，不必等 refresh 回來（避免按鈕短暫停在舊狀態）
+      setPunchCount((n) => (n ?? 0) + 1);
       if (type === "clock_in") {
         toast.show("已開始外勤", "ok");
       } else {
@@ -58,34 +65,54 @@ export default function PunchView() {
     }
   }
 
-  const totalKm = trips.reduce((s, t) => s + (t.distanceM ?? 0), 0) / 1000;
+  const totalKm = trips.reduce((s, t) => s + (t.distanceM ?? t.straightDistanceM ?? 0), 0) / 1000;
+  const loadingState = punchCount === null;          // 尚未知道今天狀態 → 先不給按鈕，避免閃動誤按
+  const notStarted = punchCount === 0;               // 今天還沒任何打卡 → 只給「開始外勤」
 
   return (
     <div className="liff-wrap">
       <h2 className="liff-h">外勤打卡</h2>
-      {/* 文案用員工視角：出門按一次「開始外勤」，之後每到一個地方按「記錄這一站」。
-          原本「出發／到點」是資料模型用語，且暗示每段要成對，與實際操作不符。 */}
-      <p className="liff-sub">出門時按一次「開始外勤」，之後每到一個地方就按「記錄這一站」，系統會自動算出各段路程。</p>
+      {/* 防呆：一次只給一顆按鈕。今天還沒打卡 → 只能「開始外勤」；已開始 → 只出現「記錄這一站」。
+          兩顆並列時小白容易按錯（原本「出發／到點」也是資料模型用語，非員工視角）。 */}
+      <p className="liff-sub">
+        {notStarted
+          ? "出門時按一下「開始外勤」，之後每到一個地方再記錄一次，系統會自動算出各段路程。"
+          : "每到一個地方就按一下，系統會自動算出從上一站到這裡的路程。"}
+      </p>
 
-      <div className="field" style={{ marginBottom: 12 }}>
-        <label htmlFor="punch-cust">這一站是哪裡？（選填）</label>
-        <input id="punch-cust" className="tf" value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="例：福特斗六廠" />
-      </div>
+      {/* 地點欄只在「記錄這一站」階段才有意義（開始外勤不需填地點）*/}
+      {!notStarted && (
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label htmlFor="punch-cust">這一站是哪裡？（選填）</label>
+          <input id="punch-cust" className="tf" value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="例：福特斗六廠" />
+        </div>
+      )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-        <button className="btn btn-primary" style={{ padding: 16, fontSize: 16 }} onClick={() => void punch("arrive_site")} disabled={busy !== null}>
-          {busy === "arrive_site" ? "定位中…" : "記錄這一站"}
-        </button>
-        <button className="btn" style={{ padding: 12, fontSize: 14 }} onClick={() => void punch("clock_in")} disabled={busy !== null}>
-          {busy === "clock_in" ? "定位中…" : "開始外勤（出門時按一次）"}
-        </button>
+      <div style={{ marginBottom: 20 }}>
+        {loadingState ? (
+          <button className="btn" style={{ width: "100%", padding: 16, fontSize: 16 }} disabled>載入中…</button>
+        ) : notStarted ? (
+          <button className="btn btn-primary" style={{ width: "100%", padding: 16, fontSize: 16 }}
+            onClick={() => void punch("clock_in")} disabled={busy !== null}>
+            {busy === "clock_in" ? "定位中…" : "開始外勤"}
+          </button>
+        ) : (
+          <button className="btn btn-primary" style={{ width: "100%", padding: 16, fontSize: 16 }}
+            onClick={() => void punch("arrive_site")} disabled={busy !== null}>
+            {busy === "arrive_site" ? "定位中…" : "記錄這一站"}
+          </button>
+        )}
       </div>
 
       <div className="liff-groups-hd">今日移動紀錄</div>
       {trips.length === 0 ? (
         <div className="dm-empty" style={{ padding: "16px 0" }}>
           今天還沒有移動紀錄
-          <div className="dm-empty-hint">按「開始外勤」後，每到一個地方按「記錄這一站」，就會出現各段路程</div>
+          <div className="dm-empty-hint">
+            {notStarted
+              ? "按上方「開始外勤」開始今天的行程"
+              : "已開始外勤 · 到下一個地方時按「記錄這一站」，就會出現路程"}
+          </div>
         </div>
       ) : (
         <>
