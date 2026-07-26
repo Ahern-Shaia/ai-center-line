@@ -570,6 +570,8 @@ M4 收尾走一次完整流程：登入 → 上傳 mock 檔 → 等分析 → �
 | **L2 · 鄰近 LINE 客服 SaaS** | 超人氣 / 麥當勞線上 / CYBERBIZ AI / Cresclab · Chat-Data / GPTBots / SleekFlow | **全部對外客服、非內部群管理** | 低（不同用戶群）|
 | **L3 · Slack 對應 · reference model** | Unthread / Question Base / ClearFeed / Zendesk Slack App | Slack 生態成熟、LINE 生態幾乎沒 equivalent | 0 威脅（可借 pattern）|
 | **L4 · Ragic AI Agent** | Ragic 官方 AI（data input assistant · form design helper · 內建 AI Agent 報價/客服/知識庫）| **原視為最大平台威脅** · 但 EEA PDF §2.6 已明確定位「Ragic AI Agent 僅作合作關係風險對沖、輕量補充」+ 我方 weyver 走取代路線 | **中→低**（見 §17.3）|
+| **L5 · 外勤業務執行管理 APP**（2026-07-26 新增）| **業務王 Salesking**（威納科技）· 小步外勤/外勤365（陸系）· Vital CRM 行動版 | 與我方 attendance / personal-daily-report **正面重疊**；但資料採集全靠員工手填表單、無群組對話源 | **中** — 詳見 [`../market/競品分析-業務王Salesking.md`](../market/競品分析-業務王Salesking.md) |
+| **L6 · LINE 打卡／差勤**（2026-07-26 新增）| NUEIP · Femas HR · 104 企業大師 · 打卡之星 · 鼎新 LINE 打卡 | 只做出勤不做業務內容，但**「LINE 原生免裝 App」這張牌他們也在打**、價格帶 NT$35-70/人/月 | **中高**（我方溢價不可來自打卡本身）|
 
 ### 17.2 我方產品線架構（一次講清）
 
