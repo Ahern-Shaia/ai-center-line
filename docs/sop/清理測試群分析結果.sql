@@ -10,11 +10,36 @@
 -- 不刪 line_message（LINE 收到的原始訊息 = 事實來源，R11 原始不可變）。
 -- 只要把該群的 analyze_enabled 關掉，之後就不會再被分析（見 STEP 4）。
 
+-- ============================================================
+-- STEP 0 · ⚠️ 先開 RLS 上下文，否則所有查詢都回 0 rows（不是沒資料，是被擋）
+-- ============================================================
+-- 這幾張表都是 FORCE ROW LEVEL SECURITY —— 連 table owner 都受政策約束
+-- （只有 superuser 會整個 bypass，Render 的 managed PG 一般不是 superuser）。
+-- psql 直連沒有應用層的 SET，policy 讀到的 current_setting 全是 NULL → 一律不通過。
+--
+-- 各表要求不同，**兩個都要設**：
+--   line_group      actor_role ∈ (aiproot_admin/consultant/system)  或 bot 的 tenant 相符
+--   analysis_batch  tenant 相符 或 actor_role ∈ (...)
+--   tickets         ⚠️ **一定要 tenant 相符**（AND 條件，沒有 actor_role 逃生門）
+--   analysis_upload / analysis_result  無 RLS
+--
+-- 只設 actor_role 的話，前面查得到、但 STEP 3a 刪 tickets 會「成功刪掉 0 筆」，
+-- 任務看板上的卡片還在 —— 又是一次無聲失敗。
+SET app.actor_role = 'system';
+SET app.current_tenant = '4d97eced-64c5-4a38-952b-dfce9588ab7c';   -- ← 台灣福祉；換租戶要改
+
+-- 確認有生效（兩個都要有值）
+SELECT current_setting('app.actor_role', true) AS actor_role,
+       current_setting('app.current_tenant', true) AS tenant;
+
 \set group_name '台灣福祉機器人測試群'
 
 -- ============================================================
 -- STEP 1 · 先看：這個群是誰、會影響哪些資料（不刪任何東西）
 -- ============================================================
+-- 查不到的話先確認：① STEP 0 有跑嗎 ② display_name 可能是 NULL
+--（bot 沒抓到群名時就會是 NULL）→ 改用下面這句列出全部群再挑：
+--   SELECT group_registry_id, group_id, display_name, analyze_enabled FROM line_group ORDER BY first_seen_at DESC;
 SELECT group_registry_id, group_id, display_name, analyze_enabled, status
 FROM line_group
 WHERE display_name = :'group_name';
@@ -44,6 +69,7 @@ FROM analysis_upload WHERE group_id = :'gid' ORDER BY id;
 BEGIN;
 
 -- 3a. 先刪 ticket（FK 是 SET NULL，不會自己跟著走）
+--     ⚠️ 若這句回 DELETE 0 但 STEP 1 明明有查到 ticket → app.current_tenant 沒設對
 DELETE FROM tickets
 WHERE source_upload_id IN (SELECT id FROM analysis_upload WHERE group_id = :'gid');
 
