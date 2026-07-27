@@ -50,7 +50,7 @@ export class HubAuditRepository {
   async listRecent(opts: { limit: number; ruleId?: string | null; status?: string | null }): Promise<HubLogRow[]> {
     const res = await db.execute<RawLogRow>(sql`
       SELECT l.received_at, l.status, l.sheet_path, l.record_id, l.line_status, l.line_message,
-             l.latency_ms, l.message_text, l.source_type, l.channel, l.rule_id, r.name AS rule_name
+             l.latency_ms, l.message_text, l.source_type, l.channel, l.rule_id, l.audit, r.name AS rule_name
         FROM notification_log l
         LEFT JOIN notification_rule r ON r.rule_id = l.rule_id
        WHERE (${opts.ruleId ?? null}::uuid IS NULL OR l.rule_id = ${opts.ruleId ?? null}::uuid)
@@ -71,6 +71,7 @@ export class HubAuditRepository {
       channel: r.channel,
       ruleId: r.rule_id,
       ruleName: r.rule_name,
+      audit: r.audit,
     }));
   }
 }
@@ -80,12 +81,12 @@ type RawLogRow = {
   received_at: string; status: string; sheet_path: string | null; record_id: number | null;
   line_status: number | null; line_message: string | null; latency_ms: number | null;
   message_text: string | null; source_type: string | null; channel: string | null;
-  rule_id: string | null; rule_name: string | null;
+  rule_id: string | null; rule_name: string | null; audit: Record<string, unknown> | null;
 };
 
 export interface HubLogRow {
   receivedAt: string; status: string; sourceRef: string | null; recordId: number | null;
   lineStatus: number | null; lineMessage: string | null; latencyMs: number | null;
   messageText: string | null; sourceType: string | null; channel: string | null;
-  ruleId: string | null; ruleName: string | null;
+  ruleId: string | null; ruleName: string | null; audit: Record<string, unknown> | null;
 }

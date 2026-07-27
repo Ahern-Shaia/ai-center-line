@@ -19,6 +19,12 @@ export interface NotificationEvent {
   sourceRef?: string;
   /** audit 用 · 來源記錄 id */
   recordId?: number;
+  /**
+   * audit 用 · 排查線索（會存進 notification_log.audit）。
+   * 「欄位全是（未填）」有好幾種可能：抓不到完整 record、payload 的 key 與模板 path 對不起來、
+   * 或資料本來就空——沒有這些線索只能猜。
+   */
+  diagnostics?: Record<string, unknown>;
 }
 
 export interface RuleRow {

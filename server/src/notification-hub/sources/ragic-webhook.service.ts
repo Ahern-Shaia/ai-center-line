@@ -38,23 +38,48 @@ export class RagicWebhookService {
     // 取完整 record（非 DELETE 且有 key）· 失敗降級用 webhook 帶的值
     let payload = parsed.recordData;
     let link: string | null = null;
+    // 排查線索：訊息欄位全空時，用來分辨是「沒抓到 record」「key 對不上」還是「資料真的空」
+    const diagnostics: Record<string, unknown> = {
+      webhookBodyKeys: Object.keys((body ?? {}) as Record<string, unknown>).slice(0, 10),
+      parsedEventType: parsed.eventType,
+      parsedRecordId: parsed.recordId,
+      recordFetched: false,
+    };
+
     if (parsed.recordId != null) {
       const acc = await withSystemTx((tx) => this.rules.getRagicAccount(tx, cfg.ragicAccountId));
-      if (acc) {
+      if (!acc) {
+        diagnostics.fetchSkipped = "找不到 Ragic 帳號設定";
+      } else {
         link = `https://${acc.server}.ragic.com/${acc.apname}${cfg.sheetPath}/${parsed.recordId}`;
-        if (parsed.eventType !== "DELETE" && acc.apiKey) {
+        if (parsed.eventType === "DELETE") {
+          diagnostics.fetchSkipped = "DELETE 事件不取 record";
+        } else if (!acc.apiKey) {
+          diagnostics.fetchSkipped = "此 Ragic 帳號未設定 API 金鑰 → 只能用 webhook 帶的內容";
+        } else {
           try {
             payload = await this.api.fetchRecord(
               { server: acc.server, apname: acc.apname, apiKey: acc.apiKey },
               cfg.sheetPath,
               parsed.recordId,
             );
+            diagnostics.recordFetched = true;
           } catch (e) {
+            diagnostics.fetchError = (e as Error).message.slice(0, 300);
             this.logger.warn(`fetch record 失敗 · 改用 webhook 內容 · ${(e as Error).message}`);
           }
         }
       }
+    } else {
+      diagnostics.fetchSkipped = "webhook 未帶 record id";
     }
+
+    // 模板 path 與 payload key 對不上是「全部（未填）」最隱蔽的成因 → 直接把兩邊列出來比
+    const payloadKeys = Object.keys(payload);
+    diagnostics.payloadKeys = payloadKeys.slice(0, 20);
+    diagnostics.payloadKeyCount = payloadKeys.length;
+    diagnostics.templatePaths = (rule.template.items ?? []).map((i) => i.path).slice(0, 20);
+    diagnostics.matchedPaths = (rule.template.items ?? []).filter((i) => i.path in payload).length;
 
     const event: NotificationEvent = {
       sourceType: "ragic_form",
@@ -65,6 +90,7 @@ export class RagicWebhookService {
       link,
       sourceRef: cfg.sheetPath,
       recordId: parsed.recordId ?? 0,
+      diagnostics,
     };
 
     const res = await this.pipeline.deliver(rule, event);

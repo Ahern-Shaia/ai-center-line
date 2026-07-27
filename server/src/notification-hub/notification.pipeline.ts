@@ -94,7 +94,7 @@ export class NotificationPipeline {
       lineMessage: res.ok ? undefined : res.message,
       latencyMs: Date.now() - startedAt,
       messageText: text,
-      audit: { eventLabel: event.eventLabel, eventType: event.eventType ?? null },
+      audit: { eventLabel: event.eventLabel, eventType: event.eventType ?? null, ...(event.diagnostics ?? {}) },
     });
 
     if (res.ok) return { status: "sent" };
