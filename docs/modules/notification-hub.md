@@ -103,6 +103,10 @@
 | 管道失敗 | LINE/email 掛 | P2 | 不 retry、audit line_failed（沿用 v2）|
 | 遷移 | v2 資料搬錯 | P2 | 一次性搬 + 對數量 + 保留 webhook_token 不變 |
 | PII 跨管道 | email 外洩地址/個資 | **P1** | 管道級遮罩策略；email 屬 Phase 2 再定 |
+| **audit 靜默失效** | pipeline 寫入 `skipped_event` / `skipped_filter`，但 `notification_log_status_check` 停在 0004 的舊清單 → INSERT 違反約束 → `HubAuditRepository` catch 後只留一行 warn，**log 完全沒有紀錄** | **P0** | ✅ **migration 0029** 補上兩個狀態值。教訓：**新增 enum 值時要連 CHECK 一起改**；且 audit 寫入失敗只 warn 不拋，正是這類問題能潛伏的原因 |
+| **無排查介面** | 使用者回報「改了卻沒通知」時，後台看不到任何紀錄，只能靠推理 | **P1** | ✅ **通知紀錄分頁**（`GET /notify-config/logs`）· 狀態一律翻成「所以我該做什麼」· 空紀錄的空狀態直接指向「Webhook 沒貼進 Ragic」 |
+
+> 這兩條由 2026-07-27 一次真實客訴反推出來（Ragic 改資料沒收到通知，查無線索）。
 
 ## 9. 里程碑
 | 里程碑 | 內容 | 狀態 |
