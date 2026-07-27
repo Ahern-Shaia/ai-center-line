@@ -1,115 +1,121 @@
-import { useMemo, useState } from "react";
-import { AUDIT_LOG, type AuditAction } from "../mockdata/auditLog";
-import StyledSelect from "../shared/StyledSelect";
+import { useCallback, useEffect, useState } from "react";
+import { ApiError, listAudit, type AuditItem, type AuditScope } from "../api";
+import { useToast } from "../Toast";
 
-const ACTION_OPTIONS: (AuditAction | "all")[] = ["all", "登入", "查看", "簽核", "駁回", "代簽核", "檢索", "匯出", "變更設定"];
-const ACTION_LABEL: Record<string, string> = { all: "全部動作" };
+// 稽核記錄 · 讀真實的 audit_log
+//
+// 這頁到 2026-07-28 為止顯示的是編造的稽核事件，連 IP 和對象都是假的。
+// 合規性質的頁面顯示編造的紀錄，比顯示「尚無資料」危險得多。
+//
+// 真實資料沒有 IP、沒有對象、沒有部門（那三欄從來沒被寫入），所以這裡就不放這三欄——
+// 擺著空欄位只會讓人以為是資料掉了。
+
+const SCOPES: { id: AuditScope; label: string; hint: string }[] = [
+  { id: "all", label: "全部", hint: "包含查看紀錄，筆數很多" },
+  { id: "write", label: "只看變更", hint: "簽核、派發、修改設定等會改到資料的操作" },
+  { id: "login", label: "只看登入", hint: "誰在什麼時候登入" },
+];
 
 function fmtTs(iso: string): string {
   const d = new Date(iso);
-  return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")} ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")}`;
-}
-
-function outcomeTag(o: string): string {
-  if (o === "成功") return "ok";
-  if (o === "已攔截") return "warn";
-  return "danger";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
 export default function AuditLog() {
-  const [action, setAction] = useState<AuditAction | "all">("all");
-  const [actor, setActor] = useState<string>("");
-  const [q, setQ] = useState("");
+  const toast = useToast();
+  const [scope, setScope] = useState<AuditScope>("write");
+  const [page, setPage] = useState(1);
+  const [items, setItems] = useState<AuditItem[]>([]);
+  const [hasNext, setHasNext] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const actors = useMemo(() => Array.from(new Set(AUDIT_LOG.map((e) => e.actor))).sort(), []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await listAudit(scope, page);
+      setItems(res.items);
+      setHasNext(res.hasNext);
+    } catch (e) {
+      toast.show(e instanceof ApiError ? e.message : "載入失敗", "danger");
+    } finally {
+      setLoading(false);
+    }
+  }, [scope, page, toast]);
+  useEffect(() => { void load(); }, [load]);
 
-  const list = useMemo(() => {
-    return AUDIT_LOG.filter((e) => {
-      if (action !== "all" && e.action !== action) return false;
-      if (actor && e.actor !== actor) return false;
-      if (q.trim() && !e.target.includes(q.trim())) return false;
-      return true;
-    });
-  }, [action, actor, q]);
+  const current = SCOPES.find((s) => s.id === scope)!;
 
   return (
     <>
       <div className="pane-hdr">
         <div>
           <h1>稽核記錄</h1>
-          <div className="sub">所有帳號的登入、查看、簽核、檢索、匯出、變更設定行為 · 保留 3 年 · 支援 SOC 2 / ISO 27001 稽核</div>
+          <div className="sub">系統自動記錄每一次操作 · 依時間倒序 · {current.hint}</div>
         </div>
       </div>
 
       <div className="al-toolbar">
-        <input
-          className="al-search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="搜尋對象，例如：WO-2506 / T-030 / STARIA"
-          aria-label="搜尋對象"
-        />
-        <StyledSelect
-          items={actors.map((a) => ({ id: a, label: a }))}
-          value={actor}
-          onChange={setActor}
-          ariaLabel="使用者篩選"
-          allowEmpty
-          emptyLabel="全部使用者"
-          className="llm-select al-select"
-        />
-
         <div className="al-actions">
-          {ACTION_OPTIONS.map((a) => (
+          {SCOPES.map((s) => (
             <button
-              key={a}
-              className={`al-action-chip${action === a ? " active" : ""}`}
-              onClick={() => setAction(a)}
+              key={s.id}
+              className={`al-action-chip${scope === s.id ? " active" : ""}`}
+              onClick={() => { setScope(s.id); setPage(1); }}
+              disabled={loading}
             >
-              {a === "all" ? "全部" : a}
+              {s.label}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="al-count mono">共 {list.length} 筆 · 依時間倒序</div>
-
-      <div className="al-table-wrap">
-        <table className="al-table">
-          <thead>
-            <tr>
-              <th>時間</th>
-              <th>使用者</th>
-              <th>角色</th>
-              <th>動作</th>
-              <th>對象</th>
-              <th>部門</th>
-              <th>結果</th>
-              <th>IP</th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.map((e) => (
-              <tr key={e.id}>
-                <td className="mono al-td-ts">{fmtTs(e.ts)}</td>
-                <td>{e.actor}</td>
-                <td className="al-td-role">{e.actorRole}</td>
-                <td><span className="tag ok" style={{ borderColor: "var(--ink-3)", color: "var(--ink-2)" }}>{e.action}</span></td>
-                <td className="al-td-target">{e.target}</td>
-                <td className="al-td-dept">{e.targetDept ?? "—"}</td>
-                <td><span className={`tag ${outcomeTag(e.outcome)}`}>{e.outcome}</span></td>
-                <td className="mono al-td-ip">{e.ip}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {list.length === 0 && (
-        <div className="state" style={{ marginTop: 16 }}>
-          <h3>找不到符合的稽核事件</h3>
-          <p>試試調整動作類型或使用者篩選</p>
+      {loading && items.length === 0 ? (
+        <div className="dm-empty">載入中…</div>
+      ) : items.length === 0 ? (
+        <div className="dm-empty">
+          這個範圍還沒有紀錄
+          <div className="dm-empty-hint">換一個範圍看看，或稍後再回來</div>
         </div>
+      ) : (
+        <>
+          <div className="al-table-wrap">
+            <table className="al-table">
+              <thead>
+                <tr>
+                  <th>時間</th>
+                  <th>使用者</th>
+                  <th>角色</th>
+                  <th>動作</th>
+                  <th>結果</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((e) => (
+                  <tr key={e.id}>
+                    <td className="mono al-td-ts">{fmtTs(e.at)}</td>
+                    <td>{e.actorName ?? "—"}</td>
+                    <td className="al-td-role">{e.actorRole ?? "—"}</td>
+                    <td className="al-td-target">
+                      <span className="tag" style={e.isWrite
+                        ? { borderColor: "var(--primary)", color: "var(--primary-2)" }
+                        : { borderColor: "var(--ink-3)", color: "var(--ink-2)" }}>
+                        {e.action}
+                      </span>
+                    </td>
+                    <td><span className={`tag ${e.result === "成功" ? "ok" : "warn"}`}>{e.result}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="ml-pager">
+            <button className="btn" disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>上一頁</button>
+            <span className="ml-pager-at mono">第 {page} 頁</span>
+            <button className="btn" disabled={!hasNext || loading} onClick={() => setPage((p) => p + 1)}>下一頁</button>
+          </div>
+        </>
       )}
     </>
   );

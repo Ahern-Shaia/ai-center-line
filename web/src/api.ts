@@ -1294,3 +1294,19 @@ export async function fetchMediaBlobUrl(mediaId: string): Promise<string> {
   if (!res.ok) throw new ApiError(res.status, friendlyStatusMessage(res.status));
   return URL.createObjectURL(await res.blob());
 }
+
+// 稽核記錄 · 讀 audit_log（原本這頁是編造的事件）
+export interface AuditItem {
+  id: string;
+  at: string;
+  actorName: string | null;
+  actorRole: string | null;
+  action: string;
+  isWrite: boolean;
+  result: string;
+}
+export type AuditScope = "all" | "write" | "login";
+export const listAudit = (scope: AuditScope, page: number) =>
+  req<{ items: AuditItem[]; page: number; pageSize: number; hasNext: boolean }>(
+    `/audit?scope=${scope}&page=${page}`,
+  );

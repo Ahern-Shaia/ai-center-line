@@ -39,10 +39,10 @@ const NAV: Array<{
     group: "資料 · 知識",
     roles: ["aiproot_admin", "consultant", "tenant_admin", "group_owner"],   // employee 只看「我的日報」
     items: [
-      { key: "rag", label: "智慧檢索", ic: iconChat, done: true },
+      // 智慧檢索 / 知識庫 / 客戶地圖 先不掛出來：這三頁還在吃寫死的示範資料，
+      // 後端也尚未有對應端點。客戶看不到 > 客戶看到假的（同 2026-07-27 下架的公司設定頁）。
+      // 各自的模組排上後再放回來。
       { key: "media", label: "素材看板", ic: iconMedia, done: true },
-      { key: "km", label: "知識庫", ic: iconBook, done: true },
-      { key: "map", label: "客戶地圖", ic: iconMap, done: true },
     ],
   },
   {
