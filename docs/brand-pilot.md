@@ -4,7 +4,8 @@
 >
 > 對應 CLAUDE.md R16 · profile：`observability-light` · 定案 2026-07-04 · **最後更新 2026-07-27**
 >
-> 2026-07-27 更新內容：補登定案後新增的 13 個元件家族（任務看板 V3 Signal／來源原文／今日日誌／
+> 2026-07-27 更新內容：§5 動效全數盤點（實作 20 條動畫、原文件只記 6 條；Enter band 校正為
+> 180-320ms 對齊實作）；補登定案後新增的 14 個元件家族（任務看板 V3 Signal／來源原文／今日日誌／
 > 行程里程／資料表格／診斷區塊／分頁／側欄折疊／確認框／主從雙欄／排程設定／開通結果／LIFF）；
 > 修正三處會誤導的舊內容（pill 命名已分三套、範例含 emoji 違反自家 avoid-list、
 > 「已同步 Ragic」是不存在的功能）。
@@ -263,28 +264,45 @@
 
 | 用途 | 時長 | 範例 |
 |---|---|---|
-| Micro（hover、focus、button 按下） | 100-150ms | `.sb-link`, `.btn`, `.icon-btn`, `.rag-cite` |
-| Enter（drawer、modal） | 180-200ms | `.drawer-scrim`（120ms），`.drawer`（200ms） |
-| Slow（進度條、metric 首載入） | 500ms | `.bar > i` |
-| Feedback（gauge/tile 首載入 → 目標值） | 1000ms | 已改成 `.bar`；`.g-fill` 已棄用 |
+| Micro（hover、focus、button 按下） | 100-160ms | `.sb-link`, `.btn`, `.icon-btn`（實作 42 處用 `.12s`）|
+| Overlay 進出（scrim、menu、tooltip） | 100-180ms | `scrim-in` .12s、`menu-in` .12s、`tip-in` .12s、`cd-in` .18s |
+| Enter（drawer、卡片、列） | 180-320ms | `drawer-in` .2s、`detail-in` .2s、`page-in` .22-.3s、`card-in` .28s、`so-in` .28s、`row-in` .3s、`tile-in` .3-.32s |
+| Slow（進度條首載入） | 500ms | `.bar > i` |
+| Loading 迴圈 | 600ms-1.4s | `spin` .6s、`typ` 1s、`sk-shim` 1.4s |
+
+> 2026-07-27 校正：原本 Enter 寫 180-200ms，但實作的卡片／列／tile 進場是 280-320ms。
+> 較大面積的元素用 200ms 會顯得突兀，實作是對的 —— 改文件對齊實作，上限拉到 320ms。
+> **超過 320ms 就要有理由**（目前只有 loading 迴圈類例外）。
 
 ### 5.3 動畫清單
 
-| 動畫 | keyframes | 時長 | 用途 |
-|---|---|---|---|
-| `scrim-in` | `opacity 0→1` | 120ms | drawer scrim |
-| `drawer-in` | `translateX 24px→0, opacity 0→1` | 200ms | drawer 本體滑入 |
-| `toast-in` | `translateX 6px→0, opacity 0→1` | 180ms | toast 通知 |
-| `spin` | `rotate 0→360deg` | 600ms linear infinite | 刷新中 icon |
-| `sk-shim` | `background-position 200%→-200%` | 1400ms infinite | skeleton shimmer |
-| `typ` | 3 個 dot 上下跳 | 1s infinite | RAG typing 指示 |
+實作共 20 條（2026-07-27 全數盤點；原文件只記了 6 條）。
+
+| 動畫 | 時長 | 用途 |
+|---|---|---|
+| `scrim-in` / `scrim-out` | .12s | 遮罩淡入淡出 |
+| `drawer-in` / `drawer-out` | .2s / .18s | 右側抽屜滑入滑出（translateX 24px）|
+| `cd-in` / `cd-out` | .18s / .14s | 確認對話框 |
+| `menu-in` / `menu-out` | .12s / .1s | user menu 下拉 |
+| `tip-in` / `tip-out` | .12s / .1s | tooltip |
+| `toast-in` | .16s | toast 通知 |
+| `page-in` | .22-.3s | 頁面主內容進場 |
+| `card-in` | .28s | 卡片進場 |
+| `row-in` | .3s | 列表列進場 |
+| `tile-in` | .3-.32s | 儀表 tile 進場 |
+| `so-in` | .28s | 簽核手風琴展開 |
+| `detail-in` | .2s | 行程／逐段里程展開 |
+| `spin` | .6s linear infinite | 刷新中 icon（**唯一不用 `--ease` 的**，旋轉用 ease 會頓）|
+| `sk-shim` | 1.4s infinite | skeleton shimmer |
+| `typ` | 1s infinite | RAG typing 指示 |
 
 ### 5.4 動效原則
 
 1. **一律靠近 UI 邊緣**（drawer 從右滑、toast 從右上進）；不做中間爆炸/縮放
 2. **移動距離小**（4-24px，最多）；不用 `translateX(100%)` 那種大位移
 3. **不做迴圈動畫**，除非**表達 loading 狀態**（skeleton, spin, typing）
-4. **顏色不做動畫**（沒有色相過渡）；hover 變色瞬間切換或 100ms 內
+4. **不做色相過渡**。hover／focus 的 background / color / border-color 可以淡入，
+   但限 **100-160ms**（實作用 `.12s`）—— 那是回饋，不是動畫
 5. **不做 transform 3D、scale > 1.05**、`filter: blur/glow`
 6. **`prefers-reduced-motion:reduce`** → 全域 `animation-duration:.01ms; transition-duration:.01ms` — 保功能不保效果
 
