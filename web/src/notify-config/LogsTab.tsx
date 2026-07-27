@@ -109,7 +109,7 @@ function Diagnostics({ audit }: { audit: Record<string, unknown> | null }) {
   const a = audit as {
     recordFetched?: boolean; fetchError?: string; fetchSkipped?: string;
     payloadKeys?: string[]; payloadKeyCount?: number; templatePaths?: string[]; matchedPaths?: number;
-    parsedRecordId?: number | null;
+    parsedRecordId?: number | null; webhookBody?: string;
   };
   if (a.recordFetched === undefined && !a.fetchSkipped && !a.fetchError) return null;
 
@@ -117,6 +117,8 @@ function Diagnostics({ audit }: { audit: Record<string, unknown> | null }) {
   const matched = a.matchedPaths ?? 0;
   const verdict =
     a.fetchError ? `抓取 Ragic 完整資料失敗：${a.fetchError}`
+    : a.fetchSkipped === "webhook 未帶 record id"
+      ? "Ragic 送來的內容裡沒有可辨識的記錄編號——多半是 Webhook 設成「精簡」模式，看下方原始內容確認"
     : a.fetchSkipped ? `未抓取完整資料：${a.fetchSkipped}`
     : total > 0 && matched === 0 ? "已抓到資料，但勾選的欄位在資料裡一個都對不上——欄位設定與這張表單不符（表單改過或路徑不同）"
     : total > 0 && matched < total ? `已抓到資料，${total} 個欄位中有 ${total - matched} 個對不上`
@@ -128,6 +130,7 @@ function Diagnostics({ audit }: { audit: Record<string, unknown> | null }) {
       <div>記錄編號 {String(a.parsedRecordId ?? "—")} · 抓到 {a.payloadKeyCount ?? 0} 個欄位 · 對上 {matched}/{total}</div>
       {a.payloadKeys?.length ? <div>資料的欄位鍵：{a.payloadKeys.join(", ")}</div> : null}
       {a.templatePaths?.length ? <div>規則設定的欄位：{a.templatePaths.join(", ")}</div> : null}
+      {a.webhookBody ? <div>Ragic 送來的原始內容：<code>{a.webhookBody}</code></div> : null}
     </div>
   );
 }
