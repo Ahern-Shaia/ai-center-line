@@ -110,8 +110,8 @@ export default function SchedulerConfigPage() {
           <h1>定時任務設定</h1>
           <div className="sub">
             {canManagePlatform
-              ? "aiproot 全站設定 · 可改 platform default + 各 tenant override"
-              : "本 tenant 設定 · 未 override 時走 platform default（成本欄位僅 aiproot 可改）"}
+              ? "平台預設設定 · 可調整整體預設值與各公司的個別設定"
+              : "貴公司的排程設定 · 未調整時採用系統預設值（部分進階項目由 AIPROOT 維護）"}
           </div>
         </div>
       </div>
@@ -119,7 +119,7 @@ export default function SchedulerConfigPage() {
       {loading && <div className="dm-empty">載入中…</div>}
 
       {!loading && configs.length === 0 && (
-        <div className="dm-empty">尚無設定 · 請聯繫 aiproot 建立 default</div>
+        <div className="dm-empty">尚未建立排程 · 請聯繫 AIPROOT 技術支援</div>
       )}
 
       {!loading && (["pdr", "group_batch"] as SchedulerId[]).map((sid) => {
@@ -223,8 +223,7 @@ function SchedulerCard({
         <div>
           <h2 style={{ margin: 0, fontSize: 15 }}>{title}</h2>
           <div className="sub" style={{ marginTop: 3 }}>
-            {isOverride ? "本 tenant 已 override" : "使用 platform default"}
-            {" · "}scheduler_id = <code>{schedulerId}</code>
+            {isOverride ? "已自訂" : "採用系統預設值"}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -327,8 +326,8 @@ function SchedulerCard({
       {schedulerId === "group_batch" && (
         <div className="sc-row">
           <div className="sc-row-lbl">
-            Lookback 保底
-            <span className="sc-row-hint">前次執行失敗 · 補跑往前 N 天 batches {canEditCost ? "" : "(aiproot 專用)"}</span>
+            失敗補跑天數
+            <span className="sc-row-hint">前一次執行失敗時，往前補跑幾天的資料{canEditCost ? "" : "（進階設定 · 由 AIPROOT 調整）"}</span>
           </div>
           <div className="sc-row-val">
             <input
@@ -346,7 +345,7 @@ function SchedulerCard({
       <div className="sc-row">
         <div className="sc-row-lbl">
           併發限制
-          <span className="sc-row-hint">同時跑幾個 batch · 過高會爆 AI API {canEditCost ? "" : "(aiproot 專用)"}</span>
+          <span className="sc-row-hint">同時處理幾個群組 · 設太高可能超出 AI 服務限制{canEditCost ? "" : "（進階設定 · 由 AIPROOT 調整）"}</span>
         </div>
         <div className="sc-row-val">
           <input

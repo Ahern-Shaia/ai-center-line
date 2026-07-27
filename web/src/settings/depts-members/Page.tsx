@@ -46,7 +46,7 @@ export default function DepartmentsMembers() {
     if (!canView) { setLoading(false); return; }
     // tenant_admin 自動用 own tenant · 不呼跨 tenant list API
     if (!canSwitchTenant && session?.tenantId) {
-      setTenants([{ tenantId: session.tenantId, tenantName: "本租戶" }]);
+      setTenants([{ tenantId: session.tenantId, tenantName: "本公司" }]);
       setSelectedTenantId(session.tenantId);
       setLoading(false);
       return;
@@ -99,7 +99,7 @@ export default function DepartmentsMembers() {
       {/* Tenant selector (只 aiproot / consultant 顯示) */}
       {canSwitchTenant && (
       <div className="dm-tenant-picker">
-        <label className="dm-tenant-lbl">目前操作租戶</label>
+        <label className="dm-tenant-lbl">目前操作公司</label>
         <Select
           className="llm-select"
           selectedKey={selectedTenantId || undefined}
@@ -109,7 +109,7 @@ export default function DepartmentsMembers() {
         >
           <AriaButton className="llm-select-btn dm-tenant-btn">
             <SelectValue className="llm-select-value">
-              {() => selectedTenant?.tenantName ?? (loading ? "載入中…" : "選擇租戶")}
+              {() => selectedTenant?.tenantName ?? (loading ? "載入中…" : "選擇公司")}
             </SelectValue>
             <svg className="llm-select-chev" width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
               <path d="M1 1l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />

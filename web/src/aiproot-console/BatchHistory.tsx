@@ -237,8 +237,8 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
               onClick={() => void onToggleBatchEnabled()}
               disabled={busy}
               title={selectedTenant.batchEnabled
-                ? "點擊 · 停用每日 08:00 cron 對此租戶（手動仍可觸發）"
-                : "點擊 · 恢復每日 08:00 cron 對此租戶"}
+                ? "點擊 · 停用此租戶每天 08:00 的自動分析（仍可手動觸發）"
+                : "點擊 · 恢復此租戶每天 08:00 的自動分析"}
             >
               每日 batch · <b style={{ color: selectedTenant.batchEnabled ? "var(--ok-600)" : "var(--rose-600)" }}>
                 {selectedTenant.batchEnabled ? "啟用中" : "已停用"}

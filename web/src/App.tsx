@@ -106,7 +106,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   km: "知識庫",
   map: "客戶地圖",
   depts: "部門 / 成員",
-  config: "租戶設定",
+  config: "公司設定",
   audit: "稽核記錄",
   "scheduler-config": "定時任務",
   "line-groups": "LINE 群組",

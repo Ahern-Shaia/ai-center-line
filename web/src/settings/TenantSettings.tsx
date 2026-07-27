@@ -5,7 +5,7 @@ export default function TenantSettings() {
     <>
       <div className="pane-hdr">
         <div>
-          <h1>租戶設定</h1>
+          <h1>公司設定</h1>
           <div className="sub">健康度參數、資料保存、AI 模型分階、外部整合、隱私策略（此頁面唯讀，正式版可調整）</div>
         </div>
       </div>

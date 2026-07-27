@@ -230,7 +230,7 @@ export default function LlmSettings() {
       <div className="llm-page">
       <h1>語言模型設定</h1>
       <p style={{ color: "var(--ink-3)", marginTop: 4, marginBottom: 20, fontSize: 13 }}>
-        由 aiproot 統一管理 · 為 <b>{selectedTenant?.tenantName ?? "當前租戶"}</b> 設定 AI 對話分析採用的模型。API 金鑰以 AES-256 加密存 DB · 僅分析時解密。
+        由 aiproot 統一管理 · 為 <b>{selectedTenant?.tenantName ?? "當前租戶"}</b> 設定 AI 對話分析採用的模型。API 金鑰加密保存，僅在分析當下解密使用。
       </p>
 
       <TenantPicker tenants={tenants} value={selectedTenantId} onChange={setSelectedTenantId} />
@@ -337,7 +337,7 @@ export default function LlmSettings() {
               className="btn"
               onClick={() => setConfirmReset(true)}
               disabled={saving || resetting}
-              title="清除此租戶的自訂設定 · 讓後端 fallback 走 env ANTHROPIC_API_KEY"
+              title="清除此租戶的自訂設定 · 改用系統預設的 AI 金鑰"
             >
               重設為平台預設
             </button>
@@ -354,7 +354,7 @@ export default function LlmSettings() {
         busy={resetting}
         title="重設為平台預設"
         body={<>
-          即將清除 <b>{selectedTenant?.tenantName ?? "此租戶"}</b> 的 LLM 設定 · 之後分析將 fallback 到 env <code>ANTHROPIC_API_KEY</code>。<br />
+          即將清除 <b>{selectedTenant?.tenantName ?? "此租戶"}</b> 的 LLM 設定 · 之後分析將改用系統預設的 AI 金鑰。<br />
           原 API 金鑰會被刪除 · 若之後需要客製 · 需重新填寫。
         </>}
         confirmLabel="重設"

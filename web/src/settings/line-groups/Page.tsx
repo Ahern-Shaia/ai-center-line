@@ -99,7 +99,7 @@ export default function LineGroupsPage() {
         <div>
           <h1>LINE 群組</h1>
           <div className="sub">
-            {loading ? "載入中…" : `本 tenant 共 ${activeGroups.length} 群 (啟用中)${leftGroups.length > 0 ? ` · ${leftGroups.length} 群已離開` : ""}`}
+            {loading ? "載入中…" : `共 ${activeGroups.length} 個群組（啟用中）${leftGroups.length > 0 ? ` · ${leftGroups.length} 群已離開` : ""}`}
             {unassignedCount > 0 && <span style={{ color: "var(--warn)", marginLeft: 8 }}> · <b>{unassignedCount}</b> 群未分派部門</span>}
           </div>
         </div>

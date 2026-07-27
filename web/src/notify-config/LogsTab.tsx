@@ -6,12 +6,12 @@ import { useToast } from "../Toast";
 // 關鍵不是把 status 字串印出來，而是每一種狀態都要能直接讀成「所以我現在該做什麼」。
 const STATUS: Record<string, { label: string; tone: "ok" | "warn" | "danger" | "mut"; why: string }> = {
   sent:              { label: "已送出",       tone: "ok",     why: "訊息已推送到 LINE" },
-  line_failed:       { label: "推送失敗",     tone: "danger", why: "我們收到了，但 LINE 拒絕——多半是 Bot token 失效或機器人已離開該群組" },
+  line_failed:       { label: "推送失敗",     tone: "danger", why: "我們收到了，但 LINE 拒絕——多半是機器人金鑰失效，或機器人已離開該群組" },
   skipped_dedup:     { label: "重複略過",     tone: "mut",    why: "30 秒內同一筆重複觸發，只送第一次" },
   skipped_event:     { label: "未訂閱此異動", tone: "warn",   why: "事件有進來，但這條規則沒勾選這種異動（新增／更新／刪除）" },
   skipped_filter:    { label: "未達門檻",     tone: "mut",    why: "內部事件被規則的數值門檻過濾掉" },
   invalid_body:      { label: "內容不符",     tone: "warn",   why: "送進來的內容無法解析" },
-  invalid_secret:    { label: "驗證失敗",     tone: "danger", why: "token 不正確" },
+  invalid_secret:    { label: "驗證失敗",     tone: "danger", why: "網址中的驗證碼不正確" },
   sheet_not_allowed: { label: "表單未授權",   tone: "warn",   why: "該表單不在此規則允許範圍" },
 };
 

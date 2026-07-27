@@ -240,7 +240,7 @@ function MemberDrawer({
           <div className="llm-hint">
             {session?.role === "tenant_admin"
               ? "只可新增部門主管 (group_owner) · 總經理室級請聯繫 aiproot"
-              : "此頁只可新增 tenant_admin / group_owner · aiproot 級由平台方另建"}
+              : "此頁可新增「總經理室」與「群組負責人」帳號 · 平台管理帳號由 AIPROOT 另行建立"}
           </div>
         </div>
 

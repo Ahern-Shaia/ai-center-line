@@ -68,7 +68,7 @@ const NAV: Array<{
       { key: "line-groups", label: "LINE 群組", ic: iconChat, done: true, perm: "line-groups:view" },
       // 客戶方自治 · 僅 tenant_admin 看得到 (aiproot 有自己的跨租戶版在 AIPROOT 管理)
       { key: "tenant-binding", label: "員工 LINE 綁定", ic: iconTeam, done: true, roles: ["tenant_admin"] },
-      { key: "config", label: "租戶設定", ic: iconCog, done: true, perm: "tenant-config:view" },
+      { key: "config", label: "公司設定", ic: iconCog, done: true, perm: "tenant-config:view" },
       { key: "scheduler-config", label: "定時任務", ic: iconCog, done: true, perm: "scheduler-config:view" },
       { key: "audit", label: "稽核記錄", ic: iconShield, done: true, perm: "audit:view" },
     ],
