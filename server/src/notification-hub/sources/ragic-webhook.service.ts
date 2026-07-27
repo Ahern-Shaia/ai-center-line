@@ -40,7 +40,8 @@ export class RagicWebhookService {
     let link: string | null = null;
     // 排查線索：訊息欄位全空時，用來分辨是「沒抓到 record」「key 對不上」還是「資料真的空」
     const diagnostics: Record<string, unknown> = {
-      webhookBodyKeys: Object.keys((body ?? {}) as Record<string, unknown>).slice(0, 10),
+      // 留原始內容片段：Ragic 完整 / 精簡兩種模式形狀差很多，只看 key 名判斷不出來
+      webhookBody: safePreview(body),
       parsedEventType: parsed.eventType,
       parsedRecordId: parsed.recordId,
       recordFetched: false,
@@ -95,5 +96,15 @@ export class RagicWebhookService {
 
     const res = await this.pipeline.deliver(rule, event);
     return { status: res.status };
+  }
+}
+
+// webhook 原始內容片段（排查用）· 截斷避免把整筆資料塞進 log
+function safePreview(body: unknown): string {
+  try {
+    const s = JSON.stringify(body);
+    return s == null ? String(body) : s.length > 400 ? `${s.slice(0, 400)}…（已截斷）` : s;
+  } catch {
+    return "（無法序列化）";
   }
 }

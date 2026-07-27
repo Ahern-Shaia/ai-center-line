@@ -97,6 +97,28 @@ test("webhook parser · 精簡模式（data 為 id 陣列）", () => {
   assert.equal(p.recordId, 7);
 });
 
+// Ragic 精簡模式送的是「裸陣列」不是 { data:[...] }（手冊 §14）
+// 原本只認 wrapped 形式 → recordId 解不出來 → 不抓 record → 訊息每個欄位都（未填）
+test("webhook parser · 精簡模式送裸陣列 [1,2,4]", () => {
+  const p = parseRagicWebhook([1, 2, 4]);
+  assert.equal(p.eventType, "UPDATE");
+  assert.equal(p.recordId, 1);
+  assert.deepEqual(p.recordData, {});
+});
+
+test("webhook parser · 裸陣列元素為數字字串", () => {
+  assert.equal(parseRagicWebhook(["36"]).recordId, 36);
+});
+
+test("webhook parser · record id 為 0（Ragic 首筆）不可當成無 id", () => {
+  assert.equal(parseRagicWebhook([0]).recordId, 0);
+  assert.equal(parseRagicWebhook({ data: [{ _ragicId: 0 }] }).recordId, 0);
+});
+
+test("webhook parser · 空陣列 → null", () => {
+  assert.equal(parseRagicWebhook([]).recordId, null);
+});
+
 test("webhook parser · eventType 缺 → UPDATE · recordId 取不到 → null", () => {
   const p = parseRagicWebhook({ data: [] });
   assert.equal(p.eventType, "UPDATE");
