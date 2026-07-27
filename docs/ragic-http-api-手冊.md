@@ -86,7 +86,7 @@ API 版本：`?v=3&api`（舊，v=1/2/3）或 `?version=2025-01-01&api`（新，
 | `reverse` | 反轉排序 | `reverse=true` |
 | `fts` | 全文搜尋 | `fts=Alphabet` |
 | `filterId` | 套用已存篩選 | `filterId=...` |
-| `naming` | 欄位命名 | `naming=EID`（欄位ID）/ `naming=FNAME`（欄位名） |
+| `naming` | 欄位命名 | `naming=EID`（欄位ID）/ `naming=FNAME`（欄位名）· **⚠️ 預設是欄位名，不是 ID**——要用 `metadata/schema` 給的 fieldId 當 key 取值，**一定要明寫 `naming=EID`**（本專案 2026-07-27 踩過：通知訊息每個欄位都「（未填）」）|
 | `subtables` | 是否含子表 | `subtables=0` |
 | `listing` | 僅列表頁欄位 | `listing=true` |
 | `fetchDomainIds` | 指定欄位 | `fetchDomainIds=1000231&fetchDomainIds=1000243` |
@@ -274,6 +274,7 @@ HTTP：200 OK · 400 缺參數 · 401 金鑰無效 · 402 參數有效但請求�
 - 檔案上傳 content-type 需 `multipart/form-data`。
 - 簽核請求 body 需 `application/x-www-form-urlencoded`。
 - Webhook 驗簽：JSON 序列化必須 key 排序 + 無縮排無換行。
+- **讀 record 的 key 預設是「欄位名稱」不是欄位 ID** → 要用欄位 ID 當 key 必須加 `naming=EID`。沒加的話：欄位沒命名時會回 `未命名` / `未命名2`（同名自動加序號），看起來有資料但用 fieldId 一個都取不到。
 
 ## 17. 查欄位 ID
 - 設計模式 → 點欄位 → 左側工具列欄位名下方即欄位 ID。

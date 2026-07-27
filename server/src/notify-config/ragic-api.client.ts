@@ -59,8 +59,12 @@ export class RagicApiClient {
   }
 
   // 抓單筆完整 record → { fieldId(字串): 值 }
+  //
+  // ⚠️ 必須帶 naming=EID。Ragic 預設回的 key 是「欄位名稱」，但規則存的 path 是
+  // metadata/schema 給的「欄位 ID」——不指定就兩邊對不上，訊息每個欄位都變「（未填）」。
+  // （更慘的是沒命名的欄位會回 "未命名" / "未命名2"，看起來像有資料其實根本取不到。）
   async fetchRecord(acc: RagicAccountRef, sheetPath: string, recordId: number | string): Promise<Record<string, unknown>> {
-    const url = `${this.baseUrl(acc, sheetPath)}/${recordId}?api`;
+    const url = `${this.baseUrl(acc, sheetPath)}/${recordId}?api&naming=EID`;
     const d = (await this.fetchJson(url, acc.apiKey)) as Record<string, unknown>;
     const rec = (d[String(recordId)] ?? Object.values(d)[0]) as Record<string, unknown> | undefined;
     if (!rec || typeof rec !== "object") throw new Error(`Ragic record ${recordId} 找不到`);
