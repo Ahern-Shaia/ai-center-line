@@ -9,7 +9,7 @@ import {
 import { useToast } from "../Toast";
 import { catLabel } from "../shared/categoryLabel";
 import { canOpenConvoDetail, navigateTo } from "../nav";
-import { getTicketSource, type TicketSource } from "../api";
+import { assignTicket, getAssignableMembers, getTicketSource, type AssignableMember, type TicketSource } from "../api";
 
 // WTB-M4 · 任務看板 Kanban 3 欄 (待簽核 / 逾時 / 已簽核)
 // 對照 docs/modules/warroom-task-board.md §7.2
@@ -95,6 +95,7 @@ export default function TaskBoard() {
         onClose={() => setDrawer(null)}
         onSignoff={doSignoff}
         signing={drawer ? signing.has(drawer.ticketId) : false}
+        onAssigned={() => { setDrawer(null); void refresh(); }}
       />
     </>
   );
@@ -167,7 +168,18 @@ function TicketCard({ t, tone, onOpen }: { t: WarroomKanbanTicket; tone: Tone; o
         )}
       </div>
       <div className="kb-card-foot">
-        {who ? (
+        {/* 已歸屬 = 對到系統帳號、進得了他的日報；待認領 = AI 有抽到人名但對不到，等主管派。
+            兩者要分得出來，否則主管不知道哪些還需要他動手。*/}
+        {t.assignStatus === "assigned" && t.assigneeAccountName ? (
+          <span className="kb-who">
+            <span className={`kb-avatar kb-avatar-${avatarTone(t.assigneeAccountName)}`} aria-hidden>
+              {t.assigneeAccountName.slice(0, 1)}
+            </span>
+            {t.assigneeAccountName}
+          </span>
+        ) : t.assignStatus === "unclaimed" ? (
+          <span className="kb-who kb-unclaimed">待認領{who ? `：${who}` : ""}</span>
+        ) : who ? (
           <span className="kb-who">
             <span className={`kb-avatar kb-avatar-${avatarTone(who)}`} aria-hidden>{who.slice(0, 1)}</span>
             {who}
@@ -197,6 +209,66 @@ function avatarTone(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (Math.imul(31, h) + name.charCodeAt(i)) | 0;
   return AVATAR_TONES[Math.abs(h) % AVATAR_TONES.length];
+}
+
+// 手動派發 · 導入期的主要流程
+// 員工還沒綁定 LINE 時 AI 對不到人，由主管指定；綁定普及後自動歸屬會接手，此處仍可覆寫。
+function AssignBox({ ticket, onAssigned }: { ticket: WarroomKanbanTicket; onAssigned: () => void }) {
+  const [members, setMembers] = useState<AssignableMember[] | null>(null);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+
+  async function pick(userId: string | null) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await assignTicket(ticket.ticketId, userId);
+      toast.show(userId ? `已派給 ${r.assigneeName ?? ""}` : "已退回待認領", "ok");
+      setOpen(false);
+      onAssigned();
+    } catch (e) { toast.show(e instanceof ApiError ? e.message : "派發失敗", "danger"); }
+    finally { setBusy(false); }
+  }
+
+  async function toggle() {
+    if (open) { setOpen(false); return; }
+    setOpen(true);
+    if (members) return;
+    try { setMembers((await getAssignableMembers()).members); }
+    catch { setMembers([]); }
+  }
+
+  const current = ticket.assignStatus === "assigned" ? ticket.assigneeAccountName : null;
+  return (
+    <div className="ab-wrap">
+      <div className="ab-row">
+        <span className="ab-lbl">當責人</span>
+        <span className="ab-val">
+          {current ?? (ticket.assignStatus === "unclaimed"
+            ? <>待認領{ticket.assigneeDisplayName ? <span className="ab-hint">（AI 讀到「{ticket.assigneeDisplayName}」但對不到系統帳號）</span> : null}</>
+            : "未指派")}
+        </span>
+        <button className="nc-lnk" onClick={() => void toggle()}>{open ? "取消" : current ? "改派" : "指派"}</button>
+      </div>
+      {open && (
+        <div className="ab-opts">
+          {members === null ? <span className="ab-hint">載入中…</span>
+            : members.length === 0 ? <span className="ab-hint">沒有可指派的成員</span>
+            : (<>
+                {members.map((m) => (
+                  <button key={m.userId} className="ab-opt" onClick={() => void pick(m.userId)} disabled={busy}>
+                    {m.name}
+                    {/* 沒綁 LINE 不影響手動派發（日報走網頁登入），只影響之後能不能自動歸屬 */}
+                    {!m.hasLineBinding && <span className="ab-nobind">未綁 LINE</span>}
+                  </button>
+                ))}
+                {current && <button className="ab-opt ab-clear" onClick={() => void pick(null)} disabled={busy}>退回待認領</button>}
+              </>)}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // 來源原文對照 · 預設收合（多數時候直接簽，需要時才展開）
@@ -244,12 +316,13 @@ function SourceMessages({ ticketId }: { ticketId: string }) {
 }
 
 function TicketDrawer({
-  ticket, onClose, onSignoff, signing,
+  ticket, onClose, onSignoff, signing, onAssigned,
 }: {
   ticket: WarroomKanbanTicket | null;
   onClose: () => void;
   onSignoff: (t: WarroomKanbanTicket) => void;
   signing: boolean;
+  onAssigned: () => void;
 }) {
   const created = useMemo(() => ticket ? formatDateTime(ticket.createdAt) : "", [ticket]);
   const confirmed = useMemo(() => ticket?.confirmedAt ? formatDateTime(ticket.confirmedAt) : "", [ticket]);
@@ -274,6 +347,8 @@ function TicketDrawer({
             {ticket.confirmedAt && (<><dt>簽核</dt><dd>{ticket.confirmedByName ?? "—"} · {confirmed}</dd></>)}
             <dt>狀態</dt><dd>{ticket.confirmStatus}</dd>
           </dl>
+
+          <AssignBox ticket={ticket} onAssigned={onAssigned} />
 
           {/* 簽核的人一定要看得到原文 —— AI 只是輔助，看不到原文就是幫 AI 背書 */}
           <SourceMessages ticketId={ticket.ticketId} />

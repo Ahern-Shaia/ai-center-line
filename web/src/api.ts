@@ -416,6 +416,16 @@ export interface TicketSource {
 export const getTicketSource = (ticketId: string) =>
   req<TicketSource>(`/warroom/tickets/${ticketId}/source`);
 
+// 任務歸屬 · 導入期由主管手動派（員工綁定 LINE 後才會自動歸屬）
+export interface AssignableMember { userId: string; name: string; hasLineBinding: boolean }
+export const getAssignableMembers = () =>
+  req<{ members: AssignableMember[] }>("/warroom/assignable-members");
+export const assignTicket = (ticketId: string, assigneeUserId: string | null) =>
+  req<{ ticketId: string; assignStatus: string; assigneeUserId: string | null; assigneeName: string | null }>(
+    `/warroom/tickets/${ticketId}/assignee`,
+    { method: "PATCH", body: JSON.stringify({ assigneeUserId }) },
+  );
+
 export interface WarroomKanbanTicket {
   ticketId: string;
   category: string | null;
@@ -424,6 +434,9 @@ export interface WarroomKanbanTicket {
   confidence: "high" | "medium" | "low" | null;
   confirmStatus: "待簽核" | "已簽核" | "逾時警示";
   assigneeDisplayName: string | null;
+  assigneeUserId: string | null;
+  assigneeAccountName: string | null;
+  assignStatus: "none" | "unclaimed" | "assigned";
   dueAt: string | null;
   sourceUploadId: number | null;
   sourceRecordIndex: number | null;
@@ -539,6 +552,7 @@ export const getMyPersonalReport = (date?: string) => {
     report: PersonalDailyReportRow | null;
     requestedDate: string;
     pendingMessageCount: number;
+  assignedTasks?: Array<{ ticketId: string; summary: string | null; category: string | null; createdAt: string }>;
     pendingMessages: PendingRawMessage[];
     userDisplayName: string;
     tenantName: string;

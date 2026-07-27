@@ -19,6 +19,7 @@ export default function MyDailyReport() {
   const [items, setItems] = useState<PersonalDailyReportItem[]>([]);
   const [pendingMessageCount, setPendingMessageCount] = useState(0);
   const [pendingMessages, setPendingMessages] = useState<PendingRawMessage[]>([]);
+  const [assignedTasks, setAssignedTasks] = useState<Array<{ ticketId: string; summary: string | null }>>([]);
   const [userDisplayName, setUserDisplayName] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -33,6 +34,7 @@ export default function MyDailyReport() {
       setReport(res.report);
       setPendingMessageCount(res.pendingMessageCount ?? 0);
       setPendingMessages(res.pendingMessages ?? []);
+      setAssignedTasks(res.assignedTasks ?? []);
       setUserDisplayName(res.userDisplayName ?? "");
       // 已送出後若又重新整理過（ai_generated_at 晚於 sent_at）→ 顯示新的 AI 結果，
       // 否則員工按「重新生成」也看不到送出後新增的訊息（final_items 永遠蓋掉 ai_items）。
@@ -239,6 +241,26 @@ export default function MyDailyReport() {
                     {m.messageType === "image" && <span style={{ color: "var(--ink-3)" }}>[圖片]</span>}
                     {!["text", "sticker", "image"].includes(m.messageType) && <span style={{ color: "var(--ink-3)" }}>[{m.messageType}]</span>}
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 指派給我的任務 · 由本人決定要不要納入日報（task-to-personal-report §5）
+              不自動寫進去：AI 歸屬可能錯、日報也可能已確認 —— 本人是最後一道防線。*/}
+          {assignedTasks.length > 0 && (
+            <div className="pdr-raw-list" style={{ marginTop: 16, borderColor: "var(--primary)" }}>
+              <div className="pdr-raw-hdr">
+                有 <b>{assignedTasks.length}</b> 項指派給你的任務尚未加入日報
+              </div>
+              {assignedTasks.map((t) => (
+                <div key={t.ticketId} className="pdr-raw-item" style={{ alignItems: "center" }}>
+                  <div className="pdr-raw-text">{t.summary ?? "（無摘要）"}</div>
+                  <button className="btn btn-sm" disabled={!canEdit}
+                    onClick={() => setItems((s) => [...s, {
+                      title: t.summary ?? "", detail: "", time: "",
+                      followup: "", source: "assigned_task", ticketId: t.ticketId,
+                    } as PersonalDailyReportItem])}>加入日報</button>
                 </div>
               ))}
             </div>
