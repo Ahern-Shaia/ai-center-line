@@ -48,6 +48,11 @@ CREATE INDEX IF NOT EXISTS idx_tickets_unclaimed
   WHERE assign_status = 'unclaimed';
 
 -- 既有資料回填：有人名的一律先進待認領（不猜對象 —— 猜錯＝把工作寫進別人的日報）
+--
+-- ⚠️ 這句在 prod 用 psql 直連時會**靜默更新 0 筆**：
+--    tickets 的 RLS policy 是 AND 條件、沒有 actor_role 逃生門，
+--    沒設 app.current_tenant 就不成立，而且不報錯。
+--    → 補跑請用 docs/sop/0031_回填待認領.sql（它有正確的 SET 上下文）。
 UPDATE tickets
    SET assign_status = 'unclaimed'
  WHERE assign_status = 'none'
