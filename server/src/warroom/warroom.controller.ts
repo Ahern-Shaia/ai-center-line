@@ -1,4 +1,6 @@
-import { BadRequestException, Controller, Get, Param, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Param, Patch, Query } from "@nestjs/common";
+import { CurrentUser } from "../auth/current-user.decorator.js";
+import type { JwtUser } from "../auth/jwt-user.js";
 import { Roles } from "../auth/roles.decorator.js";
 import { WarroomService } from "./warroom.service.js";
 import { WarroomTasksService } from "./warroom-tasks.service.js";
@@ -31,6 +33,30 @@ export class WarroomController {
   @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
   async dailyReports(@Query("from") fromDate?: string, @Query("to") toDate?: string) {
     return this.tasksService.listDailyReports({ fromDate, toDate });
+  }
+
+  /** 可指派的成員 · 手動派發下拉用 */
+  @Get("assignable-members")
+  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  async assignableMembers() {
+    return { members: await this.tasksService.assignableMembers() };
+  }
+
+  /**
+   * 手動派發任務給某人（assigneeUserId = null 則退回待認領）。
+   * 導入期的主要流程 —— 員工還沒綁定 LINE 時，AI 對不到人，由主管指定。
+   */
+  @Patch("tickets/:ticketId/assignee")
+  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  async assign(
+    @CurrentUser() user: JwtUser,
+    @Param("ticketId") ticketId: string,
+    @Body() body: { assigneeUserId?: string | null },
+  ) {
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
+    const a = body?.assigneeUserId ?? null;
+    if (a !== null && !UUID_RE.test(a)) throw new BadRequestException("assigneeUserId 格式不正確");
+    return this.tasksService.assignTicket(ticketId, a, user.user_id);
   }
 
   // 某張任務卡的來源原文 · 簽核前拿 AI 抽取結果與原始訊息對照

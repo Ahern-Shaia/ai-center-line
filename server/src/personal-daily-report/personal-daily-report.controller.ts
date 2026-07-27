@@ -171,11 +171,25 @@ export class PersonalDailyReportController {
       WHERE u.user_id = ${user.user_id}::uuid
     `);
     const meta = info.rows[0];
+    // 指派給我、尚未簽核的任務（task-to-personal-report §5）
+    // ⚠️ 不自動寫進日報 —— 由本人決定要不要納入。本人是歸屬錯誤的最後一道防線。
+    // ⚠️ 只帶 summary 不帶原始對話：任務可能來自本人不在的群組（doc §6 F-3）。
+    const assigned = await tx.execute<{ ticket_id: string; summary: string; category: string | null; created_at: string }>(sql_import`
+      SELECT ticket_id::text, summary, category, created_at::text
+      FROM tickets
+      WHERE assignee_user_id = ${user.user_id}::uuid
+        AND confirm_status <> '已簽核'
+      ORDER BY created_at DESC
+      LIMIT 20
+    `);
     return {
       report: row,
       requestedDate: date,
       pendingMessageCount,
       pendingMessages,
+      assignedTasks: assigned.rows.map((t) => ({
+        ticketId: t.ticket_id, summary: t.summary, category: t.category, createdAt: t.created_at,
+      })),
       userDisplayName: meta?.display_name ?? "",
       tenantName: meta?.tenant_name ?? "",
     };

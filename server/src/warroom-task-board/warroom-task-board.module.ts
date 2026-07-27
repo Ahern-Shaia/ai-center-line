@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { CategoryRegistryController } from "./category-registry.controller.js";
 import { CategoryRegistryRepository } from "./category-registry.repository.js";
 import { TicketMaterializerService } from "./ticket-materializer.service.js";
+import { AssigneeResolverService } from "./assignee-resolver.service.js";
 
 /**
  * Warroom Task Board 模組 · WTB
@@ -15,10 +16,12 @@ import { TicketMaterializerService } from "./ticket-materializer.service.js";
   controllers: [CategoryRegistryController],
   providers: [
     TicketMaterializerService,
+    AssigneeResolverService,
     CategoryRegistryRepository,
   ],
   exports: [
     TicketMaterializerService,
+    AssigneeResolverService,
     CategoryRegistryRepository,
   ],
 })

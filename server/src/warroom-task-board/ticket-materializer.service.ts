@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { AssigneeResolverService } from "./assignee-resolver.service.js";
 import { sql } from "drizzle-orm";
 import { withTenant } from "../db/client.js";
 
@@ -15,6 +16,8 @@ import { withTenant } from "../db/client.js";
 @Injectable()
 export class TicketMaterializerService {
   private readonly logger = new Logger(TicketMaterializerService.name);
+
+  constructor(private readonly assigneeResolver: AssigneeResolverService) {}
 
   /**
    * Materialize an upload's records → tickets
@@ -87,17 +90,21 @@ export class TicketMaterializerService {
         const summary = truncate(rec.title || rec.detail || "（無摘要）", 500);
         const assignee = rec.person ? truncate(rec.person, 100) : null;
         const category = rec.category ? truncate(rec.category, 100) : null;
+        // 對到系統帳號才自動歸屬；對不到一律 unclaimed 由主管手動派（doc §2 寧可不歸屬不可歸錯人）
+        const resolved = await this.assigneeResolver.resolve(tx, bundle.tenantId, assignee);
 
         // 冪等 UPSERT · ux_tickets_source_record 撞則 UPDATE
         const res = await tx.execute<{ inserted: boolean }>(sql`
           INSERT INTO tickets (
             tenant_id, department_id, category, summary, confidence,
             confirm_status, needs_review, assignee_display_name,
+            assignee_user_id, assign_status,
             source_upload_id, source_record_index, message_count
           ) VALUES (
             ${bundle.tenantId}::uuid, ${bundle.departmentId}::uuid,
             ${category}, ${summary}, ${rec.confidence},
             '待簽核', false, ${assignee},
+            ${resolved.userId}::uuid, ${resolved.status},
             ${uploadId}, ${idx}, ${rec.source_ids?.length ?? null}
           )
           ON CONFLICT (source_upload_id, source_record_index)
@@ -107,6 +114,11 @@ export class TicketMaterializerService {
             summary = EXCLUDED.summary,
             confidence = EXCLUDED.confidence,
             assignee_display_name = EXCLUDED.assignee_display_name,
+            -- 重跑不可蓋掉主管已經手動派好的結果（人的決定優先於 AI）
+            assignee_user_id = CASE WHEN tickets.assigned_by IS NULL
+                                    THEN EXCLUDED.assignee_user_id ELSE tickets.assignee_user_id END,
+            assign_status    = CASE WHEN tickets.assigned_by IS NULL
+                                    THEN EXCLUDED.assign_status ELSE tickets.assign_status END,
             message_count = EXCLUDED.message_count,
             updated_at = now()
           RETURNING (xmax = 0) AS inserted

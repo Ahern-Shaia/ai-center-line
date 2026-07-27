@@ -19,6 +19,11 @@ export interface WarroomTicket {
   confidence: "high" | "medium" | "low" | null;
   confirmStatus: "待簽核" | "已簽核" | "逾時警示";
   assigneeDisplayName: string | null;
+  /** 對到的系統帳號 · null 表示尚未歸屬 */
+  assigneeUserId: string | null;
+  assigneeAccountName: string | null;
+  /** none=AI 沒抽到人名 / unclaimed=有人名但對不到（導入期正常）/ assigned=已對到帳號 */
+  assignStatus: "none" | "unclaimed" | "assigned";
   dueAt: string | null;
   sourceUploadId: number | null;
   sourceRecordIndex: number | null;
@@ -68,6 +73,9 @@ export class WarroomTasksService {
       confidence: "high" | "medium" | "low" | null;
       confirm_status: "待簽核" | "已簽核" | "逾時警示";
       assignee_display_name: string | null;
+      assignee_user_id: string | null;
+      assignee_account_name: string | null;
+      assign_status: string;
       due_at: string | null;
       source_upload_id: number | null;
       source_record_index: number | null;
@@ -79,7 +87,9 @@ export class WarroomTasksService {
     }>(sql`
       SELECT t.ticket_id, t.category, t.category_id::text,
              t.summary, t.confidence, t.confirm_status,
-             t.assignee_display_name, t.due_at::text,
+             t.assignee_display_name, t.assignee_user_id::text, t.assign_status,
+             au.display_name AS assignee_account_name,
+             t.due_at::text,
              t.source_upload_id, t.source_record_index,
              t.created_at::text,
              t.department_id::text, d.department_name,
@@ -88,6 +98,7 @@ export class WarroomTasksService {
       FROM tickets t
       LEFT JOIN departments d ON d.department_id = t.department_id
       LEFT JOIN users u ON u.user_id = t.confirmed_by
+      LEFT JOIN users au ON au.user_id = t.assignee_user_id
       ORDER BY t.created_at DESC
       LIMIT 500
     `);
@@ -103,6 +114,9 @@ export class WarroomTasksService {
       confidence: r.confidence,
       confirmStatus: r.confirm_status,
       assigneeDisplayName: r.assignee_display_name,
+      assigneeUserId: r.assignee_user_id,
+      assigneeAccountName: r.assignee_account_name,
+      assignStatus: (r.assign_status ?? "none") as "none" | "unclaimed" | "assigned",
       dueAt: r.due_at,
       sourceUploadId: r.source_upload_id,
       sourceRecordIndex: r.source_record_index,
@@ -263,6 +277,61 @@ export class WarroomTasksService {
       unavailableReason: sourceIds.size > 0 && messages.length === 0
         ? "這筆抽取有標記來源訊息，但在分析結果中找不到對應內容" : null,
     };
+  }
+
+  /**
+   * 主管手動派發任務給某人。
+   *
+   * 這是導入期的**主要**流程，不是自動歸屬失敗時的退路 ——
+   * 手動派發本來就是「AI 可能認錯」時的確認機制；員工陸續綁定 LINE 後，
+   * 自動歸屬才逐步接手（doc §2 / §3.3）。
+   *
+   * 權限走 RLS：tickets policy 已限本租戶、group_owner 再限本部門，
+   * 查不到就是無權操作 → 404，不另做一套判斷。
+   */
+  async assignTicket(ticketId: string, assigneeUserId: string | null, actorUserId: string): Promise<{
+    ticketId: string; assignStatus: string; assigneeUserId: string | null; assigneeName: string | null;
+  }> {
+    const tx = currentTx();
+    if (assigneeUserId) {
+      // 只能派給同租戶的人 —— RLS 已限 tickets，這裡再擋 users（避免跨租戶指派）
+      const ok = await tx.execute<{ n: number }>(sql`
+        SELECT count(*)::int AS n FROM users WHERE user_id = ${assigneeUserId}::uuid
+      `);
+      if ((ok.rows[0]?.n ?? 0) === 0) throw new NotFoundException("找不到這個成員，或不屬於貴公司");
+    }
+    const status = assigneeUserId ? "assigned" : "unclaimed";
+    const res = await tx.execute<{ ticket_id: string; name: string | null }>(sql`
+      UPDATE tickets t
+         SET assignee_user_id = ${assigneeUserId}::uuid,
+             assign_status    = ${status},
+             assigned_by      = ${actorUserId}::uuid,
+             assigned_at      = now(),
+             updated_at       = now()
+       WHERE t.ticket_id = ${ticketId}::uuid
+      RETURNING t.ticket_id::text,
+                (SELECT display_name FROM users WHERE user_id = ${assigneeUserId}::uuid) AS name
+    `);
+    if (res.rows.length === 0) throw new NotFoundException("找不到這張任務，或你沒有權限操作");
+    return {
+      ticketId, assignStatus: status, assigneeUserId,
+      assigneeName: res.rows[0].name,
+    };
+  }
+
+  /** 可被指派的成員（同租戶）· 手動派發下拉用 */
+  async assignableMembers(): Promise<Array<{ userId: string; name: string; hasLineBinding: boolean }>> {
+    const res = await currentTx().execute<{ user_id: string; name: string | null; bound: boolean }>(sql`
+      SELECT u.user_id::text, u.display_name AS name,
+             EXISTS(SELECT 1 FROM user_line_binding b
+                     WHERE b.user_id = u.user_id AND b.status = 'active') AS bound
+        FROM users u
+       WHERE u.role <> 'aiproot_admin'
+       ORDER BY u.display_name NULLS LAST
+    `);
+    return res.rows.map((r) => ({
+      userId: r.user_id, name: r.name ?? "（未命名）", hasLineBinding: r.bound,
+    }));
   }
 
   async listGroupMessages(args: { groupId: string; batchDate: string }): Promise<{
