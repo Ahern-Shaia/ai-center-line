@@ -70,7 +70,12 @@ const NAV: Array<{
       { key: "line-groups", label: "LINE 群組", ic: iconChat, done: true, perm: "line-groups:view" },
       // 客戶方自治 · 僅 tenant_admin 看得到 (aiproot 有自己的跨租戶版在 AIPROOT 管理)
       { key: "tenant-binding", label: "員工 LINE 綁定", ic: iconTeam, done: true, roles: ["tenant_admin"] },
-      { key: "config", label: "公司設定", ic: iconCog, done: true, perm: "tenant-config:view" },
+      // 「公司設定」暫時下架（2026-07-27）：整頁 24 項全是示範資料，而且對客戶做假承諾 ——
+      // 「工研院知識庫 已啟用 · 契約有效期至 2027-06」「員工 opt-out 已啟用」
+      // 「影像自動遮罩 臉部/車牌/證件」這些功能都不存在。
+      // 寧可沒有這頁，也不可在客戶畫面上放做不到的東西。真實設定散在
+      // 定時任務 / 語言模型設定 / LINE 群組 各頁，等有真資料再重做。
+      // { key: "config", label: "公司設定", ic: iconCog, done: true, perm: "tenant-config:view" },
       { key: "scheduler-config", label: "定時任務", ic: iconCog, done: true, perm: "scheduler-config:view" },
       { key: "audit", label: "稽核記錄", ic: iconShield, done: true, perm: "audit:view" },
     ],

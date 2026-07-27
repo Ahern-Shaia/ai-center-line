@@ -8,7 +8,6 @@ import MediaLibrary from "./kb/MediaLibrary";
 import KnowledgeBase from "./kb/KnowledgeBase";
 import CustomerMap from "./kb/CustomerMap";
 import DepartmentsMembers from "./settings/depts-members/Page";
-import TenantSettings from "./settings/TenantSettings";
 import AuditLog from "./settings/AuditLog";
 import SchedulerConfigPage from "./settings/scheduler-config/Page";
 import LineGroupsPage from "./settings/line-groups/Page";
@@ -44,7 +43,6 @@ type Route =
   | { page: "km" }
   | { page: "map" }
   | { page: "depts" }
-  | { page: "config" }
   | { page: "audit" }
   | { page: "scheduler-config" }
   | { page: "line-groups" }
@@ -77,7 +75,6 @@ const CRUMB: Record<Route["page"], string> = {
   km: "資料 · 知識",
   map: "資料 · 知識",
   depts: "設定",
-  config: "設定",
   audit: "設定",
   "scheduler-config": "設定",
   "line-groups": "設定",
@@ -109,7 +106,6 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   km: "知識庫",
   map: "客戶地圖",
   depts: "部門 / 成員",
-  config: "公司設定",
   audit: "稽核記錄",
   "scheduler-config": "定時任務",
   "line-groups": "LINE 群組",
@@ -235,7 +231,7 @@ export default function App() {
   const onNav = (key: string) => {
     if (key === "warroom") setRoute({ page: "warroom" });
     else if (key === "rag" || key === "media" || key === "km" || key === "map"
-      || key === "depts" || key === "config" || key === "audit" || key === "scheduler-config" || key === "line-groups") {
+      || key === "depts" || key === "audit" || key === "scheduler-config" || key === "line-groups") {
       setRoute({ page: key });
     } else if (key === "tenant-binding") {
       // 客戶方自治 · 僅 tenant_admin（自租戶 LINE 綁定管理）
@@ -310,7 +306,6 @@ export default function App() {
           {route.page === "km" && <KnowledgeBase />}
           {route.page === "map" && <CustomerMap />}
           {route.page === "depts" && <DepartmentsMembers />}
-          {route.page === "config" && <TenantSettings />}
           {route.page === "audit" && <AuditLog />}
           {route.page === "scheduler-config" && <SchedulerConfigPage />}
           {route.page === "line-groups" && <LineGroupsPage />}
