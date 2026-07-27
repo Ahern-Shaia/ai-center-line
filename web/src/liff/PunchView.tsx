@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, attendancePunch, getTrips, type TripRow } from "../api";
 import { useToast } from "../Toast";
+import { SAME_LOCATION_LABEL, SAME_LOCATION_NEXT, SAME_LOCATION_REASON, SAME_LOCATION_WHY } from "../shared/mileageCopy";
 
 // LIFF 外勤打卡（M2）· JWT 已由 main.tsx applyLiffToken 換好
 // LIFF 無 getLocation → navigator.geolocation（enableHighAccuracy + timeout · iOS 16.4 需 timeout+重試）
@@ -75,7 +76,8 @@ export default function PunchView() {
   }
 
   const totalKm = trips.reduce((s, t) => s + (t.distanceM ?? t.straightDistanceM ?? 0), 0) / 1000;
-  const allSameLocation = trips.length > 0 && trips.every((t) => t.routeProvider === "same_location");
+  // 只要有任一段是原地就說明（不必全部都是）——使用者看到其中一段 0 就會開始懷疑
+  const hasSameLocation = trips.some((t) => t.routeProvider === "same_location");
   const loadingState = punchCount === null;          // 尚未知道今天狀態 → 先不給按鈕，避免閃動誤按
   const notStarted = punchCount === 0;               // 今天還沒任何打卡 → 只給「開始外勤」
 
@@ -132,7 +134,7 @@ export default function PunchView() {
               <span>
                 第 {i + 1} 段
                 {/* 沒標「原地打卡」的話，站在同一個地方測試會看到一排 0.0，看起來像壞掉 */}
-                {t.routeProvider === "same_location" && <span className="liff-note"> · 原地打卡</span>}
+                {t.routeProvider === "same_location" && <span className="liff-note"> · {SAME_LOCATION_LABEL}</span>}
               </span>
               <span className="liff-pct">{t.distanceM != null ? `${(t.distanceM / 1000).toFixed(1)} km` : "里程計算中"}</span>
             </div>
@@ -141,10 +143,12 @@ export default function PunchView() {
             <span>今日合計</span>
             <span className="liff-pct">{totalKm.toFixed(1)} km</span>
           </div>
-          {allSameLocation && (
-            <div className="dm-empty-hint" style={{ marginTop: 8 }}>
-              目前每一段都是在同一個位置打的（未移動），所以距離是 0。
-              走到別的地點再按一次「記錄這一站」，就會算出實際路程。
+          {hasSameLocation && (
+            <div className="liff-explain">
+              <b>為什麼距離是 0？</b>
+              <div>{SAME_LOCATION_WHY}</div>
+              <div>{SAME_LOCATION_REASON}</div>
+              <div><b>{SAME_LOCATION_NEXT}</b></div>
             </div>
           )}
         </>

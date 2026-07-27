@@ -22,6 +22,7 @@ const PUNCH_TYPE_LABEL: Record<string, string> = {
 };
 
 // 原地打卡判定：兩點距離小於此值視為「沒有移動」（GPS 靜止誤差約 5-20m）
+// ⚠️ 改這個值要同步改前端文案 web/src/shared/mileageCopy.ts（那裡直接把數字寫給使用者看）
 // 這種段落不該去問路由服務——Google/ORS 找不到「同一點到同一點」的路線，
 // 會被誤判成「算不出來」而永遠留 null、卡在待補算清單。
 const SAME_LOCATION_THRESHOLD_M = 20;

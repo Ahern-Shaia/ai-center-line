@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, getMapTileConfig, getSession, getTrips, relabelPunch, type PunchRow, type TripRow } from "../api";
 import { useToast } from "../Toast";
+import { SAME_LOCATION_LABEL, SAME_LOCATION_NEXT, SAME_LOCATION_REASON, SAME_LOCATION_WHY } from "../shared/mileageCopy";
 
 const TripMap = lazy(() => import("./TripMap"));
 
@@ -115,7 +116,7 @@ export default function MyTrips() {
                       <span className="trip-km" style={{ textAlign: "right" }}>
                         0.0 km
                         <span style={{ display: "block", fontSize: 10.5, color: "var(--ink-3)", fontFamily: "var(--sans)" }}>
-                          原地打卡
+                          {SAME_LOCATION_LABEL}
                         </span>
                       </span>
                     ) : t.routeProvider === "straight_fallback" ? (
@@ -145,7 +146,7 @@ export default function MyTrips() {
                       <div className="trip-detail-row"><span>直線距離</span><span>{straightKm != null ? `${straightKm} km` : "—"}</span></div>
                       <div className="trip-method">
                         {t.routeProvider === "same_location"
-                          ? <>這兩次打卡在<b>同一位置</b>（未移動，或距離在 GPS 誤差內），因此沒有里程。</>
+                          ? <><b>為什麼距離是 0？</b><br />{SAME_LOCATION_WHY}<br />{SAME_LOCATION_REASON}<br /><b>{SAME_LOCATION_NEXT}</b></>
                           : t.routeProvider === "straight_fallback"
                           ? <>本段當時<b>取不到道路路線</b>（地圖服務未回應），先以兩點<b>直線距離</b>計算、地圖以虛線示意。待地圖服務恢復後，管理員可執行補算升級為實際道路里程。</>
                           : roadKm != null
