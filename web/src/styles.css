@@ -1643,15 +1643,20 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .kanban { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
 @media (max-width:1100px) { .kanban { grid-template-columns:1fr; } }
 .kb-col { display:flex; flex-direction:column; background:var(--surface-2, #F5F6F8); border-radius:6px; border:1px solid var(--line); min-height:400px; }
-.kb-col-hdr { padding:12px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; }
+.kb-col-hdr { padding:12px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:7px; }
 .kb-col-title { font-size:13px; font-weight:600; color:var(--ink); }
-.kb-col-count { font-size:12px; color:var(--ink-3); background:var(--surface); border:1px solid var(--line); padding:2px 8px; border-radius:10px; }
+.kb-col-count { margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--ink-3); background:var(--surface); border:1px solid var(--line); padding:1px 8px; border-radius:10px; font-variant-numeric:tabular-nums; }
+.kb-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.kb-dot-warn { background:var(--warn); } .kb-dot-danger { background:var(--danger); } .kb-dot-ok { background:var(--ok); }
 .kb-col-body { flex:1; padding:12px; display:flex; flex-direction:column; gap:8px; overflow-y:auto; max-height:calc(100vh - 260px); }
 .kb-col-foot { padding:8px 14px; font-size:11.5px; color:var(--ink-3); border-top:1px solid var(--line); }
 .kb-empty { text-align:center; padding:24px 0; color:var(--ink-3); font-size:12.5px; }
 
 /* Kanban card · overrides existing .kb-card CSS */
-.kb-card { display:flex; flex-direction:column; gap:6px; padding:12px 14px; text-align:left; cursor:pointer; }
+/* V3 Signal 卡片（裁定 2026-07-27 · docs/modules/design-research-taskboard.md §5）*/
+.kb-card { position:relative; overflow:hidden; display:flex; flex-direction:column; gap:6px; padding:11px 12px 11px 15px; text-align:left; cursor:pointer; }
+.kb-stripe { position:absolute; left:0; top:0; bottom:0; width:3px; }
+.kb-stripe-warn { background:var(--warn); } .kb-stripe-danger { background:var(--danger); } .kb-stripe-ok { background:var(--ok); }
 .kb-card:hover { border-color:var(--primary); }
 .kb-card-summary { font-size:13px; color:var(--ink); line-height:1.5; }
 .kb-card-meta { display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:11.5px; color:var(--ink-3); }
@@ -1659,6 +1664,17 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .kb-conf { padding:2px 7px; border-radius:3px; border:1px solid currentColor; background:transparent; font-size:11px; font-weight:500; line-height:1.4; }
 .kb-conf-mid { color:var(--warn); }
 .kb-conf-low { color:var(--danger); }
+.kb-conf { display:inline-flex; align-items:center; gap:4px; font-weight:600; }
+/* 菱形 = 色＋形＋字的「形」· 色盲/黑白列印也分得出來 */
+.kb-conf-d { width:6px; height:6px; transform:rotate(45deg); background:currentColor; display:inline-block; flex-shrink:0; }
+/* 逾時給實心，因為它是唯一需要「跳出來」的訊號 */
+.kb-over { background:var(--danger); color:#fff; font-weight:600; font-size:11px; padding:2px 7px; border-radius:3px; font-variant-numeric:tabular-nums; }
+.kb-card-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11.5px; color:var(--ink-3); }
+.kb-who { display:inline-flex; align-items:center; gap:5px; color:var(--ink-2); }
+.kb-unassigned { color:var(--ink-3); font-style:italic; }
+.kb-avatar { width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:#fff; flex-shrink:0; }
+.kb-avatar-blue { background:#5B76B7; } .kb-avatar-green { background:#3E9E82; } .kb-avatar-rose { background:#C05B7A; }
+.kb-avatar-amber { background:#B98431; } .kb-avatar-slate { background:#6B7686; }
 .kb-assignee, .kb-due { display:inline-flex; align-items:center; gap:3px; color:var(--ink-3); }
 .kb-ic { flex-shrink:0; opacity:.7; }
 .kb-card-dept { font-size:11px; color:var(--ink-3); margin-top:2px; }

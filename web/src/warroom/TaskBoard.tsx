@@ -98,19 +98,23 @@ export default function TaskBoard() {
   );
 }
 
+type Tone = "warn" | "danger" | "ok";
+
 function KanbanColumn({
   title, tone, count, tickets, onOpen, note,
 }: {
   title: string;
-  tone: "warn" | "danger" | "ok";
+  tone: Tone;
   count: number;
   tickets: WarroomKanbanTicket[];
   onOpen: (t: WarroomKanbanTicket) => void;
   note?: string;
 }) {
   return (
-    <div className={`kb-col kb-tone-${tone}`}>
+    <div className="kb-col">
       <div className="kb-col-hdr">
+        {/* 色＋形＋字三重編碼：燈點只是輔助，欄名本身就講清楚狀態 */}
+        <span className={`kb-dot kb-dot-${tone}`} aria-hidden />
         <span className="kb-col-title">{title}</span>
         <span className="kb-col-count">{count}</span>
       </div>
@@ -119,7 +123,7 @@ function KanbanColumn({
           <div className="kb-empty">目前無 {title}</div>
         )}
         {tickets.map((t) => (
-          <TicketCard key={t.ticketId} t={t} onOpen={() => onOpen(t)} />
+          <TicketCard key={t.ticketId} t={t} tone={tone} onOpen={() => onOpen(t)} />
         ))}
       </div>
       {note && <div className="kb-col-foot">{note}</div>}
@@ -127,27 +131,29 @@ function KanbanColumn({
   );
 }
 
-function TicketCard({ t, onOpen }: { t: WarroomKanbanTicket; onOpen: () => void }) {
-  const dueText = t.dueAt ? formatDate(t.dueAt) : null;
+function TicketCard({ t, tone, onOpen }: { t: WarroomKanbanTicket; tone: Tone; onOpen: () => void }) {
   // 高信度是本看板預設（sub 已說明）· 逐卡標「信度高」反成雜訊 · 只在中/低時提醒審核者留意
   const confChip = t.confidence === "medium" ? { label: "信度中", level: "mid" }
     : t.confidence === "low" ? { label: "信度低", level: "low" }
       : null;
+  // 逾時要顯「量級」不只是「在逾時欄」—— 逾 1 天和逾 15 天的處理順序完全不同
+  const overdueDays = tone === "danger" ? daysOverdue(t.dueAt) : null;
+  const dueText = t.dueAt && overdueDays == null ? formatDate(t.dueAt) : null;
+  const who = t.assigneeDisplayName;
+
   return (
     <button className="kb-card" onClick={onOpen}>
+      <span className={`kb-stripe kb-stripe-${tone}`} aria-hidden />
       <div className="kb-card-summary">{t.summary}</div>
       <div className="kb-card-meta">
         {t.category && <span className="kb-tag">{catLabel(t.category)}</span>}
-        {confChip && <span className={`kb-conf kb-conf-${confChip.level}`}>{confChip.label}</span>}
-        {t.assigneeDisplayName && (
-          <span className="kb-assignee">
-            <svg className="kb-ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-              <circle cx="12" cy="8" r="3.2" />
-              <path d="M5.5 19a6.5 6.5 0 0 1 13 0" strokeLinecap="round" />
-            </svg>
-            {t.assigneeDisplayName}
+        {confChip && (
+          <span className={`kb-conf kb-conf-${confChip.level}`}>
+            <span className="kb-conf-d" aria-hidden />
+            {confChip.label}
           </span>
         )}
+        {overdueDays != null && <span className="kb-over">逾時 {overdueDays} 天</span>}
         {dueText && (
           <span className="kb-due">
             <svg className="kb-ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -158,9 +164,37 @@ function TicketCard({ t, onOpen }: { t: WarroomKanbanTicket; onOpen: () => void 
           </span>
         )}
       </div>
-      {t.departmentName && <div className="kb-card-dept">{t.departmentName}</div>}
+      <div className="kb-card-foot">
+        {who ? (
+          <span className="kb-who">
+            <span className={`kb-avatar kb-avatar-${avatarTone(who)}`} aria-hidden>{who.slice(0, 1)}</span>
+            {who}
+          </span>
+        ) : <span className="kb-who kb-unassigned">未指派</span>}
+        {/* mockup 這裡是「已同步 Ragic」，但目前沒有 Ragic 同步、資料也沒這欄位 →
+            不做假訊號，已簽核欄改顯示誰簽的 */}
+        <span>{tone === "ok" && t.confirmedByName ? `${t.confirmedByName} 已簽核` : t.departmentName ?? ""}</span>
+      </div>
     </button>
   );
+}
+
+// 逾期天數 · 只在逾時欄用；未逾期（含今天）回 null，避免顯示「逾時 0 天」
+function daysOverdue(dueAt: string | null): number | null {
+  if (!dueAt) return null;
+  const due = new Date(dueAt);
+  if (Number.isNaN(due.getTime())) return null;
+  const startOfDay = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.floor((startOfDay(new Date()) - startOfDay(due)) / 86_400_000);
+  return diff > 0 ? diff : null;
+}
+
+// avatar 底色依姓名決定 · 同一人每次都同色（隨機會讓人以為換人了）
+const AVATAR_TONES = ["blue", "green", "rose", "amber", "slate"] as const;
+function avatarTone(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (Math.imul(31, h) + name.charCodeAt(i)) | 0;
+  return AVATAR_TONES[Math.abs(h) % AVATAR_TONES.length];
 }
 
 function TicketDrawer({

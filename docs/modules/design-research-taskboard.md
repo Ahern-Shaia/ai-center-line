@@ -67,6 +67,25 @@
 
 ---
 
+## 5. 裁定（2026-07-27）· 採 **V3 Signal 卡片**
+
+三版 mockup 中用戶裁定 [`taskboard-v3-signal`](../mockup/taskboard-v3-signal.html)（另兩版 v1-calm / v2-triage 與後來的 redesign 不採用）。
+
+V3 就是 §4 表中三個 ⬜ 的具體長相，落地內容：
+
+| 元素 | 做法 | 對應 §3 結論 |
+|---|---|---|
+| 卡片左側 3px 色條（signal） | 語意色隨欄位（琥珀／玫瑰／emerald） | 色＋形＋字的「形」 |
+| 欄首 `●` 燈點 + mono 計數 | 取代純文字欄頭 | §B0-OL 狀態語意 |
+| **逾時 N 天** 實心 pill | 由 `dueAt` 算天數 | Datadog time-in-status（membership ≠ 嚴重度） |
+| 信心度 pill 加 **◆ 菱形** | 原本只有色＋字，補上形 | 修「只靠顏色」 |
+| 指派改 **初字圓標 avatar** | 顏色由姓名 hash 決定（穩定） | Linear/Jira 好掃 |
+| 部門移到卡片 footer 右側 | 原本獨立一行、佔高度 | 克制 |
+
+**與 mockup 的一處刻意不同**：mockup 已簽核欄顯示「已同步 Ragic」，但**目前沒有 Ragic 同步這件事**，資料裡也沒有這個欄位。不做假訊號——改顯示 `confirmedByName`（誰簽的）。要顯示同步狀態得等真的有同步功能。
+
+---
+
 ## 附錄 · 來源
 - Linear Kanban / display options — toolstackpm.com, linear.app/docs/display-options
 - Jira card customization（最多 3 欄、色碼）— support.atlassian.com/jira-software-cloud/docs/customize-cards
