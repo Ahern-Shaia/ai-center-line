@@ -28,9 +28,11 @@ const NAV: Array<{
       // 我的日報 / 我的行程 · 全角色可見 · employee 也看得到 · 主管也自己填/跑外勤
       { key: "my-daily-report", label: "我的日報", ic: iconBook, done: true },
       { key: "my-trips", label: "我的行程", ic: iconMap, done: true },
-      // 總覽儀表 / 每日簽核 · 主管級才顯 (employee 只看得到我的日報)
+      // 總覽儀表 · 主管級才顯 (employee 只看得到我的日報)
+      // 「每日簽核」已移除：它指向的就是 warroom 同一頁（簽核區塊在總覽儀表下半部），
+      // 點了路由不變、側欄高亮也不會動 —— 對使用者就是「點了沒反應」。
+      // 單筆簽核在任務看板的卡片抽屜；部門每日確認在總覽儀表。
       { key: "warroom", label: "總覽儀表", ic: iconGauge, done: true, perm: "warroom-tasks:view" },
-      { key: "signoff", label: "每日簽核", ic: iconCheck, done: true, perm: "signoff:action" },
     ],
   },
   {
@@ -288,7 +290,6 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
 
 // ---- inline SVG icons（keep bundle small；stroke 1.5 for observability weight）
 function iconGauge() { return svg(<><path d="M3 12a9 9 0 0 1 18 0" /><path d="M12 12l4-3" /></>); }
-function iconCheck() { return svg(<><path d="m5 12 4 4 10-10" /></>); }
 function iconChat() { return svg(<><path d="M4 6h16v10H8l-4 4V6z" /></>); }
 function iconMedia() { return svg(<><rect x="3" y="4" width="18" height="14" rx="2" /><path d="m3 15 5-5 5 5" /><circle cx="15" cy="9" r="1.5" /></>); }
 function iconBook() { return svg(<><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z" /><path d="M5 17h11" /></>); }

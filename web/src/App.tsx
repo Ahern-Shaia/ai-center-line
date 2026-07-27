@@ -229,7 +229,7 @@ export default function App() {
   const crumb = CRUMB[route.page];
 
   const onNav = (key: string) => {
-    if (key === "warroom" || key === "signoff") setRoute({ page: "warroom" });
+    if (key === "warroom") setRoute({ page: "warroom" });
     else if (key === "rag" || key === "media" || key === "km" || key === "map"
       || key === "depts" || key === "config" || key === "audit" || key === "scheduler-config" || key === "line-groups") {
       setRoute({ page: key });
