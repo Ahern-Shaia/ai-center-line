@@ -65,10 +65,19 @@ const EXPIRES_AT_KEY = "acl.password_expires";
 let token: string | null = localStorage.getItem(TOKEN_KEY);
 export const getToken = () => token;
 
+// 誰在用：PermissionProvider 掛在 App 之上（含登入頁），登入時 App 內部 setState
+// 不會讓它重新執行 effect —— 沒有這個訊號，登入後權限永遠不會去抓（要手動重新整理才會好）。
+const tokenListeners = new Set<() => void>();
+export function onTokenChange(fn: () => void): () => void {
+  tokenListeners.add(fn);
+  return () => { tokenListeners.delete(fn); };
+}
+
 function setToken(t: string | null) {
   token = t;
   if (t) localStorage.setItem(TOKEN_KEY, t);
   else localStorage.removeItem(TOKEN_KEY);
+  tokenListeners.forEach((fn) => fn());
 }
 
 function decodeJwt(t: string): Record<string, unknown> | null {
@@ -107,6 +116,7 @@ export function logout() {
   localStorage.removeItem(EXPIRES_AT_KEY);
   localStorage.removeItem("acl.perms");
   localStorage.removeItem("acl.perms_ts");
+  localStorage.removeItem("acl.perms_id");
 }
 
 export class ApiError extends Error {
