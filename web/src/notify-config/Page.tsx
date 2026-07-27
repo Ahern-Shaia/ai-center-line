@@ -3,6 +3,7 @@ import { ApiError, ncListRules, ncRemove, ncSetEnabled, notifyWebhookUrl, type N
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import Wizard from "./Wizard";
+import LogsTab from "./LogsTab";
 
 const SOURCE_LABEL: Record<string, string> = { ragic_form: "Ragic 表單", internal_event: "系統事件" };
 const CHANNEL_LABEL: Record<string, string> = { line_group: "LINE 群組", line_user: "LINE 私訊" };
@@ -11,6 +12,7 @@ const CHANNEL_LABEL: Record<string, string> = { line_group: "LINE 群組", line_
 export default function NotifyConfigPage() {
   const toast = useToast();
   const [mode, setMode] = useState<"list" | "wizard">("list");
+  const [tab, setTab] = useState<"rules" | "logs">("rules");
   const [rules, setRules] = useState<NotifyRuleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [delTarget, setDelTarget] = useState<NotifyRuleRow | null>(null);
@@ -64,7 +66,12 @@ export default function NotifyConfigPage() {
         <div><button className="btn btn-primary" onClick={() => setMode("wizard")}>＋ 新增通知規則</button></div>
       </div>
 
-      {loading ? (
+      <div className="dm-tabs">
+        <button className={`dm-tab${tab === "rules" ? " active" : ""}`} onClick={() => setTab("rules")}>通知規則</button>
+        <button className={`dm-tab${tab === "logs" ? " active" : ""}`} onClick={() => setTab("logs")}>通知紀錄</button>
+      </div>
+
+      {tab === "logs" ? <LogsTab /> : loading ? (
         <div className="dm-empty">載入中…</div>
       ) : rules.length === 0 ? (
         <div className="dm-empty">

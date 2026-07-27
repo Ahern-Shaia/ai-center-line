@@ -347,6 +347,22 @@ export interface NotifiableUser { userId: string; name: string }
 export const notifyWebhookUrl = (token: string) =>
   `${API_BASE || "https://ai-center-line.onrender.com"}/notify/webhook/${token}`;
 
+export interface NotifyLogRow {
+  receivedAt: string; status: string; sourceRef: string | null; recordId: number | null;
+  lineStatus: number | null; lineMessage: string | null; latencyMs: number | null;
+  messageText: string | null; sourceType: string | null; channel: string | null;
+  ruleId: string | null; ruleName: string | null;
+}
+// 通知紀錄（排查「改了為什麼沒通知」）
+export const ncListLogs = (params?: { limit?: number; ruleId?: string; status?: string }) => {
+  const q = new URLSearchParams();
+  if (params?.limit) q.set("limit", String(params.limit));
+  if (params?.ruleId) q.set("ruleId", params.ruleId);
+  if (params?.status) q.set("status", params.status);
+  const s = q.toString();
+  return req<NotifyLogRow[]>(`/notify-config/logs${s ? `?${s}` : ""}`);
+};
+
 export const ncListAccounts = () => req<RagicAccountRow[]>("/notify-config/accounts");
 export const ncCreateAccount = (body: { tenantId?: string | null; server: string; apname: string; displayName: string; apiKey?: string }) =>
   req<{ accountId: string }>("/notify-config/accounts", { method: "POST", body: JSON.stringify(body) });

@@ -1885,6 +1885,14 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .nc-pill.on { background:var(--ok-tint); color:var(--ok); }
 .nc-pill.off { background:var(--well); color:var(--ink-3); }
 .nc-pill.ev { background:var(--primary-tint); color:var(--primary-2); margin-right:4px; }
+.nc-pill.ok { background:var(--ok-tint); color:var(--ok); }
+.nc-pill.warn { background:var(--warn-tint); color:var(--warn); }
+.nc-pill.danger { background:var(--danger-tint); color:var(--danger); }
+.nc-pill.mut { background:var(--well); color:var(--ink-3); }
+.nc-log-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.nc-log-filters { display:flex; gap:12px; flex-wrap:wrap; }
+.nc-log-filters .nc-lnk.active { color:var(--ink); font-weight:600; }
+.nc-log-msg { margin-top:6px; padding:8px 10px; background:var(--well); border-radius:var(--r); font-size:12px; color:var(--ink-2); white-space:pre-wrap; line-height:1.6; }
 .nc-act { display:flex; gap:10px; }
 .nc-lnk { color:var(--primary-2); font-size:12.5px; cursor:pointer; background:none; border:none; padding:0; font:inherit; }
 .nc-lnk.mut { color:var(--ink-3); }
