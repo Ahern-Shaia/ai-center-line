@@ -1,6 +1,6 @@
 # ai-analysis-layering · 多租戶 AI 分析的分層架構
 
-> 狀態：✅ **APPROVED v1.0**（2026-07-27）· OQ-AAL-1..9 **全採建議裁定** · 進 M1
+> 狀態：🔨 **M1+M2+M4 本地 SHIPPED**（2026-07-27）· ⚠️ 待 push + **prod migration 0030** · M3 卡客戶欄位確認
 >
 > **這是架構決策文件，不是功能模組。** 它決定下列待裁定事項的做法，應先於它們定案：
 > [`extraction-schema-service-order`](extraction-schema-service-order.md)（L2 的第一個模板）、
@@ -190,16 +190,69 @@ OQ-AAL-9 明文與下列三題同一問題，故一併定案為 **ai-center-line
 
 ## 9. 里程碑
 
-| 里程碑 | 內容 |
-|---|---|
-| **M0** | 本文件 + OQ 裁定 ← 目前在這 |
-| **M1** | L1/L2 界線落到 `src/schemas.ts`：抽出 L1 共用結構 + 模板機制 |
-| **M2** | **抽取健康度儀表**（填充率／信心度分佈，per-tenant per-欄位）· 先於第二個模板 |
-| **M3** | 服務工單型模板（＝ [`extraction-schema-service-order`](extraction-schema-service-order.md) M1-M3） |
-| **M4** | 模板選擇進開通 wizard + aiproot 後台可改 |
-| **M5** | 用 M2 的指標回檢台灣福祉，對照本文 §0 的基準數字 |
+| 里程碑 | 內容 | 狀態 |
+|---|---|---|
+| **M0** | 本文件 + OQ 裁定 | ✅ |
+| **M1** | L1/L2 界線落到 schema + 模板機制（`pipeline/templates.ts` · migration 0030 · +9 tests）| ✅ 本地 |
+| **M2** | 抽取健康度儀表（填充率／信心度／自動警示 · aiproot 側）| ✅ 本地 |
+| **M3** | 服務工單型模板 | 🔒 卡客戶欄位確認（OQ-ESO-1）|
+| **M4** | 租戶管理頁可改模板 | ✅ 本地 |
+| **M5** | 用 M2 的指標回檢台灣福祉，對照本文 §0 的基準數字 | ⬜ 待 prod 0030 |
 
 > **M2 排在 M3 前面是刻意的**：沒有量測就不知道模板對不對，第二個模板等於再賭一次。
+
+---
+
+## 9-bis. 落地實況（2026-07-27 · M1/M2/M4）
+
+### 實作與文件的三處差異（以實作為準）
+
+| # | doc 原本寫 | 實際 | 為什麼 |
+|---|---|---|---|
+| 1 | `extraction-schema-service-order` §4「新增 service_reports **不需 migration**（analysis_result 是 jsonb）」 | **需要**。migration 0030 加了 `analysis_result.service_reports` | `analysis_result` 是**固定欄位**（messages / daily_reports / records），不是單一 jsonb blob。原判斷有誤 |
+| 2 | L2 首批兩個模板（服務工單 + 產線報工） | 實作**三個**：多一個 `general`（L1 only） | §4「L1 是安全網」需要一個具體載體。台灣福祉現況（daily_report 0 筆）就該是 general —— 不然 prompt 一直在要求模型產出用不到的欄位 |
+| 3 | — | `analysis_result.extraction_template` 記錄當時用的模板 | 換模板後歷史資料仍要能正確解讀，否則健康度統計會把舊資料算進新模板 |
+
+### 刻意的預設值（compat）
+
+`tenants.extraction_template` **default = `factory_report` ＝現行行為**。跑完 0030 不會有任何租戶的抽取行為改變；要切 `general` 由人在後台操作。
+
+### R12 回歸的處理方式（與慣例不同，說明理由）
+
+CLAUDE.md R12 要求改 schema/prompt 後重跑 `samples/`。**這次沒有跑，改用單元測試**，理由：
+
+- `npm run analyze` 跑的是 **CLI prototype（`src/`）**，本次改的是 **server pipeline**（兩份各自獨立 copy）。跑 CLI 會「通過」但完全沒驗到這次的改動——**那是假的綠燈**。
+- 真正的風險是兩件事，且都能靜態驗證：① 拆 prompt 時漏掉規則 ② `general` 模板叫模型產出 schema 裡沒有的欄位。
+- 已加 `server/test/conversation-analysis.templates.test.ts`（9 tests）覆蓋：L1 各模板皆可解析、factory_report 形狀與改版前一致、prompt 拆分後指示不漏、base prompt 不得殘留 L2 指示、模板上限 5 個、default 必須等於現行行為。**永久防線，不花 API 費用。**
+
+> ⚠️ **已知技術債**：`src/`（CLI）與 `server/src/conversation-analysis/pipeline/`（prod）是兩份 copy，本次只改後者，兩邊已進一步分歧。收斂成 shared package 另議。
+
+### 實測（本機 · migration 0030 已跑）
+
+造 20 筆記錄（person 15、machine_code 1、work_order 0）驗證聚合與警示：
+
+```
+aiproot [產線報工型]  訊息=60 L1=20 L2=0
+  L1 當責人  75%  L1 狀態 100%  L1 機台 5%  L1 工單 0%
+  ⚠ machine_code、work_order 幾乎抽不到（<10%）· 模板可能不合
+  ⚠ 套用的業種模板完全沒有產出 · 該客戶的回報格式可能對不上
+```
+
+**成功重現台灣福祉的樣態**（§0 基準：對口 72% / 機台 7% / 工單 8%）——這正是儀表要抓的訊號。
+
+### FMEA 覆核
+
+| # | 原緩解 | 落地情況 |
+|---|---|---|
+| F-1 商業紀律退化成接案 | 明文紀律 | ✅ 寫進 `templates.ts` 檔頭 + 單元測試鎖模板數 ≤5 |
+| F-2 模板選錯沒人發現 | 填充率常設指標 | ✅ M2 儀表 + 四條自動警示（門檻寫在後端，不散落前端）|
+| F-3 L1/L2 界線模糊 | 判準 + 驗證 | ✅ 測試斷言 base prompt 不得含 `daily_reports` / `output_qty` |
+| F-4 L2 爆炸 | 數量上限 | ✅ 測試鎖 ≤5 |
+| F-5 L3 缺資料 | L1 不依賴 L3 | ✅ `loadTemplate` 查不到一律 fallback default，不因設定缺失改變行為 |
+| F-6 prompt 膨脹 | per-tenant 只啟用一個 | ✅ fragment 接在 system prompt 尾端，仍是穩定前綴、caching 不受影響 |
+| F-7 新模板拖累既有 | 新舊樣本都要過 | ✅ 測試斷言 factory_report 形狀與改版前一致 |
+
+**P0 三條全數落地**，無殘留。
 
 ---
 
@@ -207,5 +260,6 @@ OQ-AAL-9 明文與下列三題同一問題，故一併定案為 **ai-center-line
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
+| 2026-07-27 | v1.1 | **M1+M2+M4 落地**（模板機制 / 健康度儀表 / 後台可改模板）· 加 §9-bis 落地實況：三處實作與文件差異、compat 預設、R12 改用單元測試的理由、實測重現台灣福祉樣態、FMEA 覆核 P0 全清 | ahern + Claude Code |
 | 2026-07-27 | v1.0 | **OQ-AAL-1..9 全採建議裁定** · 進 M1 · 連帶定案 OQ-BQA-2 / OQ-TPR-11 / OQ-ESO-10（皆屬 ai-center-line）與 OQ-ESO-2（並存）| ahern |
 | 2026-07-27 | v0.1 | M0 首版 · 以台灣福祉真實填充率（狀態 100% / 對口 72% vs 機台 7% / 工單 8%）論證 L1/L2 界線 · 三層模型（通用核心／業種模板／租戶詞彙）· 判準「欄位結構不同→L2、同欄位不同值→L3」· 商業紀律「模板要能開垂直市場才做，否則不接」· L1 為過渡安全網（實證：daily_report 0 筆但 records 60 筆）· 填充率當常設指標 · FMEA 7 條含 3 個 P0 · OQ-AAL-1..9 | ahern + Claude Code |
