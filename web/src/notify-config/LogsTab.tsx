@@ -80,6 +80,7 @@ export default function LogsTab() {
                   <td>
                     <div className="nc-t-name">{r.ruleName ?? "（規則已刪除）"}</div>
                     {open === i && r.messageText && <div className="nc-log-msg">{r.messageText}</div>}
+                    {open === i && <Diagnostics audit={r.audit} />}
                   </td>
                   <td><span className={`nc-pill ${s.tone}`}>{s.label}</span></td>
                   <td className="nc-t-mono" style={{ fontSize: 12 }}>
@@ -99,6 +100,35 @@ export default function LogsTab() {
         最近 100 筆 · 點任一列可展開實際送出的訊息內容。
       </div>
     </>
+  );
+}
+
+// 「欄位全是（未填）」的診斷：分辨是抓不到 record、key 對不上、還是資料本來就空
+function Diagnostics({ audit }: { audit: Record<string, unknown> | null }) {
+  if (!audit) return null;
+  const a = audit as {
+    recordFetched?: boolean; fetchError?: string; fetchSkipped?: string;
+    payloadKeys?: string[]; payloadKeyCount?: number; templatePaths?: string[]; matchedPaths?: number;
+    parsedRecordId?: number | null;
+  };
+  if (a.recordFetched === undefined && !a.fetchSkipped && !a.fetchError) return null;
+
+  const total = a.templatePaths?.length ?? 0;
+  const matched = a.matchedPaths ?? 0;
+  const verdict =
+    a.fetchError ? `抓取 Ragic 完整資料失敗：${a.fetchError}`
+    : a.fetchSkipped ? `未抓取完整資料：${a.fetchSkipped}`
+    : total > 0 && matched === 0 ? "已抓到資料，但勾選的欄位在資料裡一個都對不上——欄位設定與這張表單不符（表單改過或路徑不同）"
+    : total > 0 && matched < total ? `已抓到資料，${total} 個欄位中有 ${total - matched} 個對不上`
+    : "欄位都對得上——顯示（未填）代表該欄位在 Ragic 本來就是空的";
+
+  return (
+    <div className="nc-log-diag">
+      <div className="nc-log-diag-verdict">{verdict}</div>
+      <div>記錄編號 {String(a.parsedRecordId ?? "—")} · 抓到 {a.payloadKeyCount ?? 0} 個欄位 · 對上 {matched}/{total}</div>
+      {a.payloadKeys?.length ? <div>資料的欄位鍵：{a.payloadKeys.join(", ")}</div> : null}
+      {a.templatePaths?.length ? <div>規則設定的欄位：{a.templatePaths.join(", ")}</div> : null}
+    </div>
   );
 }
 

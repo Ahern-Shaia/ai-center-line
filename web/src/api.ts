@@ -351,7 +351,7 @@ export interface NotifyLogRow {
   receivedAt: string; status: string; sourceRef: string | null; recordId: number | null;
   lineStatus: number | null; lineMessage: string | null; latencyMs: number | null;
   messageText: string | null; sourceType: string | null; channel: string | null;
-  ruleId: string | null; ruleName: string | null;
+  ruleId: string | null; ruleName: string | null; audit: Record<string, unknown> | null;
 }
 // 通知紀錄（排查「改了為什麼沒通知」）
 export const ncListLogs = (params?: { limit?: number; ruleId?: string; status?: string }) => {
