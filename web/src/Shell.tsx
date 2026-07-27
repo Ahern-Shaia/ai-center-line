@@ -78,6 +78,8 @@ const NAV: Array<{
     roles: ["aiproot_admin", "consultant"],
     items: [
       { key: "onboard-tenant", label: "開通新租戶", ic: iconTeam, done: true },
+      // 含重設密碼 → 只給 aiproot_admin（顧問看得到卻點不動＝更糟的體驗）
+      { key: "tenant-mgmt", label: "租戶管理", ic: iconTeam, done: true, roles: ["aiproot_admin"] },
       { key: "cost-dashboard", label: "AI 成本管理", ic: iconGauge, done: true },
       { key: "batch-history", label: "對話分析歷程", ic: iconChat, done: true },
       { key: "binding-audit", label: "LINE 綁定稽核", ic: iconTeam, done: true },
@@ -88,6 +90,8 @@ const NAV: Array<{
     ],
   },
 ];
+
+const COLLAPSED_KEY = "sb_collapsed_groups";
 
 const ROLE_LABEL: Record<string, string> = {
   aiproot_admin: "AIPROOT 管理員",
@@ -151,6 +155,24 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
     onNav(key);
   };
 
+  const visibleNav = NAV
+    .filter((g) => !g.roles || g.roles.includes(session.role))
+    .map((g) => ({ ...g, items: g.items.filter(itemVisible) }))
+    .filter((g) => g.items.length > 0);
+
+  // 收合狀態存 localStorage：功能持續增加，每次重整都要重收一次會很煩
+  const [collapsed, setCollapsed] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? "[]") as string[]; }
+    catch { return []; }
+  });
+  const toggleGroup = (group: string) => {
+    setCollapsed((s) => {
+      const next = s.includes(group) ? s.filter((g) => g !== group) : [...s, group];
+      localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
   return (
     <div className={`app${mobileNavOpen ? " mobile-nav-open" : ""}`}>
       {mobileNavOpen && <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} aria-hidden />}
@@ -164,26 +186,38 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
           <button className="sb-close" onClick={() => setMobileNavOpen(false)} aria-label="關閉選單">×</button>
         </div>
         <nav className="sb-nav">
-          {NAV.filter((g) => !g.roles || g.roles.includes(session.role))
-            .map((g) => ({ ...g, items: g.items.filter(itemVisible) }))
-            .filter((g) => g.items.length > 0)
-            .map((g) => (
-            <div key={g.group}>
-              <div className="sb-group">{g.group}</div>
-              {g.items.map((it) => (
+          {visibleNav.map((g) => {
+            // 目前所在的分組永遠展開——否則點進去後選單自己收起來，會找不到自己在哪
+            const hasActive = g.items.some((it) => it.key === active);
+            const open = hasActive || !collapsed.includes(g.group);
+            return (
+              <div key={g.group}>
                 <button
-                  key={it.key}
-                  className={`sb-link${active === it.key ? " active" : ""}${!it.done ? " planned" : ""}`}
-                  onClick={() => it.done ? handleNav(it.key) : toast.show(`「${it.label}」規劃於後續版本推出`)}
-                  aria-current={active === it.key ? "page" : undefined}
+                  className={`sb-group sb-group-btn${open ? "" : " collapsed"}`}
+                  onClick={() => toggleGroup(g.group)}
+                  aria-expanded={open}
                 >
-                  <it.ic />
-                  <span>{it.label}</span>
-                  {!it.done && <span className="sb-plan-dot" aria-label="規劃中" title="規劃中" />}
+                  <span>{g.group}</span>
+                  <svg className="sb-chev" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
                 </button>
-              ))}
-            </div>
-          ))}
+                {open && g.items.map((it) => (
+                  <button
+                    key={it.key}
+                    className={`sb-link${active === it.key ? " active" : ""}${!it.done ? " planned" : ""}`}
+                    onClick={() => it.done ? handleNav(it.key) : toast.show(`「${it.label}」規劃於後續版本推出`)}
+                    aria-current={active === it.key ? "page" : undefined}
+                  >
+                    <it.ic />
+                    <span>{it.label}</span>
+                    {!it.done && <span className="sb-plan-dot" aria-label="規劃中" title="規劃中" />}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
         </nav>
         <div className="sb-foot">
           <div><span className="sb-foot-brand">aiproot</span> 技術支援</div>

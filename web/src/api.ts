@@ -1077,6 +1077,23 @@ export interface AiprootTenantOption {
 export const listAiprootTenants = () =>
   req<{ tenants: AiprootTenantOption[] }>("/aiproot-console/tenants");
 
+// 租戶管理 · 某租戶的登入帳號一覽（救援用 · 不回密碼）
+export interface TenantUserRow {
+  userId: string;
+  email: string | null;
+  displayName: string | null;
+  role: Role;
+  departmentName: string | null;
+  mustChangePassword: boolean;
+  locked: boolean;
+  lockedUntil: string | null;
+  lastLoginAt: string | null;
+  failedLoginCount: number;
+  passwordUpdatedAt: string | null;
+}
+export const listTenantLoginAccounts = (tenantId: string) =>
+  req<{ users: TenantUserRow[] }>(`/aiproot-console/tenants/${tenantId}/users`);
+
 // convo-analysis-realtime · aiproot 切 tenant 是否啟用 cron batch
 export const setTenantBatchEnabled = (tenantId: string, enabled: boolean) =>
   req<{ tenantId: string; batchEnabled: boolean }>(
