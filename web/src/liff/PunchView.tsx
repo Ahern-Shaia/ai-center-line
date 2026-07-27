@@ -56,8 +56,11 @@ export default function PunchView() {
       if (type === "clock_in") {
         toast.show("已開始外勤", "ok");
       } else {
+        // 原地打卡若照報「本段 0.0 km」，使用者會讀成「沒記錄到」→ 直接說明是沒移動
         const km = res.trip?.distanceM != null ? (res.trip.distanceM / 1000).toFixed(1) : null;
-        const base = km ? `已記錄這一站 · 本段 ${km} km` : "已記錄這一站";
+        const base = res.trip?.routeProvider === "same_location"
+          ? "已記錄這一站 · 與上一站同位置（未移動）"
+          : km ? `已記錄這一站 · 本段 ${km} km` : "已記錄這一站";
         // 沒填地點不擋打卡（打卡有時效、地點沒有），但要讓他知道還補得回來
         toast.show(typed ? base : `${base} · 未填地點，可到「我的行程」補填`, "ok");
         setCustomer("");

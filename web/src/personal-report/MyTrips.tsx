@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { ApiError, getMapTileConfig, getTrips, relabelPunch, type PunchRow, type TripRow } from "../api";
+import { ApiError, getMapTileConfig, getSession, getTrips, relabelPunch, type PunchRow, type TripRow } from "../api";
 import { useToast } from "../Toast";
 
 const TripMap = lazy(() => import("./TripMap"));
@@ -12,6 +12,7 @@ export default function MyTrips() {
   const [punches, setPunches] = useState<PunchRow[]>([]);
   const [tile, setTile] = useState<{ tileProvider: string; tileApiKey: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [openTrip, setOpenTrip] = useState<string | null>(null);
   const toast = useToast();
 
@@ -24,9 +25,13 @@ export default function MyTrips() {
       const res = await getTrips(d);
       setTrips(res.trips);
       setPunches(res.punches);
+      setLoadError(null);
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
-      if (!quiet) { setTrips([]); setPunches([]); }
+      // 載入失敗不可偽裝成「這天沒有外勤行程」——使用者會以為打卡沒記錄到，
+      // 實際上是讀取出錯（toast 會消失，空狀態卻會一直留在那誤導人）。
+      const msg = err instanceof ApiError ? err.message : "載入失敗";
+      toast.show(msg, "danger");
+      if (!quiet) { setTrips([]); setPunches([]); setLoadError(msg); }
     } finally {
       if (!quiet) setLoading(false);
     }
@@ -57,10 +62,22 @@ export default function MyTrips() {
 
       {loading ? (
         <div className="dm-empty">載入中…</div>
+      ) : loadError ? (
+        <div className="dm-empty">
+          讀取失敗
+          <div className="dm-empty-hint">{loadError}</div>
+          <button className="btn btn-sm" style={{ marginTop: 10 }} onClick={() => void load(date)}>重新載入</button>
+        </div>
       ) : trips.length === 0 && punches.length === 0 ? (
         <div className="dm-empty">
           這天沒有外勤行程
           <div className="dm-empty-hint">當天按過「開始外勤」與「記錄這一站」才會出現各段路程</div>
+          {/* 打卡走 LINE 綁定的員工身分，平台登入可能是另一組帳號——
+              同一個人有兩個帳號時，這裡會「明明打了卡卻查無資料」，把身分印出來一眼就看得出來 */}
+          <div className="dm-empty-hint" style={{ marginTop: 8 }}>
+            目前查詢身分：{whoami() ?? "（未知）"}
+            <br />打卡是記在 LINE 綁定的那個員工帳號上；若你用另一組帳號登入平台，這裡會看不到。
+          </div>
         </div>
       ) : (
         <>
@@ -210,6 +227,11 @@ function PunchRowItem({ punch, onSaved }: { punch: PunchRow; onSaved: () => void
       )}
     </div>
   );
+}
+
+// 目前這個 JWT 是誰（LIFF 綁定身分 vs 平台登入帳號可能不同）
+function whoami(): string | null {
+  return getSession()?.email ?? null;
 }
 
 function getTaipeiDate(): string {

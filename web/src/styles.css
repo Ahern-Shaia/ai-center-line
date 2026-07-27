@@ -1997,3 +1997,12 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .liff-note { color:var(--ink-3); font-size:11.5px; }
 .liff-pct { font-family:var(--mono); font-size:12px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
 .liff-ok-mark { width:52px; height:52px; border-radius:50%; background:var(--ok-tint); color:var(--ok); display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:700; margin-bottom:14px; }
+
+/* ==================== 觸控裝置 · 輸入框字級下限 ====================
+   iOS（含 LINE webview）在 focus font-size < 16px 的輸入框時會自動放大整個頁面，
+   而且不會自己縮回 —— 使用者看到的是「版面跑掉、右邊被切掉」，會直接判定功能壞了。
+   16px 是 iOS 的門檻值，不是設計偏好，所以放在檔案最後確保蓋過各處的小字規則。 */
+@media (max-width:760px) {
+  input, textarea, select,
+  .tf, .hdr-group .tf, .trip-tl-edit .tf { font-size:16px; }
+}
