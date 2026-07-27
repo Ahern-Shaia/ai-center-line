@@ -2,7 +2,12 @@
 
 > 本檔＝戰情室後台的**設計系統實作稿**。上位規範見 `docs/frontend-design-principles.md §B0-OL`；本檔把 §B0-OL 落實成 CSS token / 元件規範 / 用法範例。動 code 改 token 前必回頭讀本檔。
 >
-> 對應 CLAUDE.md R16 · profile：`observability-light` · 定案 2026-07-04
+> 對應 CLAUDE.md R16 · profile：`observability-light` · 定案 2026-07-04 · **最後更新 2026-07-27**
+>
+> 2026-07-27 更新內容：補登定案後新增的 13 個元件家族（任務看板 V3 Signal／來源原文／今日日誌／
+> 行程里程／資料表格／診斷區塊／分頁／側欄折疊／確認框／主從雙欄／排程設定／開通結果／LIFF）；
+> 修正三處會誤導的舊內容（pill 命名已分三套、範例含 emoji 違反自家 avoid-list、
+> 「已同步 Ragic」是不存在的功能）。
 
 ---
 
@@ -139,22 +144,35 @@
 | 待確認 | `.lamp.yellow` | `--warn` | `--warn-tint` | 「待確認」/ `HEALTH_LABEL.yellow` |
 | 逾時 | `.lamp.red` | `--danger` | `--danger-tint` | 「逾時」/ `HEALTH_LABEL.red` |
 
-**Pill（`.pill` 家族）**：`padding:2px 8px`, `border-radius:999px`, `font-size:11.5px`, `font-weight:600`, `tabular-nums`。
+**Pill**：`padding:2px 8px`, `border-radius:999px`, `font-size:11.5px`, `font-weight:600`, `tabular-nums`。
 
-| Variant | 底 | 字 | 用途 |
+> ⚠️ 實作上有三套並存，**新做元件前先確認要用哪一套**，不要再開第四套：
+
+| 家族 | selector | 用在哪 |
+|---|---|---|
+| 儀表／簽核 | `.pill` + `.ok / .warn / .danger / .review / .muted` | 總覽儀表、簽核手風琴 |
+| 表格 | `.nc-pill` + `.ok / .warn / .danger / .mut / .ev / .on / .off` | 通知設定、通知紀錄、租戶管理 |
+| 任務看板 | `.kb-tag`（分類）· `.kb-conf` + `.kb-conf-mid / -low`（信心度）· `.kb-over`（逾時） | 任務看板卡片 |
+
+| 語意 | 底 | 字 | 用途 |
 |---|---|---|---|
-| `.pill.ok` | `--ok-tint` | `#065F46` | 高信心 / 已簽核 / 已同步 Ragic |
-| `.pill.warn` | `--warn-tint` | `#92400E` | 中信心 / 待確認 |
-| `.pill.danger` | `--danger-tint` | `#9F1239` | 低信心 |
-| `.pill.review` | `--warn-tint` | `#92400E` | 已攔截需補件（dashed border 加強識別） |
-| `.pill.muted` | `--well` | `--ink-3` | 無資料 / 無待簽 |
+| ok | `--ok-tint` | `#065F46` / `--ok` | 高信心 / 已簽核 / 正常 |
+| warn | `--warn-tint` | `#92400E` / `--warn` | 中信心 / 待確認 |
+| danger | `--danger-tint` | `#9F1239` / `--danger` | 低信心 / 已鎖定 |
+| review | `--warn-tint` + dashed border | `#92400E` | 已攔截需補件 |
+| muted | `--well` | `--ink-3` | 無資料 / 無待簽 |
+| **逾時（實心例外）** | `--danger` 實底 | `#fff` | **只有逾時用實心** —— 它是唯一需要「跳出來」的訊號 |
 
 ### 3.4 燈號 vs pill 分工
 
 - **燈** = 部門/群組**整體**健康狀態（一個部門一顆燈）
 - **Pill** = 單筆 ticket 的**信心度 / 狀態**（一筆一 pill；一部門可有多 pill）
 - 燈壞 → 一定要有「為什麼」的說明文字（不能只靠色）
-- Pill 一律色 + 文字（`高信心`, `✓ 已同步 Ragic`, `🛑 已即時攔截`）
+- **Pill 一律色 + 文字**，而且**不用 emoji**（§1.3 avoid-list）。範例：`高信心`、`已簽核`、`逾時 5 天`
+- **不要標「已同步 Ragic」** —— 目前沒有 Ragic 同步功能、資料也沒有這個欄位。
+  在畫面上放一個系統做不到的狀態＝假訊號（2026-07-27 做 V3 卡片時的裁定，見 `design-research-taskboard.md` §5）
+- **雙編碼要三重**：色 + **形** + 字。只靠顏色的話色盲與黑白列印分不出來
+  （信心度用 `◆` 菱形 `.kb-conf-d`、欄位狀態用 `●` 燈點 `.kb-dot`、卡片用左側色條 `.kb-stripe`）
 
 ---
 
@@ -199,6 +217,30 @@
 | **Source drawer** | `.src-meta`, `.src-snippet`, `.src-note` | well、warn-tint | Citation drill-down 內文 |
 | **Onboarding** | `.ob-steps`, `.ob-step`, `.ob-num`, `.ob-body`, `.ob-arrow`, `.ob-cta` | primary-tint（step num）、sh-sm | 5 步驟原理頁 |
 | **Login** | `.login-wrap`, `.login-card`, `.login-brand`, `.field` | surface、sh、primary tint focus ring | 登入卡 |
+
+> 以下為 2026-07-04 定案後陸續加入的元件（2026-07-27 補登）。
+> 之前這份清單只涵蓋約一半實作，導致新做元件時容易另起爐灶。
+
+| 元件 | selector 家族 | 用途 |
+|---|---|---|
+| **任務看板 · V3 Signal**（裁定 2026-07-27）| `.kanban`, `.kb-col`, `.kb-col-hdr`, `.kb-dot`, `.kb-card`, `.kb-stripe`, `.kb-tag`, `.kb-conf` + `.kb-conf-d`, `.kb-over`, `.kb-card-foot`, `.kb-who`, `.kb-avatar` | 簽核 triage 佇列。卡片左 3px 語意色條＝signal；欄首 `●` 燈點；逾時顯「N 天」量級；指派用初字圓標（底色由姓名 hash 決定，**不可隨機**，同一人每次同色）。規範見 [`design-research-taskboard.md`](modules/design-research-taskboard.md) §5 |
+| **來源原文對照** | `.ts-wrap`, `.ts-toggle`, `.ts-body`, `.ts-hd`, `.ts-msg`, `.ts-msg-meta`, `.ts-note` | 任務卡抽屜內收合區塊。只列 AI 實際採用的訊息（`source_ids`），不是整天對話。取不到時要說出原因（`.ts-note`） |
+| **環形儀表**（Recharts donut） | `.gauge-tile`, `.gauge-donut`, `.gauge-center`, `.gauge-num`, `.gauge-label`, `.gauge-frac` | 總覽儀表三環（簽核率／健康度／高信心）。**狀態靠環本身承載，tile 保持中性**，不要再給 tile 上語意底色。已取代舊的 `.tile .bar` 長條寫法 |
+| **今日日誌** | `.dl-day`, `.dl-day-hdr`, `.dl-day-cards`, `.dl-card`, `.dl-report-item`, `.dl-quiet`, `.dl-raw` | 每天一段、每群一卡。`.dl-day-cards` 必須 `align-items:start`（grid 預設 stretch 會把空卡撐成大片空白）；當日無內容的群收成 `.dl-quiet` 一行 |
+| **行程 · 里程** | `.trip-tl`, `.trip-tl-row`, `.trip-tl-badge`, `.trip-tl-place`, `.trip-list`, `.trip-row`, `.trip-km`, `.trip-detail`, `.trip-method`, `.trip-map` | 打卡時間軸 + 逐段里程 + 依據展開。地圖走 react-leaflet + CARTO light |
+| **資料表格** | `.nc-tbl`, `.nc-t-name`, `.nc-t-sub`, `.nc-t-mono`, `.nc-pill`, `.nc-act`, `.nc-lnk` | 通知設定／通知紀錄／租戶管理共用。**新表格一律用這套，不要 invent `.table`** |
+| **診斷區塊** | `.nc-log-diag`, `.nc-log-diag-verdict`, `.nc-log-msg` | 失敗原因要給「所以我該做什麼」的一句話結論，再列對照數字 |
+| **分頁** | `.dm-tabs`, `.dm-tab` | 頁內切換（總覽儀表／任務看板／今日日誌、通知規則／通知紀錄） |
+| **側欄分組折疊** | `.sb-group-btn`, `.sb-chev` | 分組可收合、狀態存 localStorage；**目前所在分組永遠展開** |
+| **確認對話框** | `.cd-scrim`, `.cd-modal`, `.cd-dialog`, `.cd-title`, `.cd-body` | 取代 `window.confirm`；React Aria Modal（focus trap / Esc / scrim 關） |
+| **主從雙欄** | `.tm-split`, `.tm-list`, `.tm-item`, `.tm-detail` | 租戶管理：左清單右明細；窄螢幕轉為上下 |
+| **排程設定** | `.sc-row`, `.sc-row-lbl`, `.sc-row-hint`, `.sc-row-val` | 時間選擇器 + 下次執行 + 進階 cron 收合 |
+| **開通結果** | `.onboard-success`, `.onboard-success-password`, `.onboard-pw`, `.onboard-warn` | 一次性密碼只顯示一次；**必須先複製才能離開** |
+| **LIFF（手機端）** | `.liff-wrap`, `.liff-h`, `.liff-sub`, `.liff-group`, `.liff-note`, `.liff-explain`, `.liff-pct` | 外勤打卡／我的日報／我的行程。`.liff-explain` 用於「為什麼是 0」這類白話說明 |
+
+> ⚠️ **觸控裝置輸入框字級下限 16px**（樣式表最後的 `@media (max-width:760px)`）。
+> iOS 對 `font-size < 16px` 的輸入框會自動放大整頁且不會縮回 —— 使用者看到的是「版面跑掉、右邊被切掉」，
+> 會直接判定功能壞了。這是 iOS 的門檻值，**不是設計偏好，不可為了視覺調小**。
 
 ### 4.3 元件組合規則
 
@@ -277,7 +319,12 @@
                  └────────────────────────────────────────────────────────────────┘
 ```
 
-### 6.2 Source drawer（點「查來源→」）
+### 6.2 Source drawer（任務卡「對照原始訊息」）
+
+> 文案已於 2026-07-27 拆成兩個入口，用途不同：
+> **「對照原始訊息」**＝這張卡的依據（只顯示 AI 實際採用的那幾則 · 所有主管可看）；
+> **「查當日完整對話」**＝當天全部對話（仍限 AIPROOT）。
+> 下圖為 v7 mockup 的原始構想，實作已簡化為抽屜內的收合區塊（`.ts-wrap` / `.ts-msg`）。
 
 ```
                                               ┌─ Drawer 580px ──────────────────────┐
