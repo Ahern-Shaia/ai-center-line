@@ -6,6 +6,10 @@ import ConfirmDialog from "../shared/ConfirmDialog";
 import { catLabel } from "../shared/categoryLabel";
 import { canOpenConvoDetail, navigateTo } from "../nav";
 
+// 一張卡最多列幾筆。這頁是「今天各群發生什麼」的掃視，不是逐條細讀 ——
+// 原本 5 筆 + detail 不截斷，卡片高度差到 5 倍，三欄網格就變成一片鋸齒空白。
+const MAX_ITEMS = 3;
+
 // WTB-M4 · 日誌 view · 按天列 · 每 upload 一 card
 // scheduler-config M4 · 加「立即分析」按鈕（tenant_admin / aiproot 可觸發）
 // 對照 docs/modules/warroom-task-board.md §7.3 · docs/modules/scheduler-config.md §6
@@ -103,8 +107,10 @@ export default function DailyLog() {
       {loading && !data && <div className="dm-empty">載入中…</div>}
       {data && data.days.length === 0 && <div className="dm-empty">此期間內無日誌</div>}
 
-      {data && data.days.map((day) => (
-        <DaySection key={day.batchDate} day={day} />
+      {/* 只有最近一天預設展開 —— 7 天 × 6-9 群 ≈ 60 張卡全攤開，
+          使用者要找「今天怎麼樣」得先滑過前六天。往前查是偶發需求，不該是預設。*/}
+      {data && data.days.map((day, i) => (
+        <DaySection key={day.batchDate} day={day} defaultOpen={i === 0} />
       ))}
     </>
   );
@@ -113,20 +119,27 @@ export default function DailyLog() {
 // 一天一段。當日沒有任何內容的群不佔一整格 —— 6 群裡 4 群沒日報時，
 // 版面 2/3 會是「當日無工作日報」的空卡片，把真正有內容的那 2 張擠掉。
 // 收成一行，需要時再展開（原始訊息仍看得到，只是不預設佔版面）。
-function DaySection({ day }: { day: WarroomDailyDays["days"][number] }) {
+function DaySection({ day, defaultOpen }: { day: WarroomDailyDays["days"][number]; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [showQuiet, setShowQuiet] = useState(false);
   const hasContent = day.uploads.filter((u) => u.dailyReports.length > 0 || u.records.length > 0);
   const quiet = day.uploads.filter((u) => u.dailyReports.length === 0 && u.records.length === 0);
   const shown = showQuiet ? day.uploads : hasContent;
+  const itemCount = hasContent.reduce((n, u) => n + u.dailyReports.length + u.records.length, 0);
 
   return (
     <div className="dl-day">
-      <div className="dl-day-hdr">
+      <button className={`dl-day-hdr dl-day-btn${open ? "" : " collapsed"}`} onClick={() => setOpen(!open)} aria-expanded={open}>
+        <svg className="dl-day-chev" width="12" height="12" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M6 9l6 6 6-6" />
+        </svg>
         <span className="dl-day-date">{formatDay(day.batchDate)}</span>
         <span className="dl-day-count">
-          {day.uploads.length} 群{quiet.length > 0 && ` · ${hasContent.length} 群有日報`}
+          {hasContent.length} 群有日報 · {itemCount} 筆{quiet.length > 0 && ` · ${quiet.length} 群無`}
         </span>
-      </div>
+      </button>
+      {!open ? null : (<>
       {shown.length > 0 && (
         <div className="dl-day-cards">
           {shown.map((u) => (
@@ -158,6 +171,7 @@ function DaySection({ day }: { day: WarroomDailyDays["days"][number] }) {
       {hasContent.length === 0 && !showQuiet && quiet.length === 0 && (
         <div className="dm-empty" style={{ padding: "12px 0" }}>當日無資料</div>
       )}
+      </>)}
     </div>
   );
 }
@@ -204,16 +218,16 @@ function GroupCard({
       </div>
       {dailyReports.length > 0 ? (
         <ul className="dl-report-list">
-          {dailyReports.slice(0, 5).map((r, i) => (
+          {dailyReports.slice(0, MAX_ITEMS).map((r, i) => (
             <li key={i} className="dl-report-item">
               <DailyReportSummary r={r} />
             </li>
           ))}
-          {dailyReports.length > 5 && (
+          {dailyReports.length > MAX_ITEMS && (
             <li className="dl-report-more">
               {canOpenConvoDetail() ? (
                 <button className="nc-lnk" onClick={() => navigateTo({ page: "convo-detail", uploadId })}>
-                  + {dailyReports.length - 5} 筆 · 查完整對話 →
+                  + {dailyReports.length - MAX_ITEMS} 筆 · 查完整對話 →
                 </button>
               ) : <span>+ {dailyReports.length - 5} 筆</span>}
             </li>
@@ -225,14 +239,14 @@ function GroupCard({
             此群無工廠報工格式訊息 · 但 AI 抽出 <b>{records.length}</b> 項分類記錄
           </div>
           <div className="dl-records">
-            {records.slice(0, 5).map((r, i) => (
+            {records.slice(0, MAX_ITEMS).map((r, i) => (
               <RecordItem key={i} r={r} />
             ))}
-            {records.length > 5 && (
+            {records.length > MAX_ITEMS && (
               <div className="dl-report-more">
                 {canOpenConvoDetail() ? (
                   <button className="nc-lnk" onClick={() => navigateTo({ page: "convo-detail", uploadId })}>
-                    + {records.length - 5} 筆 · 查完整對話 →
+                    + {records.length - MAX_ITEMS} 筆 · 查完整對話 →
                   </button>
                 ) : <span>+ {records.length - 5} 筆</span>}
               </div>
