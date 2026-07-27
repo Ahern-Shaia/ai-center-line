@@ -36,6 +36,7 @@ import { AttendanceModule } from "./attendance/attendance.module.js";
 import { NotifyConfigModule } from "./notify-config/notify-config.module.js";
 import { NotificationHubModule } from "./notification-hub/notification-hub.module.js";
 import { MediaModule } from "./media/media.module.js";
+import { AuditModule } from "./audit/audit.module.js";
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { MediaModule } from "./media/media.module.js";
     NotificationHubModule,
     NotifyConfigModule,
     MediaModule,
+    AuditModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [
