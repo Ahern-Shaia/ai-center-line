@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 /**
  * S3-相容 客戶端 · 預設 Cloudflare R2 (OQ-CAR-2 v0.3 裁定 · 省 egress)
@@ -75,6 +75,15 @@ export class MediaStorageService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * 抹掉物件 · 誤傳的個資照片要真的不見（media-and-vision.md §7）
+   * S3 刪不存在的 key 不算錯，所以重跑清除排程是安全的。
+   */
+  async remove(key: string): Promise<void> {
+    if (!this.client) throw new Error("S3 未設定 · 呼叫前需 check enabled");
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
   async get(key: string): Promise<Buffer | null> {

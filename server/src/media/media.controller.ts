@@ -1,5 +1,7 @@
-import { BadRequestException, Controller, Get, Param, Query, Res } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Query, Res } from "@nestjs/common";
 import type { FastifyReply } from "fastify";
+import { CurrentUser } from "../auth/current-user.decorator.js";
+import type { JwtUser } from "../auth/jwt-user.js";
 import { Roles } from "../auth/roles.decorator.js";
 import { MediaService } from "./media.service.js";
 
@@ -8,6 +10,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // 素材看板 · docs/modules/media-and-vision.md §2
 // employee 不開放：素材看板是跨群檢視，employee 只看自己的日報。
 const VIEWERS = ["aiproot_admin", "consultant", "tenant_admin", "group_owner"] as const;
+// 刪除／還原限總經理室以上（用戶 2026-07-28 裁定）· group_owner 只能看
+const DELETERS = ["aiproot_admin", "consultant", "tenant_admin"] as const;
 
 @Controller("media")
 export class MediaController {
@@ -15,10 +19,14 @@ export class MediaController {
 
   @Get()
   @Roles(...VIEWERS)
-  async list(@Query("kind") kind?: string, @Query("page") page?: string) {
+  async list(
+    @Query("kind") kind?: string,
+    @Query("page") page?: string,
+    @Query("deleted") deleted?: string,
+  ) {
     const p = page ? Number(page) : 1;
     if (!Number.isFinite(p) || p < 1) throw new BadRequestException("page 格式不正確");
-    return this.svc.list({ kind, page: p });
+    return this.svc.list({ kind, page: p, deleted: deleted === "true" });
   }
 
   /** 檔案內容 · 經權限確認後由伺服器代理，R2 網址不外流（FMEA F-2） */
@@ -39,5 +47,38 @@ export class MediaController {
       // 內容不可變（一則訊息一個檔），但屬租戶私有 → 只准瀏覽器自己留
       .header("cache-control", "private, max-age=86400")
       .send(file.body);
+  }
+
+  /** 刪除（隱藏）· 保留期內可還原。只動我們系統裡的副本，LINE 群組那則訊息還在 */
+  @Delete(":mediaId")
+  @Roles(...DELETERS)
+  async remove(
+    @CurrentUser() user: JwtUser,
+    @Param("mediaId") mediaId: string,
+    @Body() body?: { reason?: string },
+  ) {
+    if (!UUID_RE.test(mediaId)) throw new BadRequestException("mediaId 格式不正確");
+    const reason = body?.reason?.trim().slice(0, 200) || null;
+    return this.svc.softDelete(mediaId, user.user_id, reason);
+  }
+
+  @Post(":mediaId/restore")
+  @Roles(...DELETERS)
+  async restore(@Param("mediaId") mediaId: string) {
+    if (!UUID_RE.test(mediaId)) throw new BadRequestException("mediaId 格式不正確");
+    await this.svc.restore(mediaId);
+    return { success: true };
+  }
+
+  /**
+   * 立即徹底清除 · 只有我方平台端能做（用戶 2026-07-28 裁定）。
+   * 客戶方最多只能刪到「隱藏」，真的要抹掉個資時找我們 —— 不可逆的操作收在一個窗口。
+   */
+  @Post(":mediaId/purge")
+  @Roles("aiproot_admin")
+  async purge(@Param("mediaId") mediaId: string) {
+    if (!UUID_RE.test(mediaId)) throw new BadRequestException("mediaId 格式不正確");
+    await this.svc.purge(mediaId);
+    return { success: true };
   }
 }
