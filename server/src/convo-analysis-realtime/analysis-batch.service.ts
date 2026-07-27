@@ -106,6 +106,10 @@ export class AnalysisBatchService {
         messageCount: messages.length,
       }));
 
+      // 6. tx 都結束了才排分析 —— 在 createBatchUpload 的 tx 內排會讀不到剛寫入那筆
+      //    （runJob 走另一條連線 → `upload N 不存在`，且 batch 仍回報 completed）
+      this.analyzeService.scheduleJob(upload.id);
+
       this.logger.log(`batch done · batchId=${batchId} · uploadId=${upload.id} · messages=${messages.length}`);
       return { batchId, status: "completed", uploadId: upload.id, messageCount: messages.length };
     } catch (err) {

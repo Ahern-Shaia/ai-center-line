@@ -78,12 +78,20 @@ export class AnalyzeService {
       })
       .returning({ id: analysisUpload.id, status: analysisUpload.status });
     const row = rows[0];
+    // ⚠️ 這裡「不」排分析工作。INSERT 還在 tx 裡，setImmediate 會在 commit 之前就跑，
+    // runJob 用另一條連線讀不到這筆 → `upload N 不存在`（2026-07-27 prod 實際發生，
+    // 7 群中 2 群整天沒有分析結果，batch 卻回報 completed / failed=0）。
+    // 由呼叫端在 tx 結束後自己呼叫 scheduleJob()。
+    return row;
+  }
+
+  /** tx commit 之後才可呼叫 —— 在 tx 內排會讀不到剛寫入的那一筆 */
+  scheduleJob(uploadId: number): void {
     setImmediate(() => {
-      void this.runJob(row.id).catch((e) =>
-        this.logger.error(`batch runJob(${row.id}) uncaught: ${String((e as Error).message ?? e)}`),
+      void this.runJob(uploadId).catch((e) =>
+        this.logger.error(`runJob(${uploadId}) uncaught: ${String((e as Error).message ?? e)}`),
       );
     });
-    return row;
   }
 
   // 從 tenant llm-config 建 provider · fallback env
@@ -110,16 +118,24 @@ export class AnalyzeService {
     const { db } = await import("../db/client.js");
     await db.update(analysisUpload).set({ status: "running" }).where(eq(analysisUpload.id, uploadId));
     try {
-      const rows = await db
-        .select({
-          rawContent: analysisUpload.rawContent,
-          tenantSlug: analysisUpload.tenantSlug,
-          tenantId: analysisUpload.tenantId,
-        })
-        .from(analysisUpload)
-        .where(eq(analysisUpload.id, uploadId))
-        .limit(1);
-      const row = rows[0];
+      // 手動上傳走 request tx（呼叫端在 controller 內，無法等 commit 後才排程），
+      // 這裡可能比 commit 早一步讀 → 短暫重試等它可見，真的不存在才失敗。
+      // batch 路徑已改成 tx 結束後才 scheduleJob，不依賴這段。
+      let row: { rawContent: string; tenantSlug: string; tenantId: string | null } | undefined;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const rows = await db
+          .select({
+            rawContent: analysisUpload.rawContent,
+            tenantSlug: analysisUpload.tenantSlug,
+            tenantId: analysisUpload.tenantId,
+          })
+          .from(analysisUpload)
+          .where(eq(analysisUpload.id, uploadId))
+          .limit(1);
+        row = rows[0];
+        if (row) break;
+        await new Promise((r) => setTimeout(r, 200));
+      }
       if (!row) throw new Error(`upload ${uploadId} 不存在`);
 
       const provider = await this.resolveProvider(row.tenantId);
