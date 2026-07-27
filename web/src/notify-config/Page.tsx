@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, ncListRules, ncRemove, ncSetEnabled, type NotifyRuleRow } from "../api";
+import { ApiError, ncListRules, ncRemove, ncSetEnabled, notifyWebhookUrl, type NotifyRuleRow } from "../api";
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import Wizard from "./Wizard";
@@ -30,6 +30,12 @@ export default function NotifyConfigPage() {
       toast.show(r.enabled ? "已停用" : "已啟用", "ok");
       void load();
     } catch (e) { toast.show(e instanceof ApiError ? e.message : "操作失敗", "danger"); }
+  }
+
+  function copyWebhook(token: string) {
+    const url = notifyWebhookUrl(token);
+    void navigator.clipboard?.writeText(url);
+    toast.show("已複製 · 貼到 Ragic 該表單「工具 → 同步 → Webhook」", "ok");
   }
 
   async function doDelete() {
@@ -90,6 +96,11 @@ export default function NotifyConfigPage() {
                 <td>{r.enabled ? <span className="nc-pill on">啟用</span> : <span className="nc-pill off">停用</span>}</td>
                 <td>
                   <div className="nc-act">
+                    {/* Ragic 規則必須把網址貼進 Ragic 才會通；建立當下的成功畫面關掉就找不回來，
+                        逼人「刪掉重建」——所以列表要能隨時重新複製。*/}
+                    {r.webhookToken && (
+                      <button className="nc-lnk" onClick={() => copyWebhook(r.webhookToken as string)}>複製網址</button>
+                    )}
                     <button className="nc-lnk mut" onClick={() => void toggleEnabled(r)}>{r.enabled ? "停用" : "啟用"}</button>
                     <button className="nc-lnk danger" onClick={() => setDelTarget(r)}>刪除</button>
                   </div>

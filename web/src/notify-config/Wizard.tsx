@@ -156,12 +156,14 @@ export default function Wizard({ onDone, onCancel }: { onDone: () => void; onCan
           {savedToken ? (
             <>
               <div className="nc-card-h"><span className="nc-step-n">✓</span>接上 Ragic Webhook</div>
-              <div className="nc-card-sub">該表單 → 工具 → Webhook → 貼上此網址 → 儲存（一次即可）</div>
+              {/* Ragic 實際路徑多一層「同步」· 少寫這層使用者常找不到 */}
+              <div className="nc-card-sub">該表單 → 右上三角下拉 → <b>工具 → 同步 → Webhook</b> → 貼上此網址 → 儲存（一次即可）</div>
               <div className="nc-url-box">
                 <code>{url}</code>
                 <button className="nc-url-copy" onClick={() => { void navigator.clipboard?.writeText(url); toast.show("已複製", "ok"); }}>複製</button>
               </div>
-              <div className="nc-callout">貼上後，之後每次符合條件的異動就會自動通知，<b>不用再貼任何程式碼</b>。</div>
+              <div className="nc-callout">貼上後，之後每次符合條件的異動就會自動通知，<b>不用再貼任何程式碼</b>。<br />
+                這個網址之後可在規則列表按「複製網址」重新取得，不必刪掉重建。</div>
             </>
           ) : (
             <>
