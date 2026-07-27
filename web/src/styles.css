@@ -693,6 +693,11 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .ml-thumb-img img { width:100%; height:100%; object-fit:cover; display:block; }
 .ml-thumb-load { flex:1; background:linear-gradient(90deg,var(--well) 25%,var(--line-2) 50%,var(--well) 75%); background-size:200% 100%; animation:ml-shimmer 1.2s linear infinite; }
 @keyframes ml-shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
+.ml-card-act { display:flex; align-items:center; gap:8px; padding-top:8px; border-top:1px dashed var(--line-2); }
+.ml-card-act .btn { padding:4px 10px; font-size:12px; }
+.ml-card-act .btn:not(.danger) { margin-left:auto; }
+.ml-card-left { font-size:11.5px; color:var(--ink-3); }
+.ml-card-left.urgent { color:var(--warn); font-weight:600; }
 .ml-pager { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:16px; }
 .ml-pager-at { font-size:12px; color:var(--ink-3); }
 

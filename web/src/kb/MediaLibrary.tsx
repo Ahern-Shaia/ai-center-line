@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, fetchMediaBlobUrl, listMedia, type MediaItem, type MediaKind, type MediaListResult } from "../api";
+import {
+  ApiError, deleteMedia, fetchMediaBlobUrl, getSession, listMedia, purgeMedia, restoreMedia,
+  type MediaItem, type MediaKind, type MediaListResult,
+} from "../api";
+import ConfirmDialog from "../shared/ConfirmDialog";
 import { useToast } from "../Toast";
 
 // 素材看板 · docs/modules/media-and-vision.md §2
@@ -73,16 +77,37 @@ export default function MediaLibrary() {
   const toast = useToast();
   const [filter, setFilter] = useState<MediaKind | "all">("all");
   const [page, setPage] = useState(1);
+  const [trash, setTrash] = useState(false);
   const [data, setData] = useState<MediaListResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [confirm, setConfirm] = useState<{ item: MediaItem; mode: "delete" | "purge" } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const role = getSession()?.role;
+  const canDelete = role === "tenant_admin" || role === "consultant" || role === "aiproot_admin";
+  const canPurge = role === "aiproot_admin";
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setData(await listMedia(filter, page)); }
+    try { setData(await listMedia(filter, page, trash)); }
     catch (e) { toast.show(e instanceof ApiError ? e.message : "載入失敗", "danger"); }
     finally { setLoading(false); }
-  }, [filter, page, toast]);
+  }, [filter, page, trash, toast]);
   useEffect(() => { void load(); }, [load]);
+
+  async function run(fn: () => Promise<unknown>, okMsg: string) {
+    setBusy(true);
+    try {
+      await fn();
+      toast.show(okMsg, "ok");
+      setConfirm(null);
+      await load();
+    } catch (e) {
+      toast.show(e instanceof ApiError ? e.message : "操作失敗", "danger");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const counts = data?.counts;
   const total = data?.total ?? 0;
@@ -93,12 +118,26 @@ export default function MediaLibrary() {
     <>
       <div className="pane-hdr">
         <div>
-          <h1>素材看板</h1>
+          {/* 標題要跟著換 —— 只改副標的話，切過去第一眼看不出自己在哪一頁 */}
+          <h1>{trash ? "素材看板 · 已刪除" : "素材看板"}</h1>
           <div className="sub">
-            LINE 群組傳的照片與檔案自動保存於此
+            {trash
+              ? "已刪除的檔案會保留 30 天，期限內可以還原，到期後自動清除"
+              : "LINE 群組傳的照片與檔案自動保存於此"}
             {counts ? ` · 共 ${counts.all.toLocaleString()} 個檔案` : ""}
           </div>
         </div>
+        {canDelete && (
+          <div className="hdr-toolbar">
+            <button
+              className={`btn${trash ? " btn-primary" : ""}`}
+              onClick={() => { setTrash(!trash); setPage(1); setFilter("all"); }}
+              disabled={loading}
+            >
+              {trash ? "回到素材看板" : "已刪除"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 數量拿到才畫按鈕列：數量 0 的類型不顯示（點了必定空白＝雜訊），
@@ -123,9 +162,13 @@ export default function MediaLibrary() {
         <div className="dm-empty">載入中…</div>
       ) : total === 0 ? (
         <div className="dm-empty">
-          {filter === "all" ? "還沒有任何檔案" : `沒有${KIND_LABEL[filter as MediaKind]}類型的檔案`}
+          {trash
+            ? "沒有已刪除的檔案"
+            : filter === "all" ? "還沒有任何檔案" : `沒有${KIND_LABEL[filter as MediaKind]}類型的檔案`}
           <div className="dm-empty-hint">
-            群組裡傳的照片、影片、檔案會自動出現在這裡（貼圖不保存）
+            {trash
+              ? "刪除的檔案會先放在這裡，30 天內都還救得回來"
+              : "群組裡傳的照片、影片、檔案會自動出現在這裡（貼圖不保存）"}
           </div>
         </div>
       ) : (
@@ -144,6 +187,32 @@ export default function MediaLibrary() {
                   <span>{fmtSize(f.sizeBytes)}</span>
                 </div>
                 {f.caption && f.filename && <div className="ml-card-desc">{f.caption}</div>}
+
+                {trash ? (
+                  <div className="ml-card-act">
+                    <span className={`ml-card-left${(f.daysLeft ?? 0) <= 3 ? " urgent" : ""}`}>
+                      {(f.daysLeft ?? 0) === 0 ? "今天到期" : `還剩 ${f.daysLeft} 天`}
+                      {f.deletedByName ? ` · ${f.deletedByName} 刪除` : ""}
+                    </span>
+                    <button className="btn" disabled={busy}
+                      onClick={() => void run(() => restoreMedia(f.mediaId), "已還原")}>
+                      還原
+                    </button>
+                    {canPurge && (
+                      <button className="btn danger" disabled={busy}
+                        onClick={() => setConfirm({ item: f, mode: "purge" })}>
+                        立即清除
+                      </button>
+                    )}
+                  </div>
+                ) : canDelete && (
+                  <div className="ml-card-act">
+                    <button className="btn" disabled={busy}
+                      onClick={() => setConfirm({ item: f, mode: "delete" })}>
+                      刪除
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -157,6 +226,36 @@ export default function MediaLibrary() {
           )}
         </>
       )}
+
+      <ConfirmDialog
+        open={!!confirm}
+        onClose={() => !busy && setConfirm(null)}
+        onConfirm={() => {
+          if (!confirm) return;
+          void (confirm.mode === "purge"
+            ? run(() => purgeMedia(confirm.item.mediaId), "已徹底清除")
+            : run(() => deleteMedia(confirm.item.mediaId), "已刪除，30 天內可還原"));
+        }}
+        busy={busy}
+        tone="danger"
+        title={confirm?.mode === "purge" ? "徹底清除這個檔案？" : "刪除這個檔案？"}
+        confirmLabel={confirm?.mode === "purge" ? "徹底清除" : "刪除"}
+        body={confirm && (
+          <>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>{displayName(confirm.item)}</div>
+            {confirm.mode === "purge" ? (
+              <p>檔案會立刻從儲存空間移除，<b>無法還原</b>。系統會留下「這個檔案被誰在何時清除」的紀錄。</p>
+            ) : (
+              <p>檔案會從素材看板移除，<b>30 天內都可以在「已刪除」裡還原</b>，到期後自動清除。</p>
+            )}
+            {/* 一定要講：使用者對「刪除」的直覺是「收回」，但 LINE 不讓 bot 收回別人的訊息 */}
+            <p style={{ color: "var(--ink-3)", fontSize: 12.5, marginTop: 8 }}>
+              請注意：這只會移除系統裡的副本，<b>LINE 群組裡的那則訊息仍然存在</b>，
+              需要另外請群組成員自行收回。
+            </p>
+          </>
+        )}
+      />
     </>
   );
 }

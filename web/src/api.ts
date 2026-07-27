@@ -1271,6 +1271,8 @@ export interface MediaItem {
   departmentName: string | null;
   senderName: string | null;
   sentAt: string;
+  daysLeft?: number;
+  deletedByName?: string | null;
 }
 export interface MediaListResult {
   items: MediaItem[];
@@ -1279,8 +1281,23 @@ export interface MediaListResult {
   page: number;
   pageSize: number;
 }
-export const listMedia = (kind: MediaKind | "all", page: number) =>
-  req<MediaListResult>(`/media?page=${page}${kind === "all" ? "" : `&kind=${kind}`}`);
+export const listMedia = (kind: MediaKind | "all", page: number, deleted = false) =>
+  req<MediaListResult>(
+    `/media?page=${page}${kind === "all" ? "" : `&kind=${kind}`}${deleted ? "&deleted=true" : ""}`,
+  );
+
+export const deleteMedia = (mediaId: string, reason?: string) =>
+  req<{ daysLeft: number }>(`/media/${mediaId}`, {
+    method: "DELETE",
+    body: JSON.stringify({ reason: reason ?? "" }),
+  });
+
+export const restoreMedia = (mediaId: string) =>
+  req<{ success: boolean }>(`/media/${mediaId}/restore`, { method: "POST", body: "{}" });
+
+/** 立即徹底清除 · 僅平台端可用 */
+export const purgeMedia = (mediaId: string) =>
+  req<{ success: boolean }>(`/media/${mediaId}/purge`, { method: "POST", body: "{}" });
 
 /**
  * 取檔案內容轉成 blob 網址給 <img> / <video> 用。
