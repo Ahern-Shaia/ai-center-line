@@ -1,6 +1,6 @@
 # ai-analysis-layering · 多租戶 AI 分析的分層架構
 
-> 狀態：🚧 **M0 DRAFT v0.1**（2026-07-27）· 待用戶裁定 OQ-AAL-1..9
+> 狀態：✅ **APPROVED v1.0**（2026-07-27）· OQ-AAL-1..9 **全採建議裁定** · 進 M1
 >
 > **這是架構決策文件，不是功能模組。** 它決定下列待裁定事項的做法，應先於它們定案：
 > [`extraction-schema-service-order`](extraction-schema-service-order.md)（L2 的第一個模板）、
@@ -160,7 +160,7 @@ L1 是安全網（見 §4）。任何租戶、任何模板、模板選錯的時�
 
 ---
 
-## 8. 開放問題（OQ-AAL-N）
+## 8. 開放問題（OQ-AAL-N）— ✅ 全數裁定 2026-07-27（用戶「全採建議」）
 
 | # | 問題 | 建議 |
 |---|---|---|
@@ -172,7 +172,19 @@ L1 是安全網（見 §4）。任何租戶、任何模板、模板選錯的時�
 | **OQ-AAL-6** | 一個租戶能不能同時啟用多個模板？ | **建議只能一個**。多個＝型態誤判風險 + prompt 膨脹；真有需求再議 |
 | **OQ-AAL-7** | 填充率儀表要不要現在做？ | **要**，而且優先於第二個模板 —— 沒有它就無法判斷模板對不對 |
 | **OQ-AAL-8** | L3 詞彙來源？ | 優先走 [`data-sync-layer`](data-sync-layer.md)（ERP-agnostic）；沒有 ERP 的租戶可手動維護 |
-| **OQ-AAL-9** | 這層架構屬 ai-center-line 還是 EEA/SAM？ | **ai-center-line**（AI 智能層的核心資產）· L3 從中介資料層取得 · 與 OQ-BQA-2 / OQ-TPR-11 / OQ-ESO-10 一併裁定 |
+| **OQ-AAL-9** | 這層架構屬 ai-center-line 還是 EEA/SAM？ | **ai-center-line**（AI 智能層的核心資產）· L3 從中介資料層取得 |
+
+### 8.1 連帶裁定（本文 OQ-AAL-9 一併解決）
+
+OQ-AAL-9 明文與下列三題同一問題，故一併定案為 **ai-center-line**：
+
+| 原 OQ | 文件 | 結果 |
+|---|---|---|
+| OQ-BQA-2 | [`business-query-assistant`](business-query-assistant.md) | ✅ 屬 ai-center-line（UI 未來可併入 SAM，但查詢層與 AI 是本專案資產）|
+| OQ-TPR-11 | [`task-to-personal-report`](task-to-personal-report.md) | ✅ 屬 ai-center-line |
+| OQ-ESO-10 | [`extraction-schema-service-order`](extraction-schema-service-order.md) | ✅ 屬 ai-center-line |
+
+**另**：OQ-ESO-2（新增 `service_reports` 並存 vs 取代 `daily_reports`）在三層框架下已自動有答案 —— **並存**，因為 L2 本來就是多選一。
 
 ---
 
@@ -195,4 +207,5 @@ L1 是安全網（見 §4）。任何租戶、任何模板、模板選錯的時�
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
+| 2026-07-27 | v1.0 | **OQ-AAL-1..9 全採建議裁定** · 進 M1 · 連帶定案 OQ-BQA-2 / OQ-TPR-11 / OQ-ESO-10（皆屬 ai-center-line）與 OQ-ESO-2（並存）| ahern |
 | 2026-07-27 | v0.1 | M0 首版 · 以台灣福祉真實填充率（狀態 100% / 對口 72% vs 機台 7% / 工單 8%）論證 L1/L2 界線 · 三層模型（通用核心／業種模板／租戶詞彙）· 判準「欄位結構不同→L2、同欄位不同值→L3」· 商業紀律「模板要能開垂直市場才做，否則不接」· L1 為過渡安全網（實證：daily_report 0 筆但 records 60 筆）· 填充率當常設指標 · FMEA 7 條含 3 個 P0 · OQ-AAL-1..9 | ahern + Claude Code |
