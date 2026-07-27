@@ -1,7 +1,9 @@
-import { BadRequestException, Controller, Get, Query } from "@nestjs/common";
+import { BadRequestException, Controller, Get, Param, Query } from "@nestjs/common";
 import { Roles } from "../auth/roles.decorator.js";
 import { WarroomService } from "./warroom.service.js";
 import { WarroomTasksService } from "./warroom-tasks.service.js";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Controller("warroom")
 export class WarroomController {
@@ -29,6 +31,15 @@ export class WarroomController {
   @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
   async dailyReports(@Query("from") fromDate?: string, @Query("to") toDate?: string) {
     return this.tasksService.listDailyReports({ fromDate, toDate });
+  }
+
+  // 某張任務卡的來源原文 · 簽核前拿 AI 抽取結果與原始訊息對照
+  // 權限：能看到 ticket 就能看到來源（RLS 已切範圍）· 不另設 permission
+  @Get("tickets/:ticketId/source")
+  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  async ticketSource(@Param("ticketId") ticketId: string) {
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
+    return this.tasksService.ticketSource(ticketId);
   }
 
   // 群組原始訊息 · tenant_admin 想看「bot 收到什麼」用

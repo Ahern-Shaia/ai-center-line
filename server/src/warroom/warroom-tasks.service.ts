@@ -1,6 +1,6 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { sql } from "drizzle-orm";
-import { currentTx } from "../db/client.js";
+import { currentTx, withSystemTx } from "../db/client.js";
 
 /**
  * WarroomTasksService · WTB-M3
@@ -209,6 +209,62 @@ export class WarroomTasksService {
    * · RLS 已擋跨 tenant (line_message tenant scope)
    * · 上限 100 則 · 避免 payload 爆
    */
+  /**
+   * 某張任務卡的「來源原文」——AI 抽出的內容 vs 當時的原始訊息。
+   *
+   * 為什麼簽核的人一定要看得到：AI 只是輔助，主管簽下去是要負責的。
+   * 看不到原文的話，簽核等於幫 AI 背書，審核就沒有意義（R11 可溯源的用意也在此）。
+   *
+   * 不需要新權限：**看得到這張 ticket 就看得到它的來源**。
+   * ticket 走 currentTx()，RLS 已經把範圍切好（group_owner 只看得到自己部門的），
+   * 查不到就代表無權查看 → 回 404，不另外做一套判斷。
+   */
+  async ticketSource(ticketId: string): Promise<{
+    summary: string;
+    extracted: Record<string, unknown> | null;
+    messages: Array<{ id: number; time: string; sender: string; text: string; kind: string }>;
+    unavailableReason: string | null;
+  }> {
+    const tx = currentTx();
+    const t = await tx.execute<{ summary: string; source_upload_id: number | null; source_record_index: number | null }>(sql`
+      SELECT summary, source_upload_id, source_record_index
+      FROM tickets WHERE ticket_id = ${ticketId}::uuid LIMIT 1
+    `);
+    const ticket = t.rows[0];
+    if (!ticket) throw new NotFoundException("找不到這張任務，或你沒有權限查看");
+
+    const empty = (reason: string) => ({
+      summary: ticket.summary, extracted: null, messages: [], unavailableReason: reason,
+    });
+    if (ticket.source_upload_id == null || ticket.source_record_index == null) {
+      return empty("這張任務沒有對應的來源分析（可能是手動建立，或來源分析已被刪除）");
+    }
+
+    // analysis_result 無 RLS · 前一步已用 ticket 授權過
+    const r = await withSystemTx((stx) => stx.execute<{ messages: unknown; records: unknown }>(sql`
+      SELECT messages, records FROM analysis_result WHERE upload_id = ${ticket.source_upload_id}
+    `));
+    const row = r.rows[0];
+    if (!row) return empty("來源分析結果已不存在");
+
+    const records = (row.records as Array<Record<string, unknown>> | null) ?? [];
+    const rec = records[ticket.source_record_index];
+    if (!rec) return empty("來源分析結果的內容已變動，對不到原本那一筆");
+
+    const sourceIds = new Set((rec.source_ids as number[] | undefined) ?? []);
+    const all = (row.messages as Array<{ id: number; time: string; sender: string; text: string; kind: string }> | null) ?? [];
+    const messages = all.filter((m) => sourceIds.has(m.id));
+
+    return {
+      summary: ticket.summary,
+      extracted: rec,
+      messages,
+      // 抽取結果有標 source_ids 卻對不到訊息 → 要說出來，不能讓人以為「本來就沒有原文」
+      unavailableReason: sourceIds.size > 0 && messages.length === 0
+        ? "這筆抽取有標記來源訊息，但在分析結果中找不到對應內容" : null,
+    };
+  }
+
   async listGroupMessages(args: { groupId: string; batchDate: string }): Promise<{
     messages: Array<{
       messageId: string;
