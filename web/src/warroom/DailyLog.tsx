@@ -103,28 +103,61 @@ export default function DailyLog() {
       {data && data.days.length === 0 && <div className="dm-empty">此期間內無日誌</div>}
 
       {data && data.days.map((day) => (
-        <div key={day.batchDate} className="dl-day">
-          <div className="dl-day-hdr">
-            <span className="dl-day-date">{formatDay(day.batchDate)}</span>
-            <span className="dl-day-count">{day.uploads.length} 群</span>
-          </div>
-          <div className="dl-day-cards">
-            {day.uploads.map((u) => (
-              <GroupCard
-                key={u.uploadId}
-                groupId={u.groupId}
-                groupName={u.groupName}
-                departmentName={u.departmentName}
-                batchDate={u.batchDate}
-                dailyReports={u.dailyReports}
-                records={u.records}
-                uploadId={u.uploadId}
-              />
-            ))}
-          </div>
-        </div>
+        <DaySection key={day.batchDate} day={day} />
       ))}
     </>
+  );
+}
+
+// 一天一段。當日沒有任何內容的群不佔一整格 —— 6 群裡 4 群沒日報時，
+// 版面 2/3 會是「當日無工作日報」的空卡片，把真正有內容的那 2 張擠掉。
+// 收成一行，需要時再展開（原始訊息仍看得到，只是不預設佔版面）。
+function DaySection({ day }: { day: WarroomDailyDays["days"][number] }) {
+  const [showQuiet, setShowQuiet] = useState(false);
+  const hasContent = day.uploads.filter((u) => u.dailyReports.length > 0 || u.records.length > 0);
+  const quiet = day.uploads.filter((u) => u.dailyReports.length === 0 && u.records.length === 0);
+  const shown = showQuiet ? day.uploads : hasContent;
+
+  return (
+    <div className="dl-day">
+      <div className="dl-day-hdr">
+        <span className="dl-day-date">{formatDay(day.batchDate)}</span>
+        <span className="dl-day-count">
+          {day.uploads.length} 群{quiet.length > 0 && ` · ${hasContent.length} 群有日報`}
+        </span>
+      </div>
+      {shown.length > 0 && (
+        <div className="dl-day-cards">
+          {shown.map((u) => (
+            <GroupCard
+              key={u.uploadId}
+              groupId={u.groupId}
+              groupName={u.groupName}
+              departmentName={u.departmentName}
+              batchDate={u.batchDate}
+              dailyReports={u.dailyReports}
+              records={u.records}
+              uploadId={u.uploadId}
+            />
+          ))}
+        </div>
+      )}
+      {quiet.length > 0 && !showQuiet && (
+        <div className="dl-quiet">
+          <span>另 {quiet.length} 群當日無日報：</span>
+          <span className="dl-quiet-names">{quiet.map((u) => u.groupName ?? u.groupId).join("、")}</span>
+          <button className="dl-quiet-toggle" onClick={() => setShowQuiet(true)}>展開查看原始訊息</button>
+        </div>
+      )}
+      {quiet.length > 0 && showQuiet && (
+        <div className="dl-quiet">
+          <button className="dl-quiet-toggle" onClick={() => setShowQuiet(false)}>收合無日報的 {quiet.length} 群</button>
+        </div>
+      )}
+      {hasContent.length === 0 && !showQuiet && quiet.length === 0 && (
+        <div className="dm-empty" style={{ padding: "12px 0" }}>當日無資料</div>
+      )}
+    </div>
   );
 }
 
