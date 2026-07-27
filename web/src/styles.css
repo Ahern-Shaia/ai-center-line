@@ -1994,5 +1994,6 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .liff-groups-hd { font-size:12px; color:var(--ink-3); margin-bottom:6px; }
 .liff-group { display:flex; align-items:center; justify-content:space-between; padding:7px 10px; border:1px solid var(--line); border-radius:5px; font-size:13px; margin-bottom:6px; }
 .liff-group.primary { border-color:var(--primary); background:var(--primary-tint); }
+.liff-note { color:var(--ink-3); font-size:11.5px; }
 .liff-pct { font-family:var(--mono); font-size:12px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
 .liff-ok-mark { width:52px; height:52px; border-radius:50%; background:var(--ok-tint); color:var(--ok); display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:700; margin-bottom:14px; }
