@@ -687,7 +687,14 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .ml-card-meta { font-size:11.5px; color:var(--ink-2); display:flex; gap:4px; }
 .ml-card-dot { color:var(--ink-3); }
 .ml-card-foot { display:flex; justify-content:space-between; font-size:10.5px; color:var(--ink-3); padding-top:4px; border-top:1px dashed var(--line-2); }
-.ml-card-desc { font-size:11px; color:var(--ink-3); margin-top:-2px; }
+.ml-card-desc { font-size:11px; color:var(--ink-3); margin-top:-2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* 圖片縮圖 · 固定高度讓格線不會因為圖片陸續載入而整片跳動 */
+.ml-thumb-img { padding:0; height:132px; overflow:hidden; align-items:stretch; }
+.ml-thumb-img img { width:100%; height:100%; object-fit:cover; display:block; }
+.ml-thumb-load { flex:1; background:linear-gradient(90deg,var(--well) 25%,var(--line-2) 50%,var(--well) 75%); background-size:200% 100%; animation:ml-shimmer 1.2s linear infinite; }
+@keyframes ml-shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
+.ml-pager { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:16px; }
+.ml-pager-at { font-size:12px; color:var(--ink-3); }
 
 /* ==================== KNOWLEDGE BASE 知識庫 ==================== */
 .kb-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; flex-wrap:wrap; }

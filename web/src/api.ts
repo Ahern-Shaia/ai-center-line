@@ -1257,3 +1257,40 @@ export const getWarroomGroupMessages = (groupId: string, date: string) =>
 // (patchLineGroup 已定義在上方 · aiproot / tenant_admin 共用)
 export const listTenantLineGroups = () =>
   req<{ groups: LineGroupRow[] }>("/line-groups");
+
+// 素材看板 · docs/modules/media-and-vision.md §2
+export type MediaKind = "image" | "video" | "audio" | "file";
+export interface MediaItem {
+  mediaId: string;
+  kind: MediaKind;
+  contentType: string | null;
+  sizeBytes: number | null;
+  filename: string | null;
+  caption: string | null;
+  groupName: string | null;
+  departmentName: string | null;
+  senderName: string | null;
+  sentAt: string;
+}
+export interface MediaListResult {
+  items: MediaItem[];
+  total: number;
+  counts: Record<MediaKind | "all", number>;
+  page: number;
+  pageSize: number;
+}
+export const listMedia = (kind: MediaKind | "all", page: number) =>
+  req<MediaListResult>(`/media?page=${page}${kind === "all" ? "" : `&kind=${kind}`}`);
+
+/**
+ * 取檔案內容轉成 blob 網址給 <img> / <video> 用。
+ * 為什麼不直接把網址塞進 src：檔案要帶 JWT 才拿得到，而 <img> 送不出 Authorization header。
+ * 這也順便讓 R2 的網址完全不進瀏覽器（media-and-vision.md FMEA F-2）。
+ * 回傳的網址用完要 URL.revokeObjectURL，否則整包檔案會留在記憶體裡。
+ */
+export async function fetchMediaBlobUrl(mediaId: string): Promise<string> {
+  const url = `${API_BASE ? API_BASE : "/api"}/media/${encodeURIComponent(mediaId)}/content`;
+  const res = await fetch(url, { headers: token ? { authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) throw new ApiError(res.status, friendlyStatusMessage(res.status));
+  return URL.createObjectURL(await res.blob());
+}
