@@ -20,6 +20,7 @@ import LlmSettings from "./settings/LlmSettings";
 import LineBots from "./line-bots/Page";
 import OnboardWizard from "./aiproot-console/OnboardWizard";
 import TenantManagement from "./aiproot-console/TenantManagement";
+import { NAV_EVENT, type NavTarget } from "./nav";
 import CostDashboard from "./aiproot-console/CostDashboard";
 import BatchHistory from "./aiproot-console/BatchHistory";
 import BindingAudit from "./aiproot-console/BindingAudit";
@@ -166,6 +167,19 @@ export default function App() {
         .catch(() => undefined);
     }
   }, [session]);
+
+  // 深層元件跨頁導航（TaskBoard / DailyLog → 分析詳情）
+  // 原本靠 window.location.hash，但這裡從未監聽 hashchange → 點了沒反應
+  useEffect(() => {
+    const onNavEvent = (e: Event) => {
+      const t = (e as CustomEvent<NavTarget>).detail;
+      if (t?.page === "convo-detail" && Number.isFinite(t.uploadId)) {
+        setRoute({ page: "convo-detail", uploadId: t.uploadId });
+      }
+    };
+    window.addEventListener(NAV_EVENT, onNavEvent);
+    return () => window.removeEventListener(NAV_EVENT, onNavEvent);
+  }, []);
 
   // P0 · session 切換時強制 reset route · 避免舊 admin 頁面殘留（切帳號看到別人資料的 bug）
   // - null → 有值（login）：重設到新 role 的 default

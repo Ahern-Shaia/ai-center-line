@@ -8,6 +8,7 @@ import {
 } from "../api";
 import { useToast } from "../Toast";
 import { catLabel } from "../shared/categoryLabel";
+import { canOpenConvoDetail, navigateTo } from "../nav";
 
 // WTB-M4 · 任務看板 Kanban 3 欄 (待簽核 / 逾時 / 已簽核)
 // 對照 docs/modules/warroom-task-board.md §7.2
@@ -229,14 +230,12 @@ function TicketDrawer({
             <dt>狀態</dt><dd>{ticket.confirmStatus}</dd>
           </dl>
 
-          {ticket.sourceUploadId && (
+          {ticket.sourceUploadId && canOpenConvoDetail() && (
             <div className="drawer-source">
-              <a href={`#/convo-detail/${ticket.sourceUploadId}`} onClick={(e) => {
-                e.preventDefault();
-                // 目前用 hash 表示 · 未來若接 route framework 換掉
-                window.location.hash = `#/convo-detail/${ticket.sourceUploadId}`;
+              <button className="nc-lnk" onClick={() => {
+                navigateTo({ page: "convo-detail", uploadId: ticket.sourceUploadId as number });
                 onClose();
-              }}>查對話上下文 →</a>
+              }}>查對話上下文 →</button>
             </div>
           )}
         </div>

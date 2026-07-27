@@ -4,6 +4,7 @@ import { usePermissions } from "../permission/PermissionContext";
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import { catLabel } from "../shared/categoryLabel";
+import { canOpenConvoDetail, navigateTo } from "../nav";
 
 // WTB-M4 · 日誌 view · 按天列 · 每 upload 一 card
 // scheduler-config M4 · 加「立即分析」按鈕（tenant_admin / aiproot 可觸發）
@@ -210,9 +211,11 @@ function GroupCard({
           ))}
           {dailyReports.length > 5 && (
             <li className="dl-report-more">
-              <a onClick={() => (window.location.hash = `#/convo-detail/${uploadId}`)}>
-                + {dailyReports.length - 5} 筆 · 查完整對話 →
-              </a>
+              {canOpenConvoDetail() ? (
+                <button className="nc-lnk" onClick={() => navigateTo({ page: "convo-detail", uploadId })}>
+                  + {dailyReports.length - 5} 筆 · 查完整對話 →
+                </button>
+              ) : <span>+ {dailyReports.length - 5} 筆</span>}
             </li>
           )}
         </ul>
@@ -227,9 +230,11 @@ function GroupCard({
             ))}
             {records.length > 5 && (
               <div className="dl-report-more">
-                <a onClick={() => (window.location.hash = `#/convo-detail/${uploadId}`)}>
-                  + {records.length - 5} 筆 · 查完整對話 →
-                </a>
+                {canOpenConvoDetail() ? (
+                  <button className="nc-lnk" onClick={() => navigateTo({ page: "convo-detail", uploadId })}>
+                    + {records.length - 5} 筆 · 查完整對話 →
+                  </button>
+                ) : <span>+ {records.length - 5} 筆</span>}
               </div>
             )}
           </div>
