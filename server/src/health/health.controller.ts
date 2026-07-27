@@ -1,6 +1,6 @@
 import { Controller, Get } from "@nestjs/common";
 import { Public } from "../auth/public.decorator.js";
-import { HealthService } from "./health.service.js";
+import { HealthService, type HealthResult } from "./health.service.js";
 
 @Controller("health")
 export class HealthController {
@@ -8,7 +8,7 @@ export class HealthController {
 
   @Public()
   @Get()
-  async get(): Promise<{ status: string; db: string }> {
+  async get(): Promise<{ status: string } & HealthResult> {
     return { status: "ok", ...(await this.health.check()) };
   }
 }
