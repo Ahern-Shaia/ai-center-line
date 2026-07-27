@@ -13,6 +13,7 @@ export const tenants = pgTable("tenants", {
   onboardStatus: text("onboard_status").notNull().default("洽談中")
     .$type<"洽談中" | "測試中" | "正式上線" | "暫停">(),
   batchEnabled: boolean("batch_enabled").notNull().default(true),   // 0014 加 · cron 是否掃該 tenant
+  extractionTemplate: text("extraction_template").notNull().default("factory_report"),   // 0030 · L2 業種模板
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -174,6 +175,8 @@ export const analysisResult = pgTable("analysis_result", {
   messages: jsonb("messages").notNull().default([]).$type<unknown[]>(),
   dailyReports: jsonb("daily_reports").notNull().default([]).$type<unknown[]>(),
   records: jsonb("records").notNull().default([]).$type<unknown[]>(),
+  serviceReports: jsonb("service_reports").notNull().default([]).$type<unknown[]>(),
+  extractionTemplate: text("extraction_template"),   // null = 0030 前舊資料 ≡ factory_report
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

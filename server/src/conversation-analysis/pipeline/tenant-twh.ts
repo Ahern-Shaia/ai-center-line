@@ -1,4 +1,9 @@
 // Tenant TWH（台灣福祉科技）· masterData + systemPrompt
+//
+// ⚠️ 本檔的 SYSTEM_PROMPT 只放 **L1 通用核心** 的規則（分類 / records / 實體對應 / 信心度）。
+//    業種專屬的抽取規則（產線報工的機台工時、服務工單的客戶金額）一律放 ./templates.ts
+//    的 promptFragment —— 否則 general 模板會叫模型產出 schema 裡沒有的欄位。
+//    見 docs/modules/ai-analysis-layering.md §2
 // ⚠️ Backend self-contained copy — keep in sync with ../../../../../src/masterData.taiwanhomecare.ts
 // 人名皆為假名（姓＋○○）· pilot demo/regression 用
 
@@ -71,22 +76,21 @@ const SYSTEM_PROMPT = `你是「台灣福祉科技」（福祉車／復康巴士
 3. 簡短回覆（「收到」「OK」「好」）跟隨其回應的主題分類。
 4. 系統訊息（加入群組等）歸 chitchat。
 
-## 抽取規則
-1. daily_reports：只放改裝報工日報的結構化資料。一則日報若涵蓋多台車或多個工位，拆成多筆。多則訊息共同構成一筆記錄時，用 source_ids 列出所有相關訊息編號。
-2. records：出勤、維保、研發、採購與其他有留存價值的內容（含知識性內容，如故障原因、處理方式、經驗提醒），一事一筆。事件有後續進展時（如報修→查修→修復）合併為一筆並更新 status。純閒聊不建記錄。
-3. 實體對應（重要）：利用主檔資料，把 LINE 顯示名對應到人員代碼（reporter_code / person 填主檔 code）、施作工位對應 machine_code（工位站碼 ST-xx）、改裝案或維修補全 work_order（改裝案號 CV-xxxx 或車號）。對不到主檔的保留原文並降低 confidence。
-4. 缺漏欄位一律填 null，禁止臆測數字。改裝情境通常沒有產量/不良數，output_qty 與 defect_qty 無明確數字時一律填 null。
-5. 口語請參考主檔 glossary 理解（如「尾門機」= 輪椅升降機、「坡板」= 斜坡板）。
-6. status：open = 尚未處理、in_progress = 處理中、resolved = 已解決、info = 純資訊/知識。
-7. confidence：欄位完整明確 = high；有推斷成分 = medium；訊息模糊 = low。
+## 抽取規則（通用核心）
+1. records：出勤、維保、研發、採購與其他有留存價值的內容（含知識性內容，如故障原因、處理方式、經驗提醒），一事一筆。事件有後續進展時（如報修→查修→修復）合併為一筆並更新 status。純閒聊不建記錄。
+2. 實體對應（重要）：利用主檔資料，把 LINE 顯示名對應到人員代碼（person 填主檔 code）、施作工位對應 machine_code（工位站碼 ST-xx）、改裝案或維修補全 work_order（改裝案號 CV-xxxx 或車號）。對不到主檔的保留原文並降低 confidence。
+3. 缺漏欄位一律填 null，禁止臆測數字。
+4. 口語請參考主檔 glossary 理解（如「尾門機」= 輪椅升降機、「坡板」= 斜坡板）。
+5. status：open = 尚未處理、in_progress = 處理中、resolved = 已解決、info = 純資訊/知識。
+6. confidence：欄位完整明確 = high；有推斷成分 = medium；訊息模糊 = low。
+7. 多則訊息共同構成一筆記錄時，用 source_ids 列出所有相關訊息編號。
 
-## 範例
+## 範例（通用核心）
 輸入訊息：
 #3 [2026-07-02 18:20] 阿源: 7/2改裝日報 阿源 示範車號A 輪椅升降機水平調校2.5h、斜坡板焊接1.5h ⏎ 備註:鋼索已換標準件 平台恢復正常
 對應輸出（節錄）：
 - classifications 含 {id: 3, category: "daily_report", confidence: "high"}
-- daily_reports 含 {date: "2026-07-02", reporter_name: "王○○", reporter_code: "P-02", line: null, machine_code: "ST-01", work_order: "示範車號 A", output_qty: null, defect_qty: null, work_hours: 2.5, overtime_hours: null, issues: "另斜坡板焊接1.5h；鋼索已換標準件、平台恢復正常", source_ids: [3], confidence: "high"}
-- 斜坡板焊接屬車體/焊接工位，可另拆一筆 daily_report（machine_code: "ST-03", work_hours: 1.5）。備註中「鋼索已換」屬升降機維修，另在 records 建一筆 maintenance 記錄（machine_code: "ST-01"）。`;
+- 備註中「鋼索已換」屬升降機維修，在 records 建一筆 maintenance 記錄（machine_code: "ST-01"、person: "P-02"、source_ids: [3]）。`;
 
 export const TWH_TENANT: Tenant = {
   systemPrompt: SYSTEM_PROMPT,

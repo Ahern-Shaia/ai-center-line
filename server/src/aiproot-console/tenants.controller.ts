@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, Get, Param, Patch } from "@nestj
 import { sql } from "drizzle-orm";
 import { Roles } from "../auth/roles.decorator.js";
 import { currentTx } from "../db/client.js";
+import { EXTRACTION_TEMPLATES, TEMPLATE_REGISTRY, type ExtractionTemplate } from "../conversation-analysis/pipeline/templates.js";
 
 /**
  * aiproot 通用：列 / 設定所有租戶
@@ -23,9 +24,9 @@ export class AiprootTenantsController {
   async list() {
     const tx = currentTx();
     const res = await tx.execute<{
-      tenant_id: string; tenant_name: string; batch_enabled: boolean;
+      tenant_id: string; tenant_name: string; batch_enabled: boolean; extraction_template: string | null;
     }>(sql`
-      SELECT tenant_id::text AS tenant_id, tenant_name, batch_enabled
+      SELECT tenant_id::text AS tenant_id, tenant_name, batch_enabled, extraction_template
       FROM tenants
       ORDER BY tenant_name ASC
     `);
@@ -34,6 +35,7 @@ export class AiprootTenantsController {
         tenantId: r.tenant_id,
         tenantName: r.tenant_name,
         batchEnabled: r.batch_enabled,
+        extractionTemplate: r.extraction_template ?? "factory_report",
       })),
     };
   }
@@ -72,6 +74,42 @@ export class AiprootTenantsController {
         passwordUpdatedAt: r.password_updated_at,
       })),
     };
+  }
+
+  /** 可選的 L2 業種模板 · service_order 未開放（欄位待客戶確認）*/
+  @Get("extraction-templates")
+  @Roles("aiproot_admin", "consultant")
+  templates() {
+    return {
+      templates: EXTRACTION_TEMPLATES
+        .filter((t) => TEMPLATE_REGISTRY[t].selectable)
+        .map((t) => ({ key: t, label: TEMPLATE_REGISTRY[t].label, description: TEMPLATE_REGISTRY[t].description })),
+    };
+  }
+
+  /**
+   * 換該租戶的 L2 業種模板。
+   * ⚠️ 只影響**之後**的分析 —— 已抽的結果不回溯重跑（R11 原始不可變），
+   *    analysis_result.extraction_template 記著當時用的是哪個，歷史仍可正確解讀。
+   */
+  @Patch(":tenantId/extraction-template")
+  @Roles("aiproot_admin")
+  async setExtractionTemplate(
+    @Param("tenantId") tenantId: string,
+    @Body() body: { template?: string },
+  ) {
+    if (!UUID_RE.test(tenantId)) throw new BadRequestException("tenantId 格式不正確");
+    const t = body?.template as ExtractionTemplate | undefined;
+    if (!t || !TEMPLATE_REGISTRY[t]?.selectable) {
+      throw new BadRequestException("模板不存在或尚未開放選用");
+    }
+    const res = await currentTx().execute<{ tenant_id: string }>(sql`
+      UPDATE tenants SET extraction_template = ${t}
+       WHERE tenant_id = ${tenantId}::uuid
+      RETURNING tenant_id::text
+    `);
+    if (res.rows.length === 0) throw new BadRequestException("tenant 不存在");
+    return { tenantId, template: t, label: TEMPLATE_REGISTRY[t].label };
   }
 
   // 切 batch_enabled · convo-analysis-realtime cron 是否掃該 tenant

@@ -5,6 +5,7 @@ import { parseLineExport, segmentMessages, type ChatMessage } from "./parser.js"
 import { analyzeSegment, addUsage, emptyUsage, type UsageStats } from "./classify.js";
 import { TWH_TENANT, type Tenant } from "./tenant-twh.js";
 import { DEFAULT_CATEGORIES, type AnalysisResultT } from "./schemas.js";
+import { TEMPLATE_REGISTRY, resolveTemplate, DEFAULT_TEMPLATE, type ExtractionTemplate } from "./templates.js";
 import type { LLMProvider } from "../../llm/provider.interface.js";
 import { createLLMProvider } from "../../llm/provider.factory.js";
 import { withTenant } from "../../db/client.js";
@@ -17,7 +18,9 @@ export type EnrichedMessage = ChatMessage & {
 export interface PipelineResult {
   groupName: string;
   messages: EnrichedMessage[];
-  dailyReports: AnalysisResultT["daily_reports"];
+  /** L2 業種區塊 · 依 template 決定存到哪個欄位（見 templates.ts resultKey）*/
+  templateReports: Array<Record<string, unknown>>;
+  template: ExtractionTemplate;
   records: AnalysisResultT["records"];
   messageCount: number;
   segmentCount: number;
@@ -52,6 +55,9 @@ export async function runPipeline(
   tenantId?: string,                                   // WTB-M2 · 若給 · pipeline 讀 category_registry
 ): Promise<PipelineResult> {
   const tenant = resolveTenant(tenantSlug);
+  // AAL · L2 業種模板 · 讀不到一律 fallback DEFAULT_TEMPLATE（＝現行行為，不因設定缺失而改變抽取）
+  const template = await loadTemplate(tenantId);
+  const resultKey = TEMPLATE_REGISTRY[template].resultKey;
   const { groupName, messages } = parseLineExport(rawText);
   const segments = segmentMessages(messages);
 
@@ -59,16 +65,19 @@ export async function runPipeline(
   const knownCategories = await loadKnownCategories(tenantId);
 
   const catMap = new Map<number, { category: string; confidence: string }>();
-  const dailyReports: AnalysisResultT["daily_reports"] = [];
+  const templateReports: Array<Record<string, unknown>> = [];
   const records: AnalysisResultT["records"] = [];
   const usage = emptyUsage();
 
   for (const seg of segments) {
-    const { result, usage: u } = await analyzeSegment(provider, groupName, seg, tenant, knownCategories);
+    const { result, usage: u } = await analyzeSegment(provider, groupName, seg, tenant, knownCategories, template);
     for (const c of result.classifications) {
       catMap.set(c.id, { category: c.category, confidence: c.confidence });
     }
-    dailyReports.push(...result.daily_reports);
+    if (resultKey) {
+      const section = (result as unknown as Record<string, unknown>)[resultKey];
+      if (Array.isArray(section)) templateReports.push(...(section as Array<Record<string, unknown>>));
+    }
     records.push(...result.records);
     addUsage(usage, u);
   }
@@ -94,12 +103,26 @@ export async function runPipeline(
   return {
     groupName,
     messages: enriched,
-    dailyReports,
+    templateReports,
+    template,
     records,
     messageCount: messages.length,
     segmentCount: segments.length,
     usage,
   };
+}
+
+// AAL helper · 讀該租戶的 L2 模板 · 查不到用 DEFAULT_TEMPLATE（保持現行行為）
+async function loadTemplate(tenantId?: string): Promise<ExtractionTemplate> {
+  if (!tenantId) return DEFAULT_TEMPLATE;
+  try {
+    const res = await withTenant({ tenantId, role: "tenant_admin" }, (tx) => tx.execute<{ t: string | null }>(sql`
+      SELECT extraction_template AS t FROM tenants WHERE tenant_id = ${tenantId}::uuid
+    `));
+    return resolveTemplate(res.rows[0]?.t);
+  } catch {
+    return DEFAULT_TEMPLATE;   // 0030 未跑或查詢失敗 → 不改變抽取行為
+  }
 }
 
 // WTB-M2 helper · 讀 registry · 空則回 DEFAULT_CATEGORIES 提示

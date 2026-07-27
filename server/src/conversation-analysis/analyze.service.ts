@@ -141,10 +141,14 @@ export class AnalyzeService {
       const provider = await this.resolveProvider(row.tenantId);
       const result = await runPipeline(row.rawContent, row.tenantSlug, provider, row.tenantId ?? undefined);
 
+      // AAL · L2 區塊依模板存到對應欄位；general 兩邊都空。
+      // 記下當時用的模板 —— 之後換模板仍能正確解讀歷史資料。
       await db.insert(analysisResult).values({
         uploadId,
         messages: result.messages,
-        dailyReports: result.dailyReports,
+        dailyReports: result.template === "factory_report" ? result.templateReports : [],
+        serviceReports: result.template === "service_order" ? result.templateReports : [],
+        extractionTemplate: result.template,
         records: result.records,
       });
       // 補進 provider / model 給 cost service 用 · runtime 讀 provider 物件
