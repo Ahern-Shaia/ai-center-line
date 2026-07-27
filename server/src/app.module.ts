@@ -35,6 +35,7 @@ import { SchedulerConfigModule } from "./scheduler-config/scheduler-config.modul
 import { AttendanceModule } from "./attendance/attendance.module.js";
 import { NotifyConfigModule } from "./notify-config/notify-config.module.js";
 import { NotificationHubModule } from "./notification-hub/notification-hub.module.js";
+import { MediaModule } from "./media/media.module.js";
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { NotificationHubModule } from "./notification-hub/notification-hub.modul
     AttendanceModule,
     NotificationHubModule,
     NotifyConfigModule,
+    MediaModule,
   ],
   controllers: [HealthController, AuthController, SignoffController, WarroomController],
   providers: [
