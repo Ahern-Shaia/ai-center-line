@@ -4,6 +4,7 @@ import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { RagicAccountService } from "./ragic-account.service.js";
 import { NotifyConfigService, type CreateRuleInput } from "./notify-config.service.js";
+import { HubAuditRepository } from "../notification-hub/audit.repository.js";
 
 // aiproot「通知設定」API · 通用規則（來源/管道無關）
 // 全掛 permission gate（notify-config:view/manage · 給 aiproot_admin+consultant）
@@ -13,6 +14,7 @@ export class NotifyConfigController {
   constructor(
     private readonly accounts: RagicAccountService,
     private readonly configs: NotifyConfigService,
+    private readonly audit: HubAuditRepository,
   ) {}
 
   // ===== 來源：Ragic 帳號 =====
@@ -70,6 +72,19 @@ export class NotifyConfigController {
     const t = tenantId || user.tenant_id;
     if (!t) throw new BadRequestException("需指定 tenantId");
     return this.configs.listNotifiableUsers(t);
+  }
+
+  // ===== 通知紀錄（排查）=====
+  /** 最近通知紀錄 · 用來回答「Ragic 改了為什麼沒通知」——有沒有進來、進來後被什麼擋掉 */
+  @Get("logs")
+  @RequirePermission("notify-config:view")
+  logs(@Query("limit") limit?: string, @Query("ruleId") ruleId?: string, @Query("status") status?: string) {
+    const n = Number(limit);
+    return this.audit.listRecent({
+      limit: Number.isFinite(n) && n > 0 ? Math.min(n, 200) : 50,
+      ruleId: ruleId || null,
+      status: status || null,
+    });
   }
 
   // ===== 規則 =====

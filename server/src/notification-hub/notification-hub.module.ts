@@ -22,6 +22,6 @@ import { RagicWebhookController } from "./sources/ragic-webhook.controller.js";
     RagicWebhookService,
     RagicApiClient,
   ],
-  exports: [NotificationBus, NotificationPipeline, RuleRepository],
+  exports: [NotificationBus, NotificationPipeline, RuleRepository, HubAuditRepository],
 })
 export class NotificationHubModule {}
