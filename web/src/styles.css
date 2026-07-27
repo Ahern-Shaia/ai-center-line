@@ -2050,3 +2050,30 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .ts-msg { display:flex; flex-direction:column; gap:2px; padding:7px 10px; background:var(--well); border-radius:4px; margin-bottom:6px; }
 .ts-msg-meta { font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
 .ts-msg-text { font-size:12.5px; color:var(--ink); line-height:1.6; white-space:pre-wrap; }
+
+/* 抽取健康度 · docs/modules/ai-analysis-layering.md §5 */
+.eh-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:14px 16px; margin-bottom:12px; }
+.eh-hdr { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.eh-name { font-size:14px; font-weight:600; color:var(--ink); }
+.eh-stats { margin-left:auto; font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+.eh-warn { background:var(--warn-tint); border:1px solid #F5D5A6; border-radius:var(--r); padding:8px 10px; margin-bottom:10px; font-size:12px; color:#7A4E1B; line-height:1.7; }
+.eh-fields { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:6px 18px; }
+.eh-field { display:flex; align-items:center; gap:8px; font-size:12px; }
+.eh-field-name { min-width:96px; color:var(--ink-2); display:flex; align-items:center; gap:5px; }
+.eh-layer { font-size:9.5px; font-family:var(--mono); color:var(--ink-3); border:1px solid var(--line); border-radius:2px; padding:0 3px; }
+.eh-bar { flex:1; height:5px; background:var(--well); border-radius:3px; overflow:hidden; min-width:40px; }
+.eh-bar-fill { display:block; height:100%; background:var(--ink-3); transition:width .3s var(--ease); }
+.eh-bar-fill.ok { background:var(--ok); } .eh-bar-fill.warn { background:var(--warn); } .eh-bar-fill.danger { background:var(--danger); }
+.eh-rate { min-width:74px; text-align:right; font-variant-numeric:tabular-nums; color:var(--ink-3); }
+.eh-rate.ok { color:var(--ok); } .eh-rate.warn { color:var(--warn); } .eh-rate.danger { color:var(--danger); font-weight:600; }
+.eh-frac { color:var(--ink-3); font-size:10.5px; margin-left:5px; font-weight:400; }
+.tm-template { border:1px solid var(--line); border-radius:var(--r-lg); padding:12px 14px; margin-bottom:16px; background:var(--surface); }
+.tm-template-hd { font-size:13px; font-weight:600; color:var(--ink); margin-bottom:10px; }
+.tm-template-hint { display:block; font-size:11.5px; font-weight:400; color:var(--ink-3); line-height:1.7; margin-top:3px; }
+.tm-template-opts { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; }
+.tm-template-opt { display:flex; flex-direction:column; gap:3px; align-items:flex-start; text-align:left; padding:9px 11px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); font-family:inherit; cursor:pointer; }
+.tm-template-opt:hover:not(:disabled) { border-color:var(--primary); }
+.tm-template-opt.active { border-color:var(--primary); background:var(--primary-tint); cursor:default; }
+.tm-template-label { font-size:12.5px; font-weight:600; color:var(--ink); }
+.tm-template-opt.active .tm-template-label { color:var(--primary-2); }
+.tm-template-desc { font-size:11px; color:var(--ink-3); line-height:1.6; }

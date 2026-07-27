@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  ApiError, listAiprootTenants, listTenantLoginAccounts, resetUserPassword, unlockUser,
-  type AiprootTenantOption, type TenantUserRow,
+  ApiError, listAiprootTenants, listExtractionTemplates, listTenantLoginAccounts,
+  resetUserPassword, setExtractionTemplate, unlockUser,
+  type AiprootTenantOption, type ExtractionTemplateOption, type TenantUserRow,
 } from "../api";
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
@@ -25,6 +26,22 @@ export default function TenantManagement() {
   const [busy, setBusy] = useState(false);
   const [newPassword, setNewPassword] = useState<{ email: string | null; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [templates, setTemplates] = useState<ExtractionTemplateOption[]>([]);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  useEffect(() => { listExtractionTemplates().then((r) => setTemplates(r.templates)).catch(() => setTemplates([])); }, []);
+
+  async function changeTemplate(template: string) {
+    if (!selected || savingTemplate) return;
+    setSavingTemplate(true);
+    try {
+      await setExtractionTemplate(selected.tenantId, template);
+      setSelected({ ...selected, extractionTemplate: template });
+      setTenants((s) => s.map((x) => x.tenantId === selected.tenantId ? { ...x, extractionTemplate: template } : x));
+      toast.show("已更新業種模板 · 之後的分析才會套用", "ok");
+    } catch (e) { toast.show(e instanceof ApiError ? e.message : "更新失敗", "danger"); }
+    finally { setSavingTemplate(false); }
+  }
 
   useEffect(() => {
     listAiprootTenants()
@@ -125,6 +142,29 @@ export default function TenantManagement() {
           </div>
 
           <div className="tm-detail">
+            {selected && templates.length > 0 && (
+              <div className="tm-template">
+                <div className="tm-template-hd">
+                  業種模板
+                  <span className="tm-template-hint">
+                    決定 AI 除了通用欄位外，還要多抽哪些業種專屬欄位。改了只影響<b>之後</b>的分析，
+                    已經抽過的結果不會變動。選完可到「抽取健康度」看套得準不準。
+                  </span>
+                </div>
+                <div className="tm-template-opts">
+                  {templates.map((t) => {
+                    const active = (selected.extractionTemplate ?? "factory_report") === t.key;
+                    return (
+                      <button key={t.key} className={`tm-template-opt${active ? " active" : ""}`}
+                        onClick={() => void changeTemplate(t.key)} disabled={savingTemplate || active}>
+                        <span className="tm-template-label">{t.label}</span>
+                        <span className="tm-template-desc">{t.description}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {!selected ? null : usersLoading ? (
               <div className="dm-empty">載入中…</div>
             ) : users.length === 0 ? (

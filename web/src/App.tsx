@@ -20,6 +20,7 @@ import LlmSettings from "./settings/LlmSettings";
 import LineBots from "./line-bots/Page";
 import OnboardWizard from "./aiproot-console/OnboardWizard";
 import TenantManagement from "./aiproot-console/TenantManagement";
+import ExtractionHealth from "./aiproot-console/ExtractionHealth";
 import { NAV_EVENT, type NavTarget } from "./nav";
 import CostDashboard from "./aiproot-console/CostDashboard";
 import BatchHistory from "./aiproot-console/BatchHistory";
@@ -55,6 +56,7 @@ type Route =
   | { page: "line-bots" }
   | { page: "onboard-tenant" }
   | { page: "tenant-mgmt" }
+  | { page: "extraction-health" }
   | { page: "cost-dashboard" }
   | { page: "batch-history" }
   | { page: "binding-audit" }
@@ -87,6 +89,7 @@ const CRUMB: Record<Route["page"], string> = {
   "line-bots": "通訊接頭層",
   "onboard-tenant": "AIPROOT 管理",
   "tenant-mgmt": "AIPROOT 管理",
+  "extraction-health": "AIPROOT 管理",
   "cost-dashboard": "AIPROOT 管理",
   "batch-history": "AIPROOT 管理",
   "binding-audit": "AIPROOT 管理",
@@ -118,6 +121,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "line-bots": "LINE 機器人管理",
   "onboard-tenant": "開通新租戶",
   "tenant-mgmt": "租戶管理",
+  "extraction-health": "抽取健康度",
   "cost-dashboard": "AI 成本管理",
   "batch-history": "對話分析歷程",
   "binding-audit": "LINE 綁定稽核",
@@ -141,7 +145,7 @@ function defaultRouteFor(session: Session | null): Route {
 const AIPROOT_ONLY_PAGES = new Set([
   "convo-list", "convo-upload", "convo-detail",
   "llm-settings", "line-bots",
-  "onboard-tenant", "tenant-mgmt", "cost-dashboard", "batch-history",
+  "onboard-tenant", "tenant-mgmt", "extraction-health", "cost-dashboard", "batch-history",
   "binding-audit", "map-config", "notify-config", "category-mgmt", "roles-mgmt",
 ]);
 
@@ -252,6 +256,9 @@ export default function App() {
       // 含重設密碼 · 僅 aiproot_admin（consultant 不給動客戶帳號）
       if (session.role !== "aiproot_admin") return;
       setRoute({ page: "tenant-mgmt" });
+    } else if (key === "extraction-health") {
+      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
+      setRoute({ page: "extraction-health" });
     } else if (key === "cost-dashboard") {
       if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
       setRoute({ page: "cost-dashboard" });
@@ -329,6 +336,7 @@ export default function App() {
           {route.page === "line-bots" && <LineBots />}
           {route.page === "onboard-tenant" && <OnboardWizard />}
           {route.page === "tenant-mgmt" && <TenantManagement />}
+          {route.page === "extraction-health" && <ExtractionHealth />}
           {route.page === "cost-dashboard" && (
             <CostDashboard onOpenAnalysis={(id) => setRoute({ page: "convo-detail", uploadId: id })} />
           )}

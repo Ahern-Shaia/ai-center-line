@@ -1090,12 +1090,34 @@ export const runPendingBatches = (opts?: { lookbackDays?: number; tenantId?: str
 
 // aiproot 通用 · 列所有租戶（下拉篩選用）
 export interface AiprootTenantOption {
+  extractionTemplate?: string;
   tenantId: string;
   tenantName: string;
   batchEnabled: boolean;
 }
 export const listAiprootTenants = () =>
   req<{ tenants: AiprootTenantOption[] }>("/aiproot-console/tenants");
+
+// ai-analysis-layering · L2 業種模板
+export interface ExtractionTemplateOption { key: string; label: string; description: string }
+export const listExtractionTemplates = () =>
+  req<{ templates: ExtractionTemplateOption[] }>("/aiproot-console/tenants/extraction-templates");
+export const setExtractionTemplate = (tenantId: string, template: string) =>
+  req<{ tenantId: string; template: string; label: string }>(
+    `/aiproot-console/tenants/${tenantId}/extraction-template`,
+    { method: "PATCH", body: JSON.stringify({ template }) },
+  );
+
+// 抽取健康度 · 模板選對了嗎（doc ai-analysis-layering §5）
+export interface FieldFill { field: string; layer: "L1" | "L2"; filled: number; total: number; rate: number }
+export interface TenantHealth {
+  tenantId: string; tenantName: string; template: string; templateLabel: string;
+  messageCount: number; recordCount: number; templateReportCount: number;
+  confidence: { high: number; medium: number; low: number };
+  fields: FieldFill[]; warnings: string[];
+}
+export const getExtractionHealth = (days: number) =>
+  req<{ days: number; tenants: TenantHealth[] }>(`/aiproot-console/extraction-health?days=${days}`);
 
 // 租戶管理 · 某租戶的登入帳號一覽（救援用 · 不回密碼）
 export interface TenantUserRow {

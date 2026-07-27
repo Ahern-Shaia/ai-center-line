@@ -82,6 +82,7 @@ const NAV: Array<{
       { key: "onboard-tenant", label: "開通新租戶", ic: iconTeam, done: true },
       // 含重設密碼 → 只給 aiproot_admin（顧問看得到卻點不動＝更糟的體驗）
       { key: "tenant-mgmt", label: "租戶管理", ic: iconTeam, done: true, roles: ["aiproot_admin"] },
+      { key: "extraction-health", label: "抽取健康度", ic: iconGauge, done: true },
       { key: "cost-dashboard", label: "AI 成本管理", ic: iconGauge, done: true },
       { key: "batch-history", label: "對話分析歷程", ic: iconChat, done: true },
       { key: "binding-audit", label: "LINE 綁定稽核", ic: iconTeam, done: true },
