@@ -9,6 +9,7 @@ import {
 import { useToast } from "../Toast";
 import { catLabel } from "../shared/categoryLabel";
 import { canOpenConvoDetail, navigateTo } from "../nav";
+import { getTicketSource, type TicketSource } from "../api";
 
 // WTB-M4 · 任務看板 Kanban 3 欄 (待簽核 / 逾時 / 已簽核)
 // 對照 docs/modules/warroom-task-board.md §7.2
@@ -198,6 +199,50 @@ function avatarTone(name: string): string {
   return AVATAR_TONES[Math.abs(h) % AVATAR_TONES.length];
 }
 
+// 來源原文對照 · 預設收合（多數時候直接簽，需要時才展開）
+function SourceMessages({ ticketId }: { ticketId: string }) {
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState<TicketSource | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function toggle() {
+    if (open) { setOpen(false); return; }
+    setOpen(true);
+    if (data) return;
+    setLoading(true);
+    try { setData(await getTicketSource(ticketId)); setErr(null); }
+    catch (e) { setErr(e instanceof Error ? e.message : "載入失敗"); }
+    finally { setLoading(false); }
+  }
+
+  return (
+    <div className="ts-wrap">
+      <button className="ts-toggle" onClick={() => void toggle()}>
+        {open ? "收合原始訊息 ▲" : "對照原始訊息 ▼"}
+      </button>
+      {open && (
+        <div className="ts-body">
+          {loading && <div className="ts-note">載入中…</div>}
+          {err && <div className="ts-note">{err}</div>}
+          {data && data.unavailableReason && <div className="ts-note">{data.unavailableReason}</div>}
+          {data && data.messages.length > 0 && (
+            <>
+              <div className="ts-hd">AI 是根據這 {data.messages.length} 則訊息整理的</div>
+              {data.messages.map((m) => (
+                <div key={m.id} className="ts-msg">
+                  <span className="ts-msg-meta">{m.time} {m.sender}</span>
+                  <span className="ts-msg-text">{m.text}</span>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TicketDrawer({
   ticket, onClose, onSignoff, signing,
 }: {
@@ -230,12 +275,15 @@ function TicketDrawer({
             <dt>狀態</dt><dd>{ticket.confirmStatus}</dd>
           </dl>
 
+          {/* 簽核的人一定要看得到原文 —— AI 只是輔助，看不到原文就是幫 AI 背書 */}
+          <SourceMessages ticketId={ticket.ticketId} />
+
           {ticket.sourceUploadId && canOpenConvoDetail() && (
             <div className="drawer-source">
               <button className="nc-lnk" onClick={() => {
                 navigateTo({ page: "convo-detail", uploadId: ticket.sourceUploadId as number });
                 onClose();
-              }}>查對話上下文 →</button>
+              }}>查當日完整對話 →</button>
             </div>
           )}
         </div>

@@ -406,6 +406,16 @@ export const confirmSignoff = (ticket_ids: string[]) =>
 
 // === Warroom Task Board · WTB-M3 ===
 
+// 任務卡來源原文 · 簽核前對照 AI 抽取結果與原始訊息
+export interface TicketSource {
+  summary: string;
+  extracted: Record<string, unknown> | null;
+  messages: Array<{ id: number; time: string; sender: string; text: string; kind: string }>;
+  unavailableReason: string | null;
+}
+export const getTicketSource = (ticketId: string) =>
+  req<TicketSource>(`/warroom/tickets/${ticketId}/source`);
+
 export interface WarroomKanbanTicket {
   ticketId: string;
   category: string | null;
