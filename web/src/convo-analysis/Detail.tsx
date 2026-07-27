@@ -184,7 +184,7 @@ export default function ConversationAnalysisDetail({ uploadId, onBack }: Props) 
           <div className="detail-sec-hdr">
             <div className="detail-sec-title">
               結構化報工日報
-              <span className="detail-sec-title-mark">→ Ragic 報工表單</span>
+              <span className="detail-sec-title-mark">→ 報工表單</span>
             </div>
             <div className="detail-sec-count">{dailyReports.length} 筆 · 高信心 {dailyReports.filter((d) => d.confidence === "high").length}</div>
           </div>
@@ -240,7 +240,7 @@ export default function ConversationAnalysisDetail({ uploadId, onBack }: Props) 
           <div className="detail-sec-hdr">
             <div className="detail-sec-title">
               事件記錄
-              <span className="detail-sec-title-mark">→ Ragic 待辦 / KM</span>
+              <span className="detail-sec-title-mark">→ 待辦 / 知識庫</span>
             </div>
             <div className="detail-sec-count">{records.length} 筆</div>
           </div>

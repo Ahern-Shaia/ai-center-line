@@ -1,81 +1,90 @@
+import { useEffect, useState } from "react";
 import Drawer from "../shared/Drawer";
-import { findExcerpt, type LineMessage } from "../mockdata/lineExcerpts";
+import { ApiError, getTicketSource, type TicketSource } from "../api";
 
+// 簽核前對照：AI 整理的內容 vs 當時的原始訊息。
+// 主管簽下去是要負責的 —— 看不到原文，簽核就只是幫 AI 背書。
+//
+// ⚠️ 2026-07-27 修：這支原本讀 mockdata/lineExcerpts（示範資料），
+//    真實任務查不到對應就整片空白。改接 GET /warroom/tickets/:id/source。
 interface Props {
   open: boolean;
   onClose: () => void;
-  summary: string | null;   // 傳 ticket summary，內部查 excerpt
+  ticketId: string | null;
+  summary: string | null;
   confidence: "high" | "medium" | "low" | null;
   needsReview: boolean;
 }
 
-const KIND_LABEL: Record<string, string> = { photo: "📷 照片", video: "🎬 影片", sticker: "😀 貼圖", audio: "🎙 語音" };
+// 欄位一律顯示中文 · 不把資料庫欄位名丟給使用者看
+const FIELD_LABEL: Record<string, string> = {
+  category: "分類", title: "標題", detail: "內容", status: "狀態",
+  person: "對口", machine_code: "工位", work_order: "案號／車號",
+  customer: "客戶", vehicle: "車輛", site: "站點", issues: "問題",
+};
 
-export default function SourceDrawer({ open, onClose, summary, confidence, needsReview }: Props) {
-  const ex = summary ? findExcerpt(summary) : undefined;
+export default function SourceDrawer({ open, onClose, ticketId, summary, confidence, needsReview }: Props) {
+  const [data, setData] = useState<TicketSource | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || !ticketId) { setData(null); setErr(null); return; }
+    let alive = true;
+    setLoading(true); setErr(null);
+    getTicketSource(ticketId)
+      .then((d) => { if (alive) setData(d); })
+      .catch((e) => { if (alive) setErr(e instanceof ApiError ? e.message : "載入失敗"); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [open, ticketId]);
+
   return (
-    <Drawer
-      open={open}
-      onClose={onClose}
-      title={ex ? `${ex.ticketId} · 來源與抽取` : "來源與抽取"}
-      subtitle={summary ?? ""}
-      width={580}
-    >
-      {!ex && summary && (
-        <div className="tc-empty">尚無來源資料</div>
+    <Drawer open={open} onClose={onClose} title="來源與整理結果" subtitle={summary ?? ""} width={580}>
+      <div className="tc-hdr" style={{ marginTop: 0 }}>
+        <span className={`tag ${confidence === "high" ? "ok" : confidence === "medium" ? "warn" : "danger"}`}>
+          {confidence === "high" ? "高信心" : confidence === "medium" ? "中信心" : "低信心"}
+        </span>
+        {needsReview && <span className="tag danger">已自動攔截 · 需補資訊</span>}
+      </div>
+
+      {loading && <div className="tc-empty">載入中…</div>}
+      {err && <div className="tc-empty">{err}</div>}
+
+      {/* 取不到原文時要說出原因，不能讓人以為「本來就沒有」 */}
+      {!loading && !err && data?.unavailableReason && (
+        <div className="tc-empty">{data.unavailableReason}</div>
       )}
-      {ex && (
-        <>
-          <div className="tc-hdr" style={{ marginTop: 0 }}>
-            <span className={`tag ${confidence === "high" ? "ok" : confidence === "medium" ? "warn" : "danger"}`}>
-              {confidence === "high" ? "高信心" : confidence === "medium" ? "中信心" : "低信心"}
-            </span>
-            {needsReview && <span className="tag danger">已即時攔截 · 需補資訊</span>}
-          </div>
 
-          <div className="tc-sec">
-            <span className="tc-sec-lbl">原始 LINE 對話</span>
-            <div className="tc-raw">
-              {ex.raw.map((m, i) => <LineBubble key={i} m={m} />)}
-            </div>
+      {!loading && !err && data && data.messages.length > 0 && (
+        <div className="tc-sec">
+          <span className="tc-sec-lbl">這是根據以下 {data.messages.length} 則訊息整理的</span>
+          <div className="tc-raw">
+            {data.messages.map((m) => (
+              <div key={m.id} className="ts-msg">
+                <span className="ts-msg-meta">{m.time} {m.sender}</span>
+                <span className="ts-msg-text">{m.text}</span>
+              </div>
+            ))}
           </div>
+        </div>
+      )}
 
-          <div className="tc-sec">
-            <span className="tc-sec-lbl">AI 抽取結果</span>
-            <div className="tc-extract">
-              {ex.extracted.map((e, i) => (
-                <div key={i} className="tc-kv">
-                  <span className="tc-k">{e.field}</span>
-                  <span className="tc-v">{e.value}</span>
+      {!loading && !err && data?.extracted && (
+        <div className="tc-sec">
+          <span className="tc-sec-lbl">整理出的內容</span>
+          <div className="tc-extract">
+            {Object.entries(data.extracted)
+              .filter(([k, v]) => FIELD_LABEL[k] && v != null && v !== "")
+              .map(([k, v]) => (
+                <div key={k} className="tc-kv">
+                  <span className="tc-k">{FIELD_LABEL[k]}</span>
+                  <span className="tc-v">{typeof v === "object" ? JSON.stringify(v) : String(v)}</span>
                 </div>
               ))}
-            </div>
           </div>
-
-          <div className="tc-sec">
-            <span className="tc-sec-lbl">信心度理由</span>
-            <div className="tc-reason">{ex.confidenceReason}</div>
-          </div>
-
-          <div className="tc-sec">
-            <span className="tc-sec-lbl">簽核後同步至</span>
-            <div className="tc-ragic">→ {ex.ragicTarget}</div>
-          </div>
-        </>
+        </div>
       )}
     </Drawer>
-  );
-}
-
-function LineBubble({ m }: { m: LineMessage }) {
-  return (
-    <div className="lb">
-      <div className="lb-meta">
-        <span className="lb-time mono">{m.time}</span>
-        <span className="lb-sender">{m.sender}</span>
-        {m.kind && m.kind !== "text" && <span className="lb-kind">{KIND_LABEL[m.kind] ?? m.kind}</span>}
-      </div>
-      <div className="lb-text">{m.text}</div>
-    </div>
   );
 }

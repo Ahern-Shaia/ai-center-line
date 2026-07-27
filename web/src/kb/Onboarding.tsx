@@ -65,15 +65,15 @@ const STEPS: Step[] = [
   },
   {
     n: 5,
-    title: "簽核後才同步 Ragic",
+    title: "確認後才正式列入紀錄",
     icon: svgIcon(<>
       <path d="M20 8a8 8 0 0 0-14-3L4 7" />
       <path d="M4 3v4h4" />
       <path d="M4 16a8 8 0 0 0 14 3l2-2" />
       <path d="M20 21v-4h-4" />
     </>),
-    body: "只有簽核後的資料才會寫進您的 Ragic ERP。錯誤或未確認的內容不會流出戰情室。",
-    detail: "同步失敗會清楚顯示並可一鍵重跑，確保跨系統資料一致。",
+    body: "只有經過確認的資料才會正式列入紀錄。未確認或有疑慮的內容不會流出戰情室。",
+    detail: "若之後要與貴公司既有系統介接，也是以確認過的資料為準。",
   },
 ];
 
@@ -83,7 +83,7 @@ export default function Onboarding({ onDone }: Props) {
       <div className="pane-hdr">
         <div>
           <h1>戰情室運作原理</h1>
-          <div className="sub">5 分鐘看懂從 LINE 到 Ragic 的完整流程</div>
+          <div className="sub">5 分鐘看懂從 LINE 對話到正式紀錄的完整流程</div>
         </div>
         <div className="actions">
           <button className="btn btn-primary" onClick={onDone}>進戰情室</button>

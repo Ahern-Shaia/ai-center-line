@@ -4,7 +4,6 @@ import { useToast } from "../Toast";
 import SourceDrawer from "./SourceDrawer";
 import { InfoTip } from "../shared/InfoTip";
 import Gauge from "../shared/Gauge";
-import { findExcerpt } from "../mockdata/lineExcerpts";
 import TaskBoard from "./TaskBoard";
 import DailyLog from "./DailyLog";
 
@@ -15,7 +14,7 @@ interface Props {
 
 type Tab = "dashboard" | "tasks" | "daily";
 
-interface SourceOpen { summary: string; confidence: WarroomTicket["confidence"]; needsReview: boolean }
+interface SourceOpen { ticketId: string; summary: string; confidence: WarroomTicket["confidence"]; needsReview: boolean }
 
 export default function WarRoom({ onRegister, onLoadingChange }: Props) {
   const [tab, setTab] = useState<Tab>("dashboard");
@@ -128,8 +127,8 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
       </div>
 
       <div className="section">
-        <h2>負責人每日最終確認 · 防呆機制</h2>
-        <span className="hint">簽核後才同步 Ragic · 低信心自動攔截</span>
+        <h2>負責人每日最終確認</h2>
+        <span className="hint">確認後才會正式列入紀錄 · 系統沒把握的內容會先攔下來</span>
       </div>
 
       <div className="signoff-list">
@@ -141,7 +140,7 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
             onToggle={() => toggleExpand(g.department_id)}
             onConfirm={() => confirmDept(g)}
             confirming={confirming === g.department_id}
-            onSource={(t) => setSource({ summary: t.summary, confidence: t.confidence, needsReview: t.needs_review })}
+            onSource={(t) => setSource({ ticketId: t.ticket_id, summary: t.summary, confidence: t.confidence, needsReview: t.needs_review })}
           />
         ))}
       </div>
@@ -149,6 +148,7 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
       <SourceDrawer
         open={!!source}
         onClose={() => setSource(null)}
+        ticketId={source?.ticketId ?? null}
         summary={source?.summary ?? null}
         confidence={source?.confidence ?? null}
         needsReview={source?.needsReview ?? false}
@@ -227,10 +227,12 @@ function DeptItem({
           {g.today_tickets.map((t) => {
             const conf = t.confidence ?? "medium";
             const isSigned = t.status === "已簽核";
-            const ex = findExcerpt(t.summary);
-            const tagText = isSigned ? "已同步 Ragic" : t.needs_review ? "低信心 · 攔截" : conf === "high" ? "高信心" : conf === "medium" ? "中信心" : "低信心";
+            const tagText = isSigned ? "已確認" : t.needs_review ? "低信心 · 已攔截" : conf === "high" ? "高信心" : conf === "medium" ? "中信心" : "低信心";
             const tagClass = isSigned ? "ok" : t.needs_review ? "danger" : conf === "high" ? "ok" : "warn";
-            const tipContent = ex?.confidenceReason ?? (isSigned ? `已於簽核後同步至 ${ex?.ragicTarget ?? "記錄系統"}` : "");
+            // 說明用固定文案 · 不再依賴示範資料（原本讀 mockdata 的內容真實環境是空的）
+            const tipContent = isSigned ? "已確認 · 正式列入紀錄"
+              : t.needs_review ? "系統對這筆沒把握，已先攔下 · 請點「查來源」核對原文"
+              : conf === "high" ? "系統判斷欄位明確" : conf === "medium" ? "部分內容為推斷 · 建議核對原文" : "訊息不夠明確 · 請核對原文";
             return (
               <div key={t.ticket_id} className={`so-line${t.needs_review ? " blocked" : ""}${isSigned ? " signed" : ""}`}>
                 <span className="so-box">□</span>
@@ -247,7 +249,7 @@ function DeptItem({
             );
           })}
           <div className="so-detail-foot">
-            <span>簽核後將同步至記錄系統</span>
+            <span>確認後才會正式列入紀錄</span>
             {!g.signed_off && confirmable > 0 && (
               <span>可簽核 <b>{confirmable}</b> 筆，低信心 <b>{lowCount}</b> 筆將被自動攔截</span>
             )}

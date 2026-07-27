@@ -61,7 +61,7 @@ export function Departments({
                 <th>顯示名稱</th>
                 <th className="num">成員</th>
                 <th className="num">綁定群</th>
-                <th>Legacy · Ragic Table</th>
+                <th>對應表單</th>
                 <th></th>
               </tr>
             </thead>

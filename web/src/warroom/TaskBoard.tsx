@@ -185,8 +185,8 @@ function TicketCard({ t, tone, onOpen }: { t: WarroomKanbanTicket; tone: Tone; o
             {who}
           </span>
         ) : <span className="kb-who kb-unassigned">未指派</span>}
-        {/* mockup 這裡是「已同步 Ragic」，但目前沒有 Ragic 同步、資料也沒這欄位 →
-            不做假訊號，已簽核欄改顯示誰簽的 */}
+        {/* 不顯示「已同步到某某系統」—— 各家用的系統不同，而且我方目前也沒有同步功能。
+            已簽核欄改顯示誰簽的。*/}
         <span>{tone === "ok" && t.confirmedByName ? `${t.confirmedByName} 已簽核` : t.departmentName ?? ""}</span>
       </div>
     </button>
@@ -368,7 +368,7 @@ function TicketDrawer({
               {signing ? "簽核中…" : "簽核此筆"}
             </button>
           ) : (
-            <span className="drawer-note">已簽核 · 已同步至 Ragic</span>
+            <span className="drawer-note">已確認 · 正式列入紀錄</span>
           )}
         </div>
       </aside>
