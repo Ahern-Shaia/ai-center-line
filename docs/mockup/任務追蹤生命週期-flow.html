@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>任務追蹤生命週期 · UI Flow</title>
+<title>任務追蹤生命週期 · UI Flow v2</title>
 <style>
   :root{
     --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6;
@@ -37,11 +37,11 @@
   .callout.warn{border-left-color:var(--warn);background:var(--warn-tint)}
   .callout.bad{border-left-color:var(--danger);background:var(--danger-tint)}
   .callout.good{border-left-color:var(--ok);background:var(--ok-tint)}
+  .callout.big{font-size:15px;padding:15px 18px}
 
-  /* 流程圖 */
   .flow{display:flex;align-items:stretch;gap:0;margin:18px 0;flex-wrap:wrap}
-  .fstep{flex:1;min-width:132px;border:1px solid var(--line);background:var(--surface);
-         padding:11px 13px;position:relative;box-shadow:var(--sh)}
+  .fstep{flex:1;min-width:140px;border:1px solid var(--line);background:var(--surface);
+         padding:11px 13px;box-shadow:var(--sh)}
   .fstep:first-child{border-radius:var(--r-lg) 0 0 var(--r-lg)}
   .fstep:last-child{border-radius:0 var(--r-lg) var(--r-lg) 0}
   .fstep+.fstep{border-left:0}
@@ -53,7 +53,6 @@
   .fstep.own{background:var(--ok-tint)}
   .fstep.mgr{background:var(--warn-tint)}
 
-  /* 對比雙欄 */
   .vs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0 6px}
   @media(max-width:900px){.vs{grid-template-columns:1fr}}
   .col{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
@@ -68,14 +67,12 @@
   .note{padding:9px 14px;font-size:12.5px;color:var(--ink-2);background:var(--well);
         border-top:1px solid var(--line-2)}
 
-  /* 假畫面 */
   .scr{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
   .scr-bar{background:var(--well);padding:6px 11px;font-size:11.5px;color:var(--ink-3);
            display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line-2)}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--ink-3);opacity:.4}
   .scr-bd{padding:13px}
 
-  /* 任務卡 */
   .tcard{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);
          padding:12px 13px;margin-bottom:9px}
   .tcard:last-child{margin-bottom:0}
@@ -89,8 +86,7 @@
   .rep b{font-weight:600;color:var(--ink)}
 
   .btn{display:inline-block;border:1px solid var(--line);border-radius:var(--r);
-       padding:6px 13px;font-size:12.5px;background:var(--surface);color:var(--ink-2);
-       cursor:default;white-space:nowrap}
+       padding:6px 13px;font-size:12.5px;background:var(--surface);color:var(--ink-2);white-space:nowrap}
   .btn.p{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
   .btn.g{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:600}
   .btn.sm{padding:3px 9px;font-size:11.5px}
@@ -105,8 +101,7 @@
 
   table{width:100%;border-collapse:collapse;font-size:13.5px;margin:12px 0}
   th{text-align:left;font-size:11.5px;color:var(--ink-3);font-weight:600;padding:7px 10px;
-     border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.03em;
-     background:var(--well)}
+     border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.03em;background:var(--well)}
   td{padding:8px 10px;border-bottom:1px solid var(--line-2);vertical-align:top}
   tr:last-child td{border-bottom:0}
   .tbl-wrap{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;
@@ -116,31 +111,26 @@
   .bad{color:var(--danger);font-weight:600}
   .good{color:var(--ok);font-weight:600}
 
-  /* 手機框 */
-  .phones{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin:14px 0}
-  .phone{border:1px solid var(--line);border-radius:14px;background:#8CABD9;overflow:hidden;
-         box-shadow:var(--sh)}
+  /* 手機 / LINE */
+  .phones{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin:14px 0}
+  .phone{border:1px solid var(--line);border-radius:14px;background:#8CABD9;overflow:hidden;box-shadow:var(--sh)}
   .ph-hd{background:#F7F7F7;padding:8px 12px;font-size:12.5px;font-weight:600;color:var(--ink);
          border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
-  .ph-bd{padding:12px 10px;min-height:212px;display:flex;flex-direction:column;gap:9px}
-  .bub{background:#fff;border-radius:12px;padding:8px 11px;font-size:13px;max-width:88%;
-       line-height:1.6;box-shadow:0 1px 1px rgba(0,0,0,.06)}
+  .ph-bd{padding:12px 10px;min-height:200px;display:flex;flex-direction:column;gap:9px}
+  .bub{background:#fff;border-radius:12px;padding:8px 11px;font-size:13px;max-width:90%;
+       line-height:1.6;box-shadow:0 1px 1px rgba(0,0,0,.06);align-self:flex-start}
+  .bub.me{background:#8DE055;align-self:flex-end}
   .bub .nm{font-size:10.5px;color:var(--ink-3);display:block;margin-bottom:2px}
   .bub .at{color:var(--primary);font-weight:600}
-  .flex-card{background:#fff;border-radius:10px;overflow:hidden;max-width:94%;
-             box-shadow:0 2px 6px rgba(0,0,0,.14)}
-  .fc-hd{background:var(--primary);color:#fff;padding:7px 11px;font-size:11.5px;font-weight:700;
-         letter-spacing:.02em}
-  .fc-bd{padding:10px 11px;font-size:12.5px;line-height:1.6}
-  .fc-bd .k{color:var(--ink-3);font-size:11px}
-  .fc-ft{display:flex;border-top:1px solid var(--line-2)}
-  .fc-ft span{flex:1;text-align:center;padding:8px 4px;font-size:12px;font-weight:600;
-              color:var(--primary);border-right:1px solid var(--line-2)}
-  .fc-ft span:last-child{border-right:0}
-  .ph-none{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;
-           color:#fff;font-size:12.5px;opacity:.92;line-height:1.7;padding:0 18px}
+  /* 引用區塊 */
+  .quo{border-left:3px solid #B9C4D4;background:rgba(0,0,0,.045);border-radius:4px;
+       padding:5px 8px;margin-bottom:6px;font-size:11.5px;color:var(--ink-2);line-height:1.5}
+  .quo .qn{font-size:10px;color:var(--ink-3);display:block}
+  .sys{background:#EEF2FF;border:1px solid #C7D2FE;border-radius:12px;padding:8px 11px;
+       font-size:12.5px;max-width:90%;line-height:1.6;align-self:flex-start;color:#3730A3}
+  .sys b{color:#312E81}
+  .ph-cap{font-size:11px;color:#fff;opacity:.94;text-align:center;line-height:1.6;padding:2px 10px}
 
-  /* dialog */
   .dlg{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
        box-shadow:0 10px 30px rgba(17,24,39,.12);max-width:430px;overflow:hidden}
   .dlg-hd{padding:12px 16px;border-bottom:1px solid var(--line-2);font-weight:600;font-size:14.5px}
@@ -155,7 +145,7 @@
   .opt.sel .radio{border-color:var(--primary);border-width:4px}
   .opt .d{font-size:11.5px;color:var(--ink-3);margin-top:1px;line-height:1.5}
   .ta{border:1px solid var(--line);border-radius:var(--r);padding:9px 11px;font-size:13.5px;
-      color:var(--ink-3);background:var(--surface);min-height:56px}
+      color:var(--ink-3);background:var(--surface);min-height:50px}
   .fl{font-size:12px;color:var(--ink-2);margin:0 0 5px;display:block}
 
   .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
@@ -175,124 +165,267 @@
   li b{color:var(--ink)}
   code{font-family:var(--mono);font-size:12.5px;background:var(--well);padding:1px 5px;
        border-radius:3px;border:1px solid var(--line-2)}
+  .quote-real{border:1px solid var(--line);border-left:3px solid var(--ok);border-radius:var(--r);
+              background:var(--surface);padding:12px 15px;margin:12px 0;font-size:13.5px;
+              font-family:var(--mono);line-height:2;color:var(--ink-2)}
+  .quote-real b{color:var(--ink);font-family:var(--sans)}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-<h1>任務追蹤生命週期 · UI Flow</h1>
-<p class="lede">從 AI 抽出任務，到當責人標記結束的完整動線。</p>
-<p class="meta">2026-07-28 · 對應 <span class="mono">docs/modules/task-completion-tracking.md v1.0</span>（OQ-TCT-1..16 已裁定）
-· 競品依據 <span class="mono">docs/market/競品研究-任務生命週期.md</span></p>
+<h1>任務追蹤生命週期 · UI Flow <span class="muted" style="font-size:19px">v2</span></h1>
+<p class="lede">從 AI 抽出任務，到當責人回報結束的完整動線。</p>
+<p class="meta">2026-07-28 · 對應 <span class="mono">docs/modules/task-completion-tracking.md v2.0</span>
+· 依 prod 真實對話（762 則訊息 / 35 張任務）修正方向</p>
 
-<div class="callout">
-  <b>這份 mockup 要你確認的是三件事：</b>
-  ① 當責人手上那一區長什麼樣、要按幾次；
-  ② 「結束」的四個選項會不會讓人選錯；
-  ③ 主管端看到的是<b>一個狀態</b>而不是四個欄位。
+<div class="callout bad big">
+  <b>⚠️ v2 是方向修正，不是改版面。</b><br>
+  v1 把「同仁登入網頁按完成」當主要入口。查完 prod 後確認：
+  <b>20 張任務有當責人姓名，0 張對得上系統帳號</b>——那個畫面目前一個人都用不了。<br>
+  更關鍵的是，客戶<b>已經自己發明了這個功能</b>，做在 LINE 裡（§01）。
 </div>
 
 
-<h2><span class="n">00</span>整條動線</h2>
-<p class="sub">四個角色接力。<b>灰底的每一格都不需要當責人做任何事</b>——只有最後一格要點。</p>
+<h2><span class="n">01</span>⭐ 為什麼要改：客戶自己訂了協定</h2>
+<p class="sub">2026-07-27 20:46–20:55，台灣福祉機器人測試群。這段對話是本次修正的全部理由。</p>
 
-<div class="flow">
-  <div class="fstep ai">
-    <div class="who">AI</div>
-    <div class="what">從對話抽出任務</div>
-    <div class="how">附 source_ids 可回溯原始訊息</div>
-  </div>
-  <div class="fstep ai">
-    <div class="who">AI · LINE</div>
-    <div class="what">推確認卡</div>
-    <div class="how">只給發話者＋當責人<br>不是全群</div>
-  </div>
-  <div class="fstep mgr">
-    <div class="who">主管</div>
-    <div class="what">簽核</div>
-    <div class="how">確認「AI 抽對了」<br>不等於做完了</div>
-  </div>
-  <div class="fstep own">
-    <div class="who">當責人</div>
-    <div class="what">進行中</div>
-    <div class="how">不做任何事就一直是進行中<br>成本 0</div>
-  </div>
-  <div class="fstep own">
-    <div class="who">當責人</div>
-    <div class="what">回報進度（選用）</div>
-    <div class="how">低承諾 · 可多次<br>留在進行中</div>
-  </div>
-  <div class="fstep own">
-    <div class="who">當責人</div>
-    <div class="what">結束</div>
-    <div class="how">四選一：完成／不用做了／<br>轉他人／做不到</div>
-  </div>
+<div class="quote-real">
+  <b>洪鈺仙Sandy</b>　 下次完成的時候請回報，因為要測試是否能夠計算工時<br>
+  <b>洪鈺仙Sandy</b>　 按著工作分配那則訊息回覆已完成<br>
+  <b>洪鈺仙Sandy</b>　 @林曉風 Patrick 是這樣操作嗎？？<br>
+  <b>林曉風Patrick</b> 是的<br>
+  <b>林曉風Patrick</b> 就正常回覆已完成或是目前狀況如何
 </div>
 
-<div class="callout good">
-  <b>設計主張：預設繼續，只有結束需要動作。</b>
-  未完成不需要任何人做任何事——系統自己知道哪些還開著、開了幾天。
-  同仁只在真的要結束時付出一次點擊。
+<div class="callout good big">
+  <b>「回覆已完成 或 目前狀況如何」＝ 我們設計的那兩顆按鈕。</b><br>
+  他們沒看過這份 mockup，獨立收斂到同樣的兩個選項。<br>
+  <b>但載體是「在 LINE 裡引用工作分配訊息回覆」，不是網頁。</b>
 </div>
 
-
-<h2><span class="n">01</span>LINE 端 · 確認卡只給「語意關係人」看</h2>
-<p class="sub">抄釘釘智慧待辦的可見性規則。我們是 AI 自動抽、密度比人工高得多，<b>全群可見等於 AI 在群裡公開點名誰該做事</b>。</p>
-
+<h3>而且已經在跑了</h3>
 <div class="phones">
   <div class="phone">
-    <div class="ph-hd"><span>二廠設備群</span><span class="muted" style="font-size:11px;font-weight:400">12 人</span></div>
+    <div class="ph-hd"><span>台灣福祉機器人測試群</span><span class="muted" style="font-size:11px;font-weight:400">07/28</span></div>
     <div class="ph-bd">
-      <div class="bub"><span class="nm">林班長</span>三號機軸承有異音，<span class="at">@陳○○</span> 明天記得換一下</div>
-      <div class="flex-card">
-        <div class="fc-hd">偵測到一件待辦</div>
-        <div class="fc-bd">
-          <div style="font-weight:600;margin-bottom:5px">更換三號機軸承</div>
-          <div class="k">當責人</div><div>陳○○</div>
-          <div class="k" style="margin-top:5px">出處</div>
-          <div class="muted" style="font-size:11.5px">林班長 今天 14:22 的訊息</div>
-        </div>
-        <div class="fc-ft"><span>建立任務</span><span style="color:#6B7280">不用了</span></div>
+      <div class="bub"><span class="nm">洪鈺仙Sandy</span><span class="at">@Wang C</span> 麻煩鮮湧的10支產品BOM先完成</div>
+      <div class="bub me">
+        <div class="quo"><span class="qn">洪鈺仙Sandy</span>@Wang C 麻煩鮮湧的10支產品BOM先完成</div>
+        鮮湧 10 支產品 BOM已完成（沒有料號的除外）
       </div>
-      <div class="muted" style="font-size:11px;color:#fff;opacity:.9;text-align:center">
-        ↑ 只有林班長與陳○○ 看得到這張卡
-      </div>
+      <div class="ph-cap">17:08 · 引用回覆，完整的一次任務結束</div>
     </div>
   </div>
-
   <div class="phone">
-    <div class="ph-hd"><span>二廠設備群</span><span class="muted" style="font-size:11px;font-weight:400">其他 10 人的畫面</span></div>
+    <div class="ph-hd"><span>有你真好</span><span class="muted" style="font-size:11px;font-weight:400">07/27</span></div>
     <div class="ph-bd">
-      <div class="bub"><span class="nm">林班長</span>三號機軸承有異音，<span class="at">@陳○○</span> 明天記得換一下</div>
-      <div class="ph-none">
-        就是一則普通訊息。<br>
-        沒有卡片、沒有提示、<br>沒有人被公開指派工作。
-      </div>
+      <div class="bub"><span class="nm">王培樺</span>@All 麻煩幫忙設定一廠保全</div>
+      <div class="bub"><span class="nm">莊益豐</span>已設定。</div>
+      <div class="bub"><span class="nm">王培樺</span>謝謝</div>
+      <div class="ph-cap">21:28 → 21:39 · <b>11 分鐘走完一整個生命週期</b></div>
     </div>
   </div>
 </div>
 
 <div class="tbl-wrap">
 <table>
-  <thead><tr><th style="width:34%">訊息型態</th><th>誰看得到確認卡</th></tr></thead>
+  <thead><tr><th style="width:52%">prod 實測</th><th>數字</th></tr></thead>
   <tbody>
-    <tr><td>有 <span class="mono">@</span> 某人</td><td>發話者 <b>＋</b> 被 @ 的人</td></tr>
-    <tr><td>沒有 <span class="mono">@</span></td><td><b>只有發話者</b></td></tr>
-    <tr><td><span class="mono">@所有人</span></td><td><b>不出卡片</b>（等於對全群喊話，指派給誰不明確）</td></tr>
+    <tr><td>訊息總數（台灣福祉 · 9 個開分析的群）</td><td class="mono">762</td></tr>
+    <tr><td><b>已經在用引用回覆的訊息</b></td><td class="mono good">158（21%）</td></tr>
+    <tr><td>帶完成語意的訊息</td><td class="mono">16</td></tr>
+    <tr><td>每晚固定發結構化工作回報的人（技術工程部組長群）</td><td class="mono">5</td></tr>
+    <tr><td>有當責人姓名的任務</td><td class="mono">20</td></tr>
+    <tr><td><b>其中對得上系統帳號的</b></td><td class="mono bad">0</td></tr>
+    <tr><td>對話裡出現的當責人 vs 真實系統帳號</td><td class="mono bad">14 人 vs ~5 個 · 零交集</td></tr>
+    <tr><td><b>訊息都帶得出發話者身分</b></td><td class="mono good">762 / 762</td></tr>
   </tbody>
 </table>
 </div>
 
-<div class="callout warn">
-  <b>AI 只建議，人來按。</b>卡片上是「建立任務」不是「已建立任務」——
-  AI 負責偵測與擺按鈕，建立的動作由人完成。這讓誤判的成本趨近於零：
-  抽錯了，沒人按，就沒事發生。<br>
-  另外要給<b>個人層級</b>的關閉開關（「不要再對我顯示這種卡片」），不是只有管理員層級。
+<div class="callout">
+  <b>最後一列是 v2 能成立的關鍵。</b>引用回覆進 webhook 時就帶了發話者的 LINE 身分——
+  <b>不需要登入、不需要綁定、不需要建帳號</b>，就知道是誰說「已完成」。<br>
+  所以「當責人沒帳號」這個死結，<b>可以繞過而不是要先解決</b>。
 </div>
 
 
-<h2><span class="n">02</span>主管 · 任務看板只顯示一個狀態</h2>
-<p class="sub">底下存四條軸（AI 抽取狀態／簽核／歸屬／工作），但<b>算出一個字給人看</b>。四個下拉並排丟給現場主管＝沒人看得懂。</p>
+<h2><span class="n">02</span>入口對照 · v1 vs v2</h2>
+
+<div class="vs">
+  <div class="col old">
+    <div class="col-hd"><span class="tag">v1</span>同仁登入網頁按完成</div>
+    <div class="col-bd">
+      <div class="scr">
+        <div class="scr-bar"><span>我的日報 · 登入後</span></div>
+        <div class="scr-bd">
+          <div class="tcard">
+            <div class="tcard-t">更換三號機軸承</div>
+            <div class="tcard-acts"><span class="btn">回報進度</span><span class="btn g">完成</span></div>
+          </div>
+        </div>
+      </div>
+      <ul style="margin-top:11px">
+        <li>要有系統帳號　<b class="bad">目前 0 人</b></li>
+        <li>要綁 LINE　<b class="bad">4 / 42</b></li>
+        <li>要學新習慣　<b class="bad">而且比現在的做法麻煩</b></li>
+      </ul>
+    </div>
+    <div class="note">等於要求他們<b>放棄一個正在運作的習慣，去改用一個更差的</b>。</div>
+  </div>
+
+  <div class="col new">
+    <div class="col-hd"><span class="tag">v2</span>在 LINE 引用回覆</div>
+    <div class="col-bd">
+      <div class="phone" style="border-radius:var(--r)">
+        <div class="ph-hd"><span>二廠設備群</span></div>
+        <div class="ph-bd" style="min-height:auto">
+          <div class="bub"><span class="nm">林班長</span><span class="at">@陳○○</span> 三號機軸承明天記得換一下</div>
+          <div class="bub me">
+            <div class="quo"><span class="qn">林班長</span>@陳○○ 三號機軸承明天記得換一下</div>
+            換好了
+          </div>
+        </div>
+      </div>
+      <ul style="margin-top:11px">
+        <li>要有系統帳號　<b class="good">不用</b></li>
+        <li>要綁 LINE　<b class="good">不用</b></li>
+        <li>要學新習慣　<b class="good">不用，7/27 客戶已經教過一輪</b></li>
+      </ul>
+    </div>
+    <div class="note">護城河是「員工照常用 LINE，不用多做事」——<b>這一版才守得住</b>。</div>
+  </div>
+</div>
+
+
+<h2><span class="n">03</span>整條動線（v2）</h2>
+<p class="sub">灰底的每一格都不需要當責人做任何事。唯一的動作是在 LINE 裡回一句話——而那句話他本來就會說。</p>
+
+<div class="flow">
+  <div class="fstep ai">
+    <div class="who">AI</div><div class="what">從對話抽出任務</div>
+    <div class="how">掛上原始訊息 id<br>（M1 要補的鏈）</div>
+  </div>
+  <div class="fstep mgr">
+    <div class="who">主管</div><div class="what">簽核</div>
+    <div class="how">確認「AI 抽對了」<br>不等於做完了</div>
+  </div>
+  <div class="fstep own">
+    <div class="who">當責人</div><div class="what">進行中</div>
+    <div class="how">不做任何事就一直是進行中<br>成本 0</div>
+  </div>
+  <div class="fstep own">
+    <div class="who">LINE</div><div class="what">引用回覆</div>
+    <div class="how">「已完成」→ 結束<br>「零件週四到」→ 記進度</div>
+  </div>
+  <div class="fstep ai">
+    <div class="who">系統</div><div class="what">回一則確認</div>
+    <div class="how">讓人知道被收到了<br>（可撤回）</div>
+  </div>
+</div>
+
+
+<h2><span class="n">04</span>⭐ 主畫面 · LINE 引用回覆的三種判定</h2>
+<p class="sub">引用把範圍縮到「一則回覆 ＋ 一則被引用的原訊息」，不需要理解整個群的脈絡。
+<span class="mono">quotedMessageId</span> 給的是<b>確定性連結</b>——連到哪一則是查表查出來的，AI 只讀那一句話的語意。</p>
+
+<div class="phones">
+  <div class="phone">
+    <div class="ph-hd"><span>① 判定為「完成」</span><span class="chip ok">結束任務</span></div>
+    <div class="ph-bd">
+      <div class="bub"><span class="nm">林班長</span><span class="at">@陳○○</span> 三號機軸承明天記得換一下</div>
+      <div class="bub me">
+        <div class="quo"><span class="qn">林班長</span>@陳○○ 三號機軸承明天記得換一下</div>
+        換好了，順便清了濾網
+      </div>
+      <div class="sys">
+        ✓ <b>已記錄完成</b>　更換三號機軸承<br>
+        <span style="font-size:11.5px">陳○○ · 開了 3 天 · 若記錄有誤請回「更正」</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="phone">
+    <div class="ph-hd"><span>② 判定為「進度」</span><span class="chip">留在進行中</span></div>
+    <div class="ph-bd">
+      <div class="bub"><span class="nm">林班長</span><span class="at">@陳○○</span> 三號機軸承明天記得換一下</div>
+      <div class="bub me">
+        <div class="quo"><span class="qn">林班長</span>@陳○○ 三號機軸承明天記得換一下</div>
+        零件已叫，週四到貨
+      </div>
+      <div class="sys">
+        ↻ <b>已記錄進度</b>　更換三號機軸承<br>
+        <span style="font-size:11.5px">任務仍在進行中</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="phone">
+    <div class="ph-hd"><span>③ 不確定</span><span class="chip warn">保守側 · 當進度</span></div>
+    <div class="ph-bd">
+      <div class="bub"><span class="nm">林班長</span><span class="at">@陳○○</span> 三號機軸承明天記得換一下</div>
+      <div class="bub me">
+        <div class="quo"><span class="qn">林班長</span>@陳○○ 三號機軸承明天記得換一下</div>
+        快好了
+      </div>
+      <div class="sys">
+        ↻ <b>已記錄進度</b>　更換三號機軸承<br>
+        <span style="font-size:11.5px">完成了的話回一句「完成」就好</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="callout bad">
+  <b>「快好了」不是「好了」。</b>語意判斷錯成「進度」是安全的，錯成「完成」不是——
+  後者會讓系統宣稱一件沒做完的事做完了（doc F-15，P0）。<br>
+  <b>所以只認高把握的完成語意</b>（已完成／好了／換好了／已處理／已設定／OK），
+  其餘一律當進度。寧可少接一筆，不可誤報一筆。
+</div>
+
+<div class="callout warn">
+  <b>一則訊息 @ 多人時不整張關掉。</b>「@小陳 @小李 這兩台都要保養」——
+  小陳回「好了」只結掉他那一份；拆不開時降級成進度，並在看板標「部分回報」（F-16）。
+</div>
+
+
+<h2><span class="n">05</span>系統回覆 · 為什麼一定要回一句</h2>
+
+<div class="two">
+  <div>
+    <div class="phone" style="max-width:340px">
+      <div class="ph-hd"><span>二廠設備群</span></div>
+      <div class="ph-bd" style="min-height:auto">
+        <div class="bub me">
+          <div class="quo"><span class="qn">林班長</span>@陳○○ 三號機軸承明天記得換一下</div>
+          換好了
+        </div>
+        <div class="sys">
+          ✓ <b>已記錄完成</b>　更換三號機軸承<br>
+          <span style="font-size:11.5px">陳○○ · 開了 3 天 · 若記錄有誤請回「更正」</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <h3>三個理由</h3>
+    <ul>
+      <li><b>回饋閉環</b>：沒有回應的話，人不知道系統有沒有接到，下次就不會再回了。</li>
+      <li><b>可撤回</b>：判錯了，當場回「更正」就能還原——比事後去網頁改容易得多。</li>
+      <li><b>擴散示範</b>：其他人在群裡看到這個互動，就學會了怎麼用。<b>不需要教育訓練。</b></li>
+    </ul>
+    <div class="callout warn">
+      <b>但要節制。</b>只在「成功接住」時回，接不到任務時<b>不要回</b>——
+      在群裡說「我找不到對應的任務」只會製造噪音，而且暴露系統的失敗。
+      接不到的統一進後台的「未接住」清單（§08）。
+    </div>
+  </div>
+</div>
+
+
+<h2><span class="n">06</span>主管視角 · 網頁這一區改成給主管看</h2>
+<p class="sub">同仁的輸入介面是 LINE。網頁回答的是主管的問題：<b>誰手上有什麼、誰卡住了。</b></p>
 
 <div class="scr">
   <div class="scr-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
@@ -301,46 +434,25 @@
     <div class="tbl-wrap" style="box-shadow:none">
     <table>
       <thead><tr>
-        <th style="width:31%">任務</th><th style="width:14%">當責人</th>
-        <th style="width:23%">狀態</th><th style="width:12%">開了</th><th>最後動作</th>
+        <th style="width:29%">任務</th><th style="width:13%">當責人</th>
+        <th style="width:22%">狀態</th><th style="width:10%">開了</th><th>最後動作</th>
       </tr></thead>
       <tbody>
-        <tr>
-          <td>更換三號機軸承</td><td>陳○○</td>
-          <td><span class="chip ok">進行中（有回報）</span></td>
-          <td class="mono">3 天</td>
-          <td class="muted" style="font-size:12px">昨天 回報「零件已叫，週四到」</td>
-        </tr>
-        <tr>
-          <td>五號機定期保養</td><td>陳○○</td>
-          <td><span class="chip">進行中</span></td>
-          <td class="mono">1 天</td>
-          <td class="muted" style="font-size:12px">—</td>
-        </tr>
-        <tr>
-          <td>包裝線輸送帶調校</td><td>李○○</td>
-          <td><span class="chip ai">AI 判讀已完成 · 待當責人確認</span></td>
-          <td class="mono">2 天</td>
-          <td class="muted" style="font-size:12px">今天 群裡出現「好了」</td>
-        </tr>
-        <tr>
-          <td>倉庫照明更換</td><td class="muted">未指派</td>
-          <td><span class="chip warn">待指派</span></td>
-          <td class="mono bad">6 天</td>
-          <td class="muted" style="font-size:12px">—</td>
-        </tr>
-        <tr>
-          <td>二號冷卻塔清洗</td><td>王○○</td>
-          <td><span class="chip ok">已完成</span></td>
-          <td class="mono muted">—</td>
-          <td class="muted" style="font-size:12px">7/26 王○○ 標記完成</td>
-        </tr>
-        <tr>
-          <td>舊料架拆除</td><td>王○○</td>
-          <td><span class="chip">已結束（不用做了）</span></td>
-          <td class="mono muted">—</td>
-          <td class="muted" style="font-size:12px">7/25 王○○ ·「改採外包」</td>
-        </tr>
+        <tr><td>更換三號機軸承</td><td>陳○○</td>
+          <td><span class="chip ok">已完成</span></td><td class="mono muted">—</td>
+          <td class="muted" style="font-size:12px">今天 LINE 回報「換好了，順便清了濾網」</td></tr>
+        <tr><td>五號機定期保養</td><td>陳○○</td>
+          <td><span class="chip">進行中</span></td><td class="mono">1 天</td>
+          <td class="muted" style="font-size:12px">—</td></tr>
+        <tr><td>包裝線輸送帶調校</td><td>李○○</td>
+          <td><span class="chip ai">AI 判讀已完成 · 待當責人確認</span></td><td class="mono">2 天</td>
+          <td class="muted" style="font-size:12px">今天 群裡出現「好了」<b>但沒有引用</b></td></tr>
+        <tr><td>倉庫照明更換</td><td class="muted">未指派</td>
+          <td><span class="chip warn">待指派</span></td><td class="mono bad">6 天</td>
+          <td class="muted" style="font-size:12px">—</td></tr>
+        <tr><td>舊料架拆除</td><td>王○○</td>
+          <td><span class="chip">已結束（不用做了）</span></td><td class="mono muted">—</td>
+          <td class="muted" style="font-size:12px">7/25 · 主管補登「改採外包」</td></tr>
       </tbody>
     </table>
     </div>
@@ -348,269 +460,66 @@
 </div>
 
 <div class="callout">
-  <b>第三列是關鍵的一格。</b><span class="chip ai">AI 判讀已完成 · 待當責人確認</span>
-  ——AI 從對話讀到「好了」，但那是<b>推論</b>不是<b>承諾</b>。
-  系統不會替他標完成，只會把這個落差講出來。<br>
-  <span class="muted" style="font-size:13px">（這就是 ITIL 的 resolved vs closed：技師標 resolved、使用者確認才 closed。）</span>
+  <b>第三列是刻意不自動關的。</b>群裡有人說「好了」但<b>沒有引用任何訊息</b>——
+  系統無法確定是在講哪一件事，所以只提示、不動作。<br>
+  <span class="muted" style="font-size:13px">（doc OQ-TCT-19：只認引用回覆的確定性連結。這也是 ITIL 的 resolved vs closed。）</span>
 </div>
 
 
-<h2><span class="n">03</span>⚠️ 新舊對比 · 簽核之後任務去哪</h2>
-<p class="sub">這是查程式碼時發現的既有缺陷，不是新功能。<span class="mono">personal-daily-report.controller.ts</span>
-的查詢條件是 <span class="mono">confirm_status IN ('待簽核','逾時警示')</span>。</p>
-
-<div class="vs">
-  <div class="col old">
-    <div class="col-hd"><span class="tag">現況</span>主管簽核後</div>
-    <div class="col-bd">
-      <div class="scr">
-        <div class="scr-bar"><span>我的日報 · 陳○○</span></div>
-        <div class="scr-bd">
-          <div style="font-size:13px;font-weight:600;margin-bottom:9px">你手上的任務</div>
-          <div style="text-align:center;padding:26px 12px;color:var(--ink-3);font-size:13px;
-                      background:var(--well);border-radius:var(--r);line-height:1.7">
-            目前沒有任務
-          </div>
-        </div>
-      </div>
-      <p style="font-size:13px;color:var(--ink-2);margin:11px 0 0">
-        主管按下「簽核」的那一刻，任務就從當責人的清單<b class="bad">消失了</b>。
-      </p>
-    </div>
-    <div class="note">
-      但簽核的意思是「<b>AI 抽對了</b>」，不是「工作做完了」——
-      負責的人在「這被確認是一件真任務」的那一刻失去了它。
-    </div>
-  </div>
-
-  <div class="col new">
-    <div class="col-hd"><span class="tag">修正後</span>主管簽核後</div>
-    <div class="col-bd">
-      <div class="scr">
-        <div class="scr-bar"><span>我的日報 · 陳○○</span></div>
-        <div class="scr-bd">
-          <div style="font-size:13px;font-weight:600;margin-bottom:9px">你手上的任務（2 件進行中）</div>
-          <div class="tcard">
-            <div class="tcard-t">更換三號機軸承</div>
-            <div class="tcard-m"><span>開了 3 天</span><span class="chip ok">已簽核</span></div>
-          </div>
-          <div class="tcard">
-            <div class="tcard-t">五號機定期保養</div>
-            <div class="tcard-m"><span>開了 1 天</span><span class="chip ok">已簽核</span></div>
-          </div>
-        </div>
-      </div>
-      <p style="font-size:13px;color:var(--ink-2);margin:11px 0 0">
-        任務<b class="good">留在當責人手上</b>，直到他自己標記結束。
-      </p>
-    </div>
-    <div class="note">
-      簽核只是換一個標籤（「這是一件真任務」），<b>不改變它在誰手上</b>。
-    </div>
-  </div>
-</div>
-
-
-<h2><span class="n">04</span>當責人 · 「你手上的任務」</h2>
-<p class="sub">放在個人日報頁<b>上方</b>，<b>不自動寫進日報內容</b>——
-一件做兩週的事若每天塞進日報，會出現在 14 份日報裡，把「今天真正做了什麼」埋掉。</p>
-
-<div class="scr">
-  <div class="scr-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
-    <span>我的日報 · 陳○○ · 7 月 28 日</span></div>
-  <div class="scr-bd">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
-      <div style="font-size:14px;font-weight:600">你手上的任務（3 件進行中）</div>
-      <span class="muted" style="font-size:11.5px">不會自動寫進今天的日報</span>
-    </div>
-
-    <div class="tcard">
-      <div class="tcard-t">更換三號機軸承</div>
-      <div class="tcard-m">
-        <span>開了 <b class="mono">3</b> 天</span>
-        <span>來自 二廠設備群 · 林班長 7/25 的訊息</span>
-      </div>
-      <div class="rep"><b>你昨天回報：</b>零件已叫，週四到貨</div>
-      <div class="tcard-acts">
-        <span class="btn">回報進度</span>
-        <span class="btn g">完成</span>
-        <span class="btn gh sm">看原始訊息</span>
-      </div>
-    </div>
-
-    <div class="tcard">
-      <div class="tcard-t">五號機定期保養</div>
-      <div class="tcard-m">
-        <span>開了 <b class="mono">1</b> 天</span>
-        <span>來自 二廠設備群 · 林班長 7/27 的訊息</span>
-      </div>
-      <div class="tcard-acts">
-        <span class="btn">回報進度</span>
-        <span class="btn g">完成</span>
-        <span class="btn gh sm">看原始訊息</span>
-      </div>
-    </div>
-
-    <div class="tcard hl">
-      <div class="tcard-t">包裝線輸送帶調校</div>
-      <div class="tcard-m">
-        <span>開了 <b class="mono">2</b> 天</span>
-        <span class="chip ai">AI 從對話判讀已完成</span>
-      </div>
-      <div class="rep" style="border-left-color:var(--primary);background:var(--primary-tint)">
-        今天 11:04 群裡出現「輸送帶調好了」——<b>是你做完了嗎？</b>
-      </div>
-      <div class="tcard-acts">
-        <span class="btn g">是，標記完成</span>
-        <span class="btn">還沒，回報進度</span>
-      </div>
-    </div>
-
-    <div style="border-top:1px solid var(--line-2);margin:16px 0 0;padding-top:14px">
-      <div style="font-size:14px;font-weight:600;margin-bottom:4px">今天做了什麼</div>
-      <p class="muted" style="font-size:12.5px;margin:0 0 9px">
-        AI 已從今天的對話整理，你可以直接送出或修改。
-      </p>
-      <div class="tcard" style="background:var(--well)">
-        <div style="font-size:13px">09:20　三號機停機檢查，確認軸承異音來源</div>
-        <div style="font-size:13px;margin-top:5px">14:40　協助二線換模</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="callout good">
-  <b>兩顆按鈕，不是一顆。</b>「做完了嗎」是一個<b>帶承諾</b>的問題——按下去等於背書。
-  只給一顆完成鍵，不確定的人的最佳策略就是不碰它，結果是整個清單只會長大不會收斂。<br>
-  給一個低承諾的「回報進度」，狀態才會被維護。<b>而 AI 抽出來的任務本來就常是半成品。</b>
-</div>
-
-
-<h2><span class="n">05</span>回報進度 · 低承諾</h2>
+<h2><span class="n">07</span>主管補登與代結案</h2>
+<p class="sub">代標不是例外是必然（Jira 的限制是 opt-in、Asana 根本沒這權限）。但要看得出來是誰按的。</p>
 
 <div class="two">
   <div>
     <div class="dlg">
-      <div class="dlg-hd">回報進度 · 更換三號機軸承</div>
-      <div class="dlg-bd">
-        <label class="fl">現在到哪了？（選填，一句話就好）</label>
-        <div class="ta">零件已叫，週四到貨</div>
-        <p class="muted" style="font-size:12px;margin:10px 0 0;line-height:1.6">
-          這件任務會<b>留在「進行中」</b>。回報只是讓大家知道有人在跟。
-        </p>
-      </div>
-      <div class="dlg-ft"><span class="btn">取消</span><span class="btn p">送出</span></div>
-    </div>
-  </div>
-  <div>
-    <h3>為什麼要有這一顆</h3>
-    <p style="font-size:13.5px;color:var(--ink-2)">
-      競品外勤筋斗雲把外勤人員的動作拆成「回報」與「結案」兩顆——
-      回報＝更新進度但留在處理中，結案＝才轉已完成。
-    </p>
-    <p style="font-size:13.5px;color:var(--ink-2)">
-      這解掉我們最大的風險（沒人會按完成）背後的真正機制：
-      <b>員工不敢按完成，所以乾脆什麼都不動。</b>
-    </p>
-    <div class="callout" style="margin-top:14px">
-      回報同時給我們一個<b>免費的訊號</b>：有人在跟這件事，只是還沒好。
-      這正是主管端要分辨的東西——<b>久懸不動</b> vs <b>有進展但慢</b>。
-    </div>
-  </div>
-</div>
-
-
-<h2><span class="n">06</span>結束 · 四選一</h2>
-<p class="sub">「結束了沒」與「為什麼結束」是兩件事。三家台灣競品都沒解「不用做了」與「做完了」分開結案——<b>這是市場空位</b>。</p>
-
-<div class="two">
-  <div>
-    <div class="dlg">
-      <div class="dlg-hd">結束這件任務 · 更換三號機軸承</div>
+      <div class="dlg-hd">結束這件任務 · 舊料架拆除</div>
       <div class="dlg-bd">
         <label class="fl">為什麼結束？</label>
-        <div class="opt sel"><span class="radio"></span>
-          <div><b>完成</b><div class="d">事情做好了</div></div></div>
-        <div class="opt"><span class="radio"></span>
-          <div><b>不用做了</b><div class="d">後來取消、或改用別的方式處理</div></div></div>
-        <div class="opt"><span class="radio"></span>
-          <div><b>轉給別人</b><div class="d">不在我這裡了</div></div></div>
-        <div class="opt"><span class="radio"></span>
-          <div><b>做不到</b><div class="d">缺料、缺人、缺權限——需要有人處理障礙</div></div></div>
+        <div class="opt"><span class="radio"></span><div><b>完成</b><div class="d">事情做好了</div></div></div>
+        <div class="opt sel"><span class="radio"></span><div><b>不用做了</b><div class="d">後來取消、或改用別的方式處理</div></div></div>
+        <div class="opt"><span class="radio"></span><div><b>轉給別人</b><div class="d">不在我這裡了</div></div></div>
+        <div class="opt"><span class="radio"></span><div><b>做不到</b><div class="d">缺料、缺人、缺權限——需要有人處理障礙</div></div></div>
         <label class="fl" style="margin-top:13px">補一句話（選填）</label>
-        <div class="ta" style="min-height:42px"></div>
+        <div class="ta">改採外包</div>
       </div>
       <div class="dlg-ft"><span class="btn">取消</span><span class="btn g">確認結束</span></div>
     </div>
   </div>
   <div>
-    <h3>為什麼不是「完成／取消」兩選一</h3>
+    <h3>結束的四個選項</h3>
     <p style="font-size:13.5px;color:var(--ink-2)">
-      四個選項對應四種完全不同的後續：<b>完成</b>進統計、<b>不用做了</b>排除在分母外、
+      對應四種不同的後續：<b>完成</b>進統計、<b>不用做了</b>排除在分母外、
       <b>轉給別人</b>要有人接、<b>做不到</b>是求救訊號要主管看到。
     </p>
-    <p style="font-size:13.5px;color:var(--ink-2)">
-      壓成一個布林，這四種訊號就全部消失了。
-    </p>
     <div class="callout warn">
-      <b>「做不到」是這四個裡最有價值的一個。</b>
-      它是唯一會讓事情<b>往上走</b>的選項——其他三個都是往下收。
-      沒有這個選項，卡住的人只能不按任何鍵，然後任務靜靜躺在那裡沒人知道。
+      <b>「做不到」是四個裡最有價值的一個。</b>
+      它是唯一會讓事情<b>往上走</b>的選項，其他三個都是往下收。
+      沒有它，卡住的人只能不按任何鍵，任務靜靜躺著沒人知道。
     </div>
-    <div class="callout bad">
-      <b>不加完成關卡。</b>不要求拍照或填表才能結案。<br>
-      競品實測的代價：業務王評論「畫面一直轉圈圈」、外勤筋斗雲 FAQ
-      有整整兩題在處理「開了權限還是無法上傳照片」。<br>
-      <b>完成條件的技術依賴愈多，關不掉的任務就愈多。</b>
+    <div class="vs" style="grid-template-columns:1fr;margin-top:14px">
+      <div class="col new">
+        <div class="col-hd"><span class="tag">代結案</span>要看得出來是誰按的</div>
+        <div class="col-bd">
+          <div class="tcard">
+            <div class="tcard-t">舊料架拆除</div>
+            <div class="tcard-m"><span class="chip warn">由林班長代為結束</span><span>7/25</span></div>
+            <div class="rep">當責人王○○ 未回報 ·「改採外包」</div>
+          </div>
+        </div>
+        <div class="note">抄釘釘：創建人結束的待辦標成「被創建人結束」<b>而不是「我完成」</b>。
+          這是日後爭議時唯一的證據。</div>
+      </div>
     </div>
   </div>
 </div>
 
 
-<h2><span class="n">07</span>主管代結案 · 要看得出來是誰按的</h2>
-<p class="sub">代標不是例外，是必然（Jira 的限制是 opt-in、Asana 根本沒這權限）。寫死「只有本人能改」，第一週就會被要求開後門。</p>
-
-<div class="vs">
-  <div class="col old">
-    <div class="col-hd"><span class="tag">不可接受</span>合併成同一個勾</div>
-    <div class="col-bd">
-      <div class="tcard">
-        <div class="tcard-t">舊料架拆除</div>
-        <div class="tcard-m"><span class="chip ok">已完成</span><span>7/25</span></div>
-      </div>
-      <p style="font-size:13px;color:var(--ink-2);margin:11px 0 0">
-        看不出來是<b>陳○○ 自己做完</b>，還是<b class="bad">主管幫他按掉的</b>。
-      </p>
-    </div>
-    <div class="note">KPI 會被代標灌水；日後「你說我沒做」的爭議沒有任何證據可查。</div>
-  </div>
-  <div class="col new">
-    <div class="col-hd"><span class="tag">採用</span>代結案是獨立狀態</div>
-    <div class="col-bd">
-      <div class="tcard">
-        <div class="tcard-t">舊料架拆除</div>
-        <div class="tcard-m"><span class="chip warn">由林班長代為結束</span><span>7/25</span></div>
-        <div class="rep">當責人陳○○ 未回報 ·「改採外包」</div>
-      </div>
-      <p style="font-size:13px;color:var(--ink-2);margin:11px 0 0">
-        <span class="mono">work_closed_by ≠ assignee</span> 時，UI 一律明示。
-      </p>
-    </div>
-    <div class="note">
-      抄釘釘：創建人結束的待辦，在參與人清單裡標成「被創建人結束」<b>而不是「我完成」</b>。
-      這是日後爭議時唯一的證據。
-    </div>
-  </div>
-</div>
-
-
-<h2><span class="n">08</span>主管 · 逾期要分兩種</h2>
-<p class="sub">合成一個「逾期」桶子，主管就無法分流。我們用 <span class="mono">assign_status</span> 分得出來。</p>
+<h2><span class="n">08</span>逾期分流 ＋ 未接住清單</h2>
 
 <div class="two">
   <div class="card" style="border-left:3px solid var(--warn)">
     <h4>逾期未開始（3 件）</h4>
-    <p style="margin-bottom:10px">沒人接，或接了但完全沒動靜。</p>
+    <p style="margin-bottom:10px">沒人接，或接了完全沒動靜。<b>主管要做的：指派，或決定不用做。</b></p>
     <div class="tcard" style="margin-bottom:7px">
       <div class="tcard-t" style="font-size:13px">倉庫照明更換</div>
       <div class="tcard-m"><span class="bad mono">6 天無人指派</span></div>
@@ -619,71 +528,84 @@
       <div class="tcard-t" style="font-size:13px">廢料區整理</div>
       <div class="tcard-m"><span class="bad mono">5 天無人指派</span></div>
     </div>
-    <p style="margin-top:11px"><b>主管要做的：</b>指派給人，或決定不用做。</p>
   </div>
-
   <div class="card" style="border-left:3px solid var(--danger)">
     <h4>逾期未完成（2 件）</h4>
-    <p style="margin-bottom:10px">有人接了，但卡住了。</p>
+    <p style="margin-bottom:10px">有人接了但卡住。<b>主管要做的：問障礙。</b></p>
     <div class="tcard" style="margin-bottom:7px">
       <div class="tcard-t" style="font-size:13px">更換三號機軸承</div>
-      <div class="tcard-m"><span>陳○○</span><span class="mono">開了 8 天</span>
-        <span class="chip">3 天前回報過</span></div>
+      <div class="tcard-m"><span>陳○○</span><span class="mono">開了 8 天</span><span class="chip">3 天前回報過</span></div>
     </div>
     <div class="tcard">
       <div class="tcard-t" style="font-size:13px">壓縮機管路檢修</div>
-      <div class="tcard-m"><span>李○○</span><span class="mono bad">開了 12 天</span>
-        <span class="chip bad">從未回報</span></div>
+      <div class="tcard-m"><span>李○○</span><span class="mono bad">開了 12 天</span><span class="chip bad">從未回報</span></div>
     </div>
-    <p style="margin-top:11px"><b>主管要做的：</b>問障礙，看要不要換人或加資源。</p>
   </div>
 </div>
 
-<div class="callout">
-  兩欄的管理動作完全不同：左邊是<b>催派工</b>，右邊是<b>問障礙</b>。
-  而右欄裡「3 天前回報過」與「從未回報」又是兩種急迫度——這就是 <span class="mono">work_last_report_at</span> 的用處。
+<h3 style="margin-top:26px">⭐ 未接住清單（v2 新增 · 只有平台管理員看得到）</h3>
+<p class="sub">收到了引用回覆，但對不上任何任務。<b>這是我們自己的除錯清單，不是客戶的待辦。</b></p>
+
+<div class="scr">
+  <div class="scr-bar"><span>系統健康 · 引用回覆未接住</span></div>
+  <div class="scr-bd">
+    <div class="tbl-wrap" style="box-shadow:none">
+    <table>
+      <thead><tr><th style="width:16%">時間</th><th style="width:34%">回覆內容</th><th>沒接住的原因</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">07/28 17:08</td><td>鮮湧 10 支產品 BOM已完成</td>
+            <td><span class="chip bad">原訊息沒被材料化成任務</span></td></tr>
+        <tr><td class="mono">07/27 21:39</td><td>已設定。</td>
+            <td><span class="chip bad">原訊息沒掛 source_message_ids</span></td></tr>
+        <tr><td class="mono">07/22 15:06</td><td>後續電話追蹤…已完成</td>
+            <td><span class="chip warn">有對到任務但信心不足，待人工確認</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
 </div>
 
-<div class="callout warn">
-  <b>但 v1 不做自動催辦。</b>沒有自動私訊、沒有自動標記主管。<br>
-  釘釘做到 IM 市佔第一，仍因員工側缺乏關閉權而在 2026-06 反噬到創辦人卸任 CEO。
-  它的電話催辦唯一的煞車是「要花錢」——<b>成本在擋濫用，不是設計在擋</b>。我們不複製這條路。
+<div class="callout bad">
+  <b>這張表在 M1 之前會是滿的，那是預期中的。</b>
+  現在 <span class="mono">tickets.source_message_ids</span> 是 <b>0 / 35 有值</b>——
+  任務跟訊息之間的鏈是斷的，所以引用回覆<b>接不回任何一張任務</b>。<br>
+  <b>M1 就是補這條鏈</b>，不補的話後面全部落空（doc F-17，P0）。
 </div>
 
 
-<h2><span class="n">09</span>完成率 · 這是驗收的 gate，不是儀表板</h2>
-<p class="sub">上線一到兩週後看這個數字。<b>若接近 0，代表該回頭改設計，而不是去催同仁按按鈕。</b></p>
+<h2><span class="n">09</span>量測 · 接住率比完成率更早有用</h2>
 
 <div class="scr">
   <div class="scr-bar"><span>戰情室 · 任務追蹤成效</span></div>
   <div class="scr-bd">
     <div class="kpi">
-      <div><div class="v good">64%</div><div class="l">結案率（近 14 天）</div></div>
-      <div><div class="v">28</div><div class="l">已結束 · 完成</div></div>
-      <div><div class="v muted">6</div><div class="l">已結束 · 不用做了</div></div>
-      <div><div class="v" style="color:var(--warn)">3</div><div class="l">已結束 · 做不到</div></div>
-      <div><div class="v">19</div><div class="l">仍進行中</div></div>
+      <div><div class="v good">78%</div><div class="l">引用回覆接住率</div></div>
+      <div><div class="v">32</div><div class="l">收到的完成回覆</div></div>
+      <div><div class="v">25</div><div class="l">成功對上任務</div></div>
+      <div><div class="v" style="color:var(--warn)">7</div><div class="l">未接住</div></div>
+      <div><div class="v good">62%</div><div class="l">結案率</div></div>
     </div>
     <p class="muted" style="font-size:12px;margin:14px 0 0;padding-top:11px;
               border-top:1px solid var(--line-2);line-height:1.7">
       <b>結案率 ＝ (完成 28 ＋ 做不到 3) ÷ (28 ＋ 3 ＋ 19) ＝ 62%</b>
-      分母<b>排除「不用做了」的 6 件</b>——否則取消一堆會被算成做完一堆。<br>
-      公式直接寫在畫面上：競品主打「達成率即時更新」卻全站不說怎麼算，
-      結果是客戶無法驗證，數字最後不被信任。
+      分母<b>排除「不用做了」</b>——否則取消一堆會被算成做完一堆。<br>
+      公式直接寫在畫面上：競品主打「達成率即時更新」卻全站不說怎麼算，結果是數字不被信任。
     </p>
   </div>
 </div>
 
+<div class="callout good">
+  <b>先看接住率，再看結案率。</b>
+  若收到 20 則完成回覆卻只對上 3 張任務——問題在<b>我們的鏈</b>，不在人。
+  這時候去催同仁按按鈕是完全搞錯方向。
+</div>
+
 
 <h2><span class="n">10</span>底層四軸 → 對外一個狀態</h2>
-<p class="sub">四軸全正交 ＝ 81 種組合，大多數無意義。存四軸，但用一個投影函數算出對外顯示的字。</p>
 
 <div class="tbl-wrap">
 <table>
-  <thead><tr>
-    <th style="width:12%">軸</th><th style="width:13%">擁有者</th>
-    <th style="width:34%">值</th><th>回答什麼</th>
-  </tr></thead>
+  <thead><tr><th style="width:16%">軸</th><th style="width:14%">擁有者</th><th style="width:33%">值</th><th>回答什麼</th></tr></thead>
   <tbody>
     <tr><td class="mono">status</td><td><b>AI</b></td>
         <td class="mono muted">open / in_progress / resolved / info</td>
@@ -692,8 +614,7 @@
         <td class="mono muted">待確認 / 待簽核 / 已簽核 / 存查 / 已忽略</td>
         <td>AI 抽對了嗎</td></tr>
     <tr><td class="mono">assign_status</td><td>系統＋主管</td>
-        <td class="mono muted">none / unclaimed / assigned</td>
-        <td>誰負責</td></tr>
+        <td class="mono muted">none / unclaimed / assigned</td><td>誰負責</td></tr>
     <tr style="background:var(--ok-tint)">
         <td class="mono"><b>work_status</b></td><td><b>當責人本人</b></td>
         <td class="mono">open / closed<br><span class="muted">＋ work_outcome：完成 / 不用做了 / 轉他人 / 做不到</span></td>
@@ -703,71 +624,52 @@
 </div>
 
 <div class="callout">
-  <b>真正像「生命週期」的只有第四條。</b>前三條描述的是「這張卡片被系統與管理者怎麼處理」，
-  不是「這件事做到哪」。<br><br>
-  <b>儲存分四軸，呈現合成一條</b>——Jira Service Management 和 ServiceNow 的簽核看起來串在工作流裡，
-  但 ServiceNow 底下是獨立的簽核表，前台那條鏈是<b>投影不是真相</b>。我們照做。
+  <b>身分要存兩欄，而且系統帳號那欄可以是空的。</b>
+  <span class="mono">work_closed_by</span>（uuid，有帳號才有值，prod 現況會是 0）、
+  <span class="mono">work_closed_line_user_id</span>（text，<b>一定有值</b>）。<br>
+  把前者設成 NOT NULL，等於把「當責人沒帳號」這個死結搬到寫入路徑上——<b>一筆都寫不進去</b>（F-18）。
 </div>
 
 
 <h2><span class="n">11</span>明確不做的</h2>
-
 <div class="three">
-  <div class="card">
-    <h4>AI 不自動標完成</h4>
+  <div class="card"><h4>AI 不自動標完成</h4>
     <p>AI 只能寫 <span class="mono">status</span>，永遠不得寫 <span class="mono">work_status</span>。
-    GitHub 花了七年才把 closed 拆成 completed／not planned，起因就是 stale bot 大量自動關閉，
-    讓「closed」完全喪失訊號。</p>
-  </div>
-  <div class="card">
-    <h4>不做自動催辦</h4>
-    <p>v1 沒有逾期自動私訊、沒有自動標記主管。先看有沒有人在用——
-    沒人用的時候催辦只會被封鎖。</p>
-  </div>
-  <div class="card">
-    <h4>不做完成關卡</h4>
-    <p>不強制拍照或填表才能結案。完成條件的技術依賴愈多，關不掉的任務就愈多。
-    等有人開始用了再談憑證。</p>
-  </div>
-  <div class="card">
-    <h4>未完成不自動進日報</h4>
-    <p>一件做兩週的事會出現在 14 份日報裡，把「今天真正做了什麼」埋掉。
-    日報是<b>一次性</b>的，任務是<b>跨日</b>的。</p>
-  </div>
-  <div class="card">
-    <h4>不做完成率排行榜</h4>
-    <p>量測是為了判斷功能有沒有被用，不是為了比較同仁。做成排行榜，
-    大家就會學會亂點完成。</p>
-  </div>
-  <div class="card">
-    <h4>不做逾期判定</h4>
-    <p><span class="mono">due_at</span> 目前全是 null（抽取 schema 還沒有時間欄位）。
-    v1 用「開了幾天」代替，不宣稱逾期。</p>
-  </div>
+    GitHub 花七年才把 closed 拆成 completed／not planned，起因就是 stale bot 大量自動關閉。</p></div>
+  <div class="card"><h4>沒引用的「好了」不算</h4>
+    <p>群裡單獨說「好了」不會關掉任何任務——無法確定在講哪一件。只在看板提示，由人確認。</p></div>
+  <div class="card"><h4>不做自動催辦</h4>
+    <p>沒有逾期自動私訊、沒有自動標記主管。釘釘做到 IM 市佔第一，仍因員工側缺乏關閉權而反噬到創辦人卸任。</p></div>
+  <div class="card"><h4>不做完成關卡</h4>
+    <p>不要求拍照或填表才能結案。完成條件的技術依賴愈多，關不掉的任務就愈多。</p></div>
+  <div class="card"><h4>未完成不自動進日報</h4>
+    <p>一件做兩週的事會出現在 14 份日報裡，把「今天真正做了什麼」埋掉。</p></div>
+  <div class="card"><h4>不做逾期判定</h4>
+    <p><span class="mono">due_at</span> 目前全是 null。用「開了幾天」代替，不宣稱逾期。</p></div>
 </div>
 
 
-<h2><span class="n">12</span>要你確認的幾件事</h2>
+<h2><span class="n">12</span>里程碑（順序已因 prod 實證重排）</h2>
 <div class="tbl-wrap">
 <table>
-  <thead><tr><th style="width:6%">#</th><th style="width:32%">問題</th><th>目前的做法</th></tr></thead>
+  <thead><tr><th style="width:9%">里程碑</th><th>內容</th></tr></thead>
   <tbody>
-    <tr><td class="mono">1</td><td>「結束」的四個選項會不會太多？</td>
-        <td>可以砍成三個（把「轉給別人」拿掉，改用既有的重新指派）。<b>「做不到」建議留著</b>——它是唯一會讓事情往上走的選項。</td></tr>
-    <tr><td class="mono">2</td><td>「回報進度」要不要強制填一句話？</td>
-        <td>目前設計成<b>選填</b>。強制填會讓它變回一個帶承諾的動作，就失去意義了。</td></tr>
-    <tr><td class="mono">3</td><td>LINE 確認卡要不要做？</td>
-        <td>§01 是本案的<b>下一階段</b>（v1 先做戰情室端）。但可見性規則現在就要定下來，因為它會影響 LINE 端的資料結構。</td></tr>
-    <tr><td class="mono">4</td><td>主管代結案要不要限部門？</td>
-        <td>沿用既有部門 RLS，不另開查詢路徑。</td></tr>
-    <tr><td class="mono">5</td><td>「你手上的任務」放日報頁上方，還是獨立一頁？</td>
-        <td>目前放<b>日報頁上方</b>——同仁本來就要去那裡送日報，不用多記一個入口。</td></tr>
+    <tr><td class="mono"><b>M1</b> ⭐</td><td><b>補 <span class="mono">source_message_ids</span></b>——讓任務掛得回 LINE 訊息。
+      <b>不補這條鏈，引用回覆找不到要關哪一張任務，後面全部落空。</b>順便讓 R11 從紙上落到實際。</td></tr>
+    <tr><td class="mono">M2</td><td>migration：<span class="mono">work_status</span> / <span class="mono">work_outcome</span> /
+      <span class="mono">work_closed_*</span> ＋ 跨軸 CHECK ＋ <span class="mono">displayState()</span> 投影函數</td></tr>
+    <tr><td class="mono"><b>M3</b> ⭐</td><td><b>LINE 引用回覆 → 關任務</b>（本案主體）· 語意三分（完成／進度／不確定）· 系統回一則確認</td></tr>
+    <tr><td class="mono">M4</td><td>主管視角：看板狀態、逾期分流、未接住清單</td></tr>
+    <tr><td class="mono">M5</td><td>網頁補登、代結案顯示、完成可還原</td></tr>
+    <tr><td class="mono">M6</td><td>日報頁「你手上的任務」改唯讀，並修掉簽核後任務消失的既有缺陷</td></tr>
+    <tr><td class="mono">M7</td><td><b>量測接住率</b>＋結案率＋FMEA 覆核</td></tr>
   </tbody>
 </table>
 </div>
 
 <p class="meta" style="margin-top:34px;padding-top:16px;border-top:1px solid var(--line)">
-  假名依專案慣例（陳○○／林班長／王○○），非真實人名。
+  §01 的對話為 prod 真實紀錄（客戶內部群組，未假名化，供內部設計判斷用）。
+  §02 起的示意畫面採假名（陳○○／林班長／王○○）。
 </p>
 
 </div>
