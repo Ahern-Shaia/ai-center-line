@@ -42,6 +42,18 @@ export interface WarroomTicket {
   workLastReportAt: string | null;
   workLastReportNote: string | null;
   displayState: string;
+  /**
+   * 卡住幾天 · null = 沒卡住（正常的卡片不長 pill）
+   *
+   * ⚠️ 這是**量級**不是歸屬。design-research-taskboard.md §2 弱點 #3：
+   * 「membership ≠ 嚴重度 —— 東西在逾時欄但沒說逾時多久，少了 triage 需要的量級」。
+   * 先前把它做成另開一區（membership），正是被點名的那個錯。
+   */
+  stuckDays: number | null;
+  /** 卡住的種類 · 決定主管要催派工還是問障礙 */
+  stuckKind: "unassigned" | "no_report" | null;
+  /** 逾時幾天 · due_at 是 null 時退回用建立日算（prod 的 due_at 100% 為 null）*/
+  overdueDays: number | null;
   confirmedAt: string | null;
 }
 
@@ -71,12 +83,11 @@ export class WarroomTasksService {
       overdue: WarroomTicket[];      // 逾時 · due_at 過期 or 建立 > 7d 且待簽
       unconfirmed: WarroomTicket[];  // 待確認 · 中信心 · 等主管決定要不要收為任務
       archived: WarroomTicket[];     // 未列入待辦 · 公告/已完成/已忽略 (limit 50)
-      overdueUnassigned: WarroomTicket[];   // 逾期未開始 · 沒人接 → 催派工
-      overdueUnconfirmed: WarroomTicket[];  // 逾期未確認完成 · 有人接但卡住 → 問障礙
     };
     counts: {
       pending: number; signed: number; overdue: number; unconfirmed: number; archived: number;
-      overdueUnassigned: number; overdueUnconfirmed: number;
+      /** 卡住的張數 · 給「只看卡住的」篩選用（Linear display options）*/
+      stuck: number;
     };
   }> {
     const tx = currentTx();
@@ -136,6 +147,7 @@ export class WarroomTasksService {
 
     const now = Date.now();
     const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+    const daysSince = (iso: string) => Math.floor((now - new Date(iso).getTime()) / 86_400_000);
 
     const all = rows.rows.map<WarroomTicket>((r) => ({
       ticketId: r.ticket_id,
@@ -163,6 +175,21 @@ export class WarroomTasksService {
       workClosedByName: r.work_closed_by_name,
       workLastReportAt: r.work_last_report_at,
       workLastReportNote: r.work_last_report_note,
+      // ── 量級（不是歸屬）· design-research-taskboard.md §2 弱點 #3 ──
+      // 卡住＝已簽核、工作還開著、且超過 7 天。正常的卡片這兩欄是 null，不長 pill
+      //（同「信心度只在中／低顯」的克制原則：全部都顯眼＝沒有重點）
+      stuckDays: (r.work_status === "open" && r.confirm_status === "已簽核"
+        && daysSince(r.created_at) > 7) ? daysSince(r.created_at) : null,
+      stuckKind: (r.work_status === "open" && r.confirm_status === "已簽核"
+        && daysSince(r.created_at) > 7)
+        ? (r.assign_status === "assigned" ? "no_report" as const : "unassigned" as const)
+        : null,
+      // ⚠️ due_at 在 prod 100% 是 null（抽取 schema 還沒有時間欄位），
+      //    只吃 due_at 的話這個 pill 永遠不會顯示 —— 那正是 §4 那行 ⬜ 掛了五天的原因。
+      //    退回用建立日算，跟 overdue 的判定基準一致。
+      overdueDays: r.due_at
+        ? Math.max(0, daysSince(r.due_at)) || null
+        : (daysSince(r.created_at) > 7 ? daysSince(r.created_at) : null),
       // 四軸投影成對外一個狀態 —— 四個下拉並排丟給現場主管沒人看得懂
       displayState: displayState({
         workStatus: r.work_status,
@@ -180,29 +207,21 @@ export class WarroomTasksService {
       if (t.dueAt) return new Date(t.dueAt).getTime() < now;
       return now - new Date(t.createdAt).getTime() > SEVEN_DAYS;
     });
-    // 0036 · 逾期分兩種 —— 管理動作完全不同（競品研究 C-3）：
-    //   未開始   ＝ 沒人接或接了沒動靜 → 主管要**催派工**
-    //   未確認完成 ＝ 有人接了但卡住     → 主管要**問障礙**
-    // 合成一個桶子的話主管無法分流。我們用 assign_status 就分得出來。
-    // ⚠️ 只看**已簽核**的。還在簽核佇列的（待簽核／逾時警示）主管的動作是「去簽核」，
-    //    上面三欄已經在講那件事了 —— 同一張票同時出現在上下兩處，
-    //    看的人會直覺認為是 bug（瀏覽器實測回饋）。
-    //    這兩欄回答的是**另一個問題**：已經確認是任務了，工作有沒有在動。
-    const staleOpen = all.filter(
-      (t) => t.workStatus === "open"
-        && t.confirmStatus === "已簽核"
-        && now - new Date(t.createdAt).getTime() > SEVEN_DAYS,
-    );
-    const overdueUnassigned = staleOpen.filter((t) => t.assignStatus !== "assigned");
-    const overdueUnconfirmed = staleOpen.filter((t) => t.assignStatus === "assigned");
     const overdueSet = new Set(overdue.map((t) => t.ticketId));
     const pending = all.filter((t) => t.confirmStatus === "待簽核" && !overdueSet.has(t.ticketId));
-    // ⚠️ 已簽核欄要**排除**下方逾期分流已經列出的那些 —— 同一張票出現兩次，
-    //    看的人會以為系統壞了（瀏覽器實測：4 張已簽核跟下方 4 張一字不差）。
-    //    每張票只出現在一個地方：還在動的留這欄，卡住的移到下面。
-    const staleIds = new Set(staleOpen.map((t) => t.ticketId));
+    // ⚠️ 卡住的**留在這一欄**，只是排到最前面。
+    //
+    // 先前把它們搬到另一個區塊，結果上線第一天所有歷史已簽核任務的 work_status
+    // 都還是預設的 open、又都超過 7 天 —— 判定全部成立，整欄被搬空，
+    // 主看板剩兩個空框，13 張真內容擠在附屬區塊。
+    //
+    // 根因是把**量級**（卡住多久）做成了**歸屬**（在哪一區），
+    // 正是 design-research-taskboard.md §2 弱點 #3 點名的錯。
+    // 告警佇列（Datadog／PagerDuty）不會因為某個告警卡住就把它移到另一張表。
     const signed = includeSigned
-      ? all.filter((t) => t.confirmStatus === "已簽核" && !staleIds.has(t.ticketId)).slice(0, 30)
+      ? all.filter((t) => t.confirmStatus === "已簽核")
+        .sort((a, b) => (b.stuckDays ?? -1) - (a.stuckDays ?? -1))   // 卡最久的排最前
+        .slice(0, 30)
       : [];
     // 中信心 · 還沒被主管認定是不是任務。不放進待簽核，也不讓它悄悄消失
     const unconfirmed = all.filter((t) => t.confirmStatus === "待確認");
@@ -212,18 +231,15 @@ export class WarroomTasksService {
     const archived = notTracked.slice(0, 50);
 
     return {
-      kanban: { pending, signed, overdue, unconfirmed, archived, overdueUnassigned, overdueUnconfirmed },
+      kanban: { pending, signed, overdue, unconfirmed, archived },
       counts: {
         pending: pending.length,
-        // ⚠️ 這個數字必須跟**畫面上看得到的卡片數**一致。
-        //    用「已簽核總數」的話，卡住的票被移到下方後，
-        //    欄頭寫 4、欄內卻是空的 —— 對主管來說「數字對不上」跟「重複顯示」一樣像 bug。
+        // 這個數字要跟畫面上看得到的卡片數一致（超過 30 由前端註腳說明）
         signed: signed.length,
         overdue: overdue.length,
         unconfirmed: unconfirmed.length,
         archived: notTracked.length,
-        overdueUnassigned: overdueUnassigned.length,
-        overdueUnconfirmed: overdueUnconfirmed.length,
+        stuck: all.filter((t) => t.stuckDays !== null).length,
       },
     };
   }
