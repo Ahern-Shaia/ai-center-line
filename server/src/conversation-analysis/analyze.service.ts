@@ -8,6 +8,7 @@ import { LlmConfigService } from "../llm/llm-config.service.js";
 import { createLLMProvider } from "../llm/provider.factory.js";
 import type { LLMProvider } from "../llm/provider.interface.js";
 import { TicketMaterializerService } from "../warroom-task-board/ticket-materializer.service.js";
+import { SignalResolverService } from "../task-completion/signal-resolver.service.js";
 
 // LINE 對話分析 · async job 執行邏輯
 // 對應 docs/modules/conversation-analysis-pilot.md v0.3 §4.4
@@ -20,6 +21,7 @@ export class AnalyzeService {
   constructor(
     private readonly llmConfig: LlmConfigService,
     @Optional() private readonly materializer?: TicketMaterializerService,
+    @Optional() private readonly signalResolver?: SignalResolverService,
   ) {}
 
   async createUpload(
@@ -188,6 +190,28 @@ export class AnalyzeService {
         } catch (mzErr) {
           // 材料化失敗不影響 upload 主流程 · aiproot 可手動 re-materialize
           this.logger.error(`materialize failed · upload=${uploadId} · ${String((mzErr as Error).message ?? mzErr)}`);
+        }
+      }
+
+      // 0036 · M3b · 任務剛建好，回頭把等著的完成訊號對上（doc §2.6）
+      // ⚠️ 一定要在 materialize 之後 —— 訊號要對的就是這一輪才產生的任務。
+      if (this.signalResolver) {
+        try {
+          const up = await db
+            .select({ tenantId: analysisUpload.tenantId, groupId: analysisUpload.groupId })
+            .from(analysisUpload).where(eq(analysisUpload.id, uploadId)).limit(1);
+          const t = up[0]?.tenantId;
+          if (t) {
+            const r = await this.signalResolver.resolvePending(t, up[0].groupId ?? undefined);
+            if (r.closed || r.created || r.noMatch) {
+              this.logger.log(
+                `completion-signals · upload=${uploadId} closed=${r.closed} created=${r.created} noMatch=${r.noMatch}`,
+              );
+            }
+          }
+        } catch (sigErr) {
+          // 對應失敗不影響分析結果 · 訊號還在表裡，下一輪會再掃到
+          this.logger.error(`resolve signals failed · upload=${uploadId} · ${String((sigErr as Error).message ?? sigErr)}`);
         }
       }
     } catch (e) {
