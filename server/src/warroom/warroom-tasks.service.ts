@@ -184,17 +184,25 @@ export class WarroomTasksService {
     //   未開始   ＝ 沒人接或接了沒動靜 → 主管要**催派工**
     //   未確認完成 ＝ 有人接了但卡住     → 主管要**問障礙**
     // 合成一個桶子的話主管無法分流。我們用 assign_status 就分得出來。
+    // ⚠️ 只看**已簽核**的。還在簽核佇列的（待簽核／逾時警示）主管的動作是「去簽核」，
+    //    上面三欄已經在講那件事了 —— 同一張票同時出現在上下兩處，
+    //    看的人會直覺認為是 bug（瀏覽器實測回饋）。
+    //    這兩欄回答的是**另一個問題**：已經確認是任務了，工作有沒有在動。
     const staleOpen = all.filter(
       (t) => t.workStatus === "open"
-        && now - new Date(t.createdAt).getTime() > SEVEN_DAYS
-        && (t.confirmStatus === "待簽核" || t.confirmStatus === "已簽核" || t.confirmStatus === "逾時警示"),
+        && t.confirmStatus === "已簽核"
+        && now - new Date(t.createdAt).getTime() > SEVEN_DAYS,
     );
     const overdueUnassigned = staleOpen.filter((t) => t.assignStatus !== "assigned");
     const overdueUnconfirmed = staleOpen.filter((t) => t.assignStatus === "assigned");
     const overdueSet = new Set(overdue.map((t) => t.ticketId));
     const pending = all.filter((t) => t.confirmStatus === "待簽核" && !overdueSet.has(t.ticketId));
+    // ⚠️ 已簽核欄要**排除**下方逾期分流已經列出的那些 —— 同一張票出現兩次，
+    //    看的人會以為系統壞了（瀏覽器實測：4 張已簽核跟下方 4 張一字不差）。
+    //    每張票只出現在一個地方：還在動的留這欄，卡住的移到下面。
+    const staleIds = new Set(staleOpen.map((t) => t.ticketId));
     const signed = includeSigned
-      ? all.filter((t) => t.confirmStatus === "已簽核").slice(0, 30)
+      ? all.filter((t) => t.confirmStatus === "已簽核" && !staleIds.has(t.ticketId)).slice(0, 30)
       : [];
     // 中信心 · 還沒被主管認定是不是任務。不放進待簽核，也不讓它悄悄消失
     const unconfirmed = all.filter((t) => t.confirmStatus === "待確認");
@@ -207,7 +215,10 @@ export class WarroomTasksService {
       kanban: { pending, signed, overdue, unconfirmed, archived, overdueUnassigned, overdueUnconfirmed },
       counts: {
         pending: pending.length,
-        signed: all.filter((t) => t.confirmStatus === "已簽核").length,
+        // ⚠️ 這個數字必須跟**畫面上看得到的卡片數**一致。
+        //    用「已簽核總數」的話，卡住的票被移到下方後，
+        //    欄頭寫 4、欄內卻是空的 —— 對主管來說「數字對不上」跟「重複顯示」一樣像 bug。
+        signed: signed.length,
         overdue: overdue.length,
         unconfirmed: unconfirmed.length,
         archived: notTracked.length,
