@@ -38,7 +38,7 @@ export class MasterDataController {
     const [src, count, accounts] = await Promise.all([
       this.repo.getSource(tx, tenantId),
       this.repo.countCustomers(tx, tenantId),
-      this.accounts.list(tx),
+      this.accounts.listForTenant(tx, tenantId),
     ]);
     return { source: src, customerCount: count, ragicAccounts: accounts };
   }
