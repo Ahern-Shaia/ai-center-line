@@ -1,11 +1,13 @@
 # master-data-sync · 主檔同步（沿用通知設定已經連好的 Ragic）
 
-> 狀態：🚧 **M0 DRAFT v0.1**（2026-07-28）· 待用戶裁定 OQ-MDS-1..10
+> 狀態：🚧 **M0 DRAFT v0.2**（2026-07-28）· 待用戶裁定 OQ-MDS-1..14
 >
 > 相關：[`four-features-reflection.md`](four-features-reflection.md)（P2 · 這是它的 gate）、[`tenant-prompt-decoupling.md`](tenant-prompt-decoupling.md)（同一件事的另一半）、[`notify-selfserve-platform.md`](notify-selfserve-platform.md)（要沿用的機制）
 >
-> ⚠️ **一句話**：客戶**已經連好 Ragic 了**（通知設定頁）。
-> 主檔同步不要再叫他連一次——只需要多問他一個問題：「哪張表是你的客戶名冊？」
+> ⚠️ **兩句話**：
+> ① 客戶**已經連好 Ragic 了**（通知設定頁）——不要再叫他連一次。
+> ② **`SourceConnector` 抽象也早就寫好了**（含 `pullCustomers()`），
+> 只是憑證走環境變數所以從沒跑過。這一案主要是**把兩套接起來**，不是新寫。
 
 ---
 
@@ -37,9 +39,49 @@
 
 寫入（POST/PUT）也支援——與用戶提到的「Ragic 後續可能透過 LINE 操作調用」有關，見 §6。
 
+### 0.2 ⭐⭐ 更大的發現：兩套 Ragic 整合並存，而且錯配
+
+`src/data-sync-layer/connectors/base.ts` 有完整的 `SourceConnector` 介面：
+
+```ts
+readonly name: "ragic" | "weyver" | "sap" | "manual";
+pullOrders() / pullCustomers() / pullContacts() / healthCheck()
+```
+
+**weyver、SAP、manual 當初就在型別裡。** Ragic 只是第一個實作，而且 `pullCustomers()` 已經寫好。
+
+問題是現在有**兩套**，而且好的地方各在一邊：
+
+| | 憑證來源 | 有沒有抽象 | 實際狀況 |
+|---|---|---|---|
+| `data-sync-layer/connectors/ragic.ts` | **環境變數** `DSL_TENANT_<SLUG>_RAGIC_API_KEY` | ✅ 有 | ❌ **prod 0 筆，從沒跑過** |
+| `notify-config/ragic-api.client.ts` | **資料庫** `ragic_account`（加密、per-tenant） | ❌ 沒有 | ✅ **48 則通知在跑** |
+
+**抽象的那套沒在用，在用的那套沒抽象。**
+
+原因很具體：走 env 的話，每接一個租戶就要改環境變數、重新部署——
+**客戶不能自助設定**，所以沒人設過。通知那套把憑證存進 DB、做了自助 wizard，客戶自己就設好了。
+
+> **所以本案的核心不是「新寫主檔同步」，是「把憑證來源統一，讓已經寫好的 connector 活過來」。**
+> 這讓原本估的 M2/M3 便宜很多。
+
 ---
 
 ## 1. 設計主張
+
+### 1.0 憑證統一走 DB，讓現有 connector 活過來
+
+`SourceConnector` 的設計是對的，錯的是憑證來源。
+
+```
+現在                                     改成
+env DSL_TENANT_*_RAGIC_API_KEY           ragic_account（DB · 加密 · 客戶自助）
+  ↓ 每接一租戶要改 env 重新部署              ↓ 客戶自己在畫面上設好
+  ↓ 沒人設過                               ↓ 已經有 48 則通知在跑
+RagicConnector（寫好了但沒跑過）           RagicConnector（同一份程式碼，活過來）
+```
+
+**不要再寫第三套 Ragic 存取。** 兩套已經夠亂了。
 
 ### 1.1 帳號共用，不要問第二次
 
@@ -147,6 +189,8 @@ GET .../customer/6?api&naming=EID&fetchDomainIds=<名稱>&fetchDomainIds=<編號
 | **F-7** | 覆蓋 | 同步把使用者手動修正過的資料洗掉 | 人的修正被 AI／同步蓋掉 | **P1** | 主檔是唯讀鏡像，**不允許在我們這邊編輯** —— 要改去 Ragic 改 |
 | **F-8** | 欄位改名 | 客戶在 Ragic 改欄位 → fieldId 不變但語意變了 | 抓到錯的欄位 | P2 | 同步時比對 schema，欄位消失就停並報錯（不要靜默抓到空值） |
 | **F-9** | 期待落差 | 客戶以為「同步」是雙向、在我們這邊改會回寫 Ragic | 資料不一致 | **P1** | 頁面明寫「唯讀鏡像 · 要修改請到 Ragic」（呼應 F-7） |
+| **F-10** | 兩套並存 | 憑證統一後忘了廢掉 env 路徑 → 兩個來源打架、debug 時查錯地方 | 難以排查 | **P1** | M2 明確刪除 `DSL_TENANT_*` 讀取，不留「暫時保留相容」 |
+| **F-11** | CSV | 客戶上傳的 CSV 欄位順序／編碼不同（Big5、無標頭） | 匯入全錯或亂碼 | **P1** | 匯入前顯示前 5 列預覽讓他確認對到哪一欄 · 不猜編碼，明講要 UTF-8 |
 
 ---
 
@@ -164,6 +208,10 @@ GET .../customer/6?api&naming=EID&fetchDomainIds=<名稱>&fetchDomainIds=<編號
 | **OQ-MDS-8** | 誰能設定？ | 沿用通知設定的層級（tenant_admin 以上）· 需新增 `master-data:manage` 權限 |
 | **OQ-MDS-9** | 沒接 Ragic 的租戶怎麼辦？ | 主檔為空 → 打卡選單退回「自己去過的地方」（已實作），AI 候選集退回 `line_member` · **不因為沒主檔而壞掉** |
 | **OQ-MDS-10** | 要不要現在就設計「LINE 操作 Ragic」的寫回路徑？ | **不要現在做，但不要擋住** · 見 §6 |
+| **OQ-MDS-11** | 要不要把 `RagicConnector` 憑證改讀 DB？ | **要** · 那是它從沒跑過的唯一原因（§0.2 · §1.0） |
+| **OQ-MDS-12** | `manual`（CSV）要不要跟 Ragic 平級？ | **要** · 多數台灣中小企業沒有 ERP（§7.2/7.3）· 寫成備案等於告訴他們「你是次等的」 |
+| **OQ-MDS-13** | `manual` 要做到多完整？ | **只做 CSV 覆蓋式匯入** · 逐筆新增／編輯等於要我們變成小型 CRM，那是另一個產品 |
+| **OQ-MDS-14** | 現有 `data_sync_order` / `contact` 要不要一起啟用？ | **不要** · v1 只做客戶（OQ-MDS-3）· 訂單目前由通知走，沒有第二個用途 |
 
 ---
 
@@ -184,24 +232,78 @@ GET .../customer/6?api&naming=EID&fetchDomainIds=<名稱>&fetchDomainIds=<編號
 
 ---
 
-## 7. 里程碑
+## 7. 不只 Ragic：ERP-agnostic 與「根本沒有 ERP」
+
+> 用戶：「Ragic 太小眾，普及率不高。」
+
+### 7.1 抽象已經在了，不用再設計一層
+
+`SourceConnector` 的 `name` 欄位就是 `"ragic" | "weyver" | "sap" | "manual"`。
+要接 weyver（自家產品，兩邊都控制得了）或別家 ERP，就是**多寫一個 implementation**，
+上層（主檔同步、打卡選單、AI 候選集）完全不用改。
+
+⚠️ 但誠實講：這個介面是**只有 Ragic 一個實作時設計的**，可能有幾處是照 Ragic 的形狀長的。
+第二個實作接上時要有「介面可能要調」的心理準備（同 `channel-adapter.md` F-1 的道理）。
+好處是第二個大概率是 weyver ——**兩邊都是自己的，改起來不用求人。**
+
+### 7.2 ⭐ 但真正的缺口不是「別家 ERP」，是「沒有 ERP」
+
+台灣中小企業很多**根本沒有 ERP**，用的是 Excel 和紙本。
+
+所以 ERP-agnostic 的重點與其說是「多接幾家 ERP」，不如說是**「沒有 ERP 也能用」**：
+
+| 客戶情況 | 主檔從哪來 | 難度 |
+|---|---|---|
+| 有 Ragic | 現有 connector（換憑證來源就能動） | **低** |
+| 用 weyver | 自家產品，兩邊都控制得了 | 中 |
+| 有別家 ERP（SAP／鼎新） | 再寫一個 connector | 高 |
+| **什麼都沒有** | **CSV 匯入 ／ 後台手動維護** | **低** |
+
+`manual` 這個值當初就寫在型別裡了——這條路被想過，只是沒實作。
+
+**而它可能是最有價值的一條**：它讓「沒有 ERP 的小客戶」也能成為客戶，
+而那正是要從傳統產業往外擴時會遇到的那一群。
+反過來說，接 SAP／鼎新那種大型 ERP 的客戶通常已有資訊部門與完整系統，
+不見得是我們的主場。
+
+### 7.3 主張：`manual` 與 Ragic 平級，不是備案
+
+「資料來源」頁應該一開始就給兩個選項，而不是「接 ERP（推薦）／沒有的話手動」：
+
+```
+你的客戶名冊在哪裡？
+  ○ Ragic          （已連線 · 沿用通知設定）
+  ○ 上傳 CSV        （沒有 ERP 也沒關係）
+```
+
+把手動寫成備案，等於告訴沒有 ERP 的客戶「你是次等的」。
+**多數台灣中小企業就是第二種。**
+
+> ⚠️ 但 `manual` 也不要現在就做完整的維護介面。
+> **CSV 匯入 + 覆蓋式更新**就夠了（一次上傳整份、取代舊的），
+> 不要做逐筆新增／編輯 —— 那等於要我們變成一個小型 CRM，是另一個產品。
+
+---
+
+## 8. 里程碑
 
 | 里程碑 | 內容 |
 |---|---|
 | **M0** | 本文件 + OQ 裁定 ← 目前在這 |
 | **M1** | `RagicApiClient` / `RagicAccountService` 抽到共用位置（**純搬移，行為不變**）|
-| **M2** | `fetchRecords()` 批次拉（`limit`/`offset`/`fetchDomainIds`）+ 單元測試 |
-| **M3** | `master_data_source` 表 + 同步服務（寫 `data_sync_customer`）+ 每日排程 + 失敗落庫 |
-| **M4** | 前端「資料來源」頁：顯示已連線帳號、選表、對欄位、立即同步、上次同步狀態 |
-| **M5** | 打卡選單與 AI 候選集改吃主檔（**保留現有 fallback**）+ 命中率量測 |
-| **M6** | FMEA 覆核（2 個 P0）+ 客戶操作說明 |
+| **M2** | **`RagicConnector` 憑證改讀 `ragic_account`**（§1.0）· 廢掉 `DSL_TENANT_*` env 路徑 |
+| **M3** | `master_data_source` 表 + 同步服務（用現有 `pullCustomers()`）+ 每日排程 + 失敗落庫 |
+| **M4** | 前端「資料來源」頁：Ragic 與 **CSV 兩個平級選項**、選表、對欄位、立即同步、上次同步狀態 |
+| **M5** | `ManualConnector`（CSV 匯入 · 覆蓋式）—— §7.3 |
+| **M6** | 打卡選單與 AI 候選集改吃主檔（**保留現有 fallback**）+ 命中率量測 |
+| **M7** | FMEA 覆核（2 個 P0）+ 客戶操作說明 |
 
 > **M5 的 fallback 不可拿掉**：沒接 Ragic 的租戶、主檔還沒同步完的空窗期，
 > 都要能照常運作（OQ-MDS-9）。**新機制上線不可以讓舊路徑消失。**
 
 ---
 
-## 8. 需要跟客戶確認的一件事
+## 9. 需要跟客戶確認的一件事
 
 **「你們的客戶名冊是哪一張 Ragic 表？」**
 
@@ -216,8 +318,9 @@ GET .../customer/6?api&naming=EID&fetchDomainIds=<名稱>&fetchDomainIds=<編號
 
 ---
 
-## 9. 變更紀錄
+## 10. 變更紀錄
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
+| 2026-07-28 | v0.2 | 起於用戶問「Ragic 可以做成模組嗎，因為 Ragic 太小眾」· ⭐⭐ **查證後發現抽象早就有了**：`SourceConnector` 介面完整（`pullOrders`/`pullCustomers`/`pullContacts`/`healthCheck`），`name` 欄位當初就寫了 `"ragic" \| "weyver" \| "sap" \| "manual"` · **但問題是兩套 Ragic 整合並存且錯配**：data-sync-layer 那套有抽象卻走 env 憑證（每接一租戶要改環境變數重新部署 → 客戶不能自助 → **prod 0 筆從沒跑過**）；notify-config 那套沒抽象卻把憑證存 DB 加自助 wizard（**48 則通知在跑**）· → 本案核心從「新寫主檔同步」改成「**把憑證來源統一，讓已寫好的 connector 活過來**」，M2/M3 因此便宜很多 · ⭐ **對「Ragic 太小眾」的回答**：真正的缺口不是「別家 ERP」而是「**根本沒有 ERP**」—— 台灣中小企業多數用 Excel 和紙本，而 `manual` 這個值當初就在型別裡只是沒實作 · 主張 **CSV 與 Ragic 平級不是備案**（寫成備案等於告訴多數客戶「你是次等的」），但只做覆蓋式匯入不做逐筆編輯（那是另一個產品）· 里程碑改為 M1–M7 · FMEA 新增 F-10（憑證統一後要真的廢掉 env 路徑，不留相容）/ F-11（CSV 編碼與欄序）· OQ 擴至 14 條 | ahern + Claude Code |
 | 2026-07-28 | v0.1 | M0 首版 · 起於用戶指出「Ragic 目前是在通知功能頁有設定」· **查證後可沿用的比想像多**：`ragic_account`（含加密 key、per-tenant）、`fetchSchemaFields()`、Wizard 的選表選欄位互動全部能共用，**只有「批次拉多筆」要新做** · Ragic API 確認支援 `limit`/`offset`/**`fetchDomainIds`** · ⭐ 主張**只拉名稱＋編號**：不是效能考量而是隱私設計 —— 沒有的東西不會外洩，比「拉進來但不放 prompt」乾淨得多（F-1 P0）· 主張帳號共用不問第二次（API key 是客戶最難的一步）但設定頁分開（兩者回答不同問題，混在一起要客戶先判斷）· 主檔為唯讀鏡像不允許在我們這邊編輯（F-7/F-9）· 沒主檔的租戶要能照常運作，fallback 不可拿掉（OQ-MDS-9）· 因應用戶提到「Ragic 後續可能透過 LINE 操作」：M1 先把 RagicApiClient 抽到共用位置（純搬移、現在便宜），但**不為寫回預先設計介面** · FMEA 9 條含 2 個 P0 · §8 列出要問客戶的那一個問題 | ahern + Claude Code |
