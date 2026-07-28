@@ -73,6 +73,20 @@ export const tickets = pgTable("tickets", {
   // （宣告成 uuid[] 正是這欄從沒被寫過的原因之一）
   sourceMessageIds: text("source_message_ids").array(),
   messageCount: integer("message_count"),
+  // 0036 · 第四條軸 · 擁有者是當責人本人（前三條分別是 AI／主管／歸屬）
+  // ⚠️ AI 永遠不得寫 work_*；materializer 重跑也不覆寫
+  workStatus: text("work_status").notNull().default("open").$type<"open" | "closed">(),
+  workOutcome: text("work_outcome").$type<"完成" | "不用做了" | "轉他人" | "做不到">(),
+  workClosedBy: uuid("work_closed_by").references(() => users.userId),   // 常為 null（當責人多半沒帳號）
+  workClosedAt: timestamp("work_closed_at", { withTimezone: true }),
+  workNote: text("work_note"),
+  workClosedVia: text("work_closed_via").$type<"line_reply" | "web" | "system">(),
+  workClosedLineUserId: text("work_closed_line_user_id"),                // 這欄才是一定有值的身分
+  workClosedMessageId: text("work_closed_message_id"),
+  workLastReportAt: timestamp("work_last_report_at", { withTimezone: true }),
+  workLastReportNote: text("work_last_report_note"),
+  workAskedAt: timestamp("work_asked_at", { withTimezone: true }),
+  workAskedMessageId: text("work_asked_message_id"),
   // 0017 · warroom-task-board
   assigneeDisplayName: text("assignee_display_name"),
   dueAt: timestamp("due_at", { withTimezone: true }),
@@ -493,4 +507,29 @@ export const notifyConfig = pgTable("notify_config", {
   createdBy: uuid("created_by").references(() => users.userId, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// 0036 · 完成訊號先落地、後對應（docs/modules/task-completion-tracking.md §2.6）
+//
+// ⚠️ 存在的理由是**時序**：完成回覆即時進來，任務每天批次才產生。
+// prod 真實案例 —— 07/27 21:28 指派、21:39 回「已設定」，
+// 但分析要到 07/28 18:00 才跑到，完成訊號比任務早 21 小時。
+// 寫成「收到回覆→找任務→關掉」的話當下一定找不到，訊號全部掉在地上。
+export const pendingCompletionSignal = pgTable("pending_completion_signal", {
+  signalId: uuid("signal_id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  groupId: text("group_id").notNull(),
+  replyMessageId: text("reply_message_id").notNull(),
+  quotedMessageId: text("quoted_message_id").notNull(),      // 對應的鑰匙
+  replierLineUserId: text("replier_line_user_id").notNull(), // 身分自帶 · 不需要系統帳號
+  replierDisplayName: text("replier_display_name"),
+  intent: text("intent").notNull()
+    .$type<"completion" | "progress" | "asked" | "answered_done" | "answered_not_yet">(),
+  note: text("note"),
+  receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  resolvedTicketId: uuid("resolved_ticket_id"),
+  // ⚠️ 未消化 ≠ no_match：前者是批次還沒輪到（不是問題），
+  //    後者是跑過了仍對不上（才是材料化漏接，才可拿去校準門檻）
+  resolution: text("resolution").$type<"closed_ticket" | "created_ticket" | "no_match" | "superseded">(),
 });

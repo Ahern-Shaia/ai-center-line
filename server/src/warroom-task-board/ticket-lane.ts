@@ -53,3 +53,58 @@ export function laneFor(
 
 /** 重跑時可以被自動重算的區 —— 人動過的（已簽核／已忽略／逾時）一律保留 */
 export const RECOMPUTABLE_LANES: readonly ConfirmStatus[] = ["待簽核", "待確認", "存查"];
+
+// ── 0036 · 第四條軸與對外顯示 ────────────────────────────────────────
+// docs/modules/task-completion-tracking.md §4.3
+
+/** 工作狀態 · 擁有者是當責人本人 · DB 的 tickets.work_status */
+export type WorkStatus = "open" | "closed";
+
+/** 為什麼結束 · DB 的 tickets.work_outcome（Jira 的 resolution 模型） */
+export type WorkOutcome = "完成" | "不用做了" | "轉他人" | "做不到";
+
+/**
+ * ⚠️ 完成率的分母要排除「不用做了」——
+ * 否則「取消一堆」會被算成「做完一堆」（Linear 的 canceled 也是這樣處理）。
+ */
+export function countsTowardCompletion(outcome: string | null | undefined): boolean {
+  return outcome !== "不用做了";
+}
+
+export interface DisplayStateInput {
+  workStatus?: string | null;
+  workOutcome?: string | null;
+  workLastReportAt?: Date | string | null;
+  workAskedAt?: Date | string | null;
+  confirmStatus?: string | null;
+  assignStatus?: string | null;
+  status?: string | null;
+}
+
+/**
+ * 四條軸 → 對外顯示的**一個**狀態。
+ *
+ * 為什麼要投影：四軸全正交 = 3×3×3×2 種組合，大多數無意義。
+ * 把四個下拉並排丟給現場主管，沒人看得懂。所以存四軸、只顯示一個字。
+ * （JSM／ServiceNow 前台那條鏈也是投影，底下是獨立的簽核物件。）
+ *
+ * ⚠️ 措辭鐵則（doc §2.5 · F-26）：對外一律「**尚未確認完成**」，不用「未完成」。
+ *    前者說的是系統的認知（永遠為真）；後者說的是工作狀態，
+ *    人做完但還沒回報時它就是**假的**——他會因此不再信任提醒。
+ *    這裡是單一事實來源，其他地方不得自行造詞。
+ */
+export function displayState(t: DisplayStateInput): string {
+  if (t.workStatus === "closed") {
+    return t.workOutcome === "完成" ? "已完成" : `已結束（${t.workOutcome ?? "未註明"}）`;
+  }
+  if (t.confirmStatus === "待確認") return "待確認是不是任務";
+  if (t.confirmStatus === "已忽略") return "已忽略";
+  if (t.confirmStatus === "存查") return "存查";
+  if (t.assignStatus !== "assigned") return "待指派";
+  // AI 從對話讀到「好了」是**推論**，不是本人的**承諾** —— 講出這個落差，不要替他結案
+  // （同 ITIL 的 resolved vs closed：技師標 resolved、使用者確認才 closed）
+  if (t.status === "resolved") return "AI 判讀已完成 · 尚未確認";
+  if (t.workAskedAt) return "已詢問 · 待本人確認";
+  if (t.workLastReportAt) return "進行中（有回報）";
+  return "進行中";
+}

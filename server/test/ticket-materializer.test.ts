@@ -164,6 +164,23 @@ test("沒人動過的區可以隨重新分析改變（狀態從公告變成待�
 // 而 LINE 引用回覆要靠它才知道該關哪一張任務。斷了就整個功能落空，
 // 所以這裡用斷言把它釘住。
 
+/**
+ * 從錯誤鏈裡挖出違反的約束名。
+ *
+ * ⚠️ Drizzle 會把 pg 的錯誤包一層，`err.message` 只剩「Failed query: ...」，
+ * 約束名在 `err.cause.constraint`。對 message 下 regex 永遠不會中 ——
+ * 而 `assert.rejects` 沒帶 matcher 的話會**為了錯的理由通過**（RLS 擋掉也算 reject）。
+ */
+function constraintOf(e: unknown): string | undefined {
+  let cur: unknown = e;
+  for (let i = 0; i < 5 && cur; i++) {
+    const c = (cur as { constraint?: string }).constraint;
+    if (c) return c;
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return undefined;
+}
+
 const recWithSrc = (title: string, srcIds: number[]) => ({
   category: "maintenance", title, detail: title, status: "open",
   person: null, machine_code: null, work_order: null,
@@ -222,5 +239,72 @@ test("重跑不可把已經有的溯源洗成 null", async () => {
     await svc.materialize(seeded.uploadId);
     const m = await srcMsgIds(seeded.tenantId, seeded.uploadId);
     assert.deepEqual(m["換軸承"], ["LINE_AAA"], "翻不出來時要保留舊值");
+  } finally { await seeded.cleanup(); }
+});
+
+// ── 0036 · M2 · 第四條軸不可被 AI 洗掉（F-2 · P0）────────────────────
+//
+// status 是 AI 讀到的（推論）、work_status 是本人回報的（承諾）。
+// materializer 的 UPSERT 沒有把 work_* 列進更新清單，這支測試把它釘住 ——
+// 少了它，重跑一次就把人的回報蓋掉，而且不會有任何錯誤訊息。
+
+test("⭐ 重跑不可洗掉本人回報的完成（work_* 不在 UPSERT 更新清單）", async () => {
+  const seeded = await seedUpload([rec("換軸承", "high", "open")]);
+  if (!seeded) return;
+  try {
+    await svc.materialize(seeded.uploadId);
+    // 當責人在 LINE 回「已完成」
+    await asTenant(seeded.tenantId, (tx) => tx.execute(sql`
+      UPDATE tickets
+         SET work_status = 'closed', work_outcome = '完成',
+             work_closed_at = now(), work_closed_via = 'line_reply',
+             work_closed_line_user_id = 'U_test', work_note = '換好了'
+       WHERE source_upload_id = ${seeded.uploadId}
+    `));
+    // 隔天重新分析同一批對話
+    await svc.materialize(seeded.uploadId);
+
+    const r = await asTenant(seeded.tenantId, (tx) => tx.execute<{
+      work_status: string; work_outcome: string | null; work_closed_line_user_id: string | null;
+    }>(sql`
+      SELECT work_status, work_outcome, work_closed_line_user_id
+        FROM tickets WHERE source_upload_id = ${seeded.uploadId}
+    `));
+    assert.equal(r.rows[0].work_status, "closed", "人的回報不可被 AI 重跑蓋掉");
+    assert.equal(r.rows[0].work_outcome, "完成");
+    assert.equal(r.rows[0].work_closed_line_user_id, "U_test", "誰回報的也要留著");
+  } finally { await seeded.cleanup(); }
+});
+
+test("新建的任務預設是 open（尚未確認完成）", async () => {
+  const seeded = await seedUpload([rec("換軸承", "high", "open")]);
+  if (!seeded) return;
+  try {
+    await svc.materialize(seeded.uploadId);
+    const r = await asTenant(seeded.tenantId, (tx) => tx.execute<{ ws: string; wo: string | null }>(sql`
+      SELECT work_status AS ws, work_outcome AS wo FROM tickets WHERE source_upload_id = ${seeded.uploadId}
+    `));
+    assert.equal(r.rows[0].ws, "open");
+    assert.equal(r.rows[0].wo, null, "沒結束就不該有結束原因（跨軸約束）");
+  } finally { await seeded.cleanup(); }
+});
+
+test("⭐ 跨軸約束擋掉「結束了卻沒說為什麼」", async () => {
+  const seeded = await seedUpload([rec("換軸承", "high", "open")]);
+  if (!seeded) return;
+  try {
+    await svc.materialize(seeded.uploadId);
+    let thrown: unknown = null;
+    try {
+      await asTenant(seeded.tenantId, (tx) => tx.execute(sql`
+        UPDATE tickets SET work_status = 'closed', work_closed_at = now()
+         WHERE source_upload_id = ${seeded.uploadId}
+      `));
+    } catch (e) { thrown = e; }
+    assert.ok(thrown, "沒有這條約束，第一個忘記寫 outcome 的路徑就會製造出永遠算不出來的票");
+    assert.equal(
+      constraintOf(thrown), "tickets_work_outcome_matches_status",
+      "要是被別的原因擋下來（例如 RLS 回 0 筆），這條測試就會為了錯的理由而通過",
+    );
   } finally { await seeded.cleanup(); }
 });
