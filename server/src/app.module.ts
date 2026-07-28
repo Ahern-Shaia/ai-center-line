@@ -17,6 +17,7 @@ import { SignoffService } from "./signoff/signoff.service.js";
 import { WarroomController } from "./warroom/warroom.controller.js";
 import { WarroomService } from "./warroom/warroom.service.js";
 import { WarroomTasksService } from "./warroom/warroom-tasks.service.js";
+import { WorkStatusService } from "./task-completion/work-status.service.js";
 import { NotifyModule } from "./notify/notify.module.js";
 import { ConversationAnalysisModule } from "./conversation-analysis/conversation-analysis.module.js";
 import { DataSyncLayerModule } from "./data-sync-layer/data-sync-layer.module.js";
@@ -78,6 +79,7 @@ import { AuditModule } from "./audit/audit.module.js";
     SignoffService,
     WarroomService,
     WarroomTasksService,
+    WorkStatusService,
     // 全域四層：JWT → RolesGuard (backward compat) → PermissionGuard (@RequirePermission) → 包 tenant tx
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },

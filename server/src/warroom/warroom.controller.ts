@@ -4,6 +4,7 @@ import type { JwtUser } from "../auth/jwt-user.js";
 import { Roles } from "../auth/roles.decorator.js";
 import { WarroomService } from "./warroom.service.js";
 import { WarroomTasksService } from "./warroom-tasks.service.js";
+import { WorkStatusService } from "../task-completion/work-status.service.js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -12,6 +13,7 @@ export class WarroomController {
   constructor(
     private readonly svc: WarroomService,
     private readonly tasksService: WarroomTasksService,
+    private readonly workStatus: WorkStatusService,
   ) {}
 
   // 三環指標（÷N）＋各群組狀態。RLS 自動限本租戶（group_owner 再限本部門）。
@@ -73,6 +75,44 @@ export class WarroomController {
     if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
     if (typeof body?.accept !== "boolean") throw new BadRequestException("accept 必須是 true 或 false");
     return this.tasksService.decideTicket(ticketId, body.accept, user.user_id);
+  }
+
+  /**
+   * 補登結束（M5）· 網頁端 · 主要入口仍是 LINE 引用回覆。
+   *
+   * 代結案是必然不是例外，所以允許 —— 但一定記 work_closed_by，
+   * 且看板要顯示「由 ○○ 代為結束」（doc F-5）。
+   */
+  @Patch("tickets/:ticketId/work-close")
+  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  async workClose(
+    @CurrentUser() user: JwtUser,
+    @Param("ticketId") ticketId: string,
+    @Body() body: { outcome?: string; note?: string },
+  ) {
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
+    if (!body?.outcome) throw new BadRequestException("請選擇結束原因");
+    return this.workStatus.close(ticketId, body.outcome, body.note?.trim() || null, user.user_id);
+  }
+
+  /** 還原成「尚未確認完成」· 標錯了要有補救途徑，否則沒人敢按（F-4） */
+  @Patch("tickets/:ticketId/work-reopen")
+  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  async workReopen(@CurrentUser() user: JwtUser, @Param("ticketId") ticketId: string) {
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
+    return this.workStatus.reopen(ticketId, user.user_id);
+  }
+
+  /** 回報進度 · 低承諾動作 · 任務留在進行中（§2.1） */
+  @Patch("tickets/:ticketId/work-report")
+  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  async workReport(
+    @CurrentUser() user: JwtUser,
+    @Param("ticketId") ticketId: string,
+    @Body() body: { note?: string },
+  ) {
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
+    return this.workStatus.report(ticketId, body?.note ?? "", user.user_id);
   }
 
   // 某張任務卡的來源原文 · 簽核前拿 AI 抽取結果與原始訊息對照
