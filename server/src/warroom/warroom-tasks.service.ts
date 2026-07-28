@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { currentTx, withSystemTx } from "../db/client.js";
-import type { ConfirmStatus } from "../warroom-task-board/ticket-lane.js";
+import { displayState, type ConfirmStatus } from "../warroom-task-board/ticket-lane.js";
 
 /**
  * WarroomTasksService · WTB-M3
@@ -34,6 +34,14 @@ export interface WarroomTicket {
   departmentId: string;
   departmentName: string | null;
   confirmedByName: string | null;
+  // 0036 · 第四條軸（當責人本人回報）· displayState 是四軸投影後的對外單一狀態
+  workStatus: "open" | "closed";
+  workOutcome: string | null;
+  workClosedVia: string | null;
+  workClosedByName: string | null;      // 代結案時 UI 要顯示「由 ○○ 代為結束」
+  workLastReportAt: string | null;
+  workLastReportNote: string | null;
+  displayState: string;
   confirmedAt: string | null;
 }
 
@@ -63,8 +71,13 @@ export class WarroomTasksService {
       overdue: WarroomTicket[];      // 逾時 · due_at 過期 or 建立 > 7d 且待簽
       unconfirmed: WarroomTicket[];  // 待確認 · 中信心 · 等主管決定要不要收為任務
       archived: WarroomTicket[];     // 未列入待辦 · 公告/已完成/已忽略 (limit 50)
+      overdueUnassigned: WarroomTicket[];   // 逾期未開始 · 沒人接 → 催派工
+      overdueUnconfirmed: WarroomTicket[];  // 逾期未確認完成 · 有人接但卡住 → 問障礙
     };
-    counts: { pending: number; signed: number; overdue: number; unconfirmed: number; archived: number };
+    counts: {
+      pending: number; signed: number; overdue: number; unconfirmed: number; archived: number;
+      overdueUnassigned: number; overdueUnconfirmed: number;
+    };
   }> {
     const tx = currentTx();
     const includeSigned = args.includeSignedOff !== false;
@@ -90,6 +103,13 @@ export class WarroomTasksService {
       department_name: string | null;
       confirmed_by_name: string | null;
       confirmed_at: string | null;
+      work_status: "open" | "closed";
+      work_outcome: string | null;
+      work_closed_via: string | null;
+      work_closed_by_name: string | null;
+      work_last_report_at: string | null;
+      work_last_report_note: string | null;
+      work_asked_at: string | null;
     }>(sql`
       SELECT t.ticket_id, t.category, t.category_id::text,
              t.summary, t.confidence, t.confirm_status, t.status,
@@ -100,11 +120,16 @@ export class WarroomTasksService {
              t.created_at::text,
              t.department_id::text, d.department_name,
              u.display_name AS confirmed_by_name,
-             t.confirmed_at::text
+             t.confirmed_at::text,
+             t.work_status, t.work_outcome, t.work_closed_via,
+             wu.display_name AS work_closed_by_name,
+             t.work_last_report_at::text, t.work_last_report_note,
+             t.work_asked_at::text
       FROM tickets t
       LEFT JOIN departments d ON d.department_id = t.department_id
       LEFT JOIN users u ON u.user_id = t.confirmed_by
       LEFT JOIN users au ON au.user_id = t.assignee_user_id
+      LEFT JOIN users wu ON wu.user_id = t.work_closed_by
       ORDER BY t.created_at DESC
       LIMIT 500
     `);
@@ -132,6 +157,22 @@ export class WarroomTasksService {
       departmentName: r.department_name,
       confirmedByName: r.confirmed_by_name,
       confirmedAt: r.confirmed_at,
+      workStatus: r.work_status,
+      workOutcome: r.work_outcome,
+      workClosedVia: r.work_closed_via,
+      workClosedByName: r.work_closed_by_name,
+      workLastReportAt: r.work_last_report_at,
+      workLastReportNote: r.work_last_report_note,
+      // 四軸投影成對外一個狀態 —— 四個下拉並排丟給現場主管沒人看得懂
+      displayState: displayState({
+        workStatus: r.work_status,
+        workOutcome: r.work_outcome,
+        workLastReportAt: r.work_last_report_at,
+        workAskedAt: r.work_asked_at,
+        confirmStatus: r.confirm_status,
+        assignStatus: r.assign_status,
+        status: r.status,
+      }),
     }));
 
     const overdue = all.filter((t) => {
@@ -139,6 +180,17 @@ export class WarroomTasksService {
       if (t.dueAt) return new Date(t.dueAt).getTime() < now;
       return now - new Date(t.createdAt).getTime() > SEVEN_DAYS;
     });
+    // 0036 · 逾期分兩種 —— 管理動作完全不同（競品研究 C-3）：
+    //   未開始   ＝ 沒人接或接了沒動靜 → 主管要**催派工**
+    //   未確認完成 ＝ 有人接了但卡住     → 主管要**問障礙**
+    // 合成一個桶子的話主管無法分流。我們用 assign_status 就分得出來。
+    const staleOpen = all.filter(
+      (t) => t.workStatus === "open"
+        && now - new Date(t.createdAt).getTime() > SEVEN_DAYS
+        && (t.confirmStatus === "待簽核" || t.confirmStatus === "已簽核" || t.confirmStatus === "逾時警示"),
+    );
+    const overdueUnassigned = staleOpen.filter((t) => t.assignStatus !== "assigned");
+    const overdueUnconfirmed = staleOpen.filter((t) => t.assignStatus === "assigned");
     const overdueSet = new Set(overdue.map((t) => t.ticketId));
     const pending = all.filter((t) => t.confirmStatus === "待簽核" && !overdueSet.has(t.ticketId));
     const signed = includeSigned
@@ -152,13 +204,15 @@ export class WarroomTasksService {
     const archived = notTracked.slice(0, 50);
 
     return {
-      kanban: { pending, signed, overdue, unconfirmed, archived },
+      kanban: { pending, signed, overdue, unconfirmed, archived, overdueUnassigned, overdueUnconfirmed },
       counts: {
         pending: pending.length,
         signed: all.filter((t) => t.confirmStatus === "已簽核").length,
         overdue: overdue.length,
         unconfirmed: unconfirmed.length,
         archived: notTracked.length,
+        overdueUnassigned: overdueUnassigned.length,
+        overdueUnconfirmed: overdueUnconfirmed.length,
       },
     };
   }

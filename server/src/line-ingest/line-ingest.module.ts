@@ -12,14 +12,13 @@ import { LineWebhookService } from "./line-webhook.service.js";
 import { MediaStorageService } from "./media-storage.service.js";
 import { MediaDownloadService } from "./media-download.service.js";
 import { MemberFetchService } from "./member-fetch.service.js";
-import { CompletionSignalService } from "../task-completion/completion-signal.service.js";
-import { OpenTaskReminderService } from "../task-completion/open-task-reminder.service.js";
+import { TaskCompletionModule } from "../task-completion/task-completion.module.js";
 import { LineBotController } from "./line-bot.controller.js";
 import { LineGroupController } from "./line-group.controller.js";
 import { LineWebhookController } from "./line-webhook.controller.js";
 
 @Module({
-  imports: [EmployeeBindingModule],       // 0016 · webhook 用 EmployeeBindingService · NudgeService 用 raw SQL 不再環回
+  imports: [EmployeeBindingModule, TaskCompletionModule],       // 0016 · webhook 用 EmployeeBindingService · NudgeService 用 raw SQL 不再環回
   controllers: [LineBotController, LineGroupController, LineWebhookController],
   providers: [
     LineApiClient,
@@ -34,8 +33,6 @@ import { LineWebhookController } from "./line-webhook.controller.js";
     MediaStorageService,
     MediaDownloadService,
     MemberFetchService,
-    CompletionSignalService,
-    OpenTaskReminderService,
   ],
   exports: [
     LineBotService,
