@@ -116,14 +116,23 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
       <div className="pane-hdr">
         <div>
           <h1>總覽儀表</h1>
-          <div className="sub">當前配置 {wr.dept_count} 個 LINE 群組 · 每日 AI 分類結果匯總（可於「部門/成員」自行新增）</div>
+          {/* ⚠️ 這個數字是 **departments 的筆數**（warroom.service.ts 的 N = depts.length），
+              不是 LINE 群組數。本產品一個部門綁一個群，數字碰巧一樣，
+              但名詞混用會讓客戶在「部門/成員」頁對不上帳。 */}
+          <div className="sub">當前配置 {wr.dept_count} 個部門 · 每日 AI 分類結果匯總（可於「部門/成員」自行新增）</div>
         </div>
       </div>
 
       <div className="tiles">
-        <Gauge value={wr.signoff_rate} label="本日簽核率" frac={`${wr.signed_depts} / ${wr.dept_count} 部門`} color="#4F46E5" />
-        <Gauge value={wr.health_rate} label="群組健康度" frac={`${wr.green_depts} / ${wr.dept_count} 綠燈`} color="#059669" />
-        <Gauge value={wr.high_conf_ratio} label="AI 高信心比例" frac={`${wr.high_num} / ${wr.high_den} 筆`} color="#D97706" />
+        {/* ⚠️ 三個環的分母不同（部門 / 部門 / 已標記筆數），
+            前兩個都是「部門」、第三個是「已標記的筆數」。
+            不把單位寫完整的話，看的人會以為三個數字可以互相比較。 */}
+        <Gauge value={wr.signoff_rate} label="本日簽核率"
+               frac={`${wr.signed_depts} / ${wr.dept_count} 個部門已簽`} color="#4F46E5" />
+        <Gauge value={wr.health_rate} label="群組健康度"
+               frac={`${wr.green_depts} / ${wr.dept_count} 個部門綠燈`} color="#059669" />
+        <Gauge value={wr.high_conf_ratio} label="AI 高信心比例"
+               frac={`${wr.high_num} / ${wr.high_den} 筆已標記`} color="#D97706" />
       </div>
 
       <div className="section">
@@ -169,12 +178,14 @@ function DeptItem({
     ? new Date(g.signed_at).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })
     : null;
 
-  const stateClass = g.signed_off
+  // P2 · 有待辦的列要跳得出來 —— 原本它跟「今日無待簽」只差一個小數字，
+  // 主管掃過去分不出哪幾列才需要他處理
+  const stateClass = (pending.length > 0 && !g.signed_off ? "so-actionable " : "") + (g.signed_off
     ? "st-signed"
     : g.health === "green" ? "st-green"
     : g.health === "yellow" ? "st-yellow"
     : g.health === "red" ? "st-red"
-    : "";
+    : "");
 
   return (
     <div className={`so-item ${stateClass}`}>
@@ -206,15 +217,21 @@ function DeptItem({
           </span>
           <span className="so-chev" aria-hidden>{expanded ? "收合" : "展開"}</span>
         </button>
+        {/* ⚠️ 沒事可做的列**不掛主要按鈕**。
+            原本 disabled 仍是紫色實心，於是整頁視覺重量最高的
+            是一整欄長得一樣、而且過半沒事可做的按鈕 ——
+            使用者得先讀完文字才知道這顆不用按，那就是多一次判斷。 */}
         {g.signed_off ? (
           <button className="btn confirmed-tag" disabled>已簽核</button>
+        ) : pending.length === 0 ? (
+          <span className="so-noop">—</span>
         ) : (
           <button
             className="btn btn-primary btn-sm"
             onClick={(e) => { e.stopPropagation(); onConfirm(); }}
-            disabled={confirming || pending.length === 0}
+            disabled={confirming}
           >
-            {confirming ? "簽核中…" : "確認今日進度"}
+            {confirming ? "簽核中…" : `確認 ${pending.length} 筆`}
           </button>
         )}
       </div>

@@ -4,6 +4,7 @@ import { usePermissions } from "../permission/PermissionContext";
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import { catLabel } from "../shared/categoryLabel";
+import { statusLabel } from "../shared/recordStatusLabel";
 import { canOpenConvoDetail, navigateTo } from "../nav";
 
 // 一張卡最多列幾筆。這頁是「今天各群發生什麼」的掃視，不是逐條細讀 ——
@@ -329,16 +330,6 @@ function RecordItem({ r }: { r: Record<string, unknown> }) {
       )}
     </div>
   );
-}
-
-function statusLabel(status: string): string {
-  switch (status) {
-    case "open": return "待處理";
-    case "in_progress": return "處理中";
-    case "resolved": return "已結案";
-    case "info": return "訊息";
-    default: return status;
-  }
 }
 
 function DailyReportSummary({ r }: { r: Record<string, unknown> }) {

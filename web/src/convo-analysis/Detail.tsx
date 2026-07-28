@@ -10,6 +10,7 @@ import {
   ApiError,
 } from "../api";
 import { useToast } from "../Toast";
+import { RECORD_STATUS_LABEL as STATUS_LABEL } from "../shared/recordStatusLabel";
 
 interface Props {
   uploadId: number;
@@ -28,12 +29,7 @@ const CAT_META: Record<string, { label: string; cls: string; rec: string }> = {
 
 const CAT_ORDER = ["daily_report", "maintenance", "procurement", "rnd", "attendance", "chitchat"];
 
-const STATUS_LABEL: Record<string, string> = {
-  open: "未處理",
-  in_progress: "處理中",
-  resolved: "已解決",
-  info: "資訊",
-};
+
 
 export default function ConversationAnalysisDetail({ uploadId, onBack }: Props) {
   const [detail, setDetail] = useState<ConvoUploadDetail | null>(null);

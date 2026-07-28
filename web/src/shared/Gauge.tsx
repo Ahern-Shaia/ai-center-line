@@ -9,6 +9,18 @@ interface Props {
   color: string;         // 狀態靠 donut 環顏色本身承載
 }
 
+/**
+ * ⚠️ track 用**該環自己的語意色**淡化，不用中性灰。
+ *
+ * 0% 時 RadialBar 什麼都不畫，整圈只剩 track ——
+ * 中性灰會讓人以為元件沒載入或壞了（prod 截圖實際發生：
+ * 「本日簽核率 0%」整圈死灰，看起來像還在轉圈）。
+ * 染色之後，0 讀起來是「這個環是活的，值就是 0」。
+ */
+function trackFill(color: string): string {
+  return `color-mix(in srgb, ${color} 14%, var(--well))`;
+}
+
 export default function Gauge({ value, label, frac, color }: Props) {
   const pct = Math.round(value * 100);
   const data = [{ name: label, value: pct, fill: color }];
@@ -31,7 +43,7 @@ export default function Gauge({ value, label, frac, color }: Props) {
             <RadialBar
               dataKey="value"
               cornerRadius={0}
-              background={{ fill: "var(--well)" }}
+              background={{ fill: trackFill(color) }}
               isAnimationActive
               animationDuration={800}
             />

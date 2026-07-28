@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import Drawer from "../shared/Drawer";
+import { catLabel } from "../shared/categoryLabel";
+import { statusLabel } from "../shared/recordStatusLabel";
 import { ApiError, getTicketSource, type TicketSource } from "../api";
 
 // 簽核前對照：AI 整理的內容 vs 當時的原始訊息。
@@ -14,6 +16,19 @@ interface Props {
   summary: string | null;
   confidence: "high" | "medium" | "low" | null;
   needsReview: boolean;
+}
+
+/**
+ * ⚠️ 欄位名與**值**都要翻。
+ * 原本只翻了欄位名，值直接 String(v) —— 於是畫面上出現
+ * 「狀態：in_progress」「分類：procurement」，把資料庫的 enum 丟給客戶看。
+ */
+function fmtValue(key: string, v: unknown): string {
+  if (typeof v === "object") return JSON.stringify(v);
+  const s = String(v);
+  if (key === "status") return statusLabel(s);
+  if (key === "category") return catLabel(s);
+  return s;
 }
 
 // 欄位一律顯示中文 · 不把資料庫欄位名丟給使用者看
@@ -79,7 +94,7 @@ export default function SourceDrawer({ open, onClose, ticketId, summary, confide
               .map(([k, v]) => (
                 <div key={k} className="tc-kv">
                   <span className="tc-k">{FIELD_LABEL[k]}</span>
-                  <span className="tc-v">{typeof v === "object" ? JSON.stringify(v) : String(v)}</span>
+                  <span className="tc-v">{fmtValue(k, v)}</span>
                 </div>
               ))}
           </div>

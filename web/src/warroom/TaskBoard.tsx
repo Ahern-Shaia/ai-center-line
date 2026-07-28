@@ -156,8 +156,9 @@ function KanbanColumn({
   note?: string;
   emptyLabel?: string;
 }) {
+  // 空欄收起來 —— 留一個 400px 高的空框沒有資訊量，只是噪音（prod 分布 13/0/2）
   return (
-    <div className="kb-col">
+    <div className={`kb-col${tickets.length === 0 ? " is-empty" : ""}`}>
       <div className="kb-col-hdr">
         {/* 色＋形＋字三重編碼：燈點只是輔助，欄名本身就講清楚狀態 */}
         <span className={`kb-dot kb-dot-${tone}`} aria-hidden />

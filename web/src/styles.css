@@ -1688,9 +1688,16 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .wr-tab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
 
 /* Kanban board · 3 columns */
-.kanban { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
+/* ⚠️ align-items:start —— 不加的話空欄會被最長的那欄撐到等高。
+   prod 實測分布是 13 / 0 / 2：中間整欄空著卻跟左欄一樣高，看起來像版面壞了。
+   （同一個病在 .wt-lanes 也發生過一次） */
+.kanban { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; align-items:start; }
 @media (max-width:1100px) { .kanban { grid-template-columns:1fr; } }
 .kb-col { display:flex; flex-direction:column; background:var(--surface-2, #F5F6F8); border-radius:6px; border:1px solid var(--line); min-height:400px; }
+/* 空的欄只包住標題與一行說明 —— 留一個 400px 高的空框沒有資訊量，只是噪音 */
+.kb-col.is-empty { min-height:0; }
+.kb-col.is-empty .kb-col-body { padding:10px 12px; }
+.kb-col.is-empty .kb-empty { padding:6px 0; }
 .kb-col-hdr { padding:12px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:7px; }
 .kb-col-title { font-size:13px; font-weight:600; color:var(--ink); }
 .kb-col-count { margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--ink-3); background:var(--surface); border:1px solid var(--line); padding:1px 8px; border-radius:10px; font-variant-numeric:tabular-nums; }
@@ -2232,3 +2239,9 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .kb-col-note { font-size:11.5px; color:var(--ink-2); background:var(--warn-tint);
                border:1px solid #F3D9A4; border-radius:var(--r); padding:6px 9px;
                margin-bottom:8px; line-height:1.5; }
+
+/* 有待辦的部門列要跳得出來 —— 原本它跟「今日無待簽」只差一個小數字 */
+.so-item.so-actionable { background:var(--surface); box-shadow:inset 3px 0 0 var(--primary); }
+.so-item.so-actionable .so-name { font-weight:600; }
+/* 沒事可做時的佔位 · 不用按鈕，維持列高一致不讓版面跳動 */
+.so-noop { color:var(--ink-3); font-size:13px; padding:0 12px; user-select:none; }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ApiError, decideTicket, type WarroomKanbanTicket } from "../api";
 import { useToast } from "../Toast";
+import { RECORD_STATUS_LABEL as STATUS_LABEL } from "../shared/recordStatusLabel";
 
 // 任務看板的兩個附加區塊 · docs/modules/task-materialization-gate.md
 //
@@ -8,9 +9,7 @@ import { useToast } from "../Toast";
 // 待確認要回答「這件事要不要追」，看板三欄回答「AI 抽得對不對」。
 // 混在同一排會讓人以為都是待辦佇列，而且五欄擠在一起誰也看不清楚。
 
-const STATUS_LABEL: Record<string, string> = {
-  open: "待處理", in_progress: "處理中", resolved: "已完成", info: "公告／資訊",
-};
+
 
 /**
  * 待確認 · AI 有整理出來但沒有十足把握的事。
