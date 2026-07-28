@@ -78,4 +78,23 @@ export class LineBotController {
     await this.botSvc.disableBot(id);
     return { status: "disabled" };
   }
+
+  /** 永久刪除前先看會連帶刪掉什麼（群組／訊息／成員／員工綁定全是 CASCADE） */
+  @Get(":id/delete-impact")
+  @Roles("aiproot_admin")
+  async deleteImpact(@Param("id") id: string) {
+    return this.botSvc.deleteImpact(id);
+  }
+
+  /**
+   * 永久刪除 · 只能刪已停用的。
+   * 沒有這個的話，停用的 bot 會永遠留在清單上，而且它佔著 bot_user_id
+   * （UNIQUE），同一個 LINE bot 想重新加入也加不了。
+   */
+  @Delete(":id/permanent")
+  @Roles("aiproot_admin")
+  async deletePermanently(@Param("id") id: string) {
+    await this.botSvc.deleteBotPermanently(id);
+    return { status: "deleted" };
+  }
 }

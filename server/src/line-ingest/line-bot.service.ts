@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { currentTx, withTenant, txStore } from "../db/client.js";
 import { LineBotRepository, type LineBotListRow } from "./line-bot.repository.js";
@@ -32,6 +32,8 @@ export interface LineBotCreateInput {
 
 @Injectable()
 export class LineBotService {
+  private readonly logger = new Logger(LineBotService.name);
+
   constructor(
     private readonly botRepo: LineBotRepository,
     private readonly groupRepo: LineGroupRepository,
@@ -138,6 +140,53 @@ export class LineBotService {
   async disableBot(botId: string): Promise<void> {
     const tx = currentTx();
     await this.botRepo.update(tx, botId, { status: "disabled" });
+  }
+
+  /**
+   * 永久刪除前先算清楚會連帶刪掉什麼。
+   *
+   * line_group / line_message / line_member / user_line_binding 對 line_bot 全都是
+   * ON DELETE CASCADE —— 刪一個 bot 會把它的群組、所有歷史訊息、成員名單、
+   * 以及**員工的 LINE 綁定**一起帶走。綁定沒了，那些人的打卡與日報就對不到人。
+   * 所以刪除前一定要讓人看到數字，不能只問一句「確定嗎」。
+   */
+  async deleteImpact(botId: string): Promise<{
+    botName: string; status: string; groups: number; messages: number; members: number; bindings: number;
+  }> {
+    const tx = currentTx();
+    const r = await tx.execute<{
+      name: string; status: string; groups: number; messages: number; members: number; bindings: number;
+    }>(sql`
+      SELECT b.name, b.status,
+             (SELECT count(*)::int FROM line_group  WHERE bot_id = b.bot_id) AS groups,
+             (SELECT count(*)::int FROM line_message WHERE bot_id = b.bot_id) AS messages,
+             (SELECT count(*)::int FROM line_member  WHERE bot_id = b.bot_id) AS members,
+             (SELECT count(*)::int FROM user_line_binding WHERE bot_id = b.bot_id) AS bindings
+        FROM line_bot b WHERE b.bot_id = ${botId}::uuid
+    `);
+    const row = r.rows[0];
+    if (!row) throw new NotFoundException("找不到這個機器人");
+    return {
+      botName: row.name, status: row.status,
+      groups: row.groups, messages: row.messages, members: row.members, bindings: row.bindings,
+    };
+  }
+
+  /**
+   * 永久刪除 · 只允許刪已停用的。
+   * 要求先停用不是為了多一道手續，是為了讓「還在收訊息的 bot」不可能被一鍵刪掉。
+   */
+  async deleteBotPermanently(botId: string): Promise<void> {
+    const tx = currentTx();
+    const impact = await this.deleteImpact(botId);
+    if (impact.status !== "disabled") {
+      throw new BadRequestException("請先停用這個機器人，再永久刪除");
+    }
+    await tx.execute(sql`DELETE FROM line_bot WHERE bot_id = ${botId}::uuid`);
+    this.logger.warn(
+      `永久刪除 bot · ${impact.botName} · 連帶刪除 群${impact.groups} 訊息${impact.messages} `
+      + `成員${impact.members} 綁定${impact.bindings}`,
+    );
   }
 
   // Refs 給 UI 下拉：
