@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ApiError, ncCreateAccount, ncCreateRule, ncEventCatalog, ncFetchFields, ncLineGroups,
-  ncListAccounts, ncNotifiableUsers, notifyWebhookUrl,
+  ApiError, ncCreateAccount, ncCreateRule, ncEventCatalog, ncFetchFields, ncGetRule, ncLineGroups,
+  ncListAccounts, ncNotifiableUsers, ncUpdateRule, notifyWebhookUrl,
   type EventDef, type LineGroupOption, type NotifiableUser, type NotifyChannelType,
   type NotifySourceType, type RagicAccountRow,
 } from "../api";
@@ -13,8 +13,18 @@ const SERVERS = ["www", "ap5", "ap15", "ap16", "na3", "eu2"].map((s) => ({ id: s
 // 可勾選欄位的統一形狀（Ragic 欄位 / 事件欄位都轉成這個）
 interface SelectableField { path: string; label: string; numeric?: boolean }
 
-export default function Wizard({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+/**
+ * 新增／編輯通知規則。
+ *
+ * 編輯時，**來源、Ragic 表單路徑、webhook 網址一律唯讀** ——
+ * 網址已經貼在客戶的 Ragic 那一側，改了通知會悄悄停掉，而客戶不會知道。
+ * 要換表單請新增一條規則。
+ */
+export default function Wizard({ ruleId, onDone, onCancel }: {
+  ruleId?: string; onDone: () => void; onCancel: () => void;
+}) {
   const toast = useToast();
+  const editing = !!ruleId;
 
   // 來源型別
   const [sourceType, setSourceType] = useState<NotifySourceType>("ragic_form");
@@ -48,12 +58,56 @@ export default function Wizard({ onDone, onCancel }: { onDone: () => void; onCan
   const [users, setUsers] = useState<NotifiableUser[]>([]);
   const [channelTarget, setChannelTarget] = useState("");
   const [saving, setSaving] = useState(false);
+  // 編輯時抓不到 Ragic 的完整欄位 —— 此時可勾選的只有規則已存的那幾個，
+  // 取消勾選再存檔就永久拿不回來。必須明講，不能讓人在不知情下弄丟欄位。
+  const [fieldsIncomplete, setFieldsIncomplete] = useState(false);
   const [savedToken, setSavedToken] = useState<string | null>(null);
   const [savedNoWebhook, setSavedNoWebhook] = useState(false);
 
   const loadAccounts = useCallback(async () => {
     try { setAccounts(await ncListAccounts()); } catch { /* ignore */ }
   }, []);
+
+  // 編輯模式 · 把既有設定填回畫面
+  useEffect(() => {
+    if (!ruleId) return;
+    void (async () => {
+      try {
+        const r = await ncGetRule(ruleId);
+        setSourceType(r.sourceType);
+        setAccountId(r.ragicAccountId ?? "");
+        setSheetPath(r.sheetPath ?? "");
+        setSheetName(r.sheetName ?? "");
+        setEventType(r.eventType ?? "");
+        setEvCreate(r.notifyCreate); setEvUpdate(r.notifyUpdate); setEvDelete(r.notifyDelete);
+        setTitle(r.title ?? "");
+        setChannelType(r.channelType);
+        setChannelTarget(r.channelTarget ?? "");
+        // 先用規則裡存的欄位讓畫面立刻有東西
+        setFields(r.fields.map((f) => ({ path: f.path, label: f.label })));
+        setSelected(r.fields.slice().sort((a, b) => a.order - b.order).map((f) => f.path));
+
+        // 再去 Ragic 拿「整張表的欄位」當可勾選全集。
+        // 只放規則存的那幾個是不夠的 —— 取消勾選再存檔之後，那個欄位就從清單消失，
+        // 使用者再也加不回來。抓不到就維持上面那份（至少還能調順序、取消勾選）。
+        if (r.sourceType === "ragic_form" && r.ragicAccountId && r.sheetPath) {
+          try {
+            const full = await ncFetchFields(r.ragicAccountId, r.sheetPath);
+            if (full.fields.length > 0) {
+              setFields(full.fields.map((f) => ({ path: String(f.fieldId), label: f.fieldName })));
+            } else {
+              setFieldsIncomplete(true);
+            }
+          } catch {
+            // 連不上 Ragic 不擋住編輯，但一定要講 —— 否則使用者會以為看到的就是全部
+            setFieldsIncomplete(true);
+          }
+        }
+      } catch (e) {
+        toast.show(e instanceof ApiError ? e.message : "載入規則失敗", "danger");
+      }
+    })();
+  }, [ruleId, toast]);
   useEffect(() => { void loadAccounts(); }, [loadAccounts]);
   useEffect(() => { ncEventCatalog().then(setCatalog).catch(() => setCatalog([])); }, []);
   useEffect(() => { ncNotifiableUsers().then(setUsers).catch(() => setUsers([])); }, []);
@@ -93,7 +147,9 @@ export default function Wizard({ onDone, onCancel }: { onDone: () => void; onCan
       const res = await ncFetchFields(accountId, sheetPath.trim());
       setFields(res.fields.map((f) => ({ path: String(f.fieldId), label: f.fieldName })));
       setSheetName(res.sheetName || sheetPath.trim());
-      setSelected([]);
+      setFieldsIncomplete(false);
+      // 編輯時重讀不要清掉已選的 —— 那等於逼人重新勾一次
+      if (!editing) setSelected([]);
       toast.show(`已讀取「${res.sheetName || sheetPath.trim()}」· ${res.fields.length} 個欄位`, "ok");
     } catch (e) {
       toast.show(e instanceof ApiError ? e.message : "抓取欄位失敗", "danger");
@@ -123,6 +179,18 @@ export default function Wizard({ onDone, onCancel }: { onDone: () => void; onCan
       const filters = threshold.path && threshold.value !== ""
         ? [{ path: threshold.path, op: "gte" as const, value: Number(threshold.value) }]
         : [];
+      if (editing) {
+        await ncUpdateRule(ruleId!, {
+          name: sourceType === "ragic_form" ? sheetName : (selectedEvent?.label ?? ""),
+          title: title.trim() || null,
+          notifyCreate: evCreate, notifyUpdate: evUpdate, notifyDelete: evDelete,
+          fields: payloadFields,
+          channelType, channelTarget,
+        });
+        toast.show("已更新", "ok");
+        onDone();
+        return;
+      }
       const res = await ncCreateRule({
         name: sourceType === "ragic_form" ? sheetName : (selectedEvent?.label ?? ""),
         sourceType,
@@ -186,7 +254,7 @@ export default function Wizard({ onDone, onCancel }: { onDone: () => void; onCan
   return (
     <div className="pane">
       <div className="pane-hdr"><div>
-        <h1>新增通知規則</h1>
+        <h1>{editing ? "編輯通知規則" : "新增通知規則"}</h1>
         <div className="sub">選觸發來源 → 勾要通知的欄位 → 選通知對象 · 免寫程式</div>
       </div>
       <div><button className="btn" onClick={onCancel}>取消</button></div>
@@ -235,11 +303,26 @@ export default function Wizard({ onDone, onCancel }: { onDone: () => void; onCan
               </div>
             )}
             <div className="nc-row" style={{ marginTop: 14 }}>
-              <div className="field" style={{ margin: 0, flex: 1 }}><label>表單路徑</label>
-                <input className="tf" value={sheetPath} onChange={(e) => setSheetPath(e.target.value)} placeholder="例：/service-tickets/10" /></div>
-              <button className="btn btn-primary" onClick={() => void fetchRagicFields()} disabled={fetching}>{fetching ? "抓取中…" : "抓取欄位"}</button>
+              <div className="field" style={{ margin: 0, flex: 1 }}><label>表單路徑{editing && "（不可修改）"}</label>
+                <input className="tf" value={sheetPath} disabled={editing}
+                  onChange={(e) => setSheetPath(e.target.value)} placeholder="例：/service-tickets/10" /></div>
+              <button className="btn btn-primary" onClick={() => void fetchRagicFields()} disabled={fetching}>
+                {fetching ? "抓取中…" : editing ? "重新讀取欄位" : "抓取欄位"}
+              </button>
             </div>
-            {fields.length > 0 && <div className="nc-ok">✓ 已讀取「{sheetName}」· {fields.length} 個欄位</div>}
+            {editing && (
+              <div className="login-hint" style={{ marginTop: 8 }}>
+                表單路徑與 webhook 網址不能修改 —— 網址已經貼在 Ragic 那一側，
+                改了通知會停掉而對方不會知道。<b>要換表單請新增一條規則。</b>
+              </div>
+            )}
+            {fields.length > 0 && (fieldsIncomplete
+              ? <div className="nc-warn">
+                  ⚠️ 目前<b>連不上 Ragic</b>，下方只列得出這條規則已經在用的 {fields.length} 個欄位，
+                  不是整張表的欄位。<b>現在取消勾選的欄位，存檔後就加不回來了</b>（除非之後連線恢復再重讀）。
+                  想調整欄位請先確認 Ragic 帳號與金鑰可用，再按「重新讀取欄位」。
+                </div>
+              : <div className="nc-ok">✓ 已讀取「{sheetName}」· {fields.length} 個欄位</div>)}
             <div className="field" style={{ marginTop: 14, marginBottom: 0 }}><label>要通知哪些異動</label>
               <div className="nc-evs">
                 <button className={`nc-ev${evCreate ? " on" : ""}`} onClick={() => setEvCreate((v) => !v)}><span className="nc-sw" />新增資料</button>
@@ -309,11 +392,18 @@ export default function Wizard({ onDone, onCancel }: { onDone: () => void; onCan
                 onClick={() => { setChannelType("line_user"); setChannelTarget(""); }}><span className="nc-sw" />LINE 私訊</button>
             </div>
           </div>
+          {/* 已存的對象若不在可選清單裡（群改名、bot 被移出、跨帳號），下面會把它補成一個選項 ——
+              否則下拉只顯示空的 placeholder，看起來像從沒設定過。*/}
           {channelType === "line_group" ? (
             <div className="field" style={{ margin: 0 }}><label>LINE 目標群</label>
               {lineGroups.length > 0 ? (
                 <StyledSelect ariaLabel="LINE 目標群" value={channelTarget} onChange={setChannelTarget} placeholder="選擇 LINE 群"
-                  items={lineGroups.map((g) => ({ id: g.groupId, label: g.displayName || g.groupId }))} />
+                  items={[
+                    ...lineGroups.map((g) => ({ id: g.groupId, label: g.displayName || g.groupId })),
+                    ...(channelTarget && !lineGroups.some((g) => g.groupId === channelTarget)
+                      ? [{ id: channelTarget, label: `${channelTarget}（目前設定 · 清單中查無此群）` }]
+                      : []),
+                  ]} />
               ) : (
                 <input className="tf" value={channelTarget} onChange={(e) => setChannelTarget(e.target.value)}
                   placeholder={sourceType === "ragic_form" ? "先選 Ragic 帳號 · 或直接貼 LINE group id" : "貼上 LINE group id"} />

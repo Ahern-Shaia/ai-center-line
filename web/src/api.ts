@@ -387,6 +387,24 @@ export const ncEventCatalog = () => req<EventDef[]>("/notify-config/event-catalo
 export const ncNotifiableUsers = (tenantId?: string) =>
   req<NotifiableUser[]>(`/notify-config/notifiable-users${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
 export const ncListRules = () => req<NotifyRuleRow[]>("/notify-config");
+
+/** 單條規則完整內容 · 編輯畫面預填用 */
+export interface NotifyRuleDetail {
+  ruleId: string; name: string; sourceType: NotifySourceType;
+  ragicAccountId: string | null; sheetPath: string | null; sheetName: string | null;
+  eventType: string | null;
+  notifyCreate: boolean; notifyUpdate: boolean; notifyDelete: boolean;
+  title: string | null;
+  fields: Array<{ path: string; label: string; order: number }>;
+  channelType: NotifyChannelType; channelTarget: string | null;
+}
+export const ncGetRule = (ruleId: string) => req<NotifyRuleDetail>(`/notify-config/${ruleId}`);
+export const ncUpdateRule = (ruleId: string, body: {
+  name?: string; title?: string | null;
+  notifyCreate?: boolean; notifyUpdate?: boolean; notifyDelete?: boolean;
+  fields?: Array<{ path: string; label: string; order: number }>;
+  channelType?: string; channelTarget?: string;
+}) => req<{ status: string }>(`/notify-config/${ruleId}`, { method: "PATCH", body: JSON.stringify(body) });
 export const ncCreateRule = (body: {
   name: string; sourceType: NotifySourceType;
   ragicAccountId?: string; sheetPath?: string; sheetName?: string;

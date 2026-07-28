@@ -698,6 +698,10 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .ml-card-act .btn:not(.danger) { margin-left:auto; }
 .ml-card-left { font-size:11.5px; color:var(--ink-3); }
 .ml-card-left.urgent { color:var(--warn); font-weight:600; }
+/* 會造成資料永久遺失的警告 · 不可跟一般灰色提示同色 */
+.nc-warn { background:var(--warn-tint); border:1px solid #F3D9A4; border-radius:var(--r); padding:11px 14px; margin-top:10px; font-size:13px; color:#92400E; line-height:1.7; }
+.nc-warn b { color:#7C2D12; }
+
 /* 資料來源 · 主檔同步狀態 */
 .md-status { display:flex; align-items:center; gap:16px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:12px 16px; margin-bottom:16px; }
 .md-stat { text-align:center; background:var(--well); border-radius:var(--r); padding:8px 16px; min-width:92px; }

@@ -12,6 +12,7 @@ const CHANNEL_LABEL: Record<string, string> = { line_group: "LINE 群組", line_
 export default function NotifyConfigPage() {
   const toast = useToast();
   const [mode, setMode] = useState<"list" | "wizard">("list");
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [tab, setTab] = useState<"rules" | "logs">("rules");
   const [rules, setRules] = useState<NotifyRuleRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +54,7 @@ export default function NotifyConfigPage() {
   }
 
   if (mode === "wizard") {
-    return <Wizard onDone={() => { setMode("list"); void load(); }} onCancel={() => setMode("list")} />;
+    return <Wizard ruleId={editingId ?? undefined} onDone={() => { setMode("list"); setEditingId(null); void load(); }} onCancel={() => { setMode("list"); setEditingId(null); }} />;
   }
 
   return (
@@ -63,7 +64,7 @@ export default function NotifyConfigPage() {
           <h1>通知設定</h1>
           <div className="sub">一條規則＝什麼事發生（來源）→ 通知誰（管道）· 支援 Ragic 表單異動與系統內部事件</div>
         </div>
-        <div><button className="btn btn-primary" onClick={() => setMode("wizard")}>＋ 新增通知規則</button></div>
+        <div><button className="btn btn-primary" onClick={() => { setEditingId(null); setMode("wizard"); }}>＋ 新增通知規則</button></div>
       </div>
 
       <div className="dm-tabs">
@@ -81,9 +82,9 @@ export default function NotifyConfigPage() {
       ) : (
         <table className="nc-tbl">
           <thead><tr>
-            <th style={{ width: "24%" }}>規則</th><th style={{ width: "14%" }}>來源</th><th style={{ width: "16%" }}>來源對象</th>
-            <th style={{ width: "12%" }}>觸發</th><th style={{ width: "10%" }}>欄位</th>
-            <th style={{ width: "16%" }}>通知對象</th><th style={{ width: "8%" }}>狀態</th><th style={{ width: "8%" }}>操作</th>
+            <th style={{ width: "18%" }}>規則</th><th style={{ width: "10%" }}>來源</th><th style={{ width: "14%" }}>來源對象</th>
+            <th style={{ width: "10%" }}>觸發</th><th style={{ width: "8%" }}>欄位</th>
+            <th style={{ width: "14%" }}>通知對象</th><th style={{ width: "8%" }}>狀態</th><th style={{ width: "18%" }}>操作</th>
           </tr></thead>
           <tbody>
             {rules.map((r) => (
@@ -108,6 +109,9 @@ export default function NotifyConfigPage() {
                     {r.webhookToken && (
                       <button className="nc-lnk" onClick={() => copyWebhook(r.webhookToken as string)}>複製網址</button>
                     )}
+                    {/* 沒有編輯的話，要調整欄位只能整條刪掉重建 —— 而重建會換 webhook 網址，
+                        客戶還得回 Ragic 重貼一次。*/}
+                    <button className="nc-lnk" onClick={() => { setEditingId(r.ruleId); setMode("wizard"); }}>編輯</button>
                     <button className="nc-lnk mut" onClick={() => void toggleEnabled(r)}>{r.enabled ? "停用" : "啟用"}</button>
                     <button className="nc-lnk danger" onClick={() => setDelTarget(r)}>刪除</button>
                   </div>
