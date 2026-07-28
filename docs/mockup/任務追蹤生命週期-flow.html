@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>任務追蹤生命週期 · UI Flow v2.4</title>
+<title>任務追蹤生命週期 · UI Flow v2.5</title>
 <style>
   :root{
     --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6;
@@ -174,9 +174,9 @@
 <body>
 <div class="wrap">
 
-<h1>任務追蹤生命週期 · UI Flow <span class="muted" style="font-size:19px">v2.4</span></h1>
+<h1>任務追蹤生命週期 · UI Flow <span class="muted" style="font-size:19px">v2.5</span></h1>
 <p class="lede">從 AI 抽出任務，到當責人回報結束的完整動線。</p>
-<p class="meta">2026-07-28 · 對應 <span class="mono">docs/modules/task-completion-tracking.md v2.4</span>
+<p class="meta">2026-07-28 · 對應 <span class="mono">docs/modules/task-completion-tracking.md v2.5</span>
 · 依 prod 真實對話兩輪查驗修正方向（762 則訊息 / 35 張任務 / 149 則引用回覆）</p>
 
 <div class="callout bad big">
@@ -443,7 +443,120 @@
 </div>
 
 
-<h2><span class="n">06</span>⭐ 未完成怎麼一直看得到（不靠強制）</h2>
+<h2><span class="n">06</span>⚠️ 時序：分析是批次，完成訊號是即時</h2>
+<p class="sub">前幾版都假設「webhook 收到回覆 → 找任務 → 關掉」。
+<b>查了 prod 排程後發現這條路走不通</b>——收到回覆的當下，任務往往還不存在。</p>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th style="width:34%">排程</th><th style="width:16%">cron</th>
+    <th style="width:14%">lookback</th><th>上次執行（台北）</th></tr></thead>
+  <tbody>
+    <tr><td><b>group_batch</b>（對話分析 → 任務）</td><td class="mono">0 18 * * *</td>
+        <td class="mono">2 天</td><td class="mono">07/28 18:00:02</td></tr>
+    <tr><td><b>pdr</b>（個人日報）</td><td class="mono">0 18 * * *</td>
+        <td class="mono">1 天</td><td class="mono">07/28 18:00:00</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>問題一：完成回覆比任務早 21 小時</h3>
+<div class="callout bad">
+<span class="mono" style="font-size:13px;line-height:2">
+07/27 18:00　分析跑完（當天批次）<br>
+07/27 21:28　王培樺：「麻煩幫忙設定一廠保全」　　<b>← 任務誕生於此</b><br>
+07/27 21:39　莊益豐：「已設定。」　　　　　　　　<b>← 11 分鐘後就完成了</b><br>
+07/28 18:00　分析才跑到這兩則（lookback 2 天）</span><br><br>
+<b>完成回覆發生在任務被建立的 21 小時之前。</b>當下去找任務，一定找不到。
+</div>
+
+<div class="two">
+  <div class="col old" style="border-radius:var(--r-lg)">
+    <div class="col-hd"><span class="tag">走不通</span>即時對應</div>
+    <div class="col-bd">
+      <p class="mono" style="font-size:12.5px;line-height:1.9;margin:0">
+        webhook 收到回覆<br>
+        → 找任務<br>
+        → <span class="bad">找不到（還沒建）</span><br>
+        → 訊號丟失
+      </p>
+    </div>
+    <div class="note">完成訊號會全部掉在地上。</div>
+  </div>
+  <div class="col new" style="border-radius:var(--r-lg)">
+    <div class="col-hd"><span class="tag">採用</span>先落地，後對應</div>
+    <div class="col-bd">
+      <p class="mono" style="font-size:12.5px;line-height:1.9;margin:0">
+        <b>① 即時</b>　webhook 收到<br>
+        　→ 寫 pending_completion_signal<br>
+        　→ <b>立刻回覆使用者</b><br><br>
+        <b>② 批次後</b>　group_batch 建出任務<br>
+        　→ 回掃未消化訊號<br>
+        　→ 對上關任務／對不上補建
+      </p>
+    </div>
+    <div class="note"><b>回饋即時，對應非同步。</b>使用者感受不到延遲。</div>
+  </div>
+</div>
+
+<h3>問題二：就地問的時候，任務還不存在</h3>
+<div class="two">
+  <div>
+    <div class="phone" style="max-width:360px">
+      <div class="ph-bd" style="min-height:auto">
+        <div class="bub me">快好了</div>
+        <div class="flex-card" style="max-width:92%">
+          <div class="fc-bd" style="padding:9px 11px">
+            收到。<b>你剛回覆的這件</b>算完成了嗎？
+          </div>
+          <div class="fc-ft"><span>完成</span><span style="color:#6B7280">還沒</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <p style="font-size:13.5px;color:var(--ink-2);margin-top:0">
+      問的時候<b>不引用任務，引用那則原始訊息</b>——上下文本來就在。
+    </p>
+    <div class="callout good">
+      答案先存進同一張 <span class="mono">pending_completion_signal</span>，
+      等任務建出來再套用。<br><b>即時回饋保住了，對應延後。</b>
+    </div>
+  </div>
+</div>
+
+<h3>⚠️ 問題三：pdr 比 group_batch 早 2 秒跑（既有缺陷）</h3>
+<div class="callout bad">
+  <span class="mono">18:00:00.876　pdr　　　　← 先跑</span><br>
+  <span class="mono">18:00:02.668　group_batch　← 後跑</span><br><br>
+  兩個排程<b>同一個 cron 表達式，執行順序沒有保證</b>。
+  而 PDR 的「我的任務」是讀 <span class="mono">tickets</span> 的——
+  今天的任務要等 group_batch 建完才有。<br><br>
+  <b>所以現在的個人日報看到的是昨天以前的任務，今天的永遠差一輪。</b>
+  這不是本案造成的，但 M6 會踩到。
+</div>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th style="width:10%"></th><th style="width:45%">做法</th><th>代價</th></tr></thead>
+  <tbody>
+    <tr style="background:var(--ok-tint)"><td><b>A ✅</b></td>
+        <td><b>pdr 改為 group_batch 完成後觸發</b>（事件相依）</td>
+        <td>要改 SchedulerManager</td></tr>
+    <tr><td>B</td><td>pdr 時間往後挪（例如 18:30）</td>
+        <td class="muted">簡單，但仍是<b>用時間猜依賴</b>，批次變慢就又壞掉</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout warn">
+  <b>還有一個誤診風險</b>：「未接住清單」裡要分得出兩種成因，否則會拿錯誤的訊號去調門檻。<br>
+  · <b>未消化</b>　＝ 批次還沒輪到 → <b>等就好，不是問題</b><br>
+  · <span class="mono">no_match</span>　＝ 批次跑過了仍對不上 → <b>這才是材料化漏接</b>，餵回門檻校準
+</div>
+
+
+<h2><span class="n">07</span>⭐ 未完成怎麼一直看得到（不靠強制）</h2>
 <p class="sub">v2 原本把輸入搬到 LINE，卻把可見性留在網頁——而他們沒帳號。
 <b>結果是當責人根本看不到自己還開著幾件。</b>這一段補這個洞。</p>
 
@@ -528,7 +641,7 @@
 </div>
 
 
-<h2><span class="n">07</span>⭐ 持續追蹤是紀律，不是不作為</h2>
+<h2><span class="n">08</span>⭐ 持續追蹤是紀律，不是不作為</h2>
 <p class="sub">不確定的任務一直留著、直到有人確認——這是對的。
 <b>但前提是標籤要說對話。</b></p>
 
@@ -618,7 +731,7 @@
 </div>
 
 
-<h2><span class="n">08</span>主管視角 · 網頁這一區改成給主管看</h2>
+<h2><span class="n">09</span>主管視角 · 網頁這一區改成給主管看</h2>
 <p class="sub">同仁的輸入介面是 LINE。網頁回答的是主管的問題：<b>誰手上有什麼、誰卡住了。</b></p>
 
 <div class="scr">
@@ -660,7 +773,7 @@
 </div>
 
 
-<h2><span class="n">09</span>主管補登與代結案</h2>
+<h2><span class="n">10</span>主管補登與代結案</h2>
 <p class="sub">代標不是例外是必然（Jira 的限制是 opt-in、Asana 根本沒這權限）。但要看得出來是誰按的。</p>
 
 <div class="two">
@@ -708,7 +821,7 @@
 </div>
 
 
-<h2><span class="n">10</span>逾期分流 ＋ 未接住清單</h2>
+<h2><span class="n">11</span>逾期分流 ＋ 未接住清單</h2>
 
 <div class="two">
   <div class="card" style="border-left:3px solid var(--warn)">
@@ -780,7 +893,7 @@
 </div>
 
 
-<h2><span class="n">11</span>⚠️ 第二輪查驗：三次都猜錯瓶頸</h2>
+<h2><span class="n">12</span>⚠️ 第二輪查驗：三次都猜錯瓶頸</h2>
 <p class="sub">每一版都以為找到瓶頸了，每一版都被同一份 prod 資料推翻。這段記下軌跡。</p>
 
 <div class="tbl-wrap">
@@ -837,7 +950,7 @@
 </div>
 
 
-<h2><span class="n">12</span>量測 · 接住率比完成率更早有用</h2>
+<h2><span class="n">13</span>量測 · 接住率比完成率更早有用</h2>
 
 <div class="scr">
   <div class="scr-bar"><span>戰情室 · 任務追蹤成效</span></div>
@@ -865,7 +978,7 @@
 </div>
 
 
-<h2><span class="n">13</span>底層四軸 → 對外一個狀態</h2>
+<h2><span class="n">14</span>底層四軸 → 對外一個狀態</h2>
 
 <div class="tbl-wrap">
 <table>
@@ -895,7 +1008,7 @@
 </div>
 
 
-<h2><span class="n">14</span>明確不做的</h2>
+<h2><span class="n">15</span>明確不做的</h2>
 <div class="three">
   <div class="card"><h4>AI 不自動標完成</h4>
     <p>AI 只能寫 <span class="mono">status</span>，永遠不得寫 <span class="mono">work_status</span>。
@@ -913,7 +1026,7 @@
 </div>
 
 
-<h2><span class="n">15</span>LINE 綁定的定位：加值層，不是啟用條件</h2>
+<h2><span class="n">16</span>LINE 綁定的定位：加值層，不是啟用條件</h2>
 <p class="sub">推廣時常見的想法是「未來以員工綁定 LINE 為使用前提」。
 <b>那本案算不算未綁定時的回退機制？——不算，而且這樣想會把主路徑當備胎蓋。</b></p>
 
@@ -1006,7 +1119,7 @@
 </div>
 
 
-<h2><span class="n">16</span>里程碑（順序已因 prod 實證重排）</h2>
+<h2><span class="n">17</span>里程碑（順序已因 prod 實證重排）</h2>
 <div class="tbl-wrap">
 <table>
   <thead><tr><th style="width:9%">里程碑</th><th>內容</th><th style="width:12%">需綁定？</th></tr></thead>
@@ -1015,12 +1128,12 @@
       <span class="bad">⚠️ 必要但不充分</span>——實測補完也只接得住 1 則（真瓶頸在 M3）。</td><td><b>否</b></td></tr>
     <tr><td class="mono">M2</td><td>migration：<span class="mono">work_status</span> / <span class="mono">work_outcome</span> /
       <span class="mono">work_closed_*</span> ＋ 跨軸 CHECK ＋ <span class="mono">displayState()</span> 投影函數</td><td><b>否</b></td></tr>
-    <tr><td class="mono"><b>M3</b> ⭐⭐</td><td><b>LINE 引用回覆 → 關任務</b>（本案主體）· <b>先擋疑問句</b>再判完成 ·
-      <b>原訊息不是任務時回頭補建</b> · 系統回一則確認</td><td><b>否</b></td></tr>
+    <tr><td class="mono"><b>M3</b> ⭐⭐</td><td><b>LINE 引用回覆 → 完成訊號</b>（本案主體）· <b>拆兩段</b>：3a 即時寫 pending_completion_signal 並回覆 ／ 3b 批次後回掃對應 ·
+      結構過濾 → 擋疑問句 → 高把握完成 → 不確定就地問 · <b>原訊息不是任務時回頭補建</b></td><td><b>否</b></td></tr>
     <tr><td class="mono"><b>M3.5</b> ⭐</td><td><b>每日回報時回覆未完成清單</b>（§06）· 只回他自己發的那則 · 沒發不回 · 0 件不回</td><td><b>否</b></td></tr>
     <tr><td class="mono">M4</td><td>主管視角：看板狀態、逾期分流、未接住清單</td><td><b>否</b></td></tr>
     <tr><td class="mono">M5</td><td>網頁補登、代結案顯示、完成可還原</td><td>部分</td></tr>
-    <tr><td class="mono">M6</td><td>日報頁「你手上的任務」改唯讀（<b>顯示要一直在，寫進去不要</b>），並修掉簽核後任務消失的既有缺陷</td><td><span class="bad">⛔ 要</span></td></tr>
+    <tr><td class="mono">M6</td><td>日報頁「你手上的任務」改唯讀（<b>顯示要一直在，寫進去不要</b>）· 修掉簽核後任務消失 · <b>＋ pdr 改為 group_batch 完成後觸發</b></td><td><span class="bad">⛔ 要</span></td></tr>
     <tr><td class="mono"><b>M7</b> ⭐</td><td><b>gate 不是收尾</b>：接住率＋結案率＋<b>材料化漏接數</b>＋FMEA 覆核<br>
       基線：真完成回覆<b>一週約 3 則</b>。兩週後仍個位數 → 問「任務沒被建出來」而不是「怎麼讓人多回報」</td><td><b>否</b></td></tr>
   </tbody>
