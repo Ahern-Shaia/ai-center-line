@@ -23,7 +23,11 @@ const admin = <T>(fn: (tx: Parameters<Parameters<typeof withTenant>[1]>[0]) => P
 const asTenant = <T>(tenantId: string, fn: (tx: Parameters<Parameters<typeof withTenant>[1]>[0]) => Promise<T>) =>
   withTenant({ tenantId, role: "aiproot_admin", departmentId: null, userId: null }, fn);
 
-async function seedUpload(records: unknown[]): Promise<{ uploadId: number; tenantId: string; cleanup: () => Promise<void> } | null> {
+async function seedUpload(
+  records: unknown[],
+  /** 0035 · M1 · 這批 blob 逐行對應的 LINE 訊息 id · 不給則沿用舊行為（沒有溯源） */
+  opts?: { sourceMessageIds?: string[]; parsedMessageCount?: number },
+): Promise<{ uploadId: number; tenantId: string; cleanup: () => Promise<void> } | null> {
   return admin(async (tx) => {
     const g = await tx.execute<{ group_id: string; tenant_id: string }>(sql`
       SELECT g.group_id, b.tenant_id::text
@@ -38,15 +42,24 @@ async function seedUpload(records: unknown[]): Promise<{ uploadId: number; tenan
     if (!u.rows[0]) return null;
 
     const up = await tx.execute<{ id: string }>(sql`
-      INSERT INTO analysis_upload (tenant_id, tenant_slug, filename, raw_content, uploaded_by, status, group_id)
+      INSERT INTO analysis_upload (tenant_id, tenant_slug, filename, raw_content, uploaded_by, status, group_id,
+                                   source_message_ids)
       VALUES (${grp.tenant_id}::uuid, 'twh', ${`mat-${randomUUID().slice(0, 8)}.txt`}, '',
-              ${u.rows[0].user_id}::uuid, 'done', ${grp.group_id})
+              ${u.rows[0].user_id}::uuid, 'done', ${grp.group_id},
+              ${opts?.sourceMessageIds
+                  ? sql`ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(opts.sourceMessageIds)}::jsonb))::text[]`
+                  : sql`NULL::text[]`})
       RETURNING id::text
     `);
     const uploadId = Number(up.rows[0].id);
+    // messages 的長度就是「parser 解出幾則」· materializer 用它跟 source_message_ids 對長度
+    const msgs = Array.from(
+      { length: opts?.parsedMessageCount ?? opts?.sourceMessageIds?.length ?? 0 },
+      (_, i) => ({ id: i, text: `m${i}` }),
+    );
     await tx.execute(sql`
-      INSERT INTO analysis_result (upload_id, records)
-      VALUES (${uploadId}, ${JSON.stringify(records)}::jsonb)
+      INSERT INTO analysis_result (upload_id, records, messages)
+      VALUES (${uploadId}, ${JSON.stringify(records)}::jsonb, ${JSON.stringify(msgs)}::jsonb)
     `);
     return {
       uploadId,
@@ -142,5 +155,72 @@ test("沒人動過的區可以隨重新分析改變（狀態從公告變成待�
     `));
     await svc.materialize(seeded.uploadId);
     assert.equal((await lanes(seeded.tenantId, seeded.uploadId))["待簽核"], 1, "沒人動過就該跟著 AI 重算");
+  } finally { await seeded.cleanup(); }
+});
+
+// ── 0035 · M1 · 任務 → 原始 LINE 訊息的鏈 ────────────────────────────
+//
+// 這條鏈在 prod 斷了很久（35 張任務 0 張有 source_message_ids），
+// 而 LINE 引用回覆要靠它才知道該關哪一張任務。斷了就整個功能落空，
+// 所以這裡用斷言把它釘住。
+
+const recWithSrc = (title: string, srcIds: number[]) => ({
+  category: "maintenance", title, detail: title, status: "open",
+  person: null, machine_code: null, work_order: null,
+  source_ids: srcIds, confidence: "high",
+});
+
+async function srcMsgIds(tenantId: string, uploadId: number): Promise<Record<string, string[] | null>> {
+  return asTenant(tenantId, async (tx) => {
+    const r = await tx.execute<{ summary: string; ids: string[] | null }>(sql`
+      SELECT summary, source_message_ids AS ids FROM tickets WHERE source_upload_id = ${uploadId}
+    `);
+    return Object.fromEntries(r.rows.map((x) => [x.summary, x.ids]));
+  });
+}
+
+test("⭐ source_ids 的索引被翻成真實的 LINE 訊息 id", async () => {
+  const seeded = await seedUpload(
+    [recWithSrc("換軸承", [0, 2]), recWithSrc("叫料", [1])],
+    { sourceMessageIds: ["LINE_AAA", "LINE_BBB", "LINE_CCC"] },
+  );
+  if (!seeded) return;
+  try {
+    await svc.materialize(seeded.uploadId);
+    const m = await srcMsgIds(seeded.tenantId, seeded.uploadId);
+    assert.deepEqual(m["換軸承"], ["LINE_AAA", "LINE_CCC"], "索引 0,2 要翻成第 1、第 3 則");
+    assert.deepEqual(m["叫料"], ["LINE_BBB"], "索引 1 要翻成第 2 則");
+  } finally { await seeded.cleanup(); }
+});
+
+test("⭐ 訊息數對不上時寧可留 null，不給錯的溯源", async () => {
+  // 來源 3 則、但 parser 只解出 2 則 —— 照索引翻會錯位歸到別則訊息
+  const seeded = await seedUpload(
+    [recWithSrc("換軸承", [0, 1])],
+    { sourceMessageIds: ["LINE_AAA", "LINE_BBB", "LINE_CCC"], parsedMessageCount: 2 },
+  );
+  if (!seeded) return;
+  try {
+    await svc.materialize(seeded.uploadId);
+    const m = await srcMsgIds(seeded.tenantId, seeded.uploadId);
+    assert.equal(m["換軸承"], null, "對不上長度就不寫 —— 錯的溯源比沒有溯源更糟");
+  } finally { await seeded.cleanup(); }
+});
+
+test("重跑不可把已經有的溯源洗成 null", async () => {
+  const seeded = await seedUpload(
+    [recWithSrc("換軸承", [0])],
+    { sourceMessageIds: ["LINE_AAA"] },
+  );
+  if (!seeded) return;
+  try {
+    await svc.materialize(seeded.uploadId);
+    // 模擬「第二次跑時對照表不見了」（例如舊 upload 沒有這欄）
+    await admin((tx) => tx.execute(sql`
+      UPDATE analysis_upload SET source_message_ids = NULL WHERE id = ${seeded.uploadId}
+    `));
+    await svc.materialize(seeded.uploadId);
+    const m = await srcMsgIds(seeded.tenantId, seeded.uploadId);
+    assert.deepEqual(m["換軸承"], ["LINE_AAA"], "翻不出來時要保留舊值");
   } finally { await seeded.cleanup(); }
 });

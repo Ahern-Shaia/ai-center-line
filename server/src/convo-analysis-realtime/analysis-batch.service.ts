@@ -98,6 +98,9 @@ export class AnalysisBatchService {
         source,
         groupId: args.groupId,
         batchDate: args.batchDate,
+        // 0035 · M1 · formatAsLineExport 每則訊息輸出剛好一行，順序與這個陣列一致。
+        // records[].source_ids 存的是 parser 重編的索引，靠這份對照表翻回真實訊息。
+        sourceMessageIds: messages.map((m) => m.messageId),
       }, tx));
 
       // 5. mark

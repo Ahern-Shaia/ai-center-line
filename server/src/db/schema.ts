@@ -69,7 +69,9 @@ export const tickets = pgTable("tickets", {
   needsReview: boolean("needs_review").notNull().default(false),
   syncStatusRagic: text("sync_status_ragic").notNull().default("未同步")
     .$type<"未同步" | "同步中" | "已同步" | "同步失敗">(),
-  sourceMessageIds: uuid("source_message_ids").array(),
+  // 0035 · uuid[] → text[]：LINE 的 message id 是字串不是 uuid
+  // （宣告成 uuid[] 正是這欄從沒被寫過的原因之一）
+  sourceMessageIds: text("source_message_ids").array(),
   messageCount: integer("message_count"),
   // 0017 · warroom-task-board
   assigneeDisplayName: text("assignee_display_name"),
@@ -168,6 +170,9 @@ export const analysisUpload = pgTable("analysis_upload", {
     .$type<"manual" | "webhook" | "webhook_manual">(),               // 0013 加
   groupId: text("group_id"),                                          // 0013 加 · LINE groupId · manual = null
   batchDate: text("batch_date"),                                      // 0013 加 · date (postgres date · driver 回 string)
+  // 0035 · 這批 blob 逐行對應的 line_message.message_id（順序即 parser 編出來的號碼）
+  // records[].source_ids 存的是索引，靠這份對照表翻回真實訊息
+  sourceMessageIds: text("source_message_ids").array(),               // manual 上傳 = null（沒有對應來源）
 });
 
 export const analysisResult = pgTable("analysis_result", {

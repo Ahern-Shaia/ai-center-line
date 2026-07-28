@@ -62,6 +62,12 @@ export class AnalyzeService {
     source: "webhook" | "webhook_manual";
     groupId: string;
     batchDate: string;
+    /**
+     * blob 逐行對應的 line_message.message_id（0035 · M1）
+     * ⚠️ 順序必須與 rawContent 的訊息行完全一致 ——
+     * materializer 拿 records[].source_ids 當索引來翻，錯位就會歸錯任務。
+     */
+    sourceMessageIds?: string[];
   }, tx: Db): Promise<{ id: number; status: string }> {
     const rows = await tx
       .insert(analysisUpload)
@@ -75,6 +81,7 @@ export class AnalyzeService {
         source: args.source,
         groupId: args.groupId,
         batchDate: args.batchDate,
+        sourceMessageIds: args.sourceMessageIds ?? null,
       })
       .returning({ id: analysisUpload.id, status: analysisUpload.status });
     const row = rows[0];

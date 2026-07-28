@@ -33,8 +33,9 @@ export class TicketMaterializerService {
         tenant_id: string;
         group_id: string | null;
         department_id: string | null;
+        source_message_ids: string[] | null;
       }>(sql`
-        SELECT au.tenant_id::text, au.group_id, lg.department_id::text
+        SELECT au.tenant_id::text, au.group_id, lg.department_id::text, au.source_message_ids
         FROM analysis_upload au
         LEFT JOIN line_bot lb ON lb.tenant_id = au.tenant_id
         LEFT JOIN line_group lg ON lg.bot_id = lb.bot_id AND lg.group_id = au.group_id
@@ -44,13 +45,16 @@ export class TicketMaterializerService {
       const uploadRow = upload.rows[0];
       if (!uploadRow) return null;
 
-      const result = await tx.execute<{ records: unknown }>(sql`
-        SELECT records FROM analysis_result WHERE upload_id = ${uploadId} LIMIT 1
+      const result = await tx.execute<{ records: unknown; message_count: number }>(sql`
+        SELECT records, jsonb_array_length(messages) AS message_count
+        FROM analysis_result WHERE upload_id = ${uploadId} LIMIT 1
       `);
       return {
         tenantId: uploadRow.tenant_id,
         groupId: uploadRow.group_id,
         departmentId: uploadRow.department_id,
+        sourceMessageIds: uploadRow.source_message_ids,
+        parsedMessageCount: result.rows[0]?.message_count ?? 0,
         records: (result.rows[0]?.records as Array<{
           category: string;
           title: string;
@@ -80,6 +84,18 @@ export class TicketMaterializerService {
       return { inserted: 0, updated: 0, skipped: bundle.records.length };
     }
 
+    // 0035 · M1 · 索引 → 真實 LINE 訊息 id 的對照表。
+    // ⚠️ 只有在「parser 解出來的則數」與「來源訊息數」一致時才敢用 ——
+    //    formatAsLineExport 每則輸出一行，正常情況下相等；不相等代表有行被合併或吃掉，
+    //    那時候照索引翻會**錯位歸到別則訊息**，寧可留 null 也不要給錯的溯源。
+    const idMap = bundle.sourceMessageIds;
+    const idMapUsable = !!idMap && idMap.length === bundle.parsedMessageCount && idMap.length > 0;
+    if (idMap && !idMapUsable) {
+      this.logger.warn(
+        `materialize · upload=${uploadId} 訊息數對不上（來源 ${idMap.length} vs 解析 ${bundle.parsedMessageCount}）· 本批不寫 source_message_ids`,
+      );
+    }
+
     // Step 2 · tenant_admin 上下文寫 tickets
     return withTenant({ tenantId: bundle.tenantId, role: "tenant_admin" }, async (tx) => {
       let inserted = 0, updated = 0, skipped = 0;
@@ -97,19 +113,28 @@ export class TicketMaterializerService {
         // 對到系統帳號才自動歸屬；對不到一律 unclaimed 由主管手動派（doc §2 寧可不歸屬不可歸錯人）
         const resolved = await this.assigneeResolver.resolve(tx, bundle.tenantId, assignee);
 
+        // R11 可溯源 · 把 source_ids 的索引翻成真實訊息 id（越界的丟掉不硬湊）
+        const srcMsgIds = idMapUsable
+          ? (rec.source_ids ?? [])
+              .map((i) => idMap![i])
+              .filter((v): v is string => typeof v === "string")
+          : null;
+
         // 冪等 UPSERT · ux_tickets_source_record 撞則 UPDATE
         const res = await tx.execute<{ inserted: boolean }>(sql`
           INSERT INTO tickets (
             tenant_id, department_id, category, summary, confidence, status,
             confirm_status, needs_review, assignee_display_name,
             assignee_user_id, assign_status,
-            source_upload_id, source_record_index, message_count
+            source_upload_id, source_record_index, message_count,
+            source_message_ids
           ) VALUES (
             ${bundle.tenantId}::uuid, ${bundle.departmentId}::uuid,
             ${category}, ${summary}, ${rec.confidence}, ${rec.status ?? null},
             ${lane}, false, ${assignee},
             ${resolved.userId}::uuid, ${resolved.status},
-            ${uploadId}, ${idx}, ${rec.source_ids?.length ?? null}
+            ${uploadId}, ${idx}, ${rec.source_ids?.length ?? null},
+            ${textArray(srcMsgIds)}
           )
           ON CONFLICT (source_upload_id, source_record_index)
           WHERE source_upload_id IS NOT NULL AND source_record_index IS NOT NULL
@@ -132,6 +157,8 @@ export class TicketMaterializerService {
             assign_status    = CASE WHEN tickets.assigned_by IS NULL
                                     THEN EXCLUDED.assign_status ELSE tickets.assign_status END,
             message_count = EXCLUDED.message_count,
+            -- 翻不出來時（EXCLUDED 為 null）保留舊值，不要把已經有的溯源洗掉
+            source_message_ids = COALESCE(EXCLUDED.source_message_ids, tickets.source_message_ids),
             updated_at = now()
           RETURNING (xmax = 0) AS inserted
         `);
@@ -147,4 +174,19 @@ export class TicketMaterializerService {
 
 function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) : s;
+}
+
+/**
+ * JS 字串陣列 → Postgres text[]
+ *
+ * ⚠️ 不能把陣列直接丟進 Drizzle 的 sql 模板：它會序列化成字串，
+ * Postgres 回 22P02「Array value must start with "{"」。型別檢查看不出來。
+ * （同一個坑的另一種形態：`= ANY(${jsArray})` 會展成 tuple → 42809）
+ *
+ * 走 jsonb 中轉而不是 string_to_array —— 後者遇到內容含分隔符就會裂開。
+ */
+function textArray(v: string[] | null) {
+  return v === null
+    ? sql`NULL::text[]`
+    : sql`ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(v)}::jsonb))::text[]`;
 }
