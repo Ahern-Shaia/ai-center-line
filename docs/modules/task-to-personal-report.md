@@ -1,6 +1,11 @@
 # task-to-personal-report · 任務自動歸屬當責人並匯入其個人日報
 
-> 狀態：🔨 **M1–M4 本地 SHIPPED**（2026-07-27）· OQ-TPR 全採建議裁定 · ⚠️ 待 push + **prod migration 0031**
+> 狀態：🔨 **M2–M5 完成 · M1 只做了一半**（2026-07-28 覆核）· OQ-TPR 全採建議裁定
+> · prod migration 0031 與回填皆已執行
+>
+> ⚠️ **M1 的「抽取 prompt 加群成員 grounding」從來沒做**，已移交
+> [`tenant-prompt-decoupling.md`](tenant-prompt-decoupling.md)（在那裡一起做，避免改兩次 prompt）。
+> **prod 實測自動歸屬率 0%**，原因與影響見 §8.5。
 >
 > 相關：[`warroom-task-board.md`](warroom-task-board.md)（任務來源）、[`personal-daily-report.md`](personal-daily-report.md)（匯入目標）、[`employee-line-binding.md`](employee-line-binding.md)（身分基石）
 >
@@ -239,11 +244,12 @@ user_line_binding.user_id  →  users（系統帳號）
 
 | 里程碑 | 內容 | 狀態 |
 |---|---|---|
-| M1 | migration 0031（`assignee_user_id` / `assign_status` 三態 / `assigned_by` 稽核）| ✅ |
+| M1a | migration 0031（`assignee_user_id` / `assign_status` 三態 / `assigned_by` 稽核）| ✅ |
+| M1b | **抽取 prompt 加群成員 grounding** | ❌ **沒做** · 移交 tenant-prompt-decoupling |
 | M2 | `AssigneeResolverService` + 材料化時自動解析 + 6 tests | ✅ |
 | M3 | 看板三態顯示 + 抽屜手動派發（**主要介面**）| ✅ |
 | M4 | 我的日報「指派給你的任務」+ 本人按「加入日報」| ✅ |
-| M5 | FMEA 覆核 + prod migration + smoke | ⬜ |
+| M5 | FMEA 覆核 + prod migration + smoke | ✅ · 但 smoke 量出自動歸屬 0%（§8.5）|
 
 ### 實作補強（doc 原本沒寫到的）
 
@@ -268,16 +274,47 @@ user_line_binding.user_id  →  users（系統帳號）
 
 **P0 四條全數落地。** F-6 為已知殘留（重複加入靠人眼），影響低。
 
+### 8.5 ⭐ prod 實測（2026-07-28）：自動歸屬 0%
+
+```
+待認領 unclaimed  9 張（AI 都有讀到人名）
+無指派 none       6 張（AI 沒讀到人名）
+已歸屬 assigned   0 張   ← 自動歸屬一次都沒成功
+```
+
+**兩個獨立原因，要分開看：**
+
+| # | 原因 | 屬於 | 能不能修 |
+|---|---|---|---|
+| ① | **grounding 沒接上**（M1b）· `AssigneeResolverService.directory()` 寫好了但**抽取端從沒呼叫過** —— 全 codebase 只有它自己的定義與測試 | **我們沒做完** | 移交 tenant-prompt-decoupling |
+| ② | **綁定率 10%**（42 人出現在群裡，僅 4 人綁 LINE） | 導入進度 | 不是程式問題 |
+
+沒有候選集，AI 抽出來的是自由文字：
+「郁芬Sandra」「佳慧/小星星/威廉/三爪」「許佳惠/SHIN 新」——
+這種字串連「對得上名單」的機會都被削掉了。
+
+> ⚠️ **但要公平講**：即使 grounding 做到完美，能自動對上的上限也只有已綁定的那 4 個人。
+> 這正是本文 §2 當初的判斷——**待認領是導入期的正常主流程，不是失敗**。
+> 手動派發的路徑是通的，功能可用。
+
+### 8.6 缺一個量測
+
+現在**沒有任何地方看得到自動歸屬率**。
+grounding 接上之後，我們不會知道有沒有變好。
+→ 建議併入 `extraction-health` 那頁（同 tenant-prompt-decoupling OQ-TPD-8 的理由：
+沒有量測就等於沒有 grounding）。
+
 ## 9. 里程碑
 
 | 里程碑 | 內容 |
 |---|---|
 | **M0** | 本文件 + OQ 裁定 ← 目前在這 |
-| **M1** | migration：`tickets.assignee_user_id` + 歸屬狀態；抽取 prompt 加群成員 grounding |
+| **M1** | migration：`tickets.assignee_user_id` + 歸屬狀態 ✅；~~抽取 prompt 加群成員 grounding~~ → **移交 tenant-prompt-decoupling** |
 | **M2** | 歸屬解析服務（唯一命中才寫入 / 其餘待認領）+ 單元測試（同名、未綁定、離職） |
 | **M3** | 任務看板顯示歸屬狀態 + 待認領指派 |
 | **M4** | 個人日報「尚未加入的任務」區塊 + 加入／刪除 |
-| **M5** | FMEA 覆核（4 個 P0）+ prod migration + smoke |
+| **M5** | FMEA 覆核（4 個 P0）+ prod migration + smoke ✅ |
+| **M6** | （新）自動歸屬率進 `extraction-health`（§8.6）· 待 grounding 接上後才有意義 |
 
 ---
 
@@ -285,5 +322,6 @@ user_line_binding.user_id  →  users（系統帳號）
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
+| 2026-07-28 | v1.1 | **覆核後修正狀態**：原本標「M1–M4 SHIPPED」高估了 —— M1 的「抽取 prompt 加群成員 grounding」**從來沒做**，`directory()` 寫好了但抽取端從沒呼叫過。拆成 M1a（migration ✅）/ M1b（grounding ❌，移交 tenant-prompt-decoupling 一起做，避免改兩次 prompt）· M5 補標完成（FMEA 覆核已寫、prod migration 0031 與回填皆已執行）· 新增 §8.5 prod 實測：**自動歸屬 0%**，拆出兩個獨立原因（grounding 沒接上＝我們沒做完；綁定率 10%＝導入進度），並指出即使 grounding 完美，上限也只有已綁定的 4 人 —— 待認領仍是導入期正常主流程 · 新增 §8.6：目前沒有任何地方看得到自動歸屬率，接上 grounding 後不會知道有沒有變好 → 新增 M6 併入 extraction-health | ahern + Claude Code |
 | 2026-07-27 | v1.0 | **OQ-TPR 全採建議裁定 · M1–M4 落地** · 加 §8-bis：用戶 reframe（待認領＝導入期正常主流程，手動派發是主要介面）· prod 實測數字（綁定 10%、人名對得上已綁定僅 3%）· 手動派發不需綁定即可用 · 三項實作補強 · FMEA P0 四條全清 | ahern + Claude Code |
 | 2026-07-27 | v0.1 | M0 首版 · 三條需求逐條查驗（①②已實作、③未實作）· 拆成身分解析／匯流／時序三個問題 · 主張抽取階段 grounding 取代事後模糊比對 · 歸屬三態（已歸屬／待認領／無指派）· 本人為最後防線 · FMEA 10 條含 4 個 P0 · OQ-TPR-1..11 | ahern + Claude Code |
