@@ -174,13 +174,24 @@ export class PersonalDailyReportController {
     // 指派給我、尚未簽核的任務（task-to-personal-report §5）
     // ⚠️ 不自動寫進日報 —— 由本人決定要不要納入。本人是歸屬錯誤的最後一道防線。
     // ⚠️ 只帶 summary 不帶原始對話：任務可能來自本人不在的群組（doc §6 F-3）。
-    const assigned = await tx.execute<{ ticket_id: string; summary: string; category: string | null; created_at: string }>(sql_import`
-      SELECT ticket_id::text, summary, category, created_at::text
+    const assigned = await tx.execute<{
+      ticket_id: string; summary: string; category: string | null; created_at: string;
+      open_days: number; last_report_note: string | null;
+    }>(sql_import`
+      SELECT ticket_id::text, summary, category, created_at::text,
+             (now()::date - created_at::date)::int AS open_days,
+             work_last_report_note AS last_report_note
       FROM tickets
       WHERE assignee_user_id = ${user.user_id}::uuid
         -- 只帶「已經確認是任務」的。待確認的還沒被主管認可為任務，
         -- 提早出現在同仁日報等於要他做一件公司還沒決定要做的事（doc F-6）
-        AND confirm_status IN ('待簽核', '逾時警示')
+        AND confirm_status IN ('待簽核', '已簽核', '逾時警示')
+        -- ⭐ 0036 · M6 · 以**本人有沒有回報完成**為準，不是以主管簽核為準。
+        -- 原本條件是 confirm_status IN ('待簽核','逾時警示')，
+        -- 意思是主管一簽核，任務就從當責人的清單消失 —— 但簽核代表
+        -- 「AI 抽對了」，不是「工作做完了」。負責的人在「這被確認是一件
+        -- 真任務」的那一刻失去了它（doc §1.3b）。
+        AND work_status = 'open'
       ORDER BY created_at DESC
       LIMIT 20
     `);
@@ -209,6 +220,9 @@ export class PersonalDailyReportController {
       todayVisits: visits.rows.map((v) => ({ place: v.place, at: v.at })),
       assignedTasks: assigned.rows.map((t) => ({
         ticketId: t.ticket_id, summary: t.summary, category: t.category, createdAt: t.created_at,
+        // 開了幾天 · 讓人一眼看出哪些拖著（我們沒有 due_at，用天數代替）
+        openDays: t.open_days,
+        lastReportNote: t.last_report_note,
       })),
       userDisplayName: meta?.display_name ?? "",
       tenantName: meta?.tenant_name ?? "",
