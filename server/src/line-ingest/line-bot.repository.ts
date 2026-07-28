@@ -154,6 +154,12 @@ export class LineBotRepository {
 
   // Webhook lookup · 靠 bot_user_id (destination) 找 bot + secret 驗簽
   // 走 owner-context tx 或加 SECURITY DEFINER · webhook 無 session
+  //
+  // ⚠️ 這裡**不過濾 status** —— 由呼叫端判斷並分別記錄。
+  //    原本查詢帶 `AND status = 'active'`，結果「bot 被停用」跟「查無此 bot」
+  //    印同一句 log（webhook destination 不對應任何 bot），
+  //    排查時會被導向「密鑰或設定壞了」的方向。
+  //    （2026-07-28 鮮湧 bot 就是這樣被誤判的）
   async getByBotUserIdWithSecret(tx: Db, botUserId: string): Promise<{
     botId: string; tenantId: string; channelSecret: string; channelAccessToken: string; status: string;
   } | null> {
@@ -168,7 +174,7 @@ export class LineBotRepository {
              pgp_sym_decrypt(channel_access_token_enc, ${key})::text AS channel_access_token,
              status
       FROM line_bot
-      WHERE bot_user_id = ${botUserId} AND status = 'active'
+      WHERE bot_user_id = ${botUserId}
       LIMIT 1
     `);
     const r = res.rows[0];

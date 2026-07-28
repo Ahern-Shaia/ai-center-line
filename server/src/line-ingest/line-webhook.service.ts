@@ -102,6 +102,14 @@ export class LineWebhookService {
         this.logger.warn(`webhook destination 不對應任何 bot · destination=${destination}`);
         return;
       }
+      // 停用中的 bot 一樣不處理，但要跟「查無此 bot」分開講 ——
+      // 兩者印同一句的話，排查時會往「密鑰／設定壞了」的方向找，實際上只是被停用。
+      if (bot.status !== "active") {
+        this.logger.warn(
+          `webhook 收到事件但 bot 已停用 · 事件已丟棄 · botId=${bot.botId} status=${bot.status} destination=${destination}`,
+        );
+        return;
+      }
 
       // HMAC-SHA256(rawBody, channel_secret) · timing-safe compare
       const expected = createHmac("sha256", bot.channelSecret).update(rawBody).digest("base64");
