@@ -5,6 +5,7 @@ import WarRoom from "./warroom/WarRoom";
 import Rag from "./kb/Rag";
 import Onboarding from "./kb/Onboarding";
 import MediaLibrary from "./kb/MediaLibrary";
+import MasterData from "./settings/MasterData";
 import KnowledgeBase from "./kb/KnowledgeBase";
 import CustomerMap from "./kb/CustomerMap";
 import DepartmentsMembers from "./settings/depts-members/Page";
@@ -47,6 +48,7 @@ type Route =
   | { page: "scheduler-config" }
   | { page: "line-groups" }
   | { page: "tenant-binding" }
+  | { page: "master-data" }
   | { page: "convo-list" }
   | { page: "convo-upload" }
   | { page: "convo-detail"; uploadId: number }
@@ -79,6 +81,7 @@ const CRUMB: Record<Route["page"], string> = {
   "scheduler-config": "設定",
   "line-groups": "設定",
   "tenant-binding": "設定",
+  "master-data": "資料來源",
   "convo-list": "AI 對話分析",
   "convo-upload": "AI 對話分析",
   "convo-detail": "AI 對話分析",
@@ -110,6 +113,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "scheduler-config": "定時任務",
   "line-groups": "LINE 群組",
   "tenant-binding": "員工 LINE 綁定",
+  "master-data": "資料來源",
   "convo-list": "分析列表",
   "convo-upload": "上傳新對話",
   "convo-detail": "分析詳情",
@@ -143,6 +147,7 @@ const AIPROOT_ONLY_PAGES = new Set([
   "llm-settings", "line-bots",
   "onboard-tenant", "tenant-mgmt", "extraction-health", "cost-dashboard", "batch-history",
   "binding-audit", "map-config", "notify-config", "category-mgmt", "roles-mgmt",
+  "master-data",
 ]);
 
 function isPageAllowedForRole(page: string, role: string): boolean {
@@ -231,7 +236,8 @@ export default function App() {
   const onNav = (key: string) => {
     if (key === "warroom") setRoute({ page: "warroom" });
     else if (key === "rag" || key === "media" || key === "km" || key === "map"
-      || key === "depts" || key === "audit" || key === "scheduler-config" || key === "line-groups") {
+      || key === "depts" || key === "audit" || key === "scheduler-config" || key === "line-groups"
+      || key === "master-data") {
       setRoute({ page: key });
     } else if (key === "tenant-binding") {
       // 客戶方自治 · 僅 tenant_admin（自租戶 LINE 綁定管理）
@@ -303,6 +309,7 @@ export default function App() {
           {route.page === "rag" && <Rag />}
           {route.page === "onboarding" && <Onboarding onDone={() => setRoute({ page: "warroom" })} />}
           {route.page === "media" && <MediaLibrary />}
+          {route.page === "master-data" && <MasterData />}
           {route.page === "km" && <KnowledgeBase />}
           {route.page === "map" && <CustomerMap />}
           {route.page === "depts" && <DepartmentsMembers />}

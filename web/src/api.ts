@@ -1352,6 +1352,33 @@ export interface MyMonthSummary {
 export const getMyMonthAttendance = () => req<MyMonthSummary>("/attendance/my-month");
 
 /** 地點候選 · 自己去過的地方（four-features-reflection §4 · P3） */
-export interface PlaceSuggestion { name: string; times: number; lastAt: string }
+export interface PlaceSuggestion { name: string; times: number; lastAt: string | null; fromMaster?: boolean }
 export const getPlaceSuggestions = (q: string) =>
   req<{ places: PlaceSuggestion[] }>(`/attendance/places?q=${encodeURIComponent(q)}`);
+
+// 主檔（客戶名冊）· docs/modules/master-data-sync.md
+export interface MasterDataSource {
+  sourceId: string;
+  provider: "ragic" | "manual";
+  accountId: string | null;
+  sheetPath: string | null;
+  nameField: string | null;
+  codeField: string | null;
+  enabled: boolean;
+  lastSyncAt: string | null;
+  lastSyncCount: number | null;
+  lastSyncError: string | null;
+}
+export interface MasterDataState {
+  source: MasterDataSource | null;
+  customerCount: number;
+  ragicAccounts: Array<{ accountId: string; displayName: string; apname: string; hasKey: boolean }>;
+}
+export const getMasterDataSource = (tenantId?: string) =>
+  req<MasterDataState>(`/master-data/source${tenantId ? `?tenantId=${tenantId}` : ""}`);
+export const saveMasterDataSource = (body: {
+  tenantId?: string; provider: "ragic" | "manual"; accountId?: string | null;
+  sheetPath?: string | null; nameField?: string | null; codeField?: string | null;
+}) => req<{ success: boolean }>("/master-data/source", { method: "POST", body: JSON.stringify(body) });
+export const syncMasterData = (tenantId?: string) =>
+  req<{ count: number }>("/master-data/sync", { method: "POST", body: JSON.stringify({ tenantId }) });

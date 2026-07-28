@@ -93,6 +93,8 @@ const NAV: Array<{
       { key: "binding-audit", label: "LINE 綁定稽核", ic: iconTeam, done: true },
       { key: "map-config", label: "地圖里程設定", ic: iconCog, done: true },
       { key: "notify-config", label: "通知設定", ic: iconChat, done: true, perm: "notify-config:view" },
+      // 資料來源與通知設定共用同一組 Ragic 憑證，權限也一致（我方維護）
+      { key: "master-data", label: "資料來源", ic: iconBook, done: true, perm: "notify-config:view" },
       { key: "category-mgmt", label: "分類管理", ic: iconBook, done: true },
       { key: "roles-mgmt", label: "權限管理", ic: iconShield, done: true, perm: "roles:view" },
     ],
