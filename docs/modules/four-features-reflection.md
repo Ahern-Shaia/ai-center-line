@@ -1,6 +1,8 @@
 # four-features-reflection · 四項功能的向上設計
 
-> 狀態：🚧 **M0 DRAFT v0.1**（2026-07-28）· 待用戶裁定 OQ-4FR-1..10
+> 狀態：**v1.0 APPROVED**（2026-07-28）· OQ-4FR-1..10 用戶「全採建議」全數裁定
+> · 新舊對比 mockup：[`../mockup/向上設計-新舊對比.html`](../mockup/向上設計-新舊對比.html)
+> · **A 已與 [`tenant-prompt-decoupling.md`](tenant-prompt-decoupling.md) 合併**（OQ-4FR-3）
 >
 > 相關：[`tenant-prompt-decoupling.md`](tenant-prompt-decoupling.md)（同一個病的一個切面）、[`task-to-personal-report.md`](task-to-personal-report.md)、[`attendance-location-mileage.md`](attendance-location-mileage.md)、[`notify-selfserve-platform.md`](notify-selfserve-platform.md)
 >

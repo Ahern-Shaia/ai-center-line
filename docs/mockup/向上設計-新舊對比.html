@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>向上設計 · 新舊對比</title>
+<style>
+  :root{
+    --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6;
+    --line:#E5E7EB; --line-2:#F0F2F5;
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --primary:#4F46E5; --primary-2:#4338CA; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5;
+    --warn:#D97706; --warn-tint:#FFFBEB;
+    --danger:#E11D48; --danger-tint:#FFF1F2;
+    --r:6px; --r-lg:10px;
+    --sans:'Inter','Noto Sans TC',-apple-system,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --sh:0 1px 2px rgba(17,24,39,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px 20px 80px;background:var(--canvas);color:var(--ink);
+       font-family:var(--sans);font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:27px;margin:0 0 6px;letter-spacing:-.01em}
+  h2{font-size:19px;margin:44px 0 4px;padding-top:20px;border-top:1px solid var(--line)}
+  h2 .n{color:var(--ink-3);font-family:var(--mono);font-size:14px;margin-right:8px}
+  .lede{color:var(--ink-2);margin:0 0 4px}
+  .meta{color:var(--ink-3);font-size:13px;margin:0}
+  .sub{color:var(--ink-2);font-size:14px;margin:2px 0 18px}
+
+  /* 對比雙欄 */
+  .vs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0 6px}
+  @media(max-width:860px){.vs{grid-template-columns:1fr}}
+  .col{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
+       overflow:hidden;box-shadow:var(--sh);display:flex;flex-direction:column}
+  .col-hd{padding:9px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;
+          border-bottom:1px solid var(--line-2)}
+  .col.old .col-hd{background:var(--danger-tint);color:#9F1239}
+  .col.new .col-hd{background:var(--ok-tint);color:#065F46}
+  .tag{font-family:var(--mono);font-size:10.5px;padding:1px 6px;border-radius:3px;
+       background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.06)}
+  .col-bd{padding:14px;flex:1}
+  .note{padding:9px 14px;font-size:12.5px;color:var(--ink-2);background:var(--well);
+        border-top:1px solid var(--line-2)}
+
+  /* 假畫面 */
+  .scr{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+  .scr-bar{background:var(--well);padding:6px 11px;font-size:11.5px;color:var(--ink-3);
+           display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line-2)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ink-3);opacity:.4}
+  .scr-bd{padding:13px}
+  label.f{display:block;font-size:12px;color:var(--ink-2);margin:0 0 4px}
+  .input{border:1px solid var(--line);border-radius:var(--r);padding:8px 11px;font-size:14px;
+         background:var(--surface);color:var(--ink)}
+  .input.ghost{color:var(--ink-3)}
+  .menu{border:1px solid var(--primary);border-radius:var(--r);background:var(--surface);
+        box-shadow:0 6px 18px rgba(17,24,39,.09);margin-top:5px;overflow:hidden}
+  .mi{padding:7px 11px;font-size:13.5px;border-bottom:1px solid var(--line-2);display:flex;
+      align-items:center;justify-content:space-between;gap:8px}
+  .mi:last-child{border-bottom:0}
+  .mi.hl{background:var(--primary-tint)}
+  .mi small{color:var(--ink-3);font-size:11px}
+  .mi.free{color:var(--ink-3);font-style:normal}
+  .btn{display:inline-block;border:1px solid var(--line);border-radius:var(--r);
+       padding:5px 12px;font-size:12.5px;background:var(--surface);color:var(--ink-2)}
+  .btn.p{background:var(--primary);border-color:var(--primary);color:#fff}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .kv{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;
+      border-bottom:1px dashed var(--line-2)}
+  .kv:last-child{border-bottom:0}
+  .kv b{font-weight:600}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .bad{color:var(--danger);font-weight:600}
+  .good{color:var(--ok);font-weight:600}
+  .muted{color:var(--ink-3)}
+  .chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;
+        border:1px solid var(--line);color:var(--ink-2);background:var(--well)}
+  .chip.ok{background:var(--ok-tint);border-color:#A7E3C9;color:#065F46}
+  .chip.warn{background:var(--warn-tint);border-color:#F3D9A4;color:#92400E}
+  .empty{color:var(--ink-3);font-size:13px;text-align:center;padding:22px 8px;
+         border:1px dashed var(--line);border-radius:var(--r);background:var(--well)}
+  .why{background:var(--primary-tint);border:1px solid #C7CEFB;border-radius:var(--r);
+       padding:11px 14px;margin:10px 0 0;font-size:13.5px;color:var(--ink-2)}
+  .why b{color:var(--ink)}
+  .pipe{display:flex;align-items:center;gap:9px;font-size:13.5px;padding:7px 0;
+        border-bottom:1px dashed var(--line-2)}
+  .pipe:last-child{border-bottom:0}
+  .pipe b{width:34px;flex-shrink:0}
+  .arr{color:var(--ink-3);font-family:var(--mono)}
+  .src{flex:1;color:var(--ink-2);font-size:13px}
+  .src.ok-src{color:var(--ink)}
+  .stack{display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 0}
+  .lvl{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+  .down{color:var(--ink-3);font-size:15px;line-height:1}
+  .hub{border:2px solid var(--primary);border-radius:var(--r);background:var(--primary-tint);
+       padding:9px 20px;text-align:center;min-width:220px}
+  .hub b{display:block;font-size:14px;color:var(--primary-2)}
+  .hub span{font-size:12.5px;color:var(--ink-2)}
+  table{width:100%;border-collapse:collapse;margin:10px 0 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:var(--well);font-size:12.5px;color:var(--ink-2)}
+  .foot{margin-top:52px;padding-top:16px;border-top:1px solid var(--line);
+        color:var(--ink-3);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>向上設計 · 新舊對比</h1>
+<p class="lede">四項功能（訂單／日誌／日報／打卡）反思後的具體樣貌</p>
+<p class="meta">2026-07-28 · aiproot · 對照 <span class="mono">docs/modules/four-features-reflection.md</span></p>
+
+<div class="why" style="margin-top:18px">
+  <b>畫面裡的字都是真的。</b>
+  左欄的「小卷米粉」「佳慧/小星星/威廉/三爪」都是 prod 目前實際存在的資料，
+  不是為了對比而編的。右欄是補上主檔層之後的樣子。
+</div>
+
+<!-- ============ 0 · 結構 ============ -->
+<h2><span class="n">00</span>結構：四條平行管線 → 一層共用主檔</h2>
+<p class="sub">這是所有其他改變的根源。下面每一節都是這張圖的一個切面。</p>
+<div class="vs">
+  <div class="col old">
+    <div class="col-hd"><span class="tag">現在</span>各自為政</div>
+    <div class="col-bd">
+      <div class="pipe"><b>訂單</b><span class="arr">→</span><span class="src ok-src">Ragic（有主檔）</span><span class="good">48 則零失敗</span></div>
+      <div class="pipe"><b>日誌</b><span class="arr">→</span><span class="src">自由文字</span><span class="bad">對不上</span></div>
+      <div class="pipe"><b>日報</b><span class="arr">→</span><span class="src">自由文字</span><span class="bad">送出率 19%</span></div>
+      <div class="pipe"><b>打卡</b><span class="arr">→</span><span class="src">自由文字</span><span class="bad">只有 4 人用</span></div>
+    </div>
+    <div class="note">四條線互不相識。同一個客戶在三個地方有三種寫法。</div>
+  </div>
+  <div class="col new">
+    <div class="col-hd"><span class="tag">向上設計</span>共用主檔</div>
+    <div class="col-bd">
+      <div class="stack">
+        <div class="lvl"><span class="chip">Ragic</span><span class="chip">LINE</span></div>
+        <div class="down">↓</div>
+        <div class="hub"><b>共用主檔</b><span>人 · 客戶 · 車輛 · 工單</span></div>
+        <div class="down">↓</div>
+        <div class="lvl"><span class="chip ok">訂單</span><span class="chip ok">日誌</span><span class="chip ok">日報</span><span class="chip ok">打卡</span></div>
+      </div>
+    </div>
+    <div class="note">四項都從同一份主檔取候選集，輸出的是<b>同一個代碼</b>而不是各自的字串。</div>
+  </div>
+</div>
+<div class="why">
+  <b>為什麼是這個順序：</b>訂單通知之所以是唯一穩定的，正是因為它讀的 Ragic 那邊<b>本來就有主檔</b>。
+  我們每天讀它發通知，卻沒有把那份資料留下來——<span class="mono">data_sync_customer</span> 表建好了，
+  prod 是 <b class="bad">0 筆</b>。
+</div>
+
+<!-- ============ 1 · 打卡 ============ -->
+<h2><span class="n">01</span>打卡 · 客戶欄：自由輸入 → 選單（保留自由輸入）</h2>
+<p class="sub">主檔的第一個受益者，也是最能說明問題的一個。</p>
+<div class="vs">
+  <div class="col old">
+    <div class="col-hd"><span class="tag">現在</span>一個空白輸入框</div>
+    <div class="col-bd">
+      <div class="scr">
+        <div class="scr-bar"><span class="dot"></span>外勤打卡</div>
+        <div class="scr-bd">
+          <label class="f">客戶／地點</label>
+          <div class="input ghost">請輸入⋯</div>
+          <div class="row" style="margin-top:12px"><span class="btn p">打卡</span></div>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:13px">
+        <div class="muted" style="font-size:12px;margin-bottom:4px">實際被填進去的（prod 45 筆）：</div>
+        <div class="row">
+          <span class="chip">台北福特</span><span class="chip warn">午餐</span>
+          <span class="chip warn">小卷米粉</span><span class="chip warn">加碼</span>
+          <span class="chip warn">回廠</span><span class="chip warn">測試</span>
+        </div>
+      </div>
+    </div>
+    <div class="note"><b>這不是同仁的錯。</b>沒有選單，就只能打字；打字就會填「今天在幹嘛」而不是「我在哪個客戶」。</div>
+  </div>
+  <div class="col new">
+    <div class="col-hd"><span class="tag">向上設計</span>選單 ＋ 可自由輸入</div>
+    <div class="col-bd">
+      <div class="scr">
+        <div class="scr-bar"><span class="dot"></span>外勤打卡</div>
+        <div class="scr-bd">
+          <label class="f">客戶／地點</label>
+          <div class="input">雲林<span style="color:var(--ink-3)">｜</span></div>
+          <div class="menu">
+            <div class="mi hl">雲林順益斗六廠 <small>上週去過 2 次</small></div>
+            <div class="mi">雲林基督教醫院 <small>客戶主檔</small></div>
+            <div class="mi free">＋ 直接使用「雲林」<small>不在名單中也能打卡</small></div>
+          </div>
+          <div class="row" style="margin-top:12px"><span class="btn p">打卡</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="note">近期去過的排最前面。<b>找不到就照樣自己打</b>——選單是加速，不是限制。</div>
+  </div>
+</div>
+<div class="why">
+  <b>刻意保留自由輸入（FMEA F-3）：</b>新客戶、私人行程、主檔還沒同步到的地方都存在。
+  逼同仁一定要從名單選，結果會是<b>他乾脆不打卡</b>——那比資料髒更糟。
+</div>
+
+<!-- ============ 2 · 日誌 ============ -->
+<h2><span class="n">02</span>日誌 · AI 抽取：自由文字 → 對到人</h2>
+<p class="sub">同一份主檔，換到 AI 這一端就是「候選集」。</p>
+<div class="vs">
+  <div class="col old">
+    <div class="col-hd"><span class="tag">現在</span>沒有候選集</div>
+    <div class="col-bd">
+      <div class="scr">
+        <div class="scr-bar"><span class="dot"></span>任務卡 · 當責人</div>
+        <div class="scr-bd">
+          <div class="kv"><span>台中標案交接與報價單作業</span><span class="chip warn">待認領</span></div>
+          <div class="kv"><span class="muted">AI 讀到</span><b class="bad">佳慧/小星星/威廉/三爪</b></div>
+          <div class="kv"><span class="muted">對到帳號</span><span class="bad">無</span></div>
+        </div>
+      </div>
+      <table>
+        <tr><th>欄位</th><th>命中率</th></tr>
+        <tr><td>當責人</td><td><b class="bad">自動歸屬 0%</b></td></tr>
+        <tr><td>機台</td><td><b class="bad">7%</b></td></tr>
+        <tr><td>工單</td><td><b class="bad">8%</b></td></tr>
+      </table>
+    </div>
+    <div class="note">一格塞四個人名，永遠對不到任何帳號。機台與工單的靶子則根本不存在（主檔是假的）。</div>
+  </div>
+  <div class="col new">
+    <div class="col-hd"><span class="tag">向上設計</span>從主檔給候選集</div>
+    <div class="col-bd">
+      <div class="scr">
+        <div class="scr-bar"><span class="dot"></span>任務卡 · 當責人</div>
+        <div class="scr-bd">
+          <div class="kv"><span>台中標案交接與報價單作業</span><span class="chip ok">已歸屬</span></div>
+          <div class="kv"><span class="muted">AI 讀到</span><b>佳慧、威廉</b></div>
+          <div class="kv"><span class="muted">對到帳號</span><b class="good">許佳惠 · 陳威廉</b></div>
+        </div>
+      </div>
+      <div class="why" style="margin-top:12px;background:var(--well);border-color:var(--line)">
+        抽取時把「這個群裡實際有哪些人」放進 prompt，
+        模型只會輸出名單中的值或 <span class="mono">null</span>，不再自由發揮。
+      </div>
+    </div>
+    <div class="note">同一份主檔，在打卡端是<b>選單</b>，在 AI 端是<b>候選集</b>——本質是同一件事。</div>
+  </div>
+</div>
+
+<!-- ============ 3 · 日報 ============ -->
+<h2><span class="n">03</span>日報 · 從空白 → 自動帶入今天發生的事</h2>
+<p class="sub">這是「一件事貫穿四項」的第一個具體成果。</p>
+<div class="vs">
+  <div class="col old">
+    <div class="col-hd"><span class="tag">現在</span>要自己想今天做了什麼</div>
+    <div class="col-bd">
+      <div class="scr">
+        <div class="scr-bar"><span class="dot"></span>我的日報 · 7/28</div>
+        <div class="scr-bd">
+          <div class="empty">今天還沒有內容<br><span style="font-size:12px">（沒有私訊回報就是空的）</span></div>
+          <div class="row" style="margin-top:12px"><span class="btn">送出</span></div>
+        </div>
+      </div>
+      <div style="margin-top:12px" class="row">
+        <span class="chip warn">16 份日報</span><span class="chip warn">僅 3 份送出 · 19%</span>
+      </div>
+    </div>
+    <div class="note">系統其實知道他今天去了哪、有哪些任務，但日報這一頁看不到——因為 join 不起來。</div>
+  </div>
+  <div class="col new">
+    <div class="col-hd"><span class="tag">向上設計</span>系統先把知道的填好</div>
+    <div class="col-bd">
+      <div class="scr">
+        <div class="scr-bar"><span class="dot"></span>我的日報 · 7/28</div>
+        <div class="scr-bd">
+          <div class="kv"><span>雲林順益斗六廠</span><span class="chip">來自打卡 · 10:20 抵達</span></div>
+          <div class="kv"><span>彰化員榮醫院 · 側踏詢價</span><span class="chip">來自任務</span></div>
+          <div class="kv"><span class="muted">尾門內飾板待討論</span><span class="chip">來自群組</span></div>
+          <div class="row" style="margin-top:12px">
+            <span class="btn p">確認送出</span><span class="muted" style="font-size:12px">可增刪修改</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note">從「<b>要自己想</b>」變成「<b>看一眼、改一下、送出</b>」。這是送出率 19% 最可能的解法。</div>
+  </div>
+</div>
+
+<!-- ============ 4 · 價值對等 ============ -->
+<h2><span class="n">04</span>價值對等 · 向同仁要的動作，要有給同仁的回報</h2>
+<p class="sub">這一項<b>不需要主檔</b>，成本最低，可以現在就做。</p>
+<div class="vs">
+  <div class="col old">
+    <div class="col-hd"><span class="tag">現在</span>打完卡就沒了</div>
+    <div class="col-bd">
+      <div class="scr">
+        <div class="scr-bar"><span class="dot"></span>打卡完成</div>
+        <div class="scr-bd">
+          <div style="text-align:center;padding:14px 0">
+            <div class="good" style="font-size:15px">✓ 已記錄</div>
+            <div class="muted" style="font-size:12.5px;margin-top:4px">10:20 · 雲林順益斗六廠</div>
+          </div>
+        </div>
+      </div>
+      <table>
+        <tr><th>功能</th><th>同仁要做</th><th>同仁得到</th></tr>
+        <tr><td>訂單通知</td><td class="good">不用做</td><td class="good">看得到訂單</td></tr>
+        <tr><td>打卡</td><td>綁定＋每次操作</td><td class="bad">沒有</td></tr>
+        <tr><td>日報</td><td>綁定＋每天送出</td><td class="bad">沒有</td></tr>
+      </table>
+    </div>
+    <div class="note"><b>唯一零成本的功能，是唯一跑得順的。</b>這不是巧合——4/42 綁定率是這樣來的。</div>
+  </div>
+  <div class="col new">
+    <div class="col-hd"><span class="tag">向上設計</span>順手把他的數字給他</div>
+    <div class="col-bd">
+      <div class="scr">
+        <div class="scr-bar"><span class="dot"></span>打卡完成</div>
+        <div class="scr-bd">
+          <div style="text-align:center;padding:10px 0 4px">
+            <div class="good" style="font-size:15px">✓ 已記錄</div>
+            <div class="muted" style="font-size:12.5px;margin-top:4px">10:20 · 雲林順益斗六廠</div>
+          </div>
+          <div style="border-top:1px dashed var(--line-2);margin-top:10px;padding-top:10px">
+            <div class="kv"><span class="muted">本月外出</span><b class="mono">12 趟</b></div>
+            <div class="kv"><span class="muted">累計里程</span><b class="mono">340.6 km</b></div>
+            <div class="kv"><span class="muted">最常跑</span><b>雲林順益 · 4 次</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note">里程<b>早就在算了</b>，只是沒給他看。這是三件小事裡最便宜的一件。</div>
+  </div>
+</div>
+<div class="why">
+  <b>⚠️ 只給本人看自己的，不做排名（FMEA F-6）。</b>
+  一旦變成同儕比較，這個功能會從「我的紀錄」變成「監控我」，抗拒會更大。
+</div>
+
+<!-- ============ 5 · 確認收斂 ============ -->
+<h2><span class="n">05</span>主管的一天 · 三個地方 → 一個入口</h2>
+<p class="sub">最不急的一項。等「請您確認」跑一週看積壓量再決定。</p>
+<div class="vs">
+  <div class="col old">
+    <div class="col-hd"><span class="tag">現在</span>要自己巡三個頁面</div>
+    <div class="col-bd">
+      <div class="kv"><span>總覽儀表</span><span class="chip">每日簽核</span></div>
+      <div class="kv"><span>任務看板</span><span class="chip">請您確認 · 收為任務／不用追</span></div>
+      <div class="kv"><span>我的日報</span><span class="chip">本人送出</span></div>
+      <div class="empty" style="margin-top:12px">沒有一個地方告訴主管「今天總共有幾件事等你」</div>
+    </div>
+    <div class="note">四種確認散在四處，主管得記得自己去巡。</div>
+  </div>
+  <div class="col new">
+    <div class="col-hd"><span class="tag">向上設計</span>一個佇列，四種來源</div>
+    <div class="col-bd">
+      <div class="scr">
+        <div class="scr-bar"><span class="dot"></span>今天要你確認的事 · 9</div>
+        <div class="scr-bd">
+          <div class="kv"><span>簽核今日日誌 <span class="chip">日誌</span></span><span class="btn">前往</span></div>
+          <div class="kv"><span>3 件要不要追 <span class="chip">任務</span></span><span class="btn">前往</span></div>
+          <div class="kv"><span>5 位同仁日報未送 <span class="chip">日報</span></span><span class="btn">前往</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><b>合佇列，不合按鈕。</b>各自前往原本的頁面處理。</div>
+  </div>
+</div>
+<div class="why">
+  <b>⚠️ 絕不做「全部確認」（FMEA F-5）。</b>
+  四種確認語意不同：簽核＝AI 抽對了嗎、收為任務＝這件事要追嗎、日報＝我認可這份彙整。
+  併成一顆按鈕，把關就等於沒有了。
+</div>
+
+<!-- ============ 6 · 順序 ============ -->
+<h2><span class="n">06</span>做的順序</h2>
+<table>
+  <tr><th style="width:56px">順序</th><th>做什麼</th><th style="width:38%">為什麼是這個位置</th></tr>
+  <tr><td><b>P1</b></td><td>§04 價值對等三件小事（里程給本人看／日報送出有回饋／綁定即時有好處）</td><td class="good">不依賴任何東西，<b>可以現在做</b></td></tr>
+  <tr><td><b>P2</b></td><td><b>主檔層落地</b>（Ragic 客戶／聯絡人同步）</td><td><b>gate</b> —— 沒有它，P3–P5 全都做不了</td></tr>
+  <tr><td><b>P3</b></td><td>§01 打卡客戶欄改選單</td><td>主檔的第一個受益者，立刻可驗證</td></tr>
+  <tr><td><b>P4</b></td><td>§02 AI 抽取接候選集</td><td>解 0% 歸屬與 7%／8% 命中率</td></tr>
+  <tr><td><b>P5</b></td><td>§03 日報自動帶入</td><td>需要打卡與任務都對得到客戶</td></tr>
+  <tr><td><b>P6</b></td><td>§05 確認佇列</td><td>最不急</td></tr>
+</table>
+
+<div class="why" style="margin-top:18px">
+  <b>這是加地基，不是重蓋。</b>
+  四項功能現在都能用、都有真實使用紀錄。上面每一項改的都是「輸入什麼」與「看得到什麼」，
+  沒有一項要求打掉現有的流程重做。
+</div>
+
+<p class="foot">
+  aiproot · 2026-07-28 · 依 <span class="mono">docs/modules/four-features-reflection.md</span> v1.0（OQ-4FR 全採建議）製作。
+  左欄數據皆取自 prod 實際資料（台灣福祉 2026-07-22 ～ 07-28）。
+</p>
+
+</div>
+</body>
+</html>
