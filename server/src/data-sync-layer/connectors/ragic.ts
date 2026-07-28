@@ -144,9 +144,16 @@ export class RagicConnector implements SourceConnector {
     const params = new URLSearchParams();
     params.set("api", "");
     params.set("APIKey", this.config.apiKey);
-    params.set("naming", "true"); // 使用欄位名而非 fieldId 為 key（部分 Ragic 支援）
+    // ⚠️ 必須是 EID 不是 "true"。Ragic 預設回的 key 是「欄位名稱」，
+    // 而下面 getField() 是用 fieldId 取值 —— 不指定 EID 就每個欄位都是 undefined，
+    // 而且不會報錯。（notify 在 2026-07-27 踩過同一個坑，這裡因為從沒跑過所以一直沒被發現）
+    params.set("naming", "EID");
     params.set("_subtables", "1");
     params.set("limit", String(options?.limit ?? DEFAULT_LIMIT));
+    if (options?.offset) params.set("offset", String(options.offset));
+    // 只拉需要的欄位 —— 這是隱私設計不是效能設計：
+    // 沒有拉進來的東西不會外洩（master-data-sync.md §3 · F-1 P0）
+    for (const f of options?.fields ?? []) params.append("fetchDomainIds", f);
     if (options?.since) {
       // Ragic where filter · 用 update_at >= since
       // 注意：Ragic where syntax 較複雜 · pilot 先不用 · 全量拉再 client 端 filter

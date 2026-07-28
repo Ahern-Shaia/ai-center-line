@@ -266,20 +266,39 @@ export class AttendanceService {
   async placeSuggestions(user: JwtUser, q: string | null) {
     const tx = currentTx();
     const kw = (q ?? "").trim().slice(0, 50);
-    const res = await tx.execute<{ name: string; times: number; last_at: string }>(sql`
-      SELECT customer_name AS name,
-             count(*)::int AS times,
-             to_char(max(punched_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS last_at
-        FROM attendance_punch
-       WHERE user_id = ${user.user_id}::uuid
-         AND nullif(btrim(customer_name), '') IS NOT NULL
-         AND (${kw} = '' OR customer_name ILIKE '%' || ${kw} || '%')
-       GROUP BY 1
-       ORDER BY max(punched_at) DESC
-       LIMIT 8
+    // 兩個來源，客戶主檔優先：
+    //   ① 客戶主檔（全公司一致 · 兩個人跑同一個客戶會選到同一筆）
+    //   ② 自己去過的（沒有主檔時的 fallback · 但只收斂得了自己）
+    // ⚠️ fallback 不可拿掉：沒接 Ragic 的租戶、主檔還沒同步完的空窗期都要能照常打卡
+    //    （master-data-sync.md OQ-MDS-9）
+    const res = await tx.execute<{ name: string; times: number; last_at: string | null; from_master: boolean }>(sql`
+      WITH mine AS (
+        SELECT customer_name AS name,
+               count(*)::int AS times,
+               max(punched_at) AS last_at
+          FROM attendance_punch
+         WHERE user_id = ${user.user_id}::uuid
+           AND nullif(btrim(customer_name), '') IS NOT NULL
+           AND (${kw} = '' OR customer_name ILIKE '%' || ${kw} || '%')
+         GROUP BY 1
+      ), master AS (
+        SELECT name, 0 AS times, NULL::timestamptz AS last_at
+          FROM data_sync_customer
+         WHERE tenant_id = ${user.tenant_id}::uuid AND active
+           AND (${kw} = '' OR name ILIKE '%' || ${kw} || '%')
+           AND name NOT IN (SELECT name FROM mine)
+      )
+      SELECT name, times,
+             to_char(last_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS last_at,
+             (times = 0) AS from_master
+        FROM (SELECT * FROM mine UNION ALL SELECT * FROM master) s
+       ORDER BY last_at DESC NULLS LAST, name
+       LIMIT 10
     `);
     return {
-      places: res.rows.map((r) => ({ name: r.name, times: r.times, lastAt: r.last_at })),
+      places: res.rows.map((r) => ({
+        name: r.name, times: r.times, lastAt: r.last_at, fromMaster: r.from_master,
+      })),
     };
   }
 

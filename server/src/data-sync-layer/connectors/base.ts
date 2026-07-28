@@ -15,6 +15,9 @@ export interface ConnectorHealthResult {
 export interface ConnectorPullOptions {
   since?: Date;               // 增量拉取 · 只拉 updated_at >= since 的
   limit?: number;             // 分頁上限 · default 200
+  offset?: number;            // 分頁位移
+  /** 只拉這些 fieldId · 空＝全拉（master-data-sync.md §3：沒拉進來的不會外洩） */
+  fields?: string[];
 }
 
 export interface SourceConnector {

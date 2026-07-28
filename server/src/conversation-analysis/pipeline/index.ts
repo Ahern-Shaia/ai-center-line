@@ -65,6 +65,8 @@ export async function runPipeline(
   const knownCategories = await loadKnownCategories(tenantId);
   // 4FR-P4 · 這個租戶實際存在的人 · 給模型當候選集
   const roster = await loadMemberRoster(tenantId);
+  // master-data-sync · 客戶主檔（沒接就是空陣列，抽取回到原行為）
+  const customers = await loadCustomerRoster(tenantId);
 
   const catMap = new Map<number, { category: string; confidence: string }>();
   const templateReports: Array<Record<string, unknown>> = [];
@@ -72,7 +74,7 @@ export async function runPipeline(
   const usage = emptyUsage();
 
   for (const seg of segments) {
-    const { result, usage: u } = await analyzeSegment(provider, groupName, seg, tenant, knownCategories, template, roster);
+    const { result, usage: u } = await analyzeSegment(provider, groupName, seg, tenant, knownCategories, template, roster, customers);
     for (const c of result.classifications) {
       catMap.set(c.id, { category: c.category, confidence: c.confidence });
     }
@@ -178,6 +180,25 @@ async function loadMemberRoster(tenantId?: string): Promise<string[]> {
     return res.rows.map((r) => r.name);
   } catch {
     // 拿不到名單就退回原行為（自由抽取）· 不因為名單查詢失敗而讓整份分析失敗
+    return [];
+  }
+}
+
+/**
+ * 客戶主檔候選 · master-data-sync.md
+ * 沒接主檔就回空陣列 —— 抽取退回原本的自由文字行為，不會壞。
+ */
+async function loadCustomerRoster(tenantId?: string): Promise<string[]> {
+  if (!tenantId) return [];
+  try {
+    const res = await withTenant({ tenantId, role: "tenant_admin" }, (tx) => tx.execute<{ name: string }>(sql`
+      SELECT name FROM data_sync_customer
+       WHERE tenant_id = ${tenantId}::uuid AND active
+       ORDER BY name
+       LIMIT 150
+    `));
+    return res.rows.map((r) => r.name);
+  } catch {
     return [];
   }
 }

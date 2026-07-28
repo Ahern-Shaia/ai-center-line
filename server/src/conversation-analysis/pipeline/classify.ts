@@ -30,6 +30,7 @@ export async function analyzeSegment(
   knownCategories?: Array<{ slug: string; name: string }>,     // WTB-M2 · 若有 · 注入 userMessage
   template: ExtractionTemplate = "factory_report",             // AAL · L2 業種模板
   memberRoster: string[] = [],                                 // 4FR-P4 · 該租戶實際存在的人
+  customerRoster: string[] = [],                               // master-data-sync · 客戶主檔
 ): Promise<{ result: AnalysisResultT; usage: UsageStats }> {
   const body = segment
     .map((m) => `#${m.id} [${m.date} ${m.time}] ${m.sender}: ${m.text.replace(/\n/g, " ⏎ ")}`)
@@ -51,13 +52,19 @@ export async function analyzeSegment(
       + `名單裡沒有的人一律填 null —— 不要自己拼湊或合併名字。\n`
     : "";
 
+  // 客戶候選集 · 同樣放 userMessage（每家客戶名冊不同，放穩定前綴會讓快取失效）
+  const customerHint = customerRoster.length > 0
+    ? `\n# 本公司客戶名冊（提到客戶時請用名冊裡的寫法）\n${customerRoster.join("、")}\n`
+      + `名冊裡沒有的客戶照原文寫，不要硬套成相近的名字。\n`
+    : "";
+
   // L2 模板的抽取規則接在 system prompt 尾端 —— 仍是穩定前綴，caching 不受影響
   // （易變內容如日期/訊息一律在 userMessage · 見 AGENTS.md）
   const def = TEMPLATE_REGISTRY[template];
   const output = await provider.chat({
     systemPrompt: tenant.systemPrompt + def.promptFragment,
     cacheableContext: `# 工廠主檔資料（模擬 Ragic 主檔，供實體對應）\n${tenant.masterDataJson}`,
-    userMessage: `群組名稱：${groupName}${categoryHint}${rosterHint}\n\n請分析以下 ${segment.length} 則訊息：\n${body}`,
+    userMessage: `群組名稱：${groupName}${categoryHint}${rosterHint}${customerHint}\n\n請分析以下 ${segment.length} 則訊息：\n${body}`,
     outputSchema: buildAnalysisSchema(template),
   });
 

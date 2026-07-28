@@ -2,7 +2,7 @@ import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post,
 import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
-import { RagicAccountService } from "./ragic-account.service.js";
+import { RagicAccountService } from "../ragic/ragic-account.service.js";
 import { NotifyConfigService, type CreateRuleInput } from "./notify-config.service.js";
 import { HubAuditRepository } from "../notification-hub/audit.repository.js";
 

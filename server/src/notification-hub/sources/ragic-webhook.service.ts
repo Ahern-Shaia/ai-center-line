@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { withSystemTx } from "../../db/client.js";
-import { RagicApiClient } from "../../notify-config/ragic-api.client.js";
+import { RagicApiClient } from "../../ragic/ragic-api.client.js";
 import { parseRagicWebhook } from "../../notify-config/ragic-webhook.parser.js";
 import { NotificationPipeline, type DeliverResult } from "../notification.pipeline.js";
 import { RuleRepository } from "../rule.repository.js";
