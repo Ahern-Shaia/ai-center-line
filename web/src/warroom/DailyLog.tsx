@@ -160,7 +160,7 @@ function DaySection({ day, defaultOpen }: { day: WarroomDailyDays["days"][number
       {quiet.length > 0 && !showQuiet && (
         <div className="dl-quiet">
           <span>另 {quiet.length} 群當日無日報：</span>
-          <span className="dl-quiet-names">{quiet.map((u) => u.groupName ?? u.groupId).join("、")}</span>
+          <span className="dl-quiet-names">{quiet.map((u) => u.groupName ?? `未命名群組 · ${u.groupId.slice(-6)}`).join("、")}</span>
           <button className="dl-quiet-toggle" onClick={() => setShowQuiet(true)}>展開查看原始訊息</button>
         </div>
       )}
@@ -214,7 +214,10 @@ function GroupCard({
   return (
     <div className="dl-card">
       <div className="dl-card-hdr">
-        <span className="dl-card-group">{groupName ?? groupId}</span>
+        {/* ⚠️ 不要把 LINE 的 group ID（Cf668e5a…）當標題印給使用者看 ——
+            那是內部識別碼，對客戶沒有意義，還會讓畫面看起來像沒設定好。
+            拉不到群名時說「未命名群組」並附短碼，至少看得出是哪一群。 */}
+        <span className="dl-card-group">{groupName ?? `未命名群組 · ${groupId.slice(-6)}`}</span>
         {departmentName && <span className="dl-card-dept">{departmentName}</span>}
       </div>
       {dailyReports.length > 0 ? (

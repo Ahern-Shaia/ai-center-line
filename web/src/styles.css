@@ -1742,6 +1742,17 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .kb-conf-d { width:6px; height:6px; transform:rotate(45deg); background:currentColor; display:inline-block; flex-shrink:0; }
 /* 逾時給實心，因為它是唯一需要「跳出來」的訊號 */
 .kb-over { background:var(--danger); color:#fff; font-weight:600; font-size:11px; padding:2px 7px; border-radius:3px; font-variant-numeric:tabular-nums; }
+/* 卡住 = 沿用「逾時」的實心 pill 模式（V3 Signal 已裁定），只換語意色。
+   ⚠️ 形用 ● 圓點與「逾時」的無形做區隔 —— 色＋形＋字三重編碼，
+   不只靠顏色（design-research-taskboard.md §2 弱點 #1 · 色盲友善）。
+   ⚠️ 這是**量級**不是歸屬：先前把它做成另開一區，正是 §2 弱點 #3 點名的錯。 */
+.kb-stuck { background:var(--warn); color:#fff; font-weight:600; font-size:11px; padding:2px 7px;
+            border-radius:3px; font-variant-numeric:tabular-nums;
+            display:inline-flex; align-items:center; gap:4px; }
+.kb-stuck.hot { background:var(--danger); }
+.kb-stuck-d { width:5px; height:5px; border-radius:50%; background:currentColor; display:inline-block; }
+/* display options 列（Linear 的克制：要聚焦用篩選，不另開容器） */
+.kb-viewbar { display:flex; align-items:center; gap:8px; }
 .kb-card-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11.5px; color:var(--ink-3); }
 .kb-who { display:inline-flex; align-items:center; gap:5px; color:var(--ink-2); }
 .kb-unassigned { color:var(--ink-3); font-style:italic; }
@@ -2241,7 +2252,19 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
                margin-bottom:8px; line-height:1.5; }
 
 /* 有待辦的部門列要跳得出來 —— 原本它跟「今日無待簽」只差一個小數字 */
+/* ⚠️ 沒事可做的列即使健康度是紅的也不該最刺眼：
+   prod 實測整頁最紅的是「今日無待簽」的人資總務，而唯一要動作的那列反而很淡。
+   健康度紅燈是「值得看一眼」，待簽才是「要你動手」—— 後者優先。 */
+.so-item.st-red:not(.so-actionable) { background:var(--surface); }
+.so-item.st-red:not(.so-actionable) .so-name { color:var(--ink-2); }
 .so-item.so-actionable { background:var(--surface); box-shadow:inset 3px 0 0 var(--primary); }
-.so-item.so-actionable .so-name { font-weight:600; }
+/* ⚠️ 基底 .so-name 已經是 700，寫 600 會讓「要處理的那列」反而比別列**更細**。
+   要強調就得比基底重（prod 實測：售後服務明顯比技術工程瘦）。 */
+.so-item.so-actionable .so-name { font-weight:800; }
 /* 沒事可做時的佔位 · 不用按鈕，維持列高一致不讓版面跳動 */
 .so-noop { color:var(--ink-3); font-size:13px; padding:0 12px; user-select:none; }
+/* Drawer 底部的工作狀態（M5 補登）· 卡面只留量級 pill，動作放這裡（Asana 兩層） */
+.wt-box { display:flex; align-items:center; gap:10px; flex:1; }
+.wt-box-state { font-size:12.5px; color:var(--ink-2); }
+.wt-box-state.ok { color:var(--ok); font-weight:600; }
+.wt-box-state.warn { color:var(--warn); font-weight:600; }

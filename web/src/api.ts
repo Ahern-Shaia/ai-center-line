@@ -475,6 +475,12 @@ export interface WarroomKanbanTicket {
   workLastReportNote: string | null;
   /** 四軸投影後的對外單一狀態 · 由後端算，前端不要自己拼（措辭鐵則在後端） */
   displayState: string;
+  /** 卡住幾天 · null = 沒卡住（正常的卡片不長 pill · 全部都顯眼＝沒有重點） */
+  stuckDays: number | null;
+  /** unassigned → 主管要催派工；no_report → 主管要問障礙 */
+  stuckKind: "unassigned" | "no_report" | null;
+  /** 逾時幾天 · due_at 為 null 時由建立日算 */
+  overdueDays: number | null;
 }
 
 export interface WarroomTaskBoard {
@@ -484,14 +490,11 @@ export interface WarroomTaskBoard {
     overdue: WarroomKanbanTicket[];
     unconfirmed: WarroomKanbanTicket[];   // 中信心 · 等主管決定要不要追
     archived: WarroomKanbanTicket[];      // 公告與已完成 · 留著可查
-    /** 逾期未開始 · 沒人接 → 主管要催派工 */
-    overdueUnassigned: WarroomKanbanTicket[];
-    /** 逾期未確認完成 · 有人接了但卡住 → 主管要問障礙 */
-    overdueUnconfirmed: WarroomKanbanTicket[];
   };
   counts: {
     pending: number; signed: number; overdue: number; unconfirmed: number; archived: number;
-    overdueUnassigned: number; overdueUnconfirmed: number;
+    /** 卡住的張數 · 給「只看卡住的」篩選用 */
+    stuck: number;
   };
 }
 

@@ -129,7 +129,7 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
             不把單位寫完整的話，看的人會以為三個數字可以互相比較。 */}
         <Gauge value={wr.signoff_rate} label="本日簽核率"
                frac={`${wr.signed_depts} / ${wr.dept_count} 個部門已簽`} color="#4F46E5" />
-        <Gauge value={wr.health_rate} label="群組健康度"
+        <Gauge value={wr.health_rate} label="部門健康度"
                frac={`${wr.green_depts} / ${wr.dept_count} 個部門綠燈`} color="#059669" />
         <Gauge value={wr.high_conf_ratio} label="AI 高信心比例"
                frac={`${wr.high_num} / ${wr.high_den} 筆已標記`} color="#D97706" />

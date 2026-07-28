@@ -11,12 +11,14 @@ import { catLabel } from "../shared/categoryLabel";
 import { canOpenConvoDetail, navigateTo } from "../nav";
 import { assignTicket, getAssignableMembers, getTicketSource, type AssignableMember, type TicketSource } from "../api";
 import { ArchivedList, UnconfirmedQueue } from "./TaskTriage";
-import { OverdueLanes } from "./WorkTracking";
+import { WorkStatusBox } from "./WorkTracking";
 
 // WTB-M4 · 任務看板 Kanban 3 欄 (待簽核 / 逾時 / 已簽核)
 // 對照 docs/modules/warroom-task-board.md §7.2
 export default function TaskBoard() {
   const [board, setBoard] = useState<WarroomTaskBoard | null>(null);
+  // 「只看卡住的」· Linear 的 display options —— 要聚焦用篩選，不用另開一個容器
+  const [onlyStuck, setOnlyStuck] = useState(false);
   const [loading, setLoading] = useState(true);
   const [drawer, setDrawer] = useState<WarroomKanbanTicket | null>(null);
   const [signing, setSigning] = useState<Set<string>>(new Set());
@@ -57,6 +59,11 @@ export default function TaskBoard() {
   if (loading && !board) return <div className="dm-empty">載入任務看板中…</div>;
   if (!board) return null;
 
+  // 篩選只影響「顯示什麼」，不影響欄頭計數 —— 計數要一直是真實總數，
+  // 否則開了篩選之後數字跟著變，人會分不清是篩掉了還是真的少了
+  const pick = (list: typeof board.kanban.pending) =>
+    onlyStuck ? list.filter((t) => t.stuckDays != null) : list;
+
   return (
     <>
       <div className="pane-hdr">
@@ -64,7 +71,17 @@ export default function TaskBoard() {
           <h1>任務看板</h1>
           <div className="sub">下方三欄是需要您簽核的任務 · 點卡片可展開原始對話對照</div>
         </div>
-        <button className="btn" onClick={() => void refresh()} disabled={loading}>重新整理</button>
+        <div className="kb-viewbar">
+          {board.counts.stuck > 0 && (
+            <button
+              className={`btn btn-sm${onlyStuck ? " btn-primary" : ""}`}
+              onClick={() => setOnlyStuck((v) => !v)}
+            >
+              {onlyStuck ? "顯示全部" : `只看卡住的（${board.counts.stuck}）`}
+            </button>
+          )}
+          <button className="btn" onClick={() => void refresh()} disabled={loading}>重新整理</button>
+        </div>
       </div>
 
       <UnconfirmedQueue
@@ -78,39 +95,25 @@ export default function TaskBoard() {
           title="待簽核"
           tone="warn"
           count={board.counts.pending}
-          tickets={board.kanban.pending}
+          tickets={pick(board.kanban.pending)}
           onOpen={setDrawer}
         />
         <KanbanColumn
           title="逾時警示"
           tone="danger"
           count={board.counts.overdue}
-          tickets={board.kanban.overdue}
+          tickets={pick(board.kanban.overdue)}
           onOpen={setDrawer}
         />
         <KanbanColumn
           title="已簽核"
           tone="ok"
           count={board.counts.signed}
-          tickets={board.kanban.signed}
+          tickets={pick(board.kanban.signed)}
           onOpen={setDrawer}
           note={signedNote(board)}
-          emptyLabel={
-            board.counts.overdueUnassigned + board.counts.overdueUnconfirmed > 0
-              ? "已簽核的任務都卡住了 · 在下方「卡住的工作」"
-              : undefined
-          }
         />
       </div>
-
-      {/* 逾期分流 · 兩欄的管理動作完全不同：左邊催派工、右邊問障礙。
-          合成一個桶子的話主管無法分流（doc §8） */}
-      <OverdueLanes
-        unassigned={board.kanban.overdueUnassigned}
-        unconfirmed={board.kanban.overdueUnconfirmed}
-        onOpen={setDrawer}
-        onChanged={() => void refresh()}
-      />
 
       <ArchivedList
         tickets={board.kanban.archived}
@@ -130,17 +133,9 @@ export default function TaskBoard() {
   );
 }
 
-/**
- * 已簽核欄的註腳。
- * 卡住的票已經移到下方的逾期分流 —— 這裡要講出去哪了，
- * 不然主管會以為簽核過的票憑空少了幾張。
- */
+/** 已簽核欄的註腳 · 只在超過顯示上限時才講 */
 function signedNote(board: WarroomTaskBoard): string | undefined {
-  const moved = board.counts.overdueUnassigned + board.counts.overdueUnconfirmed;
-  const parts: string[] = [];
-  if (moved > 0) parts.push(`另有 ${moved} 件卡住了 · 已移到下方「卡住的工作」`);
-  if (board.counts.signed > 30) parts.push(`顯示最近 30 筆 · 共 ${board.counts.signed}`);
-  return parts.length > 0 ? parts.join(" · ") : undefined;
+  return board.counts.signed > 30 ? `顯示最近 30 筆 · 共 ${board.counts.signed}` : undefined;
 }
 
 type Tone = "warn" | "danger" | "ok";
@@ -186,7 +181,10 @@ function TicketCard({ t, tone, onOpen }: { t: WarroomKanbanTicket; tone: Tone; o
     : t.confidence === "low" ? { label: "信度低", level: "low" }
       : null;
   // 逾時要顯「量級」不只是「在逾時欄」—— 逾 1 天和逾 15 天的處理順序完全不同
-  const overdueDays = tone === "danger" ? daysOverdue(t.dueAt) : null;
+  // ⚠️ 改吃後端算好的 overdueDays：prod 的 due_at 100% 是 null，
+  //    只吃 due_at 的舊寫法讓這個 pill **從來沒顯示過**
+  //    （design-research-taskboard.md §4 那行 ⬜ 掛了五天的真正原因）
+  const overdueDays = tone === "danger" ? t.overdueDays : null;
   const dueText = t.dueAt && overdueDays == null ? formatDate(t.dueAt) : null;
   const who = t.assigneeDisplayName;
 
@@ -203,6 +201,15 @@ function TicketCard({ t, tone, onOpen }: { t: WarroomKanbanTicket; tone: Tone; o
           </span>
         )}
         {overdueDays != null && <span className="kb-over">逾時 {overdueDays} 天</span>}
+        {/* 卡住＝**量級**不是歸屬（design-research-taskboard.md §2 弱點 #3）。
+            沿用 V3 已裁定的實心 pill，形用 ● 圓點與「逾時」的無形做區隔 ——
+            色＋形＋字三重編碼，不只靠顏色。正常的卡片不長這個 pill。 */}
+        {t.stuckDays != null && (
+          <span className={`kb-stuck${t.stuckKind === "unassigned" ? " hot" : ""}`}>
+            <span className="kb-stuck-d" aria-hidden />
+            卡住 {t.stuckDays} 天 · {t.stuckKind === "unassigned" ? "待指派" : "無回報"}
+          </span>
+        )}
         {dueText && (
           <span className="kb-due">
             <svg className="kb-ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -409,6 +416,11 @@ function TicketDrawer({
           )}
         </div>
         <div className="drawer-foot">
+          {/* 工作狀態（第四條軸）· 只有已簽核的才有意義 ——
+              還在簽核佇列的，主管的動作是「簽核」不是「補登結束」 */}
+          {ticket.confirmStatus === "已簽核" && (
+            <WorkStatusBox ticket={ticket} onChanged={onAssigned} />
+          )}
           {ticket.confirmStatus === "待簽核" || ticket.confirmStatus === "逾時警示" ? (
             <button className="btn btn-primary" onClick={() => onSignoff(ticket)} disabled={signing}>
               {signing ? "簽核中…" : "簽核此筆"}
