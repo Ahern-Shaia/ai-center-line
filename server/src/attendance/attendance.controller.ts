@@ -47,6 +47,18 @@ export class AttendanceController {
     return this.svc.relabelPunch(user, punchId, typeof body?.customerName === "string" ? body.customerName : null);
   }
 
+  /** 地點候選 · 自己去過的地方（選單是加速不是限制 · 前端仍保留自由輸入） */
+  @Get("places")
+  async places(@CurrentUser() user: JwtUser, @Query("q") q?: string) {
+    return this.svc.placeSuggestions(user, typeof q === "string" ? q : null);
+  }
+
+  /** 本月外勤摘要 · 只回自己的（打卡完給同仁看自己的數字 · 4FR §7） */
+  @Get("my-month")
+  async myMonth(@CurrentUser() user: JwtUser) {
+    return this.svc.myMonthSummary(user);
+  }
+
   // date 選填（YYYY-MM-DD，台北日）· 省略＝當日 · 只回自己的行程 + 打卡序列
   @Get("trips")
   async trips(@CurrentUser() user: JwtUser, @Query("date") date?: string) {

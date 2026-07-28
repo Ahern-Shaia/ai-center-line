@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { sql } from "drizzle-orm";
 import { currentTx, withSystemTx } from "../db/client.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { AttendanceRepository, type PunchLite } from "./attendance.repository.js";
@@ -201,6 +202,87 @@ export class AttendanceService {
   }
 
   // 指定台北日期的行程 + 打卡序列（dateStr = null → 當日）· 員工只看自己（以 JWT user_id 限定）
+  /**
+   * 本月外勤摘要 · 給打卡的人自己看 · four-features-reflection.md §7（價值對等）
+   *
+   * 里程本來就在算了，只是從來沒給同仁看過。
+   * 四項功能裡唯一零成本（訂單通知）的那項是唯一跑得順的 ——
+   * 其餘三項都要同仁付出、回報卻只給主管，所以綁定率 4/42、日報送出率 19%。
+   *
+   * ⚠️ 只回自己的，而且不做同儕排名（FMEA F-6）：
+   * 一旦變成互相比較，這個功能就從「我的紀錄」變成「監控我」，抗拒只會更大。
+   */
+  async myMonthSummary(user: JwtUser) {
+    const tx = currentTx();
+    const res = await tx.execute<{
+      trips: number; meters: string | number | null; days: number;
+      top_place: string | null; top_count: number | null;
+    }>(sql`
+      WITH mine AS (
+        SELECT t.trip_id, t.distance_m, t.created_at,
+               (SELECT p.customer_name FROM attendance_punch p
+                 WHERE p.user_id = t.user_id
+                   AND nullif(p.customer_name, '') IS NOT NULL
+                   AND p.punched_at <= t.created_at
+                 ORDER BY p.punched_at DESC LIMIT 1) AS place
+          FROM attendance_trip t
+         WHERE t.user_id = ${user.user_id}::uuid
+           AND t.created_at >= date_trunc('month', now() AT TIME ZONE 'Asia/Taipei')
+      )
+      SELECT count(*)::int                                   AS trips,
+             COALESCE(sum(distance_m), 0)                    AS meters,
+             count(DISTINCT (created_at AT TIME ZONE 'Asia/Taipei')::date)::int AS days,
+             (SELECT place FROM mine WHERE place IS NOT NULL
+               GROUP BY place ORDER BY count(*) DESC LIMIT 1) AS top_place,
+             (SELECT count(*)::int FROM mine m2
+               WHERE m2.place = (SELECT place FROM mine WHERE place IS NOT NULL
+                                  GROUP BY place ORDER BY count(*) DESC LIMIT 1)) AS top_count
+        FROM mine
+    `);
+    const r = res.rows[0];
+    const meters = Number(r?.meters ?? 0);
+    return {
+      trips: r?.trips ?? 0,
+      outDays: r?.days ?? 0,
+      // 公里到小數一位就好 —— 這是給人看的數字，不是報帳依據
+      km: Math.round(meters / 100) / 10,
+      topPlace: r?.top_place ?? null,
+      topPlaceCount: r?.top_count ?? 0,
+    };
+  }
+
+  /**
+   * 地點候選 · 這個人自己去過的地方，依「最近去過 + 去過幾次」排序。
+   *
+   * 為什麼先做這個而不是等 Ragic 客戶主檔（four-features-reflection.md §4 · P3）：
+   * prod 的打卡地點是自由輸入，填進去的是「午餐」「小卷米粉」「加碼」——
+   * 那不是同仁的錯，**沒有選單就只能打字**。
+   * 用他自己去過的地方當候選，第二次去同一個客戶就不用重打，
+   * 拼寫自然收斂，而且完全不依賴外部主檔。
+   *
+   * ⚠️ 只回自己的（別人的行程是隱私），而且**選單是加速不是限制**——
+   * 前端必須保留自由輸入（FMEA F-3：逼人從名單選，結果會是他乾脆不打卡）。
+   */
+  async placeSuggestions(user: JwtUser, q: string | null) {
+    const tx = currentTx();
+    const kw = (q ?? "").trim().slice(0, 50);
+    const res = await tx.execute<{ name: string; times: number; last_at: string }>(sql`
+      SELECT customer_name AS name,
+             count(*)::int AS times,
+             to_char(max(punched_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS last_at
+        FROM attendance_punch
+       WHERE user_id = ${user.user_id}::uuid
+         AND nullif(btrim(customer_name), '') IS NOT NULL
+         AND (${kw} = '' OR customer_name ILIKE '%' || ${kw} || '%')
+       GROUP BY 1
+       ORDER BY max(punched_at) DESC
+       LIMIT 8
+    `);
+    return {
+      places: res.rows.map((r) => ({ name: r.name, times: r.times, lastAt: r.last_at })),
+    };
+  }
+
   async tripsByDate(user: JwtUser, dateStr: string | null) {
     if (dateStr !== null && !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       throw new BadRequestException("date 格式需為 YYYY-MM-DD");

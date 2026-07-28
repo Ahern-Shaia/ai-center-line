@@ -63,6 +63,8 @@ export async function runPipeline(
 
   // WTB-M2 · 讀 category_registry active list · 若 tenant 沒 registry → 用 DEFAULT_CATEGORIES
   const knownCategories = await loadKnownCategories(tenantId);
+  // 4FR-P4 · 這個租戶實際存在的人 · 給模型當候選集
+  const roster = await loadMemberRoster(tenantId);
 
   const catMap = new Map<number, { category: string; confidence: string }>();
   const templateReports: Array<Record<string, unknown>> = [];
@@ -70,7 +72,7 @@ export async function runPipeline(
   const usage = emptyUsage();
 
   for (const seg of segments) {
-    const { result, usage: u } = await analyzeSegment(provider, groupName, seg, tenant, knownCategories, template);
+    const { result, usage: u } = await analyzeSegment(provider, groupName, seg, tenant, knownCategories, template, roster);
     for (const c of result.classifications) {
       catMap.set(c.id, { category: c.category, confidence: c.confidence });
     }
@@ -144,6 +146,39 @@ async function loadKnownCategories(tenantId?: string): Promise<Array<{ slug: str
     return res.rows.map((r) => ({ slug: r.slug, name: r.name }));
   } catch {
     return DEFAULT_CATEGORIES.map((s) => ({ slug: s, name: s }));
+  }
+}
+
+/**
+ * 這個租戶實際存在的人名 · four-features-reflection.md §4
+ *
+ * 為什麼需要：沒有候選集時，模型抽出來的是自由文字 ——
+ * prod 實際抽到過「佳慧/小星星/威廉/三爪」（一格四個人）、「許佳惠/SHIN 新」，
+ * 這種字串永遠對不到任何帳號，自動歸屬因此是 0%。
+ *
+ * 名單來源是 line_member + users，都是真實資料（prod 42 人），
+ * 不是 tenant-twh.ts 那份假主檔（P-01 洪○○ 那些人在真實群組裡不存在）。
+ *
+ * ⚠️ 只送顯示名，不送電話/地址 —— 名單會進 prompt 送到模型供應商（FMEA F-1）。
+ */
+async function loadMemberRoster(tenantId?: string): Promise<string[]> {
+  if (!tenantId) return [];
+  try {
+    const res = await withTenant({ tenantId, role: "tenant_admin" }, (tx) => tx.execute<{ name: string }>(sql`
+      SELECT DISTINCT btrim(name) AS name FROM (
+        SELECT u.display_name AS name FROM users u
+         WHERE u.tenant_id = ${tenantId}::uuid AND nullif(btrim(u.display_name), '') IS NOT NULL
+        UNION
+        SELECT lm.display_name FROM line_member lm
+         WHERE lm.tenant_id = ${tenantId}::uuid AND nullif(btrim(lm.display_name), '') IS NOT NULL
+      ) s
+      ORDER BY 1
+      LIMIT 80
+    `));
+    return res.rows.map((r) => r.name);
+  } catch {
+    // 拿不到名單就退回原行為（自由抽取）· 不因為名單查詢失敗而讓整份分析失敗
+    return [];
   }
 }
 

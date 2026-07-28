@@ -184,11 +184,29 @@ export class PersonalDailyReportController {
       ORDER BY created_at DESC
       LIMIT 20
     `);
+    // 今天去過哪 · four-features-reflection.md §5（P5）
+    //
+    // 日報 16 份只有 3 份送出（19%）。最可能的原因是「要自己想今天做了什麼」——
+    // 但系統其實知道他今天去了哪，只是這一頁看不到。
+    // 從「要自己想」變成「看一眼、改一下、送出」。
+    // ⚠️ 一樣不自動寫進日報，由本人決定要不要納入（同 assignedTasks 的理由）。
+    const visits = await tx.execute<{ place: string; at: string }>(sql_import`
+      SELECT customer_name AS place,
+             to_char(punched_at AT TIME ZONE 'Asia/Taipei', 'HH24:MI') AS at
+        FROM attendance_punch
+       WHERE user_id = ${user.user_id}::uuid
+         AND nullif(btrim(customer_name), '') IS NOT NULL
+         AND (punched_at AT TIME ZONE 'Asia/Taipei')::date = ${date}::date
+       ORDER BY punched_at
+       LIMIT 20
+    `);
+
     return {
       report: row,
       requestedDate: date,
       pendingMessageCount,
       pendingMessages,
+      todayVisits: visits.rows.map((v) => ({ place: v.place, at: v.at })),
       assignedTasks: assigned.rows.map((t) => ({
         ticketId: t.ticket_id, summary: t.summary, category: t.category, createdAt: t.created_at,
       })),
@@ -209,7 +227,14 @@ export class PersonalDailyReportController {
     const action = body.action ?? "save_draft";
 
     const tx = currentTx();
-    const row = await this.repo.getByUserDate(tx, user.user_id, date);
+    let row = await this.repo.getByUserDate(tx, user.user_id, date);
+    // 今天沒有日報列，但本人自己加了項目（來自打卡／指派任務）→ 幫他開一列。
+    // 原本一律擋並回「請先傳訊息給 bot」，但那些項目根本不需要私訊 bot 就存在，
+    // 加得進去卻送不出去，使用者會走到死路（4FR §5）。
+    if (!row && body.items.length > 0 && user.tenant_id) {
+      await this.repo.ensureRow(tx, { tenantId: user.tenant_id, userId: user.user_id, reportDate: date });
+      row = await this.repo.getByUserDate(tx, user.user_id, date);
+    }
     if (!row) throw new BadRequestException("尚未生成日報 · 請先傳訊息給 bot 或按重新生成");
     if (row.userId !== user.user_id) throw new ForbiddenException("只能編輯自己的日報");
 

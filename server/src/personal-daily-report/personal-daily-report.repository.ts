@@ -129,6 +129,25 @@ export class PersonalDailyReportRepository {
     return { reportId: res.rows[0].report_id };
   }
 
+  /**
+   * 沒有日報列就開一列（給「自己手動加項目」用）· four-features-reflection.md §5
+   *
+   * 為什麼需要：原本 save 遇到沒有日報列一律擋，訊息是「請先傳訊息給 bot」。
+   * 但同仁可能今天沒私訊 bot，卻有打卡、有被指派任務 ——
+   * 那些都是可以加進日報的東西。加得進去卻送不出，使用者就走到死路了。
+   *
+   * ai_items 留空：這一列不是 AI 產的，是本人自己開的。
+   */
+  async ensureRow(tx: Db, args: { tenantId: string; userId: string; reportDate: string }): Promise<{ reportId: string }> {
+    const res = await tx.execute<{ report_id: string }>(sql`
+      INSERT INTO personal_daily_report (tenant_id, user_id, report_date, ai_items, status)
+      VALUES (${args.tenantId}::uuid, ${args.userId}::uuid, ${args.reportDate}::date, '[]'::jsonb, 'draft')
+      ON CONFLICT (user_id, report_date) DO UPDATE SET updated_at = now()
+      RETURNING report_id
+    `);
+    return { reportId: res.rows[0].report_id };
+  }
+
   async markEmpty(tx: Db, args: { tenantId: string; userId: string; reportDate: string }): Promise<void> {
     await tx.execute(sql`
       INSERT INTO personal_daily_report (tenant_id, user_id, report_date, ai_items, status, ai_generated_at)

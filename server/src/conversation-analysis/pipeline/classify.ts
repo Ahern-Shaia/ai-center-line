@@ -29,6 +29,7 @@ export async function analyzeSegment(
   tenant: Tenant,
   knownCategories?: Array<{ slug: string; name: string }>,     // WTB-M2 · 若有 · 注入 userMessage
   template: ExtractionTemplate = "factory_report",             // AAL · L2 業種模板
+  memberRoster: string[] = [],                                 // 4FR-P4 · 該租戶實際存在的人
 ): Promise<{ result: AnalysisResultT; usage: UsageStats }> {
   const body = segment
     .map((m) => `#${m.id} [${m.date} ${m.time}] ${m.sender}: ${m.text.replace(/\n/g, " ⏎ ")}`)
@@ -38,13 +39,25 @@ export async function analyzeSegment(
     ? `\n# 已知分類（依使用頻率 · 優先歸入 · 全新性質才自行命名）\n${knownCategories.map((c) => `- ${c.slug} (${c.name})`).join("\n")}\n`
     : "";
 
+  // 人名候選集 · 放 userMessage 不放 system（名單依租戶而異，放進穩定前綴會讓快取失效）
+  //
+  // 沒有這段時，模型抽出來的是自由文字 —— prod 實際抽到過
+  // 「佳慧/小星星/威廉/三爪」（一格塞四個人），那種字串永遠對不到帳號。
+  // 明講「只能填名單裡的，或 null」比只給名單有效：不限制的話模型仍會自行發揮。
+  const rosterHint = memberRoster.length > 0
+    ? `\n# 本公司同仁名單（person 欄位只能填這裡面的名字，或 null）\n`
+      + `${memberRoster.join("、")}\n`
+      + `一件事若牽涉多人，person 只填**主要負責的那一位**；分不出來就填 null。\n`
+      + `名單裡沒有的人一律填 null —— 不要自己拼湊或合併名字。\n`
+    : "";
+
   // L2 模板的抽取規則接在 system prompt 尾端 —— 仍是穩定前綴，caching 不受影響
   // （易變內容如日期/訊息一律在 userMessage · 見 AGENTS.md）
   const def = TEMPLATE_REGISTRY[template];
   const output = await provider.chat({
     systemPrompt: tenant.systemPrompt + def.promptFragment,
     cacheableContext: `# 工廠主檔資料（模擬 Ragic 主檔，供實體對應）\n${tenant.masterDataJson}`,
-    userMessage: `群組名稱：${groupName}${categoryHint}\n\n請分析以下 ${segment.length} 則訊息：\n${body}`,
+    userMessage: `群組名稱：${groupName}${categoryHint}${rosterHint}\n\n請分析以下 ${segment.length} 則訊息：\n${body}`,
     outputSchema: buildAnalysisSchema(template),
   });
 
