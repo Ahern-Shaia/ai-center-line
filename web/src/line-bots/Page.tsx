@@ -9,7 +9,12 @@ import {
   type LineBotDto,
   type LineGroupRow,
   type LineRefsDto,
+  enableLineBot,
+  lineBotDeleteImpact,
+  deleteLineBotPermanently,
+  type LineBotDeleteImpact,
 } from "../api";
+import ConfirmDialog from "../shared/ConfirmDialog";
 import { useToast } from "../Toast";
 import { BotList, BotDetailEmpty } from "./List";
 import { BotDetail } from "./Detail";
@@ -31,6 +36,9 @@ export default function LineBots() {
   const [refs, setRefs] = useState<LineRefsDto>({ tenants: [], departments: [] });
   const [drawer, setDrawer] = useState<DrawerState>(null);
   const [confirmDisable, setConfirmDisable] = useState<string | null>(null);
+  // 永久刪除是 CASCADE —— 群組/訊息/成員/員工綁定會一起消失，所以要先算清楚給人看
+  const [purge, setPurge] = useState<{ botId: string; impact: LineBotDeleteImpact } | null>(null);
+  const [purging, setPurging] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -137,6 +145,22 @@ export default function LineBots() {
             canManage={canManage}
             onEdit={() => setDrawer({ kind: "edit", botId: selectedBotId })}
             onDisable={() => setConfirmDisable(selectedBotId)}
+            onEnable={async () => {
+              try {
+                await enableLineBot(selectedBotId);
+                toast.show("已重新啟用", "ok");
+                reloadDetail();
+              } catch (err) {
+                toast.show(err instanceof ApiError ? err.message : "啟用失敗", "danger");
+              }
+            }}
+            onDeletePermanently={async () => {
+              try {
+                setPurge({ botId: selectedBotId, impact: await lineBotDeleteImpact(selectedBotId) });
+              } catch (err) {
+                toast.show(err instanceof ApiError ? err.message : "無法讀取刪除影響", "danger");
+              }
+            }}
             onReload={reloadDetail}
           />
         ) : (
@@ -166,6 +190,45 @@ export default function LineBots() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!purge}
+        onClose={() => !purging && setPurge(null)}
+        onConfirm={async () => {
+          if (!purge) return;
+          setPurging(true);
+          try {
+            await deleteLineBotPermanently(purge.botId);
+            toast.show("已永久刪除", "ok");
+            setPurge(null);
+            window.location.reload();
+          } catch (err) {
+            toast.show(err instanceof ApiError ? err.message : "刪除失敗", "danger");
+          } finally { setPurging(false); }
+        }}
+        busy={purging}
+        tone="danger"
+        title="永久刪除這個機器人？"
+        confirmLabel="永久刪除"
+        body={purge && (
+          <>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>{purge.impact.botName}</div>
+            <p style={{ margin: "0 0 8px" }}>以下資料會<b>一併永久刪除，無法復原</b>：</p>
+            <ul style={{ margin: "0 0 8px", paddingLeft: 20 }}>
+              <li>群組 <b>{purge.impact.groups}</b> 個</li>
+              <li>歷史訊息 <b>{purge.impact.messages}</b> 則</li>
+              <li>群成員紀錄 <b>{purge.impact.members}</b> 筆</li>
+              <li>員工 LINE 綁定 <b>{purge.impact.bindings}</b> 筆</li>
+            </ul>
+            {purge.impact.bindings > 0 && (
+              <p style={{ color: "var(--danger)", fontSize: 13 }}>
+                ⚠️ 有 {purge.impact.bindings} 位同仁的 LINE 綁定會被解除，
+                他們的打卡與日報將對不到人，需要重新綁定。
+              </p>
+            )}
+          </>
+        )}
+      />
 
       {confirmDisable && (
         <DisableConfirmModal

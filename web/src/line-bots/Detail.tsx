@@ -22,13 +22,15 @@ type Department = { departmentId: string; departmentName: string };
 
 // 右 pane · Bot Detail（Bot info collapsible + Groups table）
 export function BotDetail({
-  detail, refs, canManage, onEdit, onDisable, onReload,
+  detail, refs, canManage, onEdit, onDisable, onEnable, onDeletePermanently, onReload,
 }: {
   detail: { bot: LineBotDto; groups: LineGroupRow[] };
   refs: LineRefsDto;
   canManage: boolean;
   onEdit: () => void;
   onDisable: () => void;
+  onEnable: () => void;
+  onDeletePermanently: () => void;
   onReload: () => Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -55,8 +57,19 @@ export function BotDetail({
           </span>
           {canManage && (
             <span className="lbot-info-actions" onClick={(e) => e.stopPropagation()}>
-              <button className="btn btn-sm" onClick={onEdit} disabled={bot.status === "disabled"}>編輯</button>
-              <button className="btn btn-sm btn-danger" onClick={onDisable} disabled={bot.status === "disabled"}>停用</button>
+              {bot.status === "disabled" ? (
+                <>
+                  {/* 停用的 bot 原本三顆按鈕全鎖 —— 變成不能編輯、不能重新啟用、也刪不掉的死路，
+                      而且它佔著 bot_user_id（UNIQUE），同一個 LINE bot 想重新加入也加不了。*/}
+                  <button className="btn btn-sm" onClick={onEnable}>重新啟用</button>
+                  <button className="btn btn-sm btn-danger" onClick={onDeletePermanently}>永久刪除</button>
+                </>
+              ) : (
+                <>
+                  <button className="btn btn-sm" onClick={onEdit}>編輯</button>
+                  <button className="btn btn-sm btn-danger" onClick={onDisable}>停用</button>
+                </>
+              )}
             </span>
           )}
         </button>

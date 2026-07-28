@@ -845,6 +845,22 @@ export const updateLineBot = (botId: string, patch: {
 export const disableLineBot = (botId: string) =>
   req<{ status: string }>(`/line-bots/${botId}`, { method: "DELETE" });
 
+/** 停用中的 bot 重新啟用 */
+export const enableLineBot = (botId: string) =>
+  req<{ bot: LineBotDto }>(`/line-bots/${botId}`, {
+    method: "PATCH", body: JSON.stringify({ status: "active" }),
+  });
+
+/** 永久刪除前先看會連帶刪掉什麼（全是 CASCADE） */
+export interface LineBotDeleteImpact {
+  botName: string; status: string;
+  groups: number; messages: number; members: number; bindings: number;
+}
+export const lineBotDeleteImpact = (botId: string) =>
+  req<LineBotDeleteImpact>(`/line-bots/${botId}/delete-impact`);
+export const deleteLineBotPermanently = (botId: string) =>
+  req<{ status: string }>(`/line-bots/${botId}/permanent`, { method: "DELETE" });
+
 export const patchLineGroup = (groupRegistryId: string, patch: {
   departmentId?: string | null;
   displayName?: string;
