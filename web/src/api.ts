@@ -557,6 +557,8 @@ export const getMyPersonalReport = (date?: string) => {
     requestedDate: string;
     pendingMessageCount: number;
   assignedTasks?: Array<{ ticketId: string; summary: string | null; category: string | null; createdAt: string }>;
+  /** 今天打卡去過的地方 · 由本人決定要不要納入日報（4FR §5） */
+  todayVisits?: Array<{ place: string; at: string }>;
     pendingMessages: PendingRawMessage[];
     userDisplayName: string;
     tenantName: string;
@@ -1338,3 +1340,18 @@ export const decideTicket = (ticketId: string, accept: boolean) =>
     method: "PATCH",
     body: JSON.stringify({ accept }),
   });
+
+/** 本月外勤摘要 · 只回自己的（four-features-reflection §7 價值對等） */
+export interface MyMonthSummary {
+  trips: number;
+  outDays: number;
+  km: number;
+  topPlace: string | null;
+  topPlaceCount: number;
+}
+export const getMyMonthAttendance = () => req<MyMonthSummary>("/attendance/my-month");
+
+/** 地點候選 · 自己去過的地方（four-features-reflection §4 · P3） */
+export interface PlaceSuggestion { name: string; times: number; lastAt: string }
+export const getPlaceSuggestions = (q: string) =>
+  req<{ places: PlaceSuggestion[] }>(`/attendance/places?q=${encodeURIComponent(q)}`);

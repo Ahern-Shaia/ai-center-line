@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, attendancePunch, getTrips, type TripRow } from "../api";
+import { ApiError, attendancePunch, getTrips, type TripRow , getMyMonthAttendance, getPlaceSuggestions, type MyMonthSummary, type PlaceSuggestion } from "../api";
 import { useToast } from "../Toast";
 import { SAME_LOCATION_LABEL, SAME_LOCATION_NEXT, SAME_LOCATION_REASON, SAME_LOCATION_WHY } from "../shared/mileageCopy";
 
@@ -26,6 +26,11 @@ export default function PunchView() {
   const custRef = useRef<HTMLInputElement>(null);
   const [trips, setTrips] = useState<TripRow[]>([]);
   const [punchCount, setPunchCount] = useState<number | null>(null);   // null = 尚未載入
+  // 同仁自己的本月數字 · 里程本來就在算，只是從來沒給他看過（4FR §7 價值對等）
+  const [month, setMonth] = useState<MyMonthSummary | null>(null);
+  // 去過的地方 · 選單是加速不是限制 —— 打字照樣可以送出（FMEA F-3）
+  const [places, setPlaces] = useState<PlaceSuggestion[]>([]);
+  const [showPlaces, setShowPlaces] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -33,6 +38,7 @@ export default function PunchView() {
       setTrips(res.trips);
       setPunchCount(res.punches.length);
     } catch { /* 靜默 · 非核心 */ }
+    try { setMonth(await getMyMonthAttendance()); } catch { /* 靜默 · 非核心 */ }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -96,7 +102,34 @@ export default function PunchView() {
       {!notStarted && (
         <div className="field" style={{ marginBottom: 12 }}>
           <label htmlFor="punch-cust">這一站是哪裡？（選填）</label>
-          <input id="punch-cust" ref={custRef} className="tf" value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="例：福特斗六廠" />
+          <input
+            id="punch-cust" ref={custRef} className="tf" value={customer}
+            onChange={(e) => {
+              setCustomer(e.target.value);
+              setShowPlaces(true);
+              void getPlaceSuggestions(e.target.value).then((r) => setPlaces(r.places)).catch(() => setPlaces([]));
+            }}
+            onFocus={() => {
+              setShowPlaces(true);
+              void getPlaceSuggestions(customer).then((r) => setPlaces(r.places)).catch(() => setPlaces([]));
+            }}
+            placeholder="例：福特斗六廠"
+            autoComplete="off"
+          />
+          {showPlaces && places.length > 0 && (
+            <div className="place-menu">
+              {places.map((p) => (
+                <button
+                  key={p.name} type="button" className="place-item"
+                  onClick={() => { setCustomer(p.name); setShowPlaces(false); }}
+                >
+                  <span className="place-name">{p.name}</span>
+                  <span className="place-meta">累計去過 {p.times} 次</span>
+                </button>
+              ))}
+              <div className="place-foot">找不到就直接打字，一樣可以送出</div>
+            </div>
+          )}
           <div className="dm-empty-hint" style={{ marginTop: 4 }}>沒填也沒關係 · 之後可到「我的行程」補填</div>
         </div>
       )}
@@ -116,6 +149,21 @@ export default function PunchView() {
           </button>
         )}
       </div>
+
+      {/* 你自己的數字 —— 不跟別人比，也不給別人看（FMEA F-6） */}
+      {month && month.trips > 0 && (
+        <div className="my-month">
+          <div className="my-month-hd">你這個月</div>
+          <div className="my-month-row">
+            <div className="my-month-cell"><b>{month.trips}</b><span>趟</span></div>
+            <div className="my-month-cell"><b>{month.km}</b><span>公里</span></div>
+            <div className="my-month-cell"><b>{month.outDays}</b><span>天外出</span></div>
+          </div>
+          {month.topPlace && (
+            <div className="my-month-top">最常跑：{month.topPlace} · 本月 {month.topPlaceCount} 次</div>
+          )}
+        </div>
+      )}
 
       <div className="liff-groups-hd">今日移動紀錄</div>
       {trips.length === 0 ? (

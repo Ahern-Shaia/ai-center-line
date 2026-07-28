@@ -20,6 +20,8 @@ export default function MyDailyReport() {
   const [pendingMessageCount, setPendingMessageCount] = useState(0);
   const [pendingMessages, setPendingMessages] = useState<PendingRawMessage[]>([]);
   const [assignedTasks, setAssignedTasks] = useState<Array<{ ticketId: string; summary: string | null }>>([]);
+  // 今天去過哪 · 系統本來就知道，只是這一頁看不到（4FR §5）
+  const [todayVisits, setTodayVisits] = useState<Array<{ place: string; at: string }>>([]);
   const [userDisplayName, setUserDisplayName] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -35,6 +37,7 @@ export default function MyDailyReport() {
       setPendingMessageCount(res.pendingMessageCount ?? 0);
       setPendingMessages(res.pendingMessages ?? []);
       setAssignedTasks(res.assignedTasks ?? []);
+      setTodayVisits(res.todayVisits ?? []);
       setUserDisplayName(res.userDisplayName ?? "");
       // 已送出後若又重新整理過（ai_generated_at 晚於 sent_at）→ 顯示新的 AI 結果，
       // 否則員工按「重新生成」也看不到送出後新增的訊息（final_items 永遠蓋掉 ai_items）。
@@ -82,7 +85,9 @@ export default function MyDailyReport() {
   }
 
   const isSent = report?.status === "sent";
-  const isEmpty = report?.status === "empty" || (!report && !loading);
+  // ⚠️ 自己手動加了項目就不算空 —— 只看 report 的話，畫面會同時顯示
+  //    「今日尚未有記錄」和下面兩筆已加入的項目，自相矛盾
+  const isEmpty = (report?.status === "empty" || (!report && !loading)) && items.length === 0;
   const isFailed = report?.status === "failed";
   // 送出後又重新整理過 → 有未送出的新版本（可再編輯、再次送出）
   const hasUnsentUpdate = report ? hasNewerAi(report) : false;
@@ -199,6 +204,50 @@ export default function MyDailyReport() {
         </div>
       )}
 
+      {/* ⚠️ 這兩個「可加入日報」的區塊刻意放在 hasItems 條件**之外**。
+          原本包在裡面，等於日報還空的時候不顯示 —— 而那正是最需要它的時候。
+          日報 16 份只有 3 份送出，就是因為打開來是一片空白、要自己想。*/}
+        {/* 今天打卡去過的地方 · 一樣不自動寫進日報，由本人決定（4FR §5）
+            日報 16 份只有 3 份送出，多半是因為「要自己想今天做了什麼」——
+            系統知道他去了哪，給他看，讓這件事從「想」變成「改」。*/}
+        {todayVisits.length > 0 && (
+          <div className="pdr-raw-list" style={{ marginTop: 16 }}>
+            <div className="pdr-raw-hdr">
+              今天打卡去過 <b>{todayVisits.length}</b> 個地方
+            </div>
+            {todayVisits.map((v, i) => (
+              <div key={`${v.place}-${v.at}-${i}`} className="pdr-raw-item" style={{ alignItems: "center" }}>
+                <div className="pdr-raw-time">{v.at}</div>
+                <div className="pdr-raw-text">{v.place}</div>
+                <button className="btn btn-sm" disabled={!canEdit}
+                  onClick={() => setItems((s) => [...s, {
+                    title: v.place, detail: "", time: v.at, followup: "", source: "attendance",
+                  } as PersonalDailyReportItem])}>加入日報</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 指派給我的任務 · 由本人決定要不要納入日報（task-to-personal-report §5）
+            不自動寫進去：AI 歸屬可能錯、日報也可能已確認 —— 本人是最後一道防線。*/}
+        {assignedTasks.length > 0 && (
+          <div className="pdr-raw-list" style={{ marginTop: 16, borderColor: "var(--primary)" }}>
+            <div className="pdr-raw-hdr">
+              有 <b>{assignedTasks.length}</b> 項指派給你的任務尚未加入日報
+            </div>
+            {assignedTasks.map((t) => (
+              <div key={t.ticketId} className="pdr-raw-item" style={{ alignItems: "center" }}>
+                <div className="pdr-raw-text">{t.summary ?? "（無摘要）"}</div>
+                <button className="btn btn-sm" disabled={!canEdit}
+                  onClick={() => setItems((s) => [...s, {
+                    title: t.summary ?? "", detail: "", time: "",
+                    followup: "", source: "assigned_task", ticketId: t.ticketId,
+                  } as PersonalDailyReportItem])}>加入日報</button>
+              </div>
+            ))}
+          </div>
+        )}
+
       {(hasItems || (report && report.aiItems.length > 0)) && (
         <>
           <div className="pdr-items">
@@ -246,26 +295,6 @@ export default function MyDailyReport() {
             </div>
           )}
 
-          {/* 指派給我的任務 · 由本人決定要不要納入日報（task-to-personal-report §5）
-              不自動寫進去：AI 歸屬可能錯、日報也可能已確認 —— 本人是最後一道防線。*/}
-          {assignedTasks.length > 0 && (
-            <div className="pdr-raw-list" style={{ marginTop: 16, borderColor: "var(--primary)" }}>
-              <div className="pdr-raw-hdr">
-                有 <b>{assignedTasks.length}</b> 項指派給你的任務尚未加入日報
-              </div>
-              {assignedTasks.map((t) => (
-                <div key={t.ticketId} className="pdr-raw-item" style={{ alignItems: "center" }}>
-                  <div className="pdr-raw-text">{t.summary ?? "（無摘要）"}</div>
-                  <button className="btn btn-sm" disabled={!canEdit}
-                    onClick={() => setItems((s) => [...s, {
-                      title: t.summary ?? "", detail: "", time: "",
-                      followup: "", source: "assigned_task", ticketId: t.ticketId,
-                    } as PersonalDailyReportItem])}>加入日報</button>
-                </div>
-              ))}
-            </div>
-          )}
-
           {items.length > 0 && (
             <ReportPreview
               items={items}
@@ -278,10 +307,13 @@ export default function MyDailyReport() {
         </>
       )}
 
-      {report && !isEmpty && !isFailed && (
+      {/* ⚠️ 條件不要求 report 存在。原本寫 `report && ...`，結果是：
+          今天沒有 AI 日報、但自己從打卡/任務加了項目 → 加得進去卻沒有送出按鈕，
+          使用者走到死路。只要有東西可送就要給他送出的地方。*/}
+      {(report || items.length > 0) && !isEmpty && !isFailed && (
         <div className="pdr-foot">
           <div style={{ fontSize: 12, color: "var(--ink-3)" }}>
-            {report.messageCount > 0 && <>今日私訊 {report.messageCount} 則 · </>}
+            {(report?.messageCount ?? 0) > 0 && <>今日私訊 {report!.messageCount} 則 · </>}
             {isSent && !hasUnsentUpdate
               ? <span style={{ color: "var(--ok-600)" }}>已送出 · 主管已收到通知</span>
               : hasUnsentUpdate
