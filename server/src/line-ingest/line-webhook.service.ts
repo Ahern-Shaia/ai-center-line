@@ -7,6 +7,7 @@ import { LineMessageRepository } from "./line-message.repository.js";
 import { MediaDownloadService } from "./media-download.service.js";
 import { MemberFetchService } from "./member-fetch.service.js";
 import { CompletionSignalService } from "../task-completion/completion-signal.service.js";
+import { OpenTaskReminderService } from "../task-completion/open-task-reminder.service.js";
 import { LineApiClient } from "./line-api.client.js";
 import { EmployeeBindingService } from "../employee-binding/employee-binding.service.js";
 
@@ -62,6 +63,7 @@ export class LineWebhookService {
     private readonly bindingService: EmployeeBindingService,
     private readonly lineApi: LineApiClient,
     private readonly completionSignal: CompletionSignalService,
+    private readonly openTaskReminder: OpenTaskReminderService,
   ) {}
 
   // 主入口 · rawBody 用於 HMAC 驗證 · payload 解析後可 access destination + events
@@ -100,6 +102,11 @@ export class LineWebhookService {
     }> = [];
     // 0036 · 引用回覆的即時回饋 · 累到 tx 結束才送（reply token 在 tx 內送會拖住交易）
     const replyTasks: Array<{ replyToken: string; accessToken: string; text: string }> = [];
+    // 0036 · M3.5 · 每日回報的未確認清單 · 查詢要在 tx 外做（tickets RLS 需 tenant 上下文）
+    const reminderTasks: Array<{
+      tenantId: string; groupId: string; senderLineUserId: string;
+      text: string; replyToken: string; accessToken: string;
+    }> = [];
 
     await withSystemTx(async (tx) => {
       const bot = await this.botRepo.getByBotUserIdWithSecret(tx, destination);
@@ -219,6 +226,20 @@ export class LineWebhookService {
             }
           }
 
+          // 0036 · M3.5 · 他自己發的每日回報 → 回一份「尚未確認完成」清單
+          // ⚠️ 這裡只收集，實際查詢在 tx 結束後做 ——
+          //    要讀 tickets，而 tickets 的 RLS 在 systemTx 底下會靜默回 0 筆。
+          if (inserted && msg.type === "text" && !msg.quotedMessageId && senderUid && event.replyToken) {
+            reminderTasks.push({
+              tenantId: ref.tenantId,
+              groupId,
+              senderLineUserId: senderUid,
+              text: textContent ?? "",
+              replyToken: event.replyToken,
+              accessToken: bot.channelAccessToken,
+            });
+          }
+
           if (inserted && MEDIA_MESSAGE_TYPES.has(msg.type)) {
             // A2 · 媒體下載 · 累到 tx 結束後 fire (LINE URL 有 24hr 時效 · 早點下越好)
             mediaTasks.push({
@@ -245,6 +266,19 @@ export class LineWebhookService {
         }
       }
     });
+
+    // M3.5 · tx 結束後才查（tickets 要 tenant 上下文）· 有清單才排回話
+    for (const r of reminderTasks) {
+      try {
+        const text = await this.openTaskReminder.replyForDailyReport({
+          tenantId: r.tenantId, groupId: r.groupId,
+          senderLineUserId: r.senderLineUserId, text: r.text,
+        });
+        if (text) replyTasks.push({ replyToken: r.replyToken, accessToken: r.accessToken, text });
+      } catch (err) {
+        this.logger.warn(`[reminder] 清單失敗 · group=${r.groupId} · ${(err as Error).message}`);
+      }
+    }
 
     // Tx 結束才回話 · reply token 有時效但不長，先讓 tx 落定再送
     for (const r of replyTasks) {

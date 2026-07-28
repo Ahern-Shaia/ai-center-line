@@ -87,6 +87,8 @@ export const tickets = pgTable("tickets", {
   workLastReportNote: text("work_last_report_note"),
   workAskedAt: timestamp("work_asked_at", { withTimezone: true }),
   workAskedMessageId: text("work_asked_message_id"),
+  workRemindedAt: timestamp("work_reminded_at", { withTimezone: true }),
+  workRemindedLineUserId: text("work_reminded_line_user_id"),
   // 0017 · warroom-task-board
   assigneeDisplayName: text("assignee_display_name"),
   dueAt: timestamp("due_at", { withTimezone: true }),

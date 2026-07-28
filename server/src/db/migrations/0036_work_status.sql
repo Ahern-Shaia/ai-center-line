@@ -34,7 +34,11 @@ ALTER TABLE tickets
   ADD COLUMN IF NOT EXISTS work_last_report_note text,
   -- 就地問過沒有（doc §2.5）· 防止同一件重複問
   ADD COLUMN IF NOT EXISTS work_asked_at timestamptz,
-  ADD COLUMN IF NOT EXISTS work_asked_message_id text;
+  ADD COLUMN IF NOT EXISTS work_asked_message_id text,
+  -- 每日回報時提醒過沒有（M3.5）· 用來限「每人每日至多 1 則」
+  -- ⚠️ 沒有這個上限，同一個人一天發兩次回報就會被回兩串清單 —— 那就是催辦了
+  ADD COLUMN IF NOT EXISTS work_reminded_at timestamptz,
+  ADD COLUMN IF NOT EXISTS work_reminded_line_user_id text;
 
 ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_work_status_check;
 ALTER TABLE tickets
@@ -68,6 +72,11 @@ COMMENT ON COLUMN tickets.work_outcome IS
   '為什麼結束 · 完成／不用做了／轉他人／做不到 · 完成率分母須排除「不用做了」';
 COMMENT ON COLUMN tickets.work_closed_line_user_id IS
   '回報者的 LINE 身分 · 不需要系統帳號（訊息自帶身分）· work_closed_by 為 null 是常態';
+
+-- 每日提醒的去重查詢（同一人、同一天）
+CREATE INDEX IF NOT EXISTS ix_tickets_work_reminded
+  ON tickets (tenant_id, work_reminded_line_user_id, work_reminded_at)
+  WHERE work_reminded_at IS NOT NULL;
 
 -- 主管端要撈「開著且久無回報」· 也是 M3.5 每日清單的查詢
 CREATE INDEX IF NOT EXISTS ix_tickets_work_open

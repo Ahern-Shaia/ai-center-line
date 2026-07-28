@@ -13,6 +13,7 @@ import { MediaStorageService } from "./media-storage.service.js";
 import { MediaDownloadService } from "./media-download.service.js";
 import { MemberFetchService } from "./member-fetch.service.js";
 import { CompletionSignalService } from "../task-completion/completion-signal.service.js";
+import { OpenTaskReminderService } from "../task-completion/open-task-reminder.service.js";
 import { LineBotController } from "./line-bot.controller.js";
 import { LineGroupController } from "./line-group.controller.js";
 import { LineWebhookController } from "./line-webhook.controller.js";
@@ -34,6 +35,7 @@ import { LineWebhookController } from "./line-webhook.controller.js";
     MediaDownloadService,
     MemberFetchService,
     CompletionSignalService,
+    OpenTaskReminderService,
   ],
   exports: [
     LineBotService,
