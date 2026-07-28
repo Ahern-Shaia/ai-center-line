@@ -1660,6 +1660,24 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .kb-col-count { margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--ink-3); background:var(--surface); border:1px solid var(--line); padding:1px 8px; border-radius:10px; font-variant-numeric:tabular-nums; }
 .kb-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 .kb-dot-warn { background:var(--warn); } .kb-dot-danger { background:var(--danger); } .kb-dot-ok { background:var(--ok); }
+.kb-dot-mid { background:var(--primary); }
+
+/* ===== 任務分區 · 待確認 / 存查（task-materialization-gate） ===== */
+.tri-box { background:var(--surface); border:1px solid var(--primary); border-radius:3px; margin-bottom:14px; overflow:hidden; }
+.tri-box-quiet { border-color:var(--line); margin-top:14px; margin-bottom:0; }
+.tri-hdr { display:flex; align-items:center; gap:8px; width:100%; padding:10px 14px; background:var(--primary-tint); border:0; border-bottom:1px solid var(--line-2); font-family:inherit; cursor:pointer; text-align:left; }
+.tri-box-quiet .tri-hdr { background:var(--well); }
+.tri-title { font-size:13.5px; font-weight:700; color:var(--ink); }
+.tri-hint { font-size:12px; color:var(--ink-2); margin-left:8px; }
+.tri-caret { margin-left:auto; color:var(--ink-3); font-size:12px; }
+.tri-body { padding:4px 0; }
+.tri-row { display:flex; align-items:center; gap:10px; padding:8px 14px; border-bottom:1px dashed var(--line-2); }
+.tri-row:last-child { border-bottom:0; }
+.tri-sum { flex:1; min-width:0; background:none; border:0; padding:0; font-family:inherit; font-size:13px; color:var(--ink); text-align:left; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tri-sum:hover { color:var(--primary-2); text-decoration:underline; }
+.tri-meta { font-size:11.5px; color:var(--ink-3); white-space:nowrap; }
+.tri-act { display:flex; gap:6px; flex-shrink:0; }
+.tri-act .btn { padding:4px 10px; font-size:12px; }
 .kb-col-body { flex:1; padding:12px; display:flex; flex-direction:column; gap:8px; overflow-y:auto; max-height:calc(100vh - 260px); }
 .kb-col-foot { padding:8px 14px; font-size:11.5px; color:var(--ink-3); border-top:1px solid var(--line); }
 .kb-empty { text-align:center; padding:24px 0; color:var(--ink-3); font-size:12.5px; }

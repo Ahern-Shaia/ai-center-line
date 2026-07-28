@@ -10,6 +10,7 @@ import { useToast } from "../Toast";
 import { catLabel } from "../shared/categoryLabel";
 import { canOpenConvoDetail, navigateTo } from "../nav";
 import { assignTicket, getAssignableMembers, getTicketSource, type AssignableMember, type TicketSource } from "../api";
+import { ArchivedList, UnconfirmedQueue } from "./TaskTriage";
 
 // WTB-M4 · 任務看板 Kanban 3 欄 (待簽核 / 逾時 / 已簽核)
 // 對照 docs/modules/warroom-task-board.md §7.2
@@ -60,10 +61,16 @@ export default function TaskBoard() {
       <div className="pane-hdr">
         <div>
           <h1>任務看板</h1>
-          <div className="sub">看板 · 高信度 AI 抽取的任務 · 點卡片展開對話上下文 · 支援單筆簽核</div>
+          <div className="sub">下方三欄是需要您簽核的任務 · 點卡片可展開原始對話對照</div>
         </div>
         <button className="btn" onClick={() => void refresh()} disabled={loading}>重新整理</button>
       </div>
+
+      <UnconfirmedQueue
+        tickets={board.kanban.unconfirmed}
+        onOpen={setDrawer}
+        onDecided={() => void refresh()}
+      />
 
       <div className="kanban">
         <KanbanColumn
@@ -89,6 +96,13 @@ export default function TaskBoard() {
           note={board.counts.signed > 30 ? `顯示最近 30 筆 · 共 ${board.counts.signed}` : undefined}
         />
       </div>
+
+      <ArchivedList
+        tickets={board.kanban.archived}
+        total={board.counts.archived}
+        onOpen={setDrawer}
+        onDecided={() => void refresh()}
+      />
 
       <TicketDrawer
         ticket={drawer}

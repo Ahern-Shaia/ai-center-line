@@ -432,7 +432,9 @@ export interface WarroomKanbanTicket {
   categoryId: string | null;
   summary: string;
   confidence: "high" | "medium" | "low" | null;
-  confirmStatus: "待簽核" | "已簽核" | "逾時警示";
+  confirmStatus: "待簽核" | "已簽核" | "逾時警示" | "待確認" | "已忽略" | "存查";
+  /** 記錄本身的狀態 · 存查區用來分辨是公告還是已完成 */
+  status: string | null;
   assigneeDisplayName: string | null;
   assigneeUserId: string | null;
   assigneeAccountName: string | null;
@@ -452,8 +454,10 @@ export interface WarroomTaskBoard {
     pending: WarroomKanbanTicket[];
     signed: WarroomKanbanTicket[];
     overdue: WarroomKanbanTicket[];
+    unconfirmed: WarroomKanbanTicket[];   // 中信心 · 等主管決定要不要追
+    archived: WarroomKanbanTicket[];      // 公告與已完成 · 留著可查
   };
-  counts: { pending: number; signed: number; overdue: number };
+  counts: { pending: number; signed: number; overdue: number; unconfirmed: number; archived: number };
 }
 
 export interface WarroomDailyReport {
@@ -1327,3 +1331,10 @@ export const listAudit = (scope: AuditScope, page: number) =>
   req<{ items: AuditItem[]; page: number; pageSize: number; hasNext: boolean }>(
     `/audit?scope=${scope}&page=${page}`,
   );
+
+/** 待確認的任務 · 收為任務（accept=true）或不用追（false）· task-materialization-gate.md */
+export const decideTicket = (ticketId: string, accept: boolean) =>
+  req<{ ticketId: string; confirmStatus: string }>(`/warroom/tickets/${ticketId}/decision`, {
+    method: "PATCH",
+    body: JSON.stringify({ accept }),
+  });
