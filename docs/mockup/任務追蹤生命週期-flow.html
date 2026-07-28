@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>任務追蹤生命週期 · UI Flow v2</title>
+<title>任務追蹤生命週期 · UI Flow v2.1</title>
 <style>
   :root{
     --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6;
@@ -174,9 +174,9 @@
 <body>
 <div class="wrap">
 
-<h1>任務追蹤生命週期 · UI Flow <span class="muted" style="font-size:19px">v2</span></h1>
+<h1>任務追蹤生命週期 · UI Flow <span class="muted" style="font-size:19px">v2.1</span></h1>
 <p class="lede">從 AI 抽出任務，到當責人回報結束的完整動線。</p>
-<p class="meta">2026-07-28 · 對應 <span class="mono">docs/modules/task-completion-tracking.md v2.0</span>
+<p class="meta">2026-07-28 · 對應 <span class="mono">docs/modules/task-completion-tracking.md v2.1</span>
 · 依 prod 真實對話（762 則訊息 / 35 張任務）修正方向</p>
 
 <div class="callout bad big">
@@ -424,7 +424,92 @@
 </div>
 
 
-<h2><span class="n">06</span>主管視角 · 網頁這一區改成給主管看</h2>
+<h2><span class="n">06</span>⭐ 未完成怎麼一直看得到（不靠強制）</h2>
+<p class="sub">v2 原本把輸入搬到 LINE，卻把可見性留在網頁——而他們沒帳號。
+<b>結果是當責人根本看不到自己還開著幾件。</b>這一段補這個洞。</p>
+
+<div class="callout bad">
+  <b>但不是「每天強制更新進度」。</b>一個人手上 5 件未完成，強制每天更新 ＝ 每天 5 次義務，
+  第三天開始複製貼上，第五天沒人理。<br>
+  <b>而且我們自己的 prod 已經證明強制沒用</b>（下表）。
+</div>
+
+<div class="two">
+  <div class="card" style="border-left:3px solid var(--danger)">
+    <h4>我們的日報頁 · 有強制機制</h4>
+    <div class="kpi" style="margin:10px 0 8px">
+      <div><div class="v bad">5</div><div class="l">真正走完（22 份中）</div></div>
+      <div><div class="v muted">11</div><div class="l">空白未填</div></div>
+      <div><div class="v muted">6</div><div class="l">草稿未送</div></div>
+    </div>
+    <p>7 人用過。有提醒、有狀態、有送出按鈕。</p>
+  </div>
+  <div class="card" style="border-left:3px solid var(--ok)">
+    <h4>LINE 群裡 · 沒有任何要求</h4>
+    <div class="kpi" style="margin:10px 0 8px">
+      <div><div class="v good">26</div><div class="l">自發回報則數</div></div>
+      <div><div class="v good">9</div><div class="l">自發回報的人</div></div>
+    </div>
+    <p>技術工程部組長群<b>每晚固定 5 人</b>發結構化回報，沒人叫他們發。</p>
+  </div>
+</div>
+
+<div class="callout good big">
+  <b>同一家公司、同一週：強制的機制產出 5 份，自願的產出 26 則。</b><br>
+  客戶自己訂的協定也不是每天——「<b>下次完成的時候</b>請回報」是事件驅動。
+</div>
+
+<h3>做法：回覆他自己發的那則回報</h3>
+
+<div class="two">
+  <div>
+    <div class="phone" style="max-width:400px">
+      <div class="ph-hd"><span>技術工程部組長/生管/物控</span><span class="muted" style="font-size:11px;font-weight:400">20:43</span></div>
+      <div class="ph-bd" style="min-height:auto">
+        <div class="bub me">7/28 阿斌<br>晨會<br>人員工作安排確認<br>與製程工程師討論中巴車內板金<br>簽核請購單</div>
+        <div class="sys">
+          ✓ <b>已收到今日回報</b><br>
+          <span style="font-size:12px">你還開著 3 件：</span>
+          <div style="font-size:11.5px;margin:5px 0 0;line-height:1.8">
+            · 更換三號機軸承<span class="muted">（第 3 天 · 最後回報：零件週四到）</span><br>
+            · 沐浴車座椅拆裝評估<span class="muted">（第 5 天 · 從未回報）</span><br>
+            · 中巴診療車領牌<span class="muted">（第 8 天 · 從未回報）</span>
+          </div>
+          <span style="font-size:11.5px;display:block;margin-top:6px">做完了就引用那則訊息回一句就好</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <h3 style="margin-top:0">四個好處</h3>
+    <ul>
+      <li><b>零新義務</b>——那則回報他本來就會發</li>
+      <li><b>時機對</b>——落在他正在回報的當下，不是隨機打斷</li>
+      <li><b>免費</b>——用 reply token 回覆，不是 push（<span class="mono">push 才計費</span>）</li>
+      <li><b>不公開點名</b>——是回他自己的訊息，不是對全群喊</li>
+    </ul>
+    <div class="callout">
+      ⭐ <b>沒發回報的人就不會收到。</b><br>
+      這比催他更好——「<b>沒發回報</b>」本身就是主管該看到的訊號，
+      那屬於主管的看板（§09 逾期未完成），不是往同仁身上加的負擔。
+    </div>
+    <div class="callout warn">
+      <b>三條節制規則</b>（否則這顆會長成催辦，也就是釘釘那條路）：<br>
+      · 只回<b>他自己發的那則</b>，沒發不回<br>
+      · <b>只用 reply token 不用 push</b>——技術上就擋掉主動打擾<br>
+      · 未完成 0 件時<b>不回</b>（連「今天沒有未完成」都不要回）
+    </div>
+  </div>
+</div>
+
+<div class="callout bad">
+  <b>不要把普通聊天誤判成回報。</b>只認明確的回報樣式
+  （「今日工作內容回報」「今日進度回報」「日期＋姓名＋晨會」）。<br>
+  <b>拿不準就不回 —— 少回一次沒事，亂回一次很吵。</b>（doc F-21）
+</div>
+
+
+<h2><span class="n">07</span>主管視角 · 網頁這一區改成給主管看</h2>
 <p class="sub">同仁的輸入介面是 LINE。網頁回答的是主管的問題：<b>誰手上有什麼、誰卡住了。</b></p>
 
 <div class="scr">
@@ -466,7 +551,7 @@
 </div>
 
 
-<h2><span class="n">07</span>主管補登與代結案</h2>
+<h2><span class="n">08</span>主管補登與代結案</h2>
 <p class="sub">代標不是例外是必然（Jira 的限制是 opt-in、Asana 根本沒這權限）。但要看得出來是誰按的。</p>
 
 <div class="two">
@@ -514,7 +599,7 @@
 </div>
 
 
-<h2><span class="n">08</span>逾期分流 ＋ 未接住清單</h2>
+<h2><span class="n">09</span>逾期分流 ＋ 未接住清單</h2>
 
 <div class="two">
   <div class="card" style="border-left:3px solid var(--warn)">
@@ -573,7 +658,7 @@
 </div>
 
 
-<h2><span class="n">09</span>量測 · 接住率比完成率更早有用</h2>
+<h2><span class="n">10</span>量測 · 接住率比完成率更早有用</h2>
 
 <div class="scr">
   <div class="scr-bar"><span>戰情室 · 任務追蹤成效</span></div>
@@ -601,7 +686,7 @@
 </div>
 
 
-<h2><span class="n">10</span>底層四軸 → 對外一個狀態</h2>
+<h2><span class="n">11</span>底層四軸 → 對外一個狀態</h2>
 
 <div class="tbl-wrap">
 <table>
@@ -631,7 +716,7 @@
 </div>
 
 
-<h2><span class="n">11</span>明確不做的</h2>
+<h2><span class="n">12</span>明確不做的</h2>
 <div class="three">
   <div class="card"><h4>AI 不自動標完成</h4>
     <p>AI 只能寫 <span class="mono">status</span>，永遠不得寫 <span class="mono">work_status</span>。
@@ -649,7 +734,7 @@
 </div>
 
 
-<h2><span class="n">12</span>里程碑（順序已因 prod 實證重排）</h2>
+<h2><span class="n">13</span>里程碑（順序已因 prod 實證重排）</h2>
 <div class="tbl-wrap">
 <table>
   <thead><tr><th style="width:9%">里程碑</th><th>內容</th></tr></thead>
@@ -659,9 +744,10 @@
     <tr><td class="mono">M2</td><td>migration：<span class="mono">work_status</span> / <span class="mono">work_outcome</span> /
       <span class="mono">work_closed_*</span> ＋ 跨軸 CHECK ＋ <span class="mono">displayState()</span> 投影函數</td></tr>
     <tr><td class="mono"><b>M3</b> ⭐</td><td><b>LINE 引用回覆 → 關任務</b>（本案主體）· 語意三分（完成／進度／不確定）· 系統回一則確認</td></tr>
+    <tr><td class="mono"><b>M3.5</b> ⭐</td><td><b>每日回報時回覆未完成清單</b>（§06）· 只回他自己發的那則 · 沒發不回 · 0 件不回</td></tr>
     <tr><td class="mono">M4</td><td>主管視角：看板狀態、逾期分流、未接住清單</td></tr>
     <tr><td class="mono">M5</td><td>網頁補登、代結案顯示、完成可還原</td></tr>
-    <tr><td class="mono">M6</td><td>日報頁「你手上的任務」改唯讀，並修掉簽核後任務消失的既有缺陷</td></tr>
+    <tr><td class="mono">M6</td><td>日報頁「你手上的任務」改唯讀（<b>顯示要一直在，寫進去不要</b>），並修掉簽核後任務消失的既有缺陷</td></tr>
     <tr><td class="mono">M7</td><td><b>量測接住率</b>＋結案率＋FMEA 覆核</td></tr>
   </tbody>
 </table>
