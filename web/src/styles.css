@@ -707,6 +707,12 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .md-err { color:var(--danger); font-weight:600; margin-top:2px; }
 .muted-hint { color:var(--ink-3); font-size:12px; margin-top:2px; }
 
+.md-key { display:flex; align-items:center; gap:10px; margin:-4px 0 14px; font-size:13px; }
+.md-key .btn { padding:4px 10px; font-size:12.5px; }
+.md-key-ok { color:var(--ok); font-weight:600; }
+.md-key-warn { color:var(--warn); font-weight:600; }
+.md-key-form { background:var(--well); border:1px solid var(--line); border-radius:var(--r); padding:14px; margin-bottom:14px; }
+
 /* 地點候選 · 打過的地方（選單是加速不是限制） */
 .place-menu { border:1px solid var(--primary); border-radius:var(--r); background:var(--surface); box-shadow:0 6px 18px rgba(17,24,39,.09); margin-top:5px; overflow:hidden; }
 .place-item { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; padding:9px 12px; background:none; border:0; border-bottom:1px solid var(--line-2); font-family:inherit; font-size:14px; text-align:left; cursor:pointer; }

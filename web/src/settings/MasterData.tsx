@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  ApiError, getMasterDataSource, getSession, listAiprootTenants, ncFetchFields,
+  ApiError, getMasterDataSource, getSession, listAiprootTenants, ncFetchFields, ncUpdateKey,
   saveMasterDataSource, syncMasterData,
   type AiprootTenantOption, type MasterDataState,
 } from "../api";
@@ -39,6 +39,10 @@ export default function MasterData() {
   const [fields, setFields] = useState<Array<{ fieldId: number; fieldName: string }>>([]);
   const [nameField, setNameField] = useState("");
   const [codeField, setCodeField] = useState("");
+  // 金鑰補填 —— 後端端點一直都有，只是沒有任何前端入口，
+  // 所以帳號建立後就補不了金鑰（prod 的帳號正是 hasKey=false）
+  const [editingKey, setEditingKey] = useState(false);
+  const [newKey, setNewKey] = useState("");
 
   useEffect(() => {
     if (!isPlatform) return;
@@ -64,6 +68,20 @@ export default function MasterData() {
     } finally { setLoading(false); }
   }, [toast, isPlatform, tenantId]);
   useEffect(() => { void load(); }, [load]);
+
+  async function saveKey() {
+    if (!accountId) { toast.show("請先選擇 Ragic 帳號", "danger"); return; }
+    if (!newKey.trim()) { toast.show("請貼上 API 金鑰", "danger"); return; }
+    setBusy(true);
+    try {
+      await ncUpdateKey(accountId, newKey.trim());
+      setNewKey(""); setEditingKey(false);
+      toast.show("金鑰已儲存", "ok");
+      await load();
+    } catch (e) {
+      toast.show(e instanceof ApiError ? e.message : "儲存失敗", "danger");
+    } finally { setBusy(false); }
+  }
 
   async function readFields() {
     if (!accountId) { toast.show("請先選擇 Ragic 帳號", "danger"); return; }
@@ -169,8 +187,42 @@ export default function MasterData() {
                   items={acc.map((a) => ({ id: a.accountId, label: `${a.displayName}（${a.apname}）` }))}
                   value={accountId} onChange={setAccountId} ariaLabel="Ragic 帳號" className="llm-select"
                 />
-                <div className="dm-empty-hint">沿用你在「通知設定」連好的帳號，不用再輸入一次金鑰</div>
+                <div className="dm-empty-hint">沿用你在「通知設定」連好的帳號</div>
               </div>
+
+              {/* 金鑰狀態要先講。原本沒有任何地方顯示，使用者得試到「讀取欄位」
+                  失敗才知道金鑰沒設 —— 先講比後救好。 */}
+              {(() => {
+                const cur = acc.find((a) => a.accountId === accountId);
+                if (!cur) return null;
+                return (
+                  <div className="md-key">
+                    <span className={cur.hasKey ? "md-key-ok" : "md-key-warn"}>
+                      {cur.hasKey ? "✓ 已設定 API 金鑰" : "⚠️ 這個帳號還沒有 API 金鑰，無法讀取資料"}
+                    </span>
+                    <button className="btn" disabled={busy}
+                      onClick={() => { setEditingKey(!editingKey); setNewKey(""); }}>
+                      {editingKey ? "取消" : cur.hasKey ? "更換金鑰" : "設定金鑰"}
+                    </button>
+                  </div>
+                );
+              })()}
+
+              {editingKey && (
+                <div className="md-key-form">
+                  <div className="field" style={{ margin: 0 }}>
+                    <label>API 金鑰</label>
+                    <input className="tf" type="password" value={newKey} autoComplete="off"
+                      onChange={(e) => setNewKey(e.target.value)} placeholder="貼上 Ragic API key" />
+                    <div className="dm-empty-hint">
+                      加密儲存 · 需要 Ragic 帳號管理者權限才產得出來
+                      （Ragic 右上角個人設定 → API 金鑰）
+                    </div>
+                  </div>
+                  <button className="btn btn-primary" style={{ marginTop: 10 }}
+                    disabled={busy || !newKey.trim()} onClick={() => void saveKey()}>儲存金鑰</button>
+                </div>
+              )}
               <div className="field">
                 <label>表單路徑</label>
                 <div style={{ display: "flex", gap: 8 }}>
