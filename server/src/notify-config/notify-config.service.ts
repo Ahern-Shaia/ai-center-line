@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
 import { currentTx } from "../db/client.js";
 import type { JwtUser } from "../auth/jwt-user.js";
@@ -161,6 +161,71 @@ export class NotifyConfigService {
       createdBy: user.user_id,
     });
     return { ruleId, webhookToken: null };
+  }
+
+  /** 單條規則的完整內容 · 編輯畫面預填用（列表只有摘要） */
+  async getRuleDetail(ruleId: string) {
+    const cur = await this.rules.getById(currentTx(), ruleId);
+    if (!cur) throw new NotFoundException("找不到這條規則");
+    const cfg = cur.sourceConfig as Record<string, unknown>;
+    const tpl = cur.template as { title?: string; items?: Array<{ path: string; label: string; order: number }> };
+    const ev = (cfg.events ?? {}) as { create?: boolean; update?: boolean; delete?: boolean };
+    return {
+      ruleId: cur.ruleId,
+      name: cur.name,
+      sourceType: cur.sourceType,
+      // 這三個回給前端只為了顯示，前端不可送回來改（改了等於換一條規則）
+      ragicAccountId: (cfg.ragicAccountId as string) ?? null,
+      sheetPath: (cfg.sheetPath as string) ?? null,
+      sheetName: (cfg.sheetName as string) ?? null,
+      eventType: (cfg.eventType as string) ?? null,
+      notifyCreate: ev.create ?? true,
+      notifyUpdate: ev.update ?? true,
+      notifyDelete: ev.delete ?? false,
+      title: tpl?.title ?? null,
+      fields: (tpl?.items ?? []).map((i) => ({ path: i.path, label: i.label, order: i.order })),
+      channelType: cur.channelType,
+      channelTarget: cur.channelTarget,
+    };
+  }
+
+  /**
+   * 編輯規則 · 可以改：名稱、觸發事件、欄位、標題、通知對象。
+   * 不能改：來源類型、Ragic 表單路徑、webhook 網址 —— 那三個改了等於換一條規則，
+   * 而網址已經貼在客戶的 Ragic 那一側，客戶不會知道，通知會悄悄停掉。
+   */
+  async updateRule(ruleId: string, input: {
+    name?: string; title?: string | null;
+    notifyCreate?: boolean; notifyUpdate?: boolean; notifyDelete?: boolean;
+    fields?: Array<{ path: string | number; label: string; order: number }>;
+    channelType?: string; channelTarget?: string;
+  }): Promise<{ status: string }> {
+    const tx = currentTx();
+    const cur = await this.rules.getById(tx, ruleId);
+    if (!cur) throw new NotFoundException("找不到這條規則");
+    if (!input.fields?.length) throw new BadRequestException("至少勾選一個通知欄位");
+    if (!input.channelTarget?.trim()) throw new BadRequestException("請選擇通知對象");
+
+    const name = input.name?.trim() || cur.name;
+    const template: NotificationTemplate = {
+      title: input.title?.trim() || name,
+      items: input.fields.map((f) => ({ path: String(f.path), label: f.label, order: f.order })),
+    };
+    const events = cur.sourceType === "ragic_form"
+      ? {
+          create: input.notifyCreate ?? true,
+          update: input.notifyUpdate ?? true,
+          delete: input.notifyDelete ?? false,
+        }
+      : null;
+
+    const ok = await this.rules.update(tx, ruleId, {
+      name, events, template,
+      channelType: input.channelType ?? cur.channelType,
+      channelTarget: input.channelTarget.trim(),
+    });
+    if (!ok) throw new NotFoundException("找不到這條規則");
+    return { status: "ok" };
   }
 
   async setEnabled(ruleId: string, enabled: boolean): Promise<{ status: string }> {

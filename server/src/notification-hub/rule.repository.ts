@@ -85,6 +85,44 @@ export class RuleRepository {
     return { ruleId: res.rows[0].rule_id };
   }
 
+  /**
+   * 編輯規則 · 只動「可以改的部分」。
+   *
+   * ⚠️ 刻意不讓改 sheetPath 與 webhookToken：
+   * webhook 網址已經貼在客戶的 Ragic 那一側，改了這兩個就等於換一條規則，
+   * 而客戶那邊不會知道，通知會悄悄停掉。要換表單請新增一條。
+   */
+  async update(tx: Db, ruleId: string, a: {
+    name: string;
+    events: { create: boolean; update: boolean; delete: boolean } | null;
+    template: unknown;
+    channelType: string;
+    channelTarget: string;
+  }): Promise<boolean> {
+    const res = await tx.execute<{ rule_id: string }>(sql`
+      UPDATE notification_rule
+         SET name = ${a.name},
+             source_config = CASE
+               WHEN ${a.events === null} THEN source_config
+               ELSE jsonb_set(source_config, '{events}', ${JSON.stringify(a.events ?? {})}::jsonb)
+             END,
+             template = ${JSON.stringify(a.template)}::jsonb,
+             channel_type = ${a.channelType},
+             channel_target = ${a.channelTarget},
+             updated_at = now()
+       WHERE rule_id = ${ruleId}::uuid
+      RETURNING rule_id::text
+    `);
+    return res.rows.length > 0;
+  }
+
+  async getById(tx: Db, ruleId: string): Promise<RuleRow | null> {
+    const res = await tx.execute<RawRule>(sql`
+      SELECT ${SELECT_COLS} FROM notification_rule WHERE rule_id = ${ruleId}::uuid LIMIT 1
+    `);
+    return res.rows[0] ? toRow(res.rows[0]) : null;
+  }
+
   async setEnabled(tx: Db, ruleId: string, enabled: boolean): Promise<void> {
     await tx.execute(sql`UPDATE notification_rule SET enabled = ${enabled}, updated_at = now() WHERE rule_id = ${ruleId}::uuid`);
   }

@@ -121,6 +121,28 @@ export class NotifyConfigController {
     });
   }
 
+  @Get(":id")
+  @RequirePermission("notify-config:view")
+  detail(@Param("id") id: string) {
+    return this.configs.getRuleDetail(id);
+  }
+
+  /**
+   * 編輯規則 · 可改名稱／觸發事件／欄位／標題／通知對象。
+   * 表單路徑與 webhook 網址不可改 —— 網址已貼在客戶的 Ragic 那側，
+   * 改了通知會悄悄停掉而客戶不會知道。要換表單請新增一條規則。
+   */
+  @Patch(":id")
+  @RequirePermission("notify-config:manage")
+  update(@Param("id") id: string, @Body() body: {
+    name?: string; title?: string | null;
+    notifyCreate?: boolean; notifyUpdate?: boolean; notifyDelete?: boolean;
+    fields?: Array<{ path: string | number; label: string; order: number }>;
+    channelType?: string; channelTarget?: string;
+  }) {
+    return this.configs.updateRule(id, body);
+  }
+
   @Patch(":id/enabled")
   @RequirePermission("notify-config:manage")
   setEnabled(@Param("id") id: string, @Body() body: { enabled?: boolean }) {
