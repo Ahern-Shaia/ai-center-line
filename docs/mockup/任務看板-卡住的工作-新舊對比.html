@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>任務看板 · 卡住的工作 · 現況 vs A+ 案</title>
+<style>
+  :root{
+    --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6; --surface-2:#F5F6F8;
+    --line:#E5E7EB; --line-2:#F0F2F5;
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --primary:#4F46E5; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5;
+    --warn:#D97706; --warn-tint:#FFFBEB; --warn-line:#F3D9A4;
+    --danger:#E11D48; --danger-tint:#FFF1F2; --danger-line:#FBCFE0;
+    --r:6px; --r-lg:10px;
+    --sans:'Inter','Noto Sans TC',-apple-system,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --sh:0 1px 2px rgba(17,24,39,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px 20px 80px;background:var(--canvas);color:var(--ink);
+       font-family:var(--sans);font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1240px;margin:0 auto}
+  h1{font-size:26px;margin:0 0 6px;letter-spacing:-.01em}
+  h2{font-size:19px;margin:44px 0 6px;padding-top:20px;border-top:1px solid var(--line)}
+  h2 .n{color:var(--ink-3);font-family:var(--mono);font-size:14px;margin-right:8px}
+  h3{font-size:14.5px;margin:20px 0 8px}
+  .lede{color:var(--ink-2);margin:0 0 4px}
+  .meta{color:var(--ink-3);font-size:13px;margin:0}
+  p{margin:8px 0}
+
+  .callout{border:1px solid var(--line);border-left:3px solid var(--primary);border-radius:var(--r);
+           background:var(--surface);padding:12px 15px;margin:16px 0;font-size:14px;color:var(--ink-2)}
+  .callout b{color:var(--ink)}
+  .callout.bad{border-left-color:var(--danger);background:var(--danger-tint)}
+  .callout.good{border-left-color:var(--ok);background:var(--ok-tint)}
+  .callout.warn{border-left-color:var(--warn);background:var(--warn-tint)}
+  .quote{border-left:3px solid var(--ink-3);background:var(--well);padding:10px 14px;margin:12px 0;
+         font-size:13.5px;color:var(--ink-2);line-height:1.7}
+  .quote b{color:var(--ink)}
+
+  .vs{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:14px 0;align-items:start}
+  @media(max-width:1000px){.vs{grid-template-columns:1fr}}
+  .col{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
+       overflow:hidden;box-shadow:var(--sh)}
+  .col-hd{padding:10px 14px;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:8px;
+          border-bottom:1px solid var(--line-2)}
+  .col.old .col-hd{background:var(--danger-tint);color:#9F1239}
+  .col.new .col-hd{background:var(--ok-tint);color:#065F46}
+  .tag{font-family:var(--mono);font-size:10.5px;padding:1px 6px;border-radius:3px;
+       background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.06)}
+  .col-bd{padding:14px;background:var(--canvas)}
+  .note{padding:10px 14px;font-size:12.5px;color:var(--ink-2);background:var(--well);
+        border-top:1px solid var(--line-2);line-height:1.65}
+
+  /* ── 看板模擬 · 沿用 V3 Signal 已裁定的語彙 ── */
+  .kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;align-items:start}
+  .kb-col{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);
+          display:flex;flex-direction:column;min-height:200px}
+  .kb-col.is-empty{min-height:0}
+  .kb-hd{padding:8px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px}
+  .dot{width:7px;height:7px;border-radius:50%}
+  .dot.warn{background:var(--warn)} .dot.rose{background:var(--danger)} .dot.ok{background:var(--ok)}
+  .kb-title{font-size:12px;font-weight:600}
+  .kb-count{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-3);
+            background:var(--surface);border:1px solid var(--line);padding:0 6px;border-radius:9px}
+  .kb-body{padding:8px;display:flex;flex-direction:column;gap:6px}
+  .kb-empty{text-align:center;padding:20px 0;color:var(--ink-3);font-size:11.5px;line-height:1.7}
+
+  .card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:4px;
+        padding:8px 9px 8px 12px;font-size:11.5px;line-height:1.5}
+  .stripe{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:4px 0 0 4px}
+  .stripe.warn{background:var(--warn)} .stripe.rose{background:var(--danger)} .stripe.ok{background:var(--ok)}
+  .sum{font-weight:600;color:var(--ink)}
+  .pills{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:5px}
+  .pill{font-size:10px;border-radius:3px;padding:1px 6px;line-height:1.5}
+  .pill.cat{background:var(--well);border:1px solid var(--line);color:var(--ink-2)}
+  .pill.conf{border:1px solid currentColor;color:var(--warn);display:inline-flex;align-items:center;
+             gap:3px;font-weight:600}
+  .pill.conf .d{width:5px;height:5px;transform:rotate(45deg);background:currentColor;display:inline-block}
+  /* V3 已裁定：逾時 = 實心 pill（Datadog duration · membership ≠ 嚴重度） */
+  .pill.over{background:var(--danger);color:#fff;font-weight:600;font-variant-numeric:tabular-nums}
+  /* A+ 新增：卡住 = 同一個模式，換語意色 · 形用 ● 與逾時的無形做區隔 */
+  .pill.stuck{background:var(--warn);color:#fff;font-weight:600;font-variant-numeric:tabular-nums;
+              display:inline-flex;align-items:center;gap:4px}
+  .pill.stuck .d{width:5px;height:5px;border-radius:50%;background:#fff;display:inline-block}
+  .pill.stuck.hot{background:var(--danger)}
+  .foot{display:flex;align-items:center;gap:6px;margin-top:6px;color:var(--ink-3);font-size:10.5px}
+  .avatar{width:15px;height:15px;border-radius:50%;display:inline-flex;align-items:center;
+          justify-content:center;font-size:9px;color:#fff;font-weight:600}
+  .a-blue{background:#4F46E5} .a-amber{background:#D97706} .a-green{background:#059669}
+  .a-slate{background:#64748B} .a-rose{background:#E11D48}
+  .kb-more{text-align:center;font-size:10.5px;color:var(--ink-3);padding:3px 0}
+
+  /* 舊版的下方附屬區 */
+  .lanes-hd{margin:14px 0 0}
+  .lanes-title{font-size:13px;font-weight:600;margin:0}
+  .lanes-sub{font-size:11px;color:var(--ink-3);display:block;margin-top:1px}
+  .lanes{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:8px;align-items:start}
+  .lane{background:var(--surface);border:1px solid var(--line);border-left-width:3px;
+        border-radius:var(--r);padding:9px}
+  .lane.warn{border-left-color:var(--warn)} .lane.danger{border-left-color:var(--danger)}
+  .lane-hd{display:flex;align-items:baseline;gap:6px;font-size:11.5px;font-weight:600}
+  .lane-count{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+  .lane-hint{font-size:10px;color:var(--ink-3);margin:2px 0 7px;line-height:1.5}
+
+  /* view options（Linear 的克制） */
+  .viewbar{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:11.5px;color:var(--ink-2)}
+  .vopt{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);
+        padding:3px 9px;font-size:11px;color:var(--ink-2)}
+  .vopt.on{border-color:var(--primary);background:var(--primary-tint);color:var(--primary);font-weight:600}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:12px 0}
+  th{text-align:left;font-size:11.5px;color:var(--ink-3);font-weight:600;padding:7px 10px;
+     border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.03em;background:var(--well)}
+  td{padding:8px 10px;border-bottom:1px solid var(--line-2);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .tbl{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:var(--surface);box-shadow:var(--sh)}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px}
+  .muted{color:var(--ink-3)}
+  .bad{color:var(--danger);font-weight:600}
+  .good{color:var(--ok);font-weight:600}
+  ul{margin:8px 0;padding-left:20px} li{margin:4px 0;font-size:14px;color:var(--ink-2)}
+  li b{color:var(--ink)}
+  code{font-family:var(--mono);font-size:12.5px;background:var(--well);padding:1px 5px;border-radius:3px;
+       border:1px solid var(--line-2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>任務看板 ·「卡住的工作」現況 vs A+ 案</h1>
+<p class="lede">已簽核但沒人回報完成的任務：<b>搬到下面另開一區</b>（現況），還是<b>留在原欄、用 pill 標出量級</b>（A+）。</p>
+<p class="meta">2026-07-29 · 數字為 prod 實測（台灣福祉）·
+依 <span class="mono">docs/modules/design-research-taskboard.md</span>（2026-07-27 已裁定 V3 Signal）</p>
+
+<div class="callout bad">
+  <b>問題是上線第一天才看得出來的。</b>
+  功能剛上線，<b>所有歷史已簽核任務的 <code>work_status</code> 都是預設的 <code>open</code></b>、
+  而且都超過 7 天 —— 「卡住」的判定對它們<b>全部成立</b>，一條規則把整欄搬空。
+</div>
+
+
+<h2><span class="n">01</span>競品研究早就寫了，而我違反了它</h2>
+
+<div class="quote">
+  <b>§0 定位</b>：我們不是泛用 PM Kanban，是<b>告警 triage 佇列</b>（Datadog／PagerDuty 模型）——
+  卡片是系統產生的、主要動作是分流＋確認、有時效壓力與信心度這兩個 PM 工具沒有的維度。
+</div>
+
+<div class="quote">
+  <b>§2 共同弱點 #3</b>：<b>membership ≠ 嚴重度</b> ——
+  東西「在逾時欄」但沒說<b>逾時多久</b>，少了 triage 需要的量級。
+  Datadog 有 duration，多數 PM 板沒有。
+</div>
+
+<div class="callout bad">
+  <b>我做的正是被點名的那件事</b>：把「卡住」做成<b>欄位歸屬</b>（另開一區＝membership），
+  而研究說 membership 本身不夠、要的是<b>量級</b>。<br><br>
+  告警佇列不會因為某個告警「卡住」就把它移到另一張表 ——
+  它是在<b>同一個佇列裡標出嚴重度與 duration</b>。
+</div>
+
+<div class="tbl">
+<table>
+  <thead><tr><th style="width:22%">競品</th><th style="width:40%">做法</th><th>對這題的意義</th></tr></thead>
+  <tbody>
+    <tr><td><b>Datadog／PagerDuty</b></td>
+        <td>嚴重度是一等公民 ＋ 佇列顯 <b>time-in-status</b> 與 responder</td>
+        <td class="good">「卡住 N 天」該是<b>卡片上的量級</b>，不是另一個容器</td></tr>
+    <tr><td><b>Linear</b></td>
+        <td>極致克制 · 預設少顯，要看什麼用 <b>display options</b> 自己開</td>
+        <td class="good">想「只看卡住的」→ <b>篩選</b>，不是獨立區塊</td></tr>
+    <tr><td><b>Asana</b></td>
+        <td>兩層：卡面快速視圖 ＋ 點開深入</td>
+        <td>細節進 drawer，卡面只留 triage 要的</td></tr>
+    <tr><td><b>Jira</b></td>
+        <td>卡片最多 3 個欄位、色條區分</td>
+        <td>別在卡上疊太多</td></tr>
+    <tr><td class="muted">Trello／Monday</td>
+        <td class="muted">彩色狀態一眼分流</td>
+        <td class="bad">⚠️ 顏色狂歡 = 要避開的反例</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout good">
+  <b>而且解法早就裁定了、只是還沒做。</b>
+  <span class="mono">design-research-taskboard.md</span> §4 有一行 ⬜ 待做：<br>
+  「<b>逾時欄顯『逾時 N 天』</b> —— 依據 Datadog duration；<b>membership ≠ 嚴重度</b>；現只分欄，未顯量級」<br><br>
+  2026-07-27 裁定的 <b>V3 Signal 卡片</b>裡就有「逾時 N 天」實心 pill。
+  <b>「卡住 N 天」是同一個模式的延伸，不是新發明。</b>
+</div>
+
+
+<h2><span class="n">02</span>並排比較</h2>
+
+<div class="vs">
+  <!-- 現況 -->
+  <div class="col old">
+    <div class="col-hd"><span class="tag">現況</span>搬到下面另開一區</div>
+    <div class="col-bd">
+      <div class="kanban">
+        <div class="kb-col is-empty">
+          <div class="kb-hd"><span class="dot warn"></span><span class="kb-title">待簽核</span><span class="kb-count">0</span></div>
+          <div class="kb-body"><div class="kb-empty">目前沒有待簽核的任務</div></div>
+        </div>
+        <div class="kb-col">
+          <div class="kb-hd"><span class="dot rose"></span><span class="kb-title">逾時警示</span><span class="kb-count">2</span></div>
+          <div class="kb-body">
+            <div class="card"><span class="stripe rose"></span>
+              <div class="sum">中巴診療車領牌進度與交期推遲</div>
+              <div class="pills"><span class="pill cat">研發討論</span></div>
+              <div class="foot"><span class="avatar a-green">C</span>Cathy</div>
+            </div>
+            <div class="card"><span class="stripe rose"></span>
+              <div class="sum">「門埋了」— 車殼與部位無法封應</div>
+              <div class="pills"><span class="pill cat">維保異常</span></div>
+              <div class="foot"><span class="avatar a-amber">李</span>李誼裕</div>
+            </div>
+          </div>
+        </div>
+        <div class="kb-col is-empty">
+          <div class="kb-hd"><span class="dot ok"></span><span class="kb-title">已簽核</span><span class="kb-count">0</span></div>
+          <div class="kb-body"><div class="kb-empty">已簽核的任務都卡住了<br>在下方「卡住的工作」</div></div>
+        </div>
+      </div>
+
+      <div class="lanes-hd">
+        <h3 class="lanes-title" style="margin:0">卡住的工作</h3>
+        <span class="lanes-sub">已簽核超過 7 天、但沒有人回報完成的</span>
+      </div>
+      <div class="lanes">
+        <div class="lane warn">
+          <div class="lane-hd">逾期未開始<span class="lane-count">13 件</span></div>
+          <div class="lane-hint">沒人接，或接了完全沒動靜</div>
+          <div class="card" style="margin-bottom:6px"><span class="stripe warn"></span>
+            <div class="sum">倉庫積層架廠商場勘與報價</div>
+            <div class="foot">郁嫺 · 開了 8 天 · 從未回報</div></div>
+          <div class="card" style="margin-bottom:6px"><span class="stripe warn"></span>
+            <div class="sum">義大利升降機庫存 30 台去化方案</div>
+            <div class="foot">未指派 · 開了 9 天</div></div>
+          <div class="kb-more">⋯ 還有 11 張</div>
+        </div>
+        <div class="lane danger">
+          <div class="lane-hd">逾期未確認完成<span class="lane-count">0 件</span></div>
+          <div class="lane-hint">有人接了但卡住</div>
+          <div class="kb-empty">目前沒有</div>
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      ①主看板三欄有兩欄是空框 —— 這是進頁面第一眼看到的；
+      ②13 張全擠在名叫「卡住的工作」的附屬區塊，聽起來像例外、實際上是全部；
+      ③下面兩欄又失衡一次（13 vs 0）。<br>
+      <b>而根本問題是：把量級（卡住多久）做成了歸屬（在哪一區）。</b>
+    </div>
+  </div>
+
+  <!-- A+ -->
+  <div class="col new">
+    <div class="col-hd"><span class="tag">A+</span>留在原欄 · 用 pill 標出量級</div>
+    <div class="col-bd">
+      <div class="viewbar">
+        <span class="muted">顯示</span>
+        <span class="vopt on">全部</span>
+        <span class="vopt">只看卡住的</span>
+        <span class="muted" style="margin-left:auto;font-size:10.5px">← Linear 的 display options</span>
+      </div>
+      <div class="kanban">
+        <div class="kb-col is-empty">
+          <div class="kb-hd"><span class="dot warn"></span><span class="kb-title">待簽核</span><span class="kb-count">0</span></div>
+          <div class="kb-body"><div class="kb-empty">目前沒有待簽核的任務</div></div>
+        </div>
+        <div class="kb-col">
+          <div class="kb-hd"><span class="dot rose"></span><span class="kb-title">逾時警示</span><span class="kb-count">2</span></div>
+          <div class="kb-body">
+            <div class="card"><span class="stripe rose"></span>
+              <div class="sum">中巴診療車領牌進度與交期推遲</div>
+              <div class="pills"><span class="pill cat">研發討論</span><span class="pill over">逾時 3 天</span></div>
+              <div class="foot"><span class="avatar a-green">C</span>Cathy</div>
+            </div>
+            <div class="card"><span class="stripe rose"></span>
+              <div class="sum">「門埋了」— 車殼與部位無法封應</div>
+              <div class="pills"><span class="pill cat">維保異常</span><span class="pill over">逾時 5 天</span></div>
+              <div class="foot"><span class="avatar a-amber">李</span>李誼裕</div>
+            </div>
+          </div>
+        </div>
+        <div class="kb-col">
+          <div class="kb-hd"><span class="dot ok"></span><span class="kb-title">已簽核</span><span class="kb-count">13</span></div>
+          <div class="kb-body">
+            <div class="card"><span class="stripe ok"></span>
+              <div class="sum">義大利升降機庫存 30 台去化方案</div>
+              <div class="pills"><span class="pill cat">採購</span>
+                <span class="pill stuck hot"><span class="d"></span>卡住 9 天 · 待指派</span></div>
+              <div class="foot"><span class="avatar a-slate">—</span>未指派</div>
+            </div>
+            <div class="card"><span class="stripe ok"></span>
+              <div class="sum">倉庫積層架廠商場勘與報價</div>
+              <div class="pills"><span class="pill cat">採購</span>
+                <span class="pill stuck"><span class="d"></span>卡住 8 天 · 無回報</span></div>
+              <div class="foot"><span class="avatar a-rose">郁</span>郁嫺</div>
+            </div>
+            <div class="kb-more">⋯ 卡住的排完，下面接正常的</div>
+            <div class="card"><span class="stripe ok"></span>
+              <div class="sum">滅火器貼紙議題結案</div>
+              <div class="pills"><span class="pill cat">研發討論</span></div>
+              <div class="foot"><span class="avatar a-amber">廖</span>廖蘭萱 · 3 天前簽核</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="height:14px"></div>
+      <div class="callout good" style="margin:0;font-size:12.5px;padding:9px 12px">
+        下方那一整區<b>拿掉</b> —— 量級回到卡片上，資訊回到它本來該在的地方。
+      </div>
+    </div>
+    <div class="note">
+      <b>「卡住 N 天」沿用 V3 已裁定的實心 pill</b>（跟「逾時 N 天」同一個模式）·
+      色＋形＋字三重編碼（● 圓點 vs 逾時的無形）· <b>只在異常時出現</b>，正常的卡片乾淨 —
+      同「信心度只在中／低顯」的克制原則。
+    </div>
+  </div>
+</div>
+
+
+<h2><span class="n">03</span>A+ 的四個設計決定，各自的依據</h2>
+<div class="tbl">
+<table>
+  <thead><tr><th style="width:26%">決定</th><th style="width:36%">怎麼做</th><th>依據</th></tr></thead>
+  <tbody>
+    <tr><td><b>卡住＝pill 不是區塊</b></td>
+        <td>「卡住 9 天 · 待指派」實心 pill，跟「逾時 N 天」同款</td>
+        <td>Datadog duration · <b>membership ≠ 嚴重度</b>（§2 弱點 #3）</td></tr>
+    <tr><td><b>色 ＋ 形 ＋ 字</b></td>
+        <td>卡住用 ● 圓點、逾時無形；紅／琥珀分兩級</td>
+        <td>修「只靠顏色編碼」（§2 弱點 #1）· 色盲友善</td></tr>
+    <tr><td><b>只在異常時顯</b></td>
+        <td>沒卡住的卡片不長 pill，維持乾淨</td>
+        <td>Linear 克制 · 同「信心度只在中／低顯」既有做法</td></tr>
+    <tr><td><b>要只看卡住的 → 篩選</b></td>
+        <td>頂部 display options 切「全部／只看卡住的」</td>
+        <td>Linear display options（§1）· 不用另開容器</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout warn">
+  <b>順手補掉一個欠很久的 ⬜。</b>
+  §4 那行「逾時欄顯『逾時 N 天』」從 2026-07-24 就列為待做，一直沒補 ——
+  <b>而這次踩的坑正是同一個病</b>（把量級做成歸屬）。這次一起做完。
+</div>
+
+
+<h2><span class="n">04</span>為什麼不選 B（只算功能上線後簽核的）</h2>
+<div class="callout warn">
+  B 是「加一個日期門檻，歷史資料不進來」—— 主看板也不會空，但<b>致命傷是它會讓那 13 張
+  真實存在的任務從追蹤裡消失</b>，而那些正是最該被看到的：<b>已經簽核、放著、沒有人回報</b>。<br><br>
+  另外它要在程式碼裡記一個「功能上線日期」，半年後沒有人記得那個判斷式為什麼存在。
+</div>
+
+
+<h2><span class="n">05</span>A+ 的代價（誠實列出）</h2>
+<ul>
+  <li><b>已簽核欄會變長</b> —— 13 張加上原本的。目前限 30 張，超過標「顯示最近 30 筆」。</li>
+  <li><b>卡片多一個 pill</b> —— 跟 Jira「最多 3 個欄位」的建議還有餘裕，但要盯著不再往上加。</li>
+  <li><b>「只看卡住的」要多做一個篩選</b> —— 但那是 Linear 驗證過的模式，比另開區塊更省版面。</li>
+</ul>
+
+<div class="callout">
+  <b>現況的代價是第一眼看到兩個空框，那個沒辦法之後補；</b>
+  A+ 的代價（欄變長、多一個 pill）都是可控且可調的。
+</div>
+
+</div>
+</body>
+</html>
