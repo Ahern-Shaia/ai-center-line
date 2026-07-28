@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>任務追蹤生命週期 · UI Flow v2.2</title>
+<title>任務追蹤生命週期 · UI Flow v2.3</title>
 <style>
   :root{
     --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6;
@@ -174,10 +174,10 @@
 <body>
 <div class="wrap">
 
-<h1>任務追蹤生命週期 · UI Flow <span class="muted" style="font-size:19px">v2.2</span></h1>
+<h1>任務追蹤生命週期 · UI Flow <span class="muted" style="font-size:19px">v2.3</span></h1>
 <p class="lede">從 AI 抽出任務，到當責人回報結束的完整動線。</p>
-<p class="meta">2026-07-28 · 對應 <span class="mono">docs/modules/task-completion-tracking.md v2.2</span>
-· 依 prod 真實對話（762 則訊息 / 35 張任務）修正方向</p>
+<p class="meta">2026-07-28 · 對應 <span class="mono">docs/modules/task-completion-tracking.md v2.3</span>
+· 依 prod 真實對話兩輪查驗修正方向（762 則訊息 / 35 張任務 / 149 則引用回覆）</p>
 
 <div class="callout bad big">
   <b>⚠️ v2 是方向修正，不是改版面。</b><br>
@@ -375,6 +375,15 @@
       </div>
     </div>
   </div>
+</div>
+
+<div class="callout bad">
+  <b>⚠️ 實測誤判率 33%：「好了嗎」含「好了」。</b>
+  prod 有 6 則被關鍵字抓到的「完成語意」，其中 <b>2 則其實是在催問</b>——
+  「有幾個半成品的Bom<b>建好了嗎</b>」「請問<b>改好了嗎</b>?」。<br>
+  <b>方向最糟</b>：把「還沒做完」關成「做完了」。<br><br>
+  <b>解法：先擋疑問句，再看完成詞。</b>
+  出現 <span class="mono">嗎 / 呢 / ? / ？</span> 一律不判完成。
 </div>
 
 <div class="callout bad">
@@ -628,8 +637,8 @@
   </div>
 </div>
 
-<h3 style="margin-top:26px">⭐ 未接住清單（v2 新增 · 只有平台管理員看得到）</h3>
-<p class="sub">收到了引用回覆，但對不上任何任務。<b>這是我們自己的除錯清單，不是客戶的待辦。</b></p>
+<h3 style="margin-top:26px">⭐ 未接住清單（只有平台管理員看得到）</h3>
+<p class="sub">收到了引用回覆，但對不上任何任務。<b>這不是客戶的待辦，是材料化門檻的校準訊號。</b><br>下面三筆是 prod 真實案例 —— 三則真正的完成回覆，原訊息<b>全部</b>沒被材料化。</p>
 
 <div class="scr">
   <div class="scr-bar"><span>系統健康 · 引用回覆未接住</span></div>
@@ -639,11 +648,11 @@
       <thead><tr><th style="width:16%">時間</th><th style="width:34%">回覆內容</th><th>沒接住的原因</th></tr></thead>
       <tbody>
         <tr><td class="mono">07/28 17:08</td><td>鮮湧 10 支產品 BOM已完成</td>
-            <td><span class="chip bad">原訊息沒被材料化成任務</span></td></tr>
-        <tr><td class="mono">07/27 21:39</td><td>已設定。</td>
-            <td><span class="chip bad">原訊息沒掛 source_message_ids</span></td></tr>
+            <td><span class="chip bad">原訊息不是任務</span> → 補建</td></tr>
         <tr><td class="mono">07/22 15:06</td><td>後續電話追蹤…已完成</td>
-            <td><span class="chip warn">有對到任務但信心不足，待人工確認</span></td></tr>
+            <td><span class="chip bad">原訊息不是任務</span> → 補建</td></tr>
+        <tr><td class="mono">07/22 18:11</td><td>已聯絡</td>
+            <td><span class="chip bad">原訊息不是任務</span> → 補建</td></tr>
       </tbody>
     </table>
     </div>
@@ -651,14 +660,84 @@
 </div>
 
 <div class="callout bad">
-  <b>這張表在 M1 之前會是滿的，那是預期中的。</b>
-  現在 <span class="mono">tickets.source_message_ids</span> 是 <b>0 / 35 有值</b>——
-  任務跟訊息之間的鏈是斷的，所以引用回覆<b>接不回任何一張任務</b>。<br>
-  <b>M1 就是補這條鏈</b>，不補的話後面全部落空（doc F-17，P0）。
+  <b>⚠️ 但第二輪查驗發現：補完鏈，這張表還是會滿的。</b><br>
+  模擬 M1 完成後的接住率 —— 149 則引用回覆，只有 <b>12 則</b>的原訊息屬於某張任務，
+  帶完成語意的交集只有 <b>1 則</b>。<br>
+  真正的原因是<b>材料化涵蓋率只有 11%</b>（67 / 596）——
+  <b>引用回覆指向的訊息，89% 根本不是任務</b>。鏈接好了也沒東西可以接。
+</div>
+
+<div class="callout good big">
+  <b>所以把因果反過來（v2.3）：</b><br>
+  <b>有人願意引用回覆說「已完成」，那則訊息就是任務</b>——
+  這是人工標註，比 AI 分類可靠得多。<br><br>
+  <span class="mono" style="font-size:13px">
+  引用回覆 ＋ 完成語意<br>
+  　├─ 原訊息已是任務　→ 關掉它<br>
+  　└─ 原訊息不是任務　→ <b>回頭補建任務，並直接標完成</b><br>
+  　　　　　　　　　　　　同時記一筆「材料化門檻漏了這則」</span><br><br>
+  於是這張表<b>從除錯清單升級成材料化門檻的校準訊號</b>。
 </div>
 
 
-<h2><span class="n">10</span>量測 · 接住率比完成率更早有用</h2>
+<h2><span class="n">10</span>⚠️ 第二輪查驗：三次都猜錯瓶頸</h2>
+<p class="sub">每一版都以為找到瓶頸了，每一版都被同一份 prod 資料推翻。這段記下軌跡。</p>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th style="width:9%">版本</th><th style="width:36%">當時認為的風險</th><th>被什麼推翻</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">v1.0</td><td>沒人願意做這個動作</td>
+        <td>查 prod：<b>他們一直在做，只是做在 LINE 裡</b>（21% 訊息用引用回覆）</td></tr>
+    <tr><td class="mono">v2.0</td><td>動作在發生，但鏈是斷的<br>
+        <span class="muted" style="font-size:12px">（source_message_ids 0/35）</span></td>
+        <td>模擬 M1 完成：<b>鏈補完也只接得住 1 則</b></td></tr>
+    <tr><td class="mono"><b>v2.3</b></td><td>鏈接上了，但<b>沒有任務可接</b><br>
+        <span class="muted" style="font-size:12px">（材料化涵蓋率 11%）</span></td>
+        <td>解法：<b>讓完成回覆自己造出任務</b></td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="two">
+  <div class="card" style="border-left:3px solid var(--danger)">
+    <h4>模擬「M1 補完之後」</h4>
+    <div class="kpi" style="margin:10px 0 8px">
+      <div><div class="v">149</div><div class="l">引用回覆總數</div></div>
+      <div><div class="v" style="color:var(--warn)">12</div><div class="l">對得到任務</div></div>
+      <div><div class="v bad">1</div><div class="l">⭐ 且帶完成語意</div></div>
+    </div>
+    <p><b>補完鏈，一週也只接得住 1 則完成訊號。</b></p>
+  </div>
+  <div class="card" style="border-left:3px solid var(--danger)">
+    <h4>真正的瓶頸：材料化涵蓋率</h4>
+    <p class="mono" style="font-size:12px;line-height:1.9;margin:8px 0">
+      596 則文字訊息<br>
+      → 116 筆抽取記錄<br>
+      → 35 張任務<br>
+      → 只涵蓋 <b>67 則訊息（11%）</b>
+    </p>
+    <p>指派型訊息（@人 ＋ 請／麻煩／幫）69 則，<b>只有 11 則變成任務（16%）</b>。</p>
+  </div>
+</div>
+
+<div class="callout bad big">
+  <b>而且我們拿來證明設計可行的旗艦案例，在現行門檻下接不住。</b><br><br>
+  <span class="mono" style="font-size:13px">
+  「鮮湧 10 支產品 BOM已完成」　　← 原訊息「@Wang C 麻煩鮮湧的10支產品BOM先完成」<b class="bad">不是任務</b><br>
+  「後續電話追蹤…已完成」　　　　← 原訊息<b class="bad">不是任務</b><br>
+  「已聯絡」　　　　　　　　　　　← 原訊息<b class="bad">不是任務</b></span><br><br>
+  三則真正的完成回覆，原訊息<b>全部</b>沒被材料化。
+</div>
+
+<div class="callout good">
+  <b>共同教訓：不要在沒有量測前假設瓶頸在哪。</b>
+  三次都猜錯了，而三次都是同一份 prod 資料給的答案 ——
+  <b>它一直在那裡，只是我們沒去問。</b>
+</div>
+
+
+<h2><span class="n">11</span>量測 · 接住率比完成率更早有用</h2>
 
 <div class="scr">
   <div class="scr-bar"><span>戰情室 · 任務追蹤成效</span></div>
@@ -686,7 +765,7 @@
 </div>
 
 
-<h2><span class="n">11</span>底層四軸 → 對外一個狀態</h2>
+<h2><span class="n">12</span>底層四軸 → 對外一個狀態</h2>
 
 <div class="tbl-wrap">
 <table>
@@ -716,7 +795,7 @@
 </div>
 
 
-<h2><span class="n">12</span>明確不做的</h2>
+<h2><span class="n">13</span>明確不做的</h2>
 <div class="three">
   <div class="card"><h4>AI 不自動標完成</h4>
     <p>AI 只能寫 <span class="mono">status</span>，永遠不得寫 <span class="mono">work_status</span>。
@@ -734,7 +813,7 @@
 </div>
 
 
-<h2><span class="n">13</span>LINE 綁定的定位：加值層，不是啟用條件</h2>
+<h2><span class="n">14</span>LINE 綁定的定位：加值層，不是啟用條件</h2>
 <p class="sub">推廣時常見的想法是「未來以員工綁定 LINE 為使用前提」。
 <b>那本案算不算未綁定時的回退機制？——不算，而且這樣想會把主路徑當備胎蓋。</b></p>
 
@@ -827,21 +906,23 @@
 </div>
 
 
-<h2><span class="n">14</span>里程碑（順序已因 prod 實證重排）</h2>
+<h2><span class="n">15</span>里程碑（順序已因 prod 實證重排）</h2>
 <div class="tbl-wrap">
 <table>
   <thead><tr><th style="width:9%">里程碑</th><th>內容</th><th style="width:12%">需綁定？</th></tr></thead>
   <tbody>
-    <tr><td class="mono"><b>M1</b> ⭐</td><td><b>補 <span class="mono">source_message_ids</span></b>——讓任務掛得回 LINE 訊息。
-      <b>不補這條鏈，引用回覆找不到要關哪一張任務，後面全部落空。</b>順便讓 R11 從紙上落到實際。</td><td><b>否</b></td></tr>
+    <tr><td class="mono">M1</td><td><b>補 <span class="mono">source_message_ids</span></b>——讓任務掛得回 LINE 訊息。順便讓 R11 從紙上落到實際。<br>
+      <span class="bad">⚠️ 必要但不充分</span>——實測補完也只接得住 1 則（真瓶頸在 M3）。</td><td><b>否</b></td></tr>
     <tr><td class="mono">M2</td><td>migration：<span class="mono">work_status</span> / <span class="mono">work_outcome</span> /
       <span class="mono">work_closed_*</span> ＋ 跨軸 CHECK ＋ <span class="mono">displayState()</span> 投影函數</td><td><b>否</b></td></tr>
-    <tr><td class="mono"><b>M3</b> ⭐</td><td><b>LINE 引用回覆 → 關任務</b>（本案主體）· 語意三分（完成／進度／不確定）· 系統回一則確認</td><td><b>否</b></td></tr>
+    <tr><td class="mono"><b>M3</b> ⭐⭐</td><td><b>LINE 引用回覆 → 關任務</b>（本案主體）· <b>先擋疑問句</b>再判完成 ·
+      <b>原訊息不是任務時回頭補建</b> · 系統回一則確認</td><td><b>否</b></td></tr>
     <tr><td class="mono"><b>M3.5</b> ⭐</td><td><b>每日回報時回覆未完成清單</b>（§06）· 只回他自己發的那則 · 沒發不回 · 0 件不回</td><td><b>否</b></td></tr>
     <tr><td class="mono">M4</td><td>主管視角：看板狀態、逾期分流、未接住清單</td><td><b>否</b></td></tr>
     <tr><td class="mono">M5</td><td>網頁補登、代結案顯示、完成可還原</td><td>部分</td></tr>
     <tr><td class="mono">M6</td><td>日報頁「你手上的任務」改唯讀（<b>顯示要一直在，寫進去不要</b>），並修掉簽核後任務消失的既有缺陷</td><td><span class="bad">⛔ 要</span></td></tr>
-    <tr><td class="mono">M7</td><td><b>量測接住率</b>＋結案率＋FMEA 覆核</td><td><b>否</b></td></tr>
+    <tr><td class="mono"><b>M7</b> ⭐</td><td><b>gate 不是收尾</b>：接住率＋結案率＋<b>材料化漏接數</b>＋FMEA 覆核<br>
+      基線：真完成回覆<b>一週約 3 則</b>。兩週後仍個位數 → 問「任務沒被建出來」而不是「怎麼讓人多回報」</td><td><b>否</b></td></tr>
   </tbody>
 </table>
 </div>
