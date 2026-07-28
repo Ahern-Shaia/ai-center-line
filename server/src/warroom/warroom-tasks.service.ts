@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { currentTx, withSystemTx } from "../db/client.js";
+import type { ConfirmStatus } from "../warroom-task-board/ticket-lane.js";
 
 /**
  * WarroomTasksService · WTB-M3
@@ -17,7 +18,9 @@ export interface WarroomTicket {
   categoryId: string | null;
   summary: string;
   confidence: "high" | "medium" | "low" | null;
-  confirmStatus: "待簽核" | "已簽核" | "逾時警示";
+  confirmStatus: ConfirmStatus;
+  /** 記錄本身的狀態 open/in_progress/resolved/info · 存查區用來標「公告」還是「已完成」 */
+  status: string | null;
   assigneeDisplayName: string | null;
   /** 對到的系統帳號 · null 表示尚未歸屬 */
   assigneeUserId: string | null;
@@ -58,8 +61,10 @@ export class WarroomTasksService {
       pending: WarroomTicket[];      // 待簽核
       signed: WarroomTicket[];       // 已簽核 (limit 30 · 最近的)
       overdue: WarroomTicket[];      // 逾時 · due_at 過期 or 建立 > 7d 且待簽
+      unconfirmed: WarroomTicket[];  // 待確認 · 中信心 · 等主管決定要不要收為任務
+      archived: WarroomTicket[];     // 未列入待辦 · 公告/已完成/已忽略 (limit 50)
     };
-    counts: { pending: number; signed: number; overdue: number };
+    counts: { pending: number; signed: number; overdue: number; unconfirmed: number; archived: number };
   }> {
     const tx = currentTx();
     const includeSigned = args.includeSignedOff !== false;
@@ -71,7 +76,8 @@ export class WarroomTasksService {
       category_id: string | null;
       summary: string | null;
       confidence: "high" | "medium" | "low" | null;
-      confirm_status: "待簽核" | "已簽核" | "逾時警示";
+      confirm_status: ConfirmStatus;
+      status: string | null;
       assignee_display_name: string | null;
       assignee_user_id: string | null;
       assignee_account_name: string | null;
@@ -86,7 +92,7 @@ export class WarroomTasksService {
       confirmed_at: string | null;
     }>(sql`
       SELECT t.ticket_id, t.category, t.category_id::text,
-             t.summary, t.confidence, t.confirm_status,
+             t.summary, t.confidence, t.confirm_status, t.status,
              t.assignee_display_name, t.assignee_user_id::text, t.assign_status,
              au.display_name AS assignee_account_name,
              t.due_at::text,
@@ -113,6 +119,7 @@ export class WarroomTasksService {
       summary: r.summary ?? "",
       confidence: r.confidence,
       confirmStatus: r.confirm_status,
+      status: r.status,
       assigneeDisplayName: r.assignee_display_name,
       assigneeUserId: r.assignee_user_id,
       assigneeAccountName: r.assignee_account_name,
@@ -137,13 +144,21 @@ export class WarroomTasksService {
     const signed = includeSigned
       ? all.filter((t) => t.confirmStatus === "已簽核").slice(0, 30)
       : [];
+    // 中信心 · 還沒被主管認定是不是任務。不放進待簽核，也不讓它悄悄消失
+    const unconfirmed = all.filter((t) => t.confirmStatus === "待確認");
+    // 未列入待辦：公告、已完成、以及主管標「不用追」的。留著可查、可改回待辦。
+    // 標了不用追就從畫面上徹底消失的話，按錯了沒有任何補救途徑（同 doc §2.1 的理由）
+    const notTracked = all.filter((t) => t.confirmStatus === "存查" || t.confirmStatus === "已忽略");
+    const archived = notTracked.slice(0, 50);
 
     return {
-      kanban: { pending, signed, overdue },
+      kanban: { pending, signed, overdue, unconfirmed, archived },
       counts: {
         pending: pending.length,
         signed: all.filter((t) => t.confirmStatus === "已簽核").length,
         overdue: overdue.length,
+        unconfirmed: unconfirmed.length,
+        archived: notTracked.length,
       },
     };
   }
@@ -317,6 +332,35 @@ export class WarroomTasksService {
       ticketId, assignStatus: status, assigneeUserId,
       assigneeName: res.rows[0].name,
     };
+  }
+
+  /**
+   * 待確認的票 · 主管定奪：收為任務 或 不用追。
+   *
+   * 為什麼決定要落到 DB 而不是前端隱藏：群組會重新分析（手動重跑、排程補跑），
+   * 「不用追」的東西如果下次又冒出來，主管第二次就不會再點了（doc F-3）。
+   * 已忽略屬於「人的決定」，materializer 重跑時不會被覆寫。
+   */
+  async decideTicket(ticketId: string, accept: boolean, actorUserId: string): Promise<{
+    ticketId: string; confirmStatus: string;
+  }> {
+    const tx = currentTx();
+    const next = accept ? "待簽核" : "已忽略";
+    const res = await tx.execute<{ ticket_id: string }>(sql`
+      UPDATE tickets
+         SET confirm_status = ${next},
+             confirmed_by   = ${accept ? null : actorUserId}::uuid,
+             updated_at     = now()
+       WHERE ticket_id = ${ticketId}::uuid
+         -- accept 時也允許把先前標「不用追」的改回來 —— 按錯了要救得回來
+         -- 用 string_to_array 而非把 JS 陣列丟進 ANY()：Drizzle 會展成 tuple
+         --    ANY(($1,$2))，Postgres 直接 42809。tsc 全綠、要 runtime 才炸
+         AND confirm_status = ANY(string_to_array(${accept ? "待確認,已忽略" : "待確認"}, ','))
+      RETURNING ticket_id::text
+    `);
+    // 改到 0 列＝不存在、已經被別人處理過、或不在權限範圍。不透露是哪一種。
+    if (res.rows.length === 0) throw new NotFoundException("找不到這張任務，或它已經被處理了");
+    return { ticketId, confirmStatus: next };
   }
 
   /** 可被指派的成員（同租戶）· 手動派發下拉用 */

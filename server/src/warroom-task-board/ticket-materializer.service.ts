@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AssigneeResolverService } from "./assignee-resolver.service.js";
 import { sql } from "drizzle-orm";
 import { withTenant } from "../db/client.js";
+import { laneFor, RECOMPUTABLE_LANES } from "./ticket-lane.js";
 
 /**
  * TicketMaterializerService · WTB-M1
@@ -21,7 +22,7 @@ export class TicketMaterializerService {
 
   /**
    * Materialize an upload's records → tickets
-   * · 只材料化 confidence='high' 的 records
+   * · 分區由 laneFor() 決定（confidence × status），不再只看 confidence
    * · department 從 upload.group_id → line_group.department_id 拿 (snapshot 當下)
    * · 冪等 · rerun 走 ON CONFLICT DO UPDATE
    */
@@ -85,7 +86,10 @@ export class TicketMaterializerService {
 
       for (let idx = 0; idx < bundle.records.length; idx++) {
         const rec = bundle.records[idx];
-        if (rec.confidence !== "high") { skipped++; continue; }
+        // 兩個維度：confidence 回答「抽得準不準」、status 回答「該不該追」。
+        // 先前只看 confidence，才會讓「開會通知」這種抽得很準的公告去排隊等簽核。
+        const lane = laneFor(rec.confidence, rec.status);
+        if (!lane) { skipped++; continue; }
 
         const summary = truncate(rec.title || rec.detail || "（無摘要）", 500);
         const assignee = rec.person ? truncate(rec.person, 100) : null;
@@ -96,14 +100,14 @@ export class TicketMaterializerService {
         // 冪等 UPSERT · ux_tickets_source_record 撞則 UPDATE
         const res = await tx.execute<{ inserted: boolean }>(sql`
           INSERT INTO tickets (
-            tenant_id, department_id, category, summary, confidence,
+            tenant_id, department_id, category, summary, confidence, status,
             confirm_status, needs_review, assignee_display_name,
             assignee_user_id, assign_status,
             source_upload_id, source_record_index, message_count
           ) VALUES (
             ${bundle.tenantId}::uuid, ${bundle.departmentId}::uuid,
-            ${category}, ${summary}, ${rec.confidence},
-            '待簽核', false, ${assignee},
+            ${category}, ${summary}, ${rec.confidence}, ${rec.status ?? null},
+            ${lane}, false, ${assignee},
             ${resolved.userId}::uuid, ${resolved.status},
             ${uploadId}, ${idx}, ${rec.source_ids?.length ?? null}
           )
@@ -113,6 +117,14 @@ export class TicketMaterializerService {
             category = EXCLUDED.category,
             summary = EXCLUDED.summary,
             confidence = EXCLUDED.confidence,
+            status = EXCLUDED.status,
+            -- 沒人動過的區可以重算；已簽核／已忽略／逾時是人的決定，重跑不可復活。
+            -- 少了這行，主管標「不用追」的事下次分析又冒出來，第二次就沒人要點了（doc F-3）
+            -- 用 string_to_array 而非把 JS 陣列丟進 ANY()：Drizzle 會展成 tuple ANY((.,.))，
+            --    Postgres 42809。型別檢查看不出來，要 runtime 才炸
+            confirm_status = CASE WHEN tickets.confirm_status
+                                       = ANY(string_to_array(${RECOMPUTABLE_LANES.join(",")}, ','))
+                                  THEN EXCLUDED.confirm_status ELSE tickets.confirm_status END,
             assignee_display_name = EXCLUDED.assignee_display_name,
             -- 重跑不可蓋掉主管已經手動派好的結果（人的決定優先於 AI）
             assignee_user_id = CASE WHEN tickets.assigned_by IS NULL

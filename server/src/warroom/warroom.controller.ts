@@ -59,6 +59,22 @@ export class WarroomController {
     return this.tasksService.assignTicket(ticketId, a, user.user_id);
   }
 
+  /**
+   * 待確認的票 · 收為任務（accept=true）或不用追（accept=false）。
+   * 權限同簽核 —— 決定一件事要不要追，跟確認它抽得對不對是同一層的判斷。
+   */
+  @Patch("tickets/:ticketId/decision")
+  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  async decide(
+    @CurrentUser() user: JwtUser,
+    @Param("ticketId") ticketId: string,
+    @Body() body: { accept?: boolean },
+  ) {
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
+    if (typeof body?.accept !== "boolean") throw new BadRequestException("accept 必須是 true 或 false");
+    return this.tasksService.decideTicket(ticketId, body.accept, user.user_id);
+  }
+
   // 某張任務卡的來源原文 · 簽核前拿 AI 抽取結果與原始訊息對照
   // 權限：能看到 ticket 就能看到來源（RLS 已切範圍）· 不另設 permission
   @Get("tickets/:ticketId/source")

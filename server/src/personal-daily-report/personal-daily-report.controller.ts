@@ -178,7 +178,9 @@ export class PersonalDailyReportController {
       SELECT ticket_id::text, summary, category, created_at::text
       FROM tickets
       WHERE assignee_user_id = ${user.user_id}::uuid
-        AND confirm_status <> '已簽核'
+        -- 只帶「已經確認是任務」的。待確認的還沒被主管認可為任務，
+        -- 提早出現在同仁日報等於要他做一件公司還沒決定要做的事（doc F-6）
+        AND confirm_status IN ('待簽核', '逾時警示')
       ORDER BY created_at DESC
       LIMIT 20
     `);

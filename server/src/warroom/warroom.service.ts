@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { inArray } from "drizzle-orm";
 import { currentTx } from "../db/client.js";
 import { departments, tickets, users } from "../db/schema.js";
+import { inSignoffScope } from "../warroom-task-board/ticket-lane.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 type Health = "green" | "yellow" | "red";
@@ -53,7 +54,10 @@ export class WarroomService {
     const asOfMs = times.length ? Math.max(...times) : Date.now();
 
     const groups: WarroomGroup[] = depts.map((d) => {
-      const dt = tks.filter((t) => t.departmentId === d.departmentId);
+      // ⚠️ 只算「在簽核佇列裡的票」。待確認（還沒決定是不是任務）、已忽略、存查（公告／已完成）
+      //    都不該進簽核率——它們永遠不會變成「已簽核」，混進來的話 every() 永遠 false，
+      //    每個部門都簽不完，簽核率會卡在 0%（task-materialization-gate.md §4 · F-2 P0）
+      const dt = tks.filter((t) => t.departmentId === d.departmentId && inSignoffScope(t.confirmStatus));
       const lastMs = dt.length ? Math.max(...dt.map((t) => new Date(t.createdAt).getTime())) : 0;
       const active = lastMs > 0 && asOfMs - lastMs <= DAY_MS;
       const overdue = dt.some((t) => t.confirmStatus === "逾時警示");
