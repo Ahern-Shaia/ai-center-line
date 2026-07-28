@@ -41,6 +41,19 @@ pandoc "docs/計畫書-系統架構文件.md" -o "docs/計畫書-系統架構文
 
 ## Code Style
 
+### 通訊通道中立（寫新東西時的紀律）
+
+產品線架構宣示「通訊接頭層 Channel Adapter · 不能硬編 LINE-specific」，
+但現況 184 個檔案有 107 個提到 LINE。**現在不做抽象**（觸發條件見
+[`docs/modules/channel-adapter.md`](docs/modules/channel-adapter.md) §7），
+但新寫的東西不要再加深耦合 —— 這幾條是零成本的：
+
+- 新表用**中性欄位名**：`external_user_id` 而非 `line_user_id`
+- 新 module／service **名稱不放 LINE**（例：`media/` 不是 `line-media/`）
+- 新端點**不叫 `/line-*`**（例：`GET /media`、`GET /audit`）
+- 平台專屬邏輯**收在 `line-ingest/`**：reply token、LIFF、24hr 媒體時效這些概念不要漏到戰情室
+- 「LINE 做不到」的事**記成產品邊界**而非待辦（例：bot 沒有歷史訊息 API）
+
 ### General
 
 - Write clean, minimal code; fewer lines is better
