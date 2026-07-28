@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>任務追蹤生命週期 · UI Flow v2.3</title>
+<title>任務追蹤生命週期 · UI Flow v2.4</title>
 <style>
   :root{
     --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6;
@@ -174,9 +174,9 @@
 <body>
 <div class="wrap">
 
-<h1>任務追蹤生命週期 · UI Flow <span class="muted" style="font-size:19px">v2.3</span></h1>
+<h1>任務追蹤生命週期 · UI Flow <span class="muted" style="font-size:19px">v2.4</span></h1>
 <p class="lede">從 AI 抽出任務，到當責人回報結束的完整動線。</p>
-<p class="meta">2026-07-28 · 對應 <span class="mono">docs/modules/task-completion-tracking.md v2.3</span>
+<p class="meta">2026-07-28 · 對應 <span class="mono">docs/modules/task-completion-tracking.md v2.4</span>
 · 依 prod 真實對話兩輪查驗修正方向（762 則訊息 / 35 張任務 / 149 則引用回覆）</p>
 
 <div class="callout bad big">
@@ -362,16 +362,18 @@
   </div>
 
   <div class="phone">
-    <div class="ph-hd"><span>③ 不確定</span><span class="chip warn">保守側 · 當進度</span></div>
+    <div class="ph-hd"><span>③ 不確定 → <b>就地問</b></span><span class="chip warn">一個 tap</span></div>
     <div class="ph-bd">
       <div class="bub"><span class="nm">林班長</span><span class="at">@陳○○</span> 三號機軸承明天記得換一下</div>
       <div class="bub me">
         <div class="quo"><span class="qn">林班長</span>@陳○○ 三號機軸承明天記得換一下</div>
         快好了
       </div>
-      <div class="sys">
-        ↻ <b>已記錄進度</b>　更換三號機軸承<br>
-        <span style="font-size:11.5px">完成了的話回一句「完成」就好</span>
+      <div class="flex-card" style="max-width:88%">
+        <div class="fc-bd" style="padding:9px 11px">
+          收到。這件算完成了嗎？
+        </div>
+        <div class="fc-ft"><span>完成</span><span style="color:#6B7280">還沒</span></div>
       </div>
     </div>
   </div>
@@ -391,6 +393,14 @@
   後者會讓系統宣稱一件沒做完的事做完了（doc F-15，P0）。<br>
   <b>所以只認高把握的完成語意</b>（已完成／好了／換好了／已處理／已設定／OK），
   其餘一律當進度。寧可少接一筆，不可誤報一筆。
+</div>
+
+<div class="callout good big">
+  ⭐ <b>而且那 2 則誤判，不需要語意判斷就能擋掉。</b><br>
+  兩則都是<b>指派者引用自己的指派訊息去催進度</b>——
+  「洪鈺仙 引用 洪鈺仙」「郁芬Sandra 引用 郁芬Sandra」。<br><br>
+  <b>結構規則：<span class="mono">回覆者 == 原訊息發話者</span> → 這是催問，不動任何狀態。</b><br>
+  零誤差、不依賴語言，而且<b>結構與疑問句兩個獨立過濾器各自都抓到同樣 2 則</b>——雙保險。
 </div>
 
 <div class="callout warn">
@@ -478,7 +488,7 @@
         <div class="bub me">7/28 阿斌<br>晨會<br>人員工作安排確認<br>與製程工程師討論中巴車內板金<br>簽核請購單</div>
         <div class="sys">
           ✓ <b>已收到今日回報</b><br>
-          <span style="font-size:12px">你還開著 3 件：</span>
+          <span style="font-size:12px">以下 3 件尚未確認完成：</span>
           <div style="font-size:11.5px;margin:5px 0 0;line-height:1.8">
             · 更換三號機軸承<span class="muted">（第 3 天 · 最後回報：零件週四到）</span><br>
             · 沐浴車座椅拆裝評估<span class="muted">（第 5 天 · 從未回報）</span><br>
@@ -518,7 +528,97 @@
 </div>
 
 
-<h2><span class="n">07</span>主管視角 · 網頁這一區改成給主管看</h2>
+<h2><span class="n">07</span>⭐ 持續追蹤是紀律，不是不作為</h2>
+<p class="sub">不確定的任務一直留著、直到有人確認——這是對的。
+<b>但前提是標籤要說對話。</b></p>
+
+<div class="two">
+  <div>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th style="width:32%">標籤</th><th style="width:30%">在說什麼</th><th>對不對</th></tr></thead>
+      <tbody>
+        <tr><td><b>未完成</b></td><td><b>工作</b>沒做完</td>
+            <td class="bad">人做完了但沒回報時 → 是假的</td></tr>
+        <tr style="background:var(--ok-tint)"><td><b>未確認完成</b></td><td><b>沒有人確認過</b></td>
+            <td class="good">永遠是真的</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="callout good">
+      只要標籤是後者，<b>持續留著就完全正確</b>——系統誠實地表達「我不知道」，
+      直到有人告訴它。<b>那是紀律。</b><br>
+      <span class="muted" style="font-size:13px">（同 ITIL 的 resolved vs closed：停在 resolved 等使用者確認，沒有人認為那是系統失職。）</span>
+    </div>
+  </div>
+  <div>
+    <h3 style="margin-top:0">改標籤直接解掉「信任」的疑慮</h3>
+    <div class="scr" style="margin-bottom:10px">
+      <div class="scr-bd" style="padding:12px 14px">
+        <div style="font-size:13.5px;color:var(--danger);margin-bottom:8px">
+          ❌「你還開著 3 件<b>未完成</b>」</div>
+        <div class="muted" style="font-size:12.5px;padding-left:16px">
+          → 他心想：我明明做完了，這系統是壞的</div>
+      </div>
+    </div>
+    <div class="scr">
+      <div class="scr-bd" style="padding:12px 14px">
+        <div style="font-size:13.5px;color:var(--ok);margin-bottom:8px">
+          ✅「以下 3 件<b>尚未確認完成</b>」</div>
+        <div class="muted" style="font-size:12.5px;padding-left:16px">
+          → 他心想：喔，我去確認一下</div>
+      </div>
+    </div>
+    <div class="callout">
+      同一個狀態、同一份資料，第二種說法<b>沒有人被冤枉</b>。<br>
+      <b>信任問題不是持續追蹤造成的，是措辭造成的。</b>
+    </div>
+  </div>
+</div>
+
+<h3>但殘留一個真問題：佇列要有出口</h3>
+<p class="sub">「持續追蹤<b>直到有人按完成</b>」——而當責人 0 人有帳號，那個「有人」目前不存在。
+紀律是真的，但迴圈沒有終止條件。</p>
+
+<div class="vs">
+  <div class="col new">
+    <div class="col-hd"><span class="tag">出口 1</span>就地問一個 tap</div>
+    <div class="col-bd">
+      <div class="phone" style="border-radius:var(--r)">
+        <div class="ph-bd" style="min-height:auto">
+          <div class="bub me">快好了</div>
+          <div class="flex-card" style="max-width:92%">
+            <div class="fc-bd" style="padding:9px 11px">收到。這件算完成了嗎？</div>
+            <div class="fc-ft"><span>完成</span><span style="color:#6B7280">還沒</span></div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:13px;margin:11px 0 0">
+        不用帳號、不用登入、在他已經在的地方。<br>
+        量很小：<b>一週約 1–2 則</b>真正不確定的。
+      </p>
+    </div>
+    <div class="note"><b>不是修正誤判，是最便宜的收斂點。</b></div>
+  </div>
+  <div class="col new">
+    <div class="col-hd"><span class="tag">出口 2</span>8 天後升級主管</div>
+    <div class="col-bd">
+      <p class="mono" style="font-size:12.5px;line-height:2;margin:0">
+        第 1–3 天　出現在他的每日回報回覆裡<br>
+        第 4–7 天　仍出現，標「已 N 天未確認」<br>
+        <b>第 8 天起　改浮到主管端，不再對他重複</b>
+      </p>
+      <div class="callout warn" style="margin-bottom:0">
+        同樣 3 件連續出現 30 天，人會自動忽略。<br>
+        <b>紀律要有階梯，不是無限重複同一句話。</b>
+      </div>
+    </div>
+    <div class="note"><b>佇列的洩壓閥</b>——主管有帳號，結得掉。</div>
+  </div>
+</div>
+
+
+<h2><span class="n">08</span>主管視角 · 網頁這一區改成給主管看</h2>
 <p class="sub">同仁的輸入介面是 LINE。網頁回答的是主管的問題：<b>誰手上有什麼、誰卡住了。</b></p>
 
 <div class="scr">
@@ -560,7 +660,7 @@
 </div>
 
 
-<h2><span class="n">08</span>主管補登與代結案</h2>
+<h2><span class="n">09</span>主管補登與代結案</h2>
 <p class="sub">代標不是例外是必然（Jira 的限制是 opt-in、Asana 根本沒這權限）。但要看得出來是誰按的。</p>
 
 <div class="two">
@@ -608,7 +708,7 @@
 </div>
 
 
-<h2><span class="n">09</span>逾期分流 ＋ 未接住清單</h2>
+<h2><span class="n">10</span>逾期分流 ＋ 未接住清單</h2>
 
 <div class="two">
   <div class="card" style="border-left:3px solid var(--warn)">
@@ -680,7 +780,7 @@
 </div>
 
 
-<h2><span class="n">10</span>⚠️ 第二輪查驗：三次都猜錯瓶頸</h2>
+<h2><span class="n">11</span>⚠️ 第二輪查驗：三次都猜錯瓶頸</h2>
 <p class="sub">每一版都以為找到瓶頸了，每一版都被同一份 prod 資料推翻。這段記下軌跡。</p>
 
 <div class="tbl-wrap">
@@ -737,7 +837,7 @@
 </div>
 
 
-<h2><span class="n">11</span>量測 · 接住率比完成率更早有用</h2>
+<h2><span class="n">12</span>量測 · 接住率比完成率更早有用</h2>
 
 <div class="scr">
   <div class="scr-bar"><span>戰情室 · 任務追蹤成效</span></div>
@@ -765,7 +865,7 @@
 </div>
 
 
-<h2><span class="n">12</span>底層四軸 → 對外一個狀態</h2>
+<h2><span class="n">13</span>底層四軸 → 對外一個狀態</h2>
 
 <div class="tbl-wrap">
 <table>
@@ -795,7 +895,7 @@
 </div>
 
 
-<h2><span class="n">13</span>明確不做的</h2>
+<h2><span class="n">14</span>明確不做的</h2>
 <div class="three">
   <div class="card"><h4>AI 不自動標完成</h4>
     <p>AI 只能寫 <span class="mono">status</span>，永遠不得寫 <span class="mono">work_status</span>。
@@ -813,7 +913,7 @@
 </div>
 
 
-<h2><span class="n">14</span>LINE 綁定的定位：加值層，不是啟用條件</h2>
+<h2><span class="n">15</span>LINE 綁定的定位：加值層，不是啟用條件</h2>
 <p class="sub">推廣時常見的想法是「未來以員工綁定 LINE 為使用前提」。
 <b>那本案算不算未綁定時的回退機制？——不算，而且這樣想會把主路徑當備胎蓋。</b></p>
 
@@ -906,7 +1006,7 @@
 </div>
 
 
-<h2><span class="n">15</span>里程碑（順序已因 prod 實證重排）</h2>
+<h2><span class="n">16</span>里程碑（順序已因 prod 實證重排）</h2>
 <div class="tbl-wrap">
 <table>
   <thead><tr><th style="width:9%">里程碑</th><th>內容</th><th style="width:12%">需綁定？</th></tr></thead>
