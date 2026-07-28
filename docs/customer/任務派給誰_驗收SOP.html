@@ -105,7 +105,7 @@
 
 <h1>任務要派給誰？</h1>
 <p class="lede">系統從 LINE 群組整理出任務之後，怎麼指定「這件事由誰負責」，以及負責的人在哪裡看到。</p>
-<p class="meta">操作與驗收手冊 · 2026-07-27 · aiproot</p>
+<p class="meta">操作與驗收手冊 · 2026-07-28 更新 · aiproot</p>
 
 <div class="note">
   <b>這份文件給誰看</b><br>
@@ -128,6 +128,9 @@
   <div class="card">
     <h4>② 對得到人就自動派</h4>
     <p>如果讀到的名字能對到公司的帳號，就直接掛在那個人身上。</p>
+    <p style="color:var(--ink-3);font-size:12.5px;margin-top:6px">
+      目前這一步<b>還沒開始發揮作用</b>（原因見下方常見問題），
+      所以現階段實際上都會走到 ③。</p>
   </div>
   <div class="card">
     <h4>③ 對不到就等您指定</h4>
@@ -194,6 +197,26 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <p style="margin-top:14px">畫面上還會看到另外兩個區塊，<b>這份手冊不會用到它們</b>，
+      但先讓您知道那是什麼，才不會停在那邊猶豫：</p>
+    <div class="screen">
+      <div class="screen-bar"><span class="dot"></span>任務看板的其他區塊</div>
+      <div class="screen-body">
+        <div class="tcard">
+          <div class="sum">▾ 請您確認 <span class="pill">3</span></div>
+          <div class="foot">AI 整理出來但沒有十足把握的事，由您決定要不要追蹤。</div>
+        </div>
+        <div class="tcard">
+          <div class="sum">▸ 未列入待辦 <span class="pill">6</span></div>
+          <div class="foot">公告與已經做完的事。不需要簽核，留著可以查。</div>
+        </div>
+      </div>
+    </div>
+    <div class="check">
+      <div class="check-t">這兩區跟「指派」無關</div>
+      <div>本次驗收<b>不用動它們</b>。要驗收的是下面三欄裡的任務卡。</div>
     </div>
 
     <div class="check">
@@ -313,7 +336,15 @@
 <p>因為同事還沒把 LINE 和系統連結起來。目前<b>42 位在群組講過話的人裡，只有 4 位完成連結</b>。</p>
 <p>系統只有在<b>完全確定</b>時才自動指派，所以現階段大部分需要您手動點一下。
 <b>這不影響使用</b> —— 手動派發本來就是您確認 AI 有沒有讀錯的機會。</p>
-<p><b>等同事陸續完成 LINE 連結，自動指派的比例就會自己上升</b>，您要手動點的會越來越少。</p>
+<p>要讓自動指派真的動起來，需要<b>兩件事同時到位</b>：</p>
+<ul>
+  <li><b>同事完成 LINE 連結</b>（貴公司這邊，目前 42 位裡 4 位）</li>
+  <li><b>我們完成人名比對的優化</b>（aiproot 這邊，開發中）
+    —— 現在系統讀到的常是「佳慧/小星星/威廉/三爪」這種一格塞好幾個人的寫法，
+    這種對不到任何帳號。</li>
+</ul>
+<p>兩件都到位後，您要手動點的才會明顯變少。
+<b>在那之前，請把手動指派當成正常流程</b>，不是系統壞了。</p>
 
 <h3>派錯人了怎麼辦？</h3>
 <p>點開那張卡片 → 點<b>「改派」</b> → 選正確的人，或選<b>「退回待認領」</b>。</p>
@@ -339,10 +370,11 @@
 <table>
   <tr><th style="width:44px">打勾</th><th>驗收項目</th></tr>
   <tr><td>☐</td><td>任務看板上，看得到任務卡</td></tr>
-  <tr><td>☐</td><td>看得出哪些<b>已有負責人</b>（人名 + 頭像）、哪些是<b>待認領</b>（橘色）</td></tr>
+  <tr><td>☐</td><td>卡片下方看得到橘色的<b>待認領</b>
+    <span style="color:var(--ink-3)">（現階段幾乎都會是這個狀態，正常）</span></td></tr>
   <tr><td>☐</td><td>點開待認領的卡片，看得到系統讀到的名字</td></tr>
   <tr><td>☐</td><td>點「指派」，列得出公司同事清單</td></tr>
-  <tr><td>☐</td><td>指派後，卡片顯示變成該同事的名字</td></tr>
+  <tr><td>☐</td><td>指派後，卡片從橘色<b>待認領</b>變成<b>人名 + 圓形頭像</b></td></tr>
   <tr><td>☐</td><td>該同事登入後，在「我的日報」看得到這項任務</td></tr>
   <tr><td>☐</td><td>該同事按「加入日報」後，項目進入日報清單</td></tr>
   <tr><td>☐</td><td>試著<b>改派</b>給另一位同事，顯示正確更新</td></tr>
