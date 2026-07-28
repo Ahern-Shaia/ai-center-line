@@ -6,6 +6,7 @@ import { LineGroupRepository } from "./line-group.repository.js";
 import { LineMessageRepository } from "./line-message.repository.js";
 import { MediaDownloadService } from "./media-download.service.js";
 import { MemberFetchService } from "./member-fetch.service.js";
+import { CompletionSignalService } from "../task-completion/completion-signal.service.js";
 import { LineApiClient } from "./line-api.client.js";
 import { EmployeeBindingService } from "../employee-binding/employee-binding.service.js";
 
@@ -35,6 +36,7 @@ interface LineWebhookEvent {
     fileName?: string;                             // file only
     packageId?: string;                            // sticker only
     stickerId?: string;
+    quotedMessageId?: string;                      // 0036 · 引用回覆指到的原訊息 —— 任務完成訊號的鑰匙
     [key: string]: unknown;
   };
 }
@@ -59,6 +61,7 @@ export class LineWebhookService {
     private readonly memberFetch: MemberFetchService,
     private readonly bindingService: EmployeeBindingService,
     private readonly lineApi: LineApiClient,
+    private readonly completionSignal: CompletionSignalService,
   ) {}
 
   // 主入口 · rawBody 用於 HMAC 驗證 · payload 解析後可 access destination + events
@@ -95,6 +98,8 @@ export class LineWebhookService {
       userId: string;
       accessToken: string;
     }> = [];
+    // 0036 · 引用回覆的即時回饋 · 累到 tx 結束才送（reply token 在 tx 內送會拖住交易）
+    const replyTasks: Array<{ replyToken: string; accessToken: string; text: string }> = [];
 
     await withSystemTx(async (tx) => {
       const bot = await this.botRepo.getByBotUserIdWithSecret(tx, destination);
@@ -192,6 +197,28 @@ export class LineWebhookService {
             rawEvent: event as unknown as Record<string, unknown>,
           });
 
+          // 0036 · M3a · 引用回覆 → 完成訊號（先落地，對應留給批次後回掃）
+          // ⚠️ 只認 inserted：webhook 會重送，重複處理會重複回話洗版
+          if (inserted && msg.type === "text" && msg.quotedMessageId && senderUid) {
+            try {
+              const r = await this.completionSignal.capture(tx, {
+                tenantId: ref.tenantId,
+                groupId,
+                replyMessageId: msg.id,
+                quotedMessageId: msg.quotedMessageId,
+                replierLineUserId: senderUid,
+                replierDisplayName: null,          // member profile 另有 cache · 這裡不擋
+                text: textContent ?? "",
+              });
+              if (r.reply && event.replyToken) {
+                replyTasks.push({ replyToken: event.replyToken, accessToken: bot.channelAccessToken, text: r.reply });
+              }
+            } catch (err) {
+              // 訊號沒收到不影響訊息本身已經落庫 —— 分析照跑，只是少一筆完成訊號
+              this.logger.warn(`[completion] 訊號落地失敗 · messageId=${msg.id} · ${(err as Error).message}`);
+            }
+          }
+
           if (inserted && MEDIA_MESSAGE_TYPES.has(msg.type)) {
             // A2 · 媒體下載 · 累到 tx 結束後 fire (LINE URL 有 24hr 時效 · 早點下越好)
             mediaTasks.push({
@@ -218,6 +245,16 @@ export class LineWebhookService {
         }
       }
     });
+
+    // Tx 結束才回話 · reply token 有時效但不長，先讓 tx 落定再送
+    for (const r of replyTasks) {
+      try {
+        await this.lineApi.replyMessage(r.accessToken, r.replyToken, [{ type: "text", text: r.text }]);
+      } catch (err) {
+        // 回話失敗不影響訊號已經落地 —— 少回一句可以，訊號掉了不行
+        this.logger.warn(`[completion] 回覆失敗 · ${(err as Error).message}`);
+      }
+    }
 
     // Tx 結束才 enqueue · 避免 in-flight tx 內做 fire-and-forget 邊界模糊
     for (const task of mediaTasks) {
