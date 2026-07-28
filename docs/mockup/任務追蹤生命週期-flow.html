@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>任務追蹤生命週期 · UI Flow v2.1</title>
+<title>任務追蹤生命週期 · UI Flow v2.2</title>
 <style>
   :root{
     --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6;
@@ -174,9 +174,9 @@
 <body>
 <div class="wrap">
 
-<h1>任務追蹤生命週期 · UI Flow <span class="muted" style="font-size:19px">v2.1</span></h1>
+<h1>任務追蹤生命週期 · UI Flow <span class="muted" style="font-size:19px">v2.2</span></h1>
 <p class="lede">從 AI 抽出任務，到當責人回報結束的完整動線。</p>
-<p class="meta">2026-07-28 · 對應 <span class="mono">docs/modules/task-completion-tracking.md v2.1</span>
+<p class="meta">2026-07-28 · 對應 <span class="mono">docs/modules/task-completion-tracking.md v2.2</span>
 · 依 prod 真實對話（762 則訊息 / 35 張任務）修正方向</p>
 
 <div class="callout bad big">
@@ -734,21 +734,114 @@
 </div>
 
 
-<h2><span class="n">13</span>里程碑（順序已因 prod 實證重排）</h2>
+<h2><span class="n">13</span>LINE 綁定的定位：加值層，不是啟用條件</h2>
+<p class="sub">推廣時常見的想法是「未來以員工綁定 LINE 為使用前提」。
+<b>那本案算不算未綁定時的回退機制？——不算，而且這樣想會把主路徑當備胎蓋。</b></p>
+
+<div class="two">
+  <div>
+    <h3 style="margin-top:0">比綁定率更說明問題的一組數字</h3>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th style="width:52%">發言者</th><th style="width:22%">訊息數</th><th>綁定</th></tr></thead>
+      <tbody>
+        <tr><td>林曉風 Patrick</td><td class="mono">492</td><td><span class="chip ok">已綁</span></td></tr>
+        <tr><td><b>郁芬Sandra</b></td><td class="mono">385</td><td><span class="chip bad">未綁</span></td></tr>
+        <tr><td>洪鈺仙Sandy</td><td class="mono">376</td><td><span class="chip ok">已綁</span></td></tr>
+        <tr><td>柏淵</td><td class="mono">205</td><td><span class="chip ok">已綁</span></td></tr>
+        <tr><td><b>Cathy</b></td><td class="mono">168</td><td><span class="chip bad">未綁</span></td></tr>
+        <tr><td><b>江冠毅</b></td><td class="mono">111</td><td><span class="chip bad">未綁</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="callout bad">
+      群組成員 <b>44 人 · 已綁 4 人</b>——而那 4 個是<b>推導入的人</b>
+      （2 個 tenant_admin ＋ 2 個試辦者），不是做事的人。<br>
+      志銓、汪、李誼裕、宗岳、大文、千祐、郁芬Sandra、Cathy 全部未綁。<br><br>
+      <b>若綁定是使用前提，系統目前只服務「正在安裝系統的人」。</b>
+    </div>
+  </div>
+  <div>
+    <h3 style="margin-top:0">為什麼引用回覆是主路徑，綁不綁都是</h3>
+    <p style="font-size:13.5px;color:var(--ink-2)">
+      綁定解決的是<b>身分對應</b>，不是<b>人在哪裡工作</b>。<br>
+      即使 100% 綁定完，同一個人要回報完成，他會選哪個？
+    </p>
+    <ul>
+      <li>開瀏覽器 → 登入 → 找到那張任務 → 點按鈕</li>
+      <li><b>在他已經在的 LINE 裡，引用那則訊息回「已完成」</b></li>
+    </ul>
+    <div class="callout good"><b>綁定不會讓網頁變得比較好用。</b></div>
+
+    <h3>綁定真正解鎖的是另一組功能</h3>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th style="width:54%">能力</th><th style="width:23%">不需綁定</th><th>需綁定</th></tr></thead>
+      <tbody>
+        <tr><td>接住完成訊號</td><td class="good">✅</td><td></td></tr>
+        <tr><td>關掉任務、記進度</td><td class="good">✅</td><td></td></tr>
+        <tr><td>主管看板、逾期分流</td><td class="good">✅</td><td></td></tr>
+        <tr><td>每日回報附未完成清單</td><td class="good">✅</td><td></td></tr>
+        <tr><td><b>個人日報</b>（任務 → 我的日報）</td><td></td><td class="bad">⛔</td></tr>
+        <tr><td><b>私訊通知</b></td><td></td><td class="bad">⛔</td></tr>
+        <tr><td><b>跨群彙整一個人的工作</b></td><td></td><td class="bad">⛔</td></tr>
+        <tr><td><b>網頁登入看自己的歷史</b></td><td></td><td class="bad">⛔</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<h3>對推廣的建議：把順序反過來</h3>
+<div class="vs">
+  <div class="col old">
+    <div class="col-hd"><span class="tag">風險</span>先綁定才有價值</div>
+    <div class="col-bd">
+      <p style="font-size:13.5px;margin:0">
+        綁定是<b>一次性摩擦</b>，但它擋在<b>所有價值前面</b>。<br><br>
+        prod 已經給了答案：可用了數月，<b class="bad">4 / 44</b>。<br>
+        其餘 90% 的人拿不到任何東西，客戶看到的是「系統沒在動」。
+      </p>
+    </div>
+    <div class="note">這是典型的 B2B 導入牆：入場費收在價值之前。</div>
+  </div>
+  <div class="col new">
+    <div class="col-hd"><span class="tag">採用</span>先給價值，綁定拿更多</div>
+    <div class="col-bd">
+      <p style="font-size:13.5px;margin:0">
+        <b>Day 1</b>　系統直接在群裡運作（不用綁、不用登入）<br>
+        <span class="muted" style="font-size:12.5px">　　主管看得到看板、完成訊號接得住 → 當天就看到東西在動</span><br><br>
+        <b>之後</b>　「想看自己的工作紀錄、想收個人日報？綁一下」<br>
+        <span class="muted" style="font-size:12.5px">　　綁定變成「拿更多」，不是「入場費」</span>
+      </p>
+    </div>
+    <div class="note">跟整個產品主張同一件事：<b>不要求員工先改習慣</b>。綁定本身就是一次習慣改變。</div>
+  </div>
+</div>
+
+<div class="callout warn">
+  <b>但要誠實記下代價。</b>未綁定時當責人只能用 <span class="mono">display_name</span>（文字）表示，
+  那不是身分——<b>同名、改暱稱、一人多帳號都會對錯</b>。<br>
+  緩解：看板對未綁者標「（未綁定）」不宣稱精確；同群內 display_name 重複時<b>不自動歸屬</b>；
+  綁定後回填即自動修正。（doc F-23）
+</div>
+
+
+<h2><span class="n">14</span>里程碑（順序已因 prod 實證重排）</h2>
 <div class="tbl-wrap">
 <table>
-  <thead><tr><th style="width:9%">里程碑</th><th>內容</th></tr></thead>
+  <thead><tr><th style="width:9%">里程碑</th><th>內容</th><th style="width:12%">需綁定？</th></tr></thead>
   <tbody>
     <tr><td class="mono"><b>M1</b> ⭐</td><td><b>補 <span class="mono">source_message_ids</span></b>——讓任務掛得回 LINE 訊息。
-      <b>不補這條鏈，引用回覆找不到要關哪一張任務，後面全部落空。</b>順便讓 R11 從紙上落到實際。</td></tr>
+      <b>不補這條鏈，引用回覆找不到要關哪一張任務，後面全部落空。</b>順便讓 R11 從紙上落到實際。</td><td><b>否</b></td></tr>
     <tr><td class="mono">M2</td><td>migration：<span class="mono">work_status</span> / <span class="mono">work_outcome</span> /
-      <span class="mono">work_closed_*</span> ＋ 跨軸 CHECK ＋ <span class="mono">displayState()</span> 投影函數</td></tr>
-    <tr><td class="mono"><b>M3</b> ⭐</td><td><b>LINE 引用回覆 → 關任務</b>（本案主體）· 語意三分（完成／進度／不確定）· 系統回一則確認</td></tr>
-    <tr><td class="mono"><b>M3.5</b> ⭐</td><td><b>每日回報時回覆未完成清單</b>（§06）· 只回他自己發的那則 · 沒發不回 · 0 件不回</td></tr>
-    <tr><td class="mono">M4</td><td>主管視角：看板狀態、逾期分流、未接住清單</td></tr>
-    <tr><td class="mono">M5</td><td>網頁補登、代結案顯示、完成可還原</td></tr>
-    <tr><td class="mono">M6</td><td>日報頁「你手上的任務」改唯讀（<b>顯示要一直在，寫進去不要</b>），並修掉簽核後任務消失的既有缺陷</td></tr>
-    <tr><td class="mono">M7</td><td><b>量測接住率</b>＋結案率＋FMEA 覆核</td></tr>
+      <span class="mono">work_closed_*</span> ＋ 跨軸 CHECK ＋ <span class="mono">displayState()</span> 投影函數</td><td><b>否</b></td></tr>
+    <tr><td class="mono"><b>M3</b> ⭐</td><td><b>LINE 引用回覆 → 關任務</b>（本案主體）· 語意三分（完成／進度／不確定）· 系統回一則確認</td><td><b>否</b></td></tr>
+    <tr><td class="mono"><b>M3.5</b> ⭐</td><td><b>每日回報時回覆未完成清單</b>（§06）· 只回他自己發的那則 · 沒發不回 · 0 件不回</td><td><b>否</b></td></tr>
+    <tr><td class="mono">M4</td><td>主管視角：看板狀態、逾期分流、未接住清單</td><td><b>否</b></td></tr>
+    <tr><td class="mono">M5</td><td>網頁補登、代結案顯示、完成可還原</td><td>部分</td></tr>
+    <tr><td class="mono">M6</td><td>日報頁「你手上的任務」改唯讀（<b>顯示要一直在，寫進去不要</b>），並修掉簽核後任務消失的既有缺陷</td><td><span class="bad">⛔ 要</span></td></tr>
+    <tr><td class="mono">M7</td><td><b>量測接住率</b>＋結案率＋FMEA 覆核</td><td><b>否</b></td></tr>
   </tbody>
 </table>
 </div>
