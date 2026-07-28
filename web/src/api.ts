@@ -465,6 +465,16 @@ export interface WarroomKanbanTicket {
   departmentName: string | null;
   confirmedByName: string | null;
   confirmedAt: string | null;
+  // 第四條軸 · 擁有者是當責人本人（前三條是 AI／主管／歸屬）
+  workStatus: "open" | "closed";
+  workOutcome: string | null;
+  workClosedVia: "line_reply" | "web" | "system" | null;
+  /** 有值代表是別人代結的 · UI 要明示（doc F-5） */
+  workClosedByName: string | null;
+  workLastReportAt: string | null;
+  workLastReportNote: string | null;
+  /** 四軸投影後的對外單一狀態 · 由後端算，前端不要自己拼（措辭鐵則在後端） */
+  displayState: string;
 }
 
 export interface WarroomTaskBoard {
@@ -474,8 +484,15 @@ export interface WarroomTaskBoard {
     overdue: WarroomKanbanTicket[];
     unconfirmed: WarroomKanbanTicket[];   // 中信心 · 等主管決定要不要追
     archived: WarroomKanbanTicket[];      // 公告與已完成 · 留著可查
+    /** 逾期未開始 · 沒人接 → 主管要催派工 */
+    overdueUnassigned: WarroomKanbanTicket[];
+    /** 逾期未確認完成 · 有人接了但卡住 → 主管要問障礙 */
+    overdueUnconfirmed: WarroomKanbanTicket[];
   };
-  counts: { pending: number; signed: number; overdue: number; unconfirmed: number; archived: number };
+  counts: {
+    pending: number; signed: number; overdue: number; unconfirmed: number; archived: number;
+    overdueUnassigned: number; overdueUnconfirmed: number;
+  };
 }
 
 export interface WarroomDailyReport {
@@ -1366,6 +1383,62 @@ export type AuditScope = "all" | "write" | "login";
 export const listAudit = (scope: AuditScope, page: number) =>
   req<{ items: AuditItem[]; page: number; pageSize: number; hasNext: boolean }>(
     `/audit?scope=${scope}&page=${page}`,
+  );
+
+// ── 任務追蹤到結束 · task-completion-tracking.md ────────────────────
+// ⚠️ 網頁是**補登**路徑 · 主要入口是 LINE 引用回覆（當責人多半沒有系統帳號）
+
+export type WorkOutcome = "完成" | "不用做了" | "轉他人" | "做不到";
+
+/** 補登結束 · 代結的話後端會記下是誰按的，看板會顯示「由 ○○ 代為結束」 */
+export const closeTicketWork = (ticketId: string, outcome: WorkOutcome, note?: string) =>
+  req<{ ticketId: string; workStatus: string; workOutcome: string }>(
+    `/warroom/tickets/${ticketId}/work-close`,
+    { method: "PATCH", body: JSON.stringify({ outcome, note }) },
+  );
+
+/** 還原成「尚未確認完成」· 標錯了要有補救途徑，否則沒人敢按 */
+export const reopenTicketWork = (ticketId: string) =>
+  req<{ ticketId: string; workStatus: string }>(
+    `/warroom/tickets/${ticketId}/work-reopen`, { method: "PATCH" },
+  );
+
+/** 回報進度 · 低承諾動作 · 任務留在進行中 */
+export const reportTicketWork = (ticketId: string, note: string) =>
+  req<{ ticketId: string }>(
+    `/warroom/tickets/${ticketId}/work-report`,
+    { method: "PATCH", body: JSON.stringify({ note }) },
+  );
+
+export interface UnresolvedSignal {
+  signalId: string; intent: string; note: string | null; receivedAt: string;
+  replier: string | null; quotedText: string | null; groupName: string | null;
+  reason: "materialization_gap" | "awaiting_batch";
+  reasonLabel: string;
+}
+
+/** 未接住清單 · 平台管理員的除錯與校準訊號，不是客戶的待辦 */
+export const getUnresolvedSignals = (tenantId: string) =>
+  req<{ items: UnresolvedSignal[]; counts: { awaitingBatch: number; materializationGap: number } }>(
+    `/completion-signals/unresolved?tenantId=${encodeURIComponent(tenantId)}`,
+  );
+
+export interface CompletionStats {
+  windowDays: number;
+  signals: {
+    total: number; completion: number; caught: number;
+    materializationGap: number; awaitingBatch: number; catchRate: number | null;
+  };
+  tickets: {
+    done: number; dropped: number; otherClosed: number; open: number;
+    closeRate: number | null; formula: string;
+  };
+}
+
+/** 接住率要先看 · 收到 20 則只對上 3 張的話，問題在鏈不在人 */
+export const getCompletionStats = (tenantId: string, days = 14) =>
+  req<CompletionStats>(
+    `/completion-signals/stats?tenantId=${encodeURIComponent(tenantId)}&days=${days}`,
   );
 
 /** 待確認的任務 · 收為任務（accept=true）或不用追（false）· task-materialization-gate.md */

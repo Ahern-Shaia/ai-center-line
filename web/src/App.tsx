@@ -21,6 +21,7 @@ import LineBots from "./line-bots/Page";
 import OnboardWizard from "./aiproot-console/OnboardWizard";
 import TenantManagement from "./aiproot-console/TenantManagement";
 import ExtractionHealth from "./aiproot-console/ExtractionHealth";
+import CompletionTracking from "./aiproot-console/CompletionTracking";
 import { NAV_EVENT, type NavTarget } from "./nav";
 import CostDashboard from "./aiproot-console/CostDashboard";
 import BatchHistory from "./aiproot-console/BatchHistory";
@@ -57,6 +58,7 @@ type Route =
   | { page: "onboard-tenant" }
   | { page: "tenant-mgmt" }
   | { page: "extraction-health" }
+  | { page: "completion-tracking" }
   | { page: "cost-dashboard" }
   | { page: "batch-history" }
   | { page: "binding-audit" }
@@ -90,6 +92,7 @@ const CRUMB: Record<Route["page"], string> = {
   "onboard-tenant": "AIPROOT 管理",
   "tenant-mgmt": "AIPROOT 管理",
   "extraction-health": "AIPROOT 管理",
+  "completion-tracking": "AIPROOT 管理",
   "cost-dashboard": "AIPROOT 管理",
   "batch-history": "AIPROOT 管理",
   "binding-audit": "AIPROOT 管理",
@@ -122,6 +125,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "onboard-tenant": "開通新租戶",
   "tenant-mgmt": "租戶管理",
   "extraction-health": "抽取健康度",
+  "completion-tracking": "任務完成追蹤",
   "cost-dashboard": "AI 成本管理",
   "batch-history": "對話分析歷程",
   "binding-audit": "LINE 綁定稽核",
@@ -145,7 +149,7 @@ function defaultRouteFor(session: Session | null): Route {
 const AIPROOT_ONLY_PAGES = new Set([
   "convo-list", "convo-upload", "convo-detail",
   "llm-settings", "line-bots",
-  "onboard-tenant", "tenant-mgmt", "extraction-health", "cost-dashboard", "batch-history",
+  "onboard-tenant", "tenant-mgmt", "extraction-health", "completion-tracking", "cost-dashboard", "batch-history",
   "binding-audit", "map-config", "notify-config", "category-mgmt", "roles-mgmt",
   "master-data",
 ]);
@@ -261,6 +265,9 @@ export default function App() {
     } else if (key === "extraction-health") {
       if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
       setRoute({ page: "extraction-health" });
+    } else if (key === "completion-tracking") {
+      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
+      setRoute({ page: "completion-tracking" });
     } else if (key === "cost-dashboard") {
       if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
       setRoute({ page: "cost-dashboard" });
@@ -339,6 +346,7 @@ export default function App() {
           {route.page === "onboard-tenant" && <OnboardWizard />}
           {route.page === "tenant-mgmt" && <TenantManagement />}
           {route.page === "extraction-health" && <ExtractionHealth />}
+          {route.page === "completion-tracking" && <CompletionTracking />}
           {route.page === "cost-dashboard" && (
             <CostDashboard onOpenAnalysis={(id) => setRoute({ page: "convo-detail", uploadId: id })} />
           )}

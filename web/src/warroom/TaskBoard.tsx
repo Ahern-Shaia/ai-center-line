@@ -11,6 +11,7 @@ import { catLabel } from "../shared/categoryLabel";
 import { canOpenConvoDetail, navigateTo } from "../nav";
 import { assignTicket, getAssignableMembers, getTicketSource, type AssignableMember, type TicketSource } from "../api";
 import { ArchivedList, UnconfirmedQueue } from "./TaskTriage";
+import { OverdueLanes } from "./WorkTracking";
 
 // WTB-M4 · 任務看板 Kanban 3 欄 (待簽核 / 逾時 / 已簽核)
 // 對照 docs/modules/warroom-task-board.md §7.2
@@ -93,9 +94,23 @@ export default function TaskBoard() {
           count={board.counts.signed}
           tickets={board.kanban.signed}
           onOpen={setDrawer}
-          note={board.counts.signed > 30 ? `顯示最近 30 筆 · 共 ${board.counts.signed}` : undefined}
+          note={signedNote(board)}
+          emptyLabel={
+            board.counts.overdueUnassigned + board.counts.overdueUnconfirmed > 0
+              ? "已簽核的任務都卡住了 · 在下方「卡住的工作」"
+              : undefined
+          }
         />
       </div>
+
+      {/* 逾期分流 · 兩欄的管理動作完全不同：左邊催派工、右邊問障礙。
+          合成一個桶子的話主管無法分流（doc §8） */}
+      <OverdueLanes
+        unassigned={board.kanban.overdueUnassigned}
+        unconfirmed={board.kanban.overdueUnconfirmed}
+        onOpen={setDrawer}
+        onChanged={() => void refresh()}
+      />
 
       <ArchivedList
         tickets={board.kanban.archived}
@@ -115,10 +130,23 @@ export default function TaskBoard() {
   );
 }
 
+/**
+ * 已簽核欄的註腳。
+ * 卡住的票已經移到下方的逾期分流 —— 這裡要講出去哪了，
+ * 不然主管會以為簽核過的票憑空少了幾張。
+ */
+function signedNote(board: WarroomTaskBoard): string | undefined {
+  const moved = board.counts.overdueUnassigned + board.counts.overdueUnconfirmed;
+  const parts: string[] = [];
+  if (moved > 0) parts.push(`另有 ${moved} 件卡住了 · 已移到下方「卡住的工作」`);
+  if (board.counts.signed > 30) parts.push(`顯示最近 30 筆 · 共 ${board.counts.signed}`);
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
 type Tone = "warn" | "danger" | "ok";
 
 function KanbanColumn({
-  title, tone, count, tickets, onOpen, note,
+  title, tone, count, tickets, onOpen, note, emptyLabel,
 }: {
   title: string;
   tone: Tone;
@@ -126,6 +154,7 @@ function KanbanColumn({
   tickets: WarroomKanbanTicket[];
   onOpen: (t: WarroomKanbanTicket) => void;
   note?: string;
+  emptyLabel?: string;
 }) {
   return (
     <div className="kb-col">
@@ -136,14 +165,16 @@ function KanbanColumn({
         <span className="kb-col-count">{count}</span>
       </div>
       <div className="kb-col-body">
+        {/* ⚠️ 提示放在**欄頂**不是欄底：欄高被最長的那欄撐開，
+            放底部的話離空狀態近兩千像素，第一屏根本看不到（瀏覽器實測） */}
+        {note && <div className="kb-col-note">{note}</div>}
         {tickets.length === 0 && (
-          <div className="kb-empty">目前無 {title}</div>
+          <div className="kb-empty">{emptyLabel ?? `目前沒有${title}的任務`}</div>
         )}
         {tickets.map((t) => (
           <TicketCard key={t.ticketId} t={t} tone={tone} onOpen={() => onOpen(t)} />
         ))}
       </div>
-      {note && <div className="kb-col-foot">{note}</div>}
     </div>
   );
 }

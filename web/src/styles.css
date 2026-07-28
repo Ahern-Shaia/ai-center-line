@@ -2156,3 +2156,79 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .ab-opt:hover:not(:disabled) { border-color:var(--primary); color:var(--primary-2); }
 .ab-opt.ab-clear { color:var(--ink-3); }
 .ab-nobind { font-size:10px; color:var(--ink-3); border:1px solid var(--line); border-radius:2px; padding:0 4px; }
+
+/* ── 任務追蹤到結束 · docs/modules/task-completion-tracking.md ──────── */
+/* 措辭鐵則：一律「尚未確認完成」不用「未完成」（F-26）—— 文案在 TSX，這裡只管樣式 */
+
+/* align-items:start —— 不加的話空的那欄會被另一欄撐到等高，
+   0 件時變成一整條兩千像素的空白框，看起來像壞了 */
+.wt-lanes { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:18px 0; align-items:start; }
+@media (max-width:900px) { .wt-lanes { grid-template-columns:1fr; } }
+
+.wt-lane { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
+           padding:14px; border-left-width:3px; }
+.wt-lane.warn { border-left-color:var(--warn); }
+.wt-lane.danger { border-left-color:var(--danger); }
+.wt-lane-hd { display:flex; align-items:baseline; gap:8px; }
+.wt-lane-title { font-size:14px; font-weight:600; color:var(--ink); }
+.wt-lane-count { margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--ink-3);
+                 font-variant-numeric:tabular-nums; }
+.wt-lane-hint { font-size:12px; color:var(--ink-3); margin:4px 0 10px; line-height:1.6; }
+.wt-empty { font-size:13px; color:var(--ink-3); padding:14px; text-align:center;
+            background:var(--well); border-radius:var(--r); }
+
+.wt-card { border:1px solid var(--line); border-radius:var(--r); background:var(--surface);
+           margin-bottom:8px; overflow:hidden; }
+.wt-card:last-child { margin-bottom:0; }
+.wt-card-main { display:block; width:100%; text-align:left; background:none; border:0;
+                padding:11px 12px 8px; cursor:pointer; font:inherit; color:inherit; }
+.wt-card-main:hover { background:var(--well); }
+.wt-card-title { font-size:13.5px; font-weight:600; line-height:1.5; color:var(--ink); }
+.wt-card-meta { display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+                font-size:11.5px; color:var(--ink-3); margin-top:4px; }
+.wt-mono { font-family:var(--mono); font-variant-numeric:tabular-nums; }
+.wt-soft { color:var(--ink-3); opacity:.8; }
+.wt-state { background:var(--well); border:1px solid var(--line); border-radius:10px; padding:1px 8px; }
+.wt-note { font-size:11.5px; color:var(--ink-2); margin-top:6px; padding-left:8px;
+           border-left:2px solid var(--line-2); line-height:1.5; }
+.wt-card-acts { display:flex; gap:7px; padding:0 12px 11px; }
+
+.wt-badge { display:inline-block; font-size:11px; padding:1px 8px; border-radius:10px;
+            border:1px solid var(--line); white-space:nowrap; }
+.wt-badge.ok { background:var(--ok-tint, #ECFDF5); border-color:#A7E3C9; color:#065F46; }
+.wt-badge.warn { background:var(--warn-tint); border-color:#F3D9A4; color:#92400E; }
+
+/* 補登結束的四選一 · 不做「一鍵完成」，四種結束對應四種不同的後續 */
+.wt-form { display:flex; flex-direction:column; gap:6px; }
+.wt-form-target { font-size:13px; color:var(--ink-2); background:var(--well);
+                  border-radius:var(--r); padding:8px 10px; margin-bottom:4px; }
+.wt-form-label { font-size:12px; color:var(--ink-2); margin-top:6px; }
+.wt-opt { display:flex; align-items:flex-start; gap:9px; width:100%; text-align:left;
+          border:1px solid var(--line); border-radius:var(--r); background:var(--surface);
+          padding:9px 12px; cursor:pointer; font:inherit; color:inherit; }
+.wt-opt:hover { background:var(--well); }
+.wt-opt.sel { border-color:var(--primary); background:var(--primary-tint); }
+.wt-radio { width:14px; height:14px; border-radius:50%; border:1.5px solid var(--ink-3);
+            flex:none; margin-top:3px; }
+.wt-opt.sel .wt-radio { border-color:var(--primary); border-width:4px; }
+.wt-opt b { font-size:13.5px; display:block; }
+.wt-opt-hint { font-size:11.5px; color:var(--ink-3); display:block; margin-top:1px; line-height:1.5; }
+.wt-textarea { border:1px solid var(--line); border-radius:var(--r); padding:8px 10px;
+               font:inherit; font-size:13.5px; resize:vertical; background:var(--surface); }
+.wt-form-foot { font-size:11.5px; color:var(--ink-3); margin:6px 0 0; line-height:1.5; }
+
+/* 未接住清單 · 平台管理員的校準訊號，不是客戶的待辦 */
+.wt-sig-reason { font-size:11px; padding:1px 8px; border-radius:10px; white-space:nowrap; }
+.wt-sig-reason.gap { background:var(--danger-tint); border:1px solid #FBCFE0; color:#9F1239; }
+.wt-sig-reason.wait { background:var(--well); border:1px solid var(--line); color:var(--ink-3); }
+.wt-stat { display:flex; gap:24px; flex-wrap:wrap; margin:4px 0 10px; }
+.wt-stat-v { font-family:var(--mono); font-size:24px; font-weight:600; line-height:1.2; }
+.wt-stat-l { font-size:11.5px; color:var(--ink-3); }
+.wt-formula { font-size:11.5px; color:var(--ink-3); line-height:1.6; padding-top:10px;
+              border-top:1px solid var(--line-2); }
+.wt-lanes-hd { margin:22px 0 0; }
+.wt-lanes-title { font-size:14px; font-weight:600; color:var(--ink); margin:0; }
+.wt-lanes-sub { font-size:12px; color:var(--ink-3); line-height:1.6; display:block; margin-top:2px; }
+.kb-col-note { font-size:11.5px; color:var(--ink-2); background:var(--warn-tint);
+               border:1px solid #F3D9A4; border-radius:var(--r); padding:6px 9px;
+               margin-bottom:8px; line-height:1.5; }
