@@ -406,11 +406,46 @@
 </div>
 
 <div class="step">
-  <div class="step-h"><span class="i">3</span>右上角的三角形下拉 → 工具 → <b>同步</b> → Webhook</div>
+  <div class="step-h"><span class="i">3</span>點上方的「工具」，在展開的選單裡找 Webhook</div>
+  <p>「工具」在表單上方那排（新增 / 工具 / 重新整理）。點下去會展開一整片選單，
+     <b>分成六個區塊</b>。Webhook 在<b>右下角</b>那一區「同步與通知」裡面。</p>
+
+  <div class="screen" style="margin-left:31px">
+    <div class="screen-cap">點「工具」後展開的選單（六個區塊）</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:12px">
+      <div style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#fff">
+        <b style="color:var(--ink-3);font-size:11px">編輯</b>
+        <div style="color:var(--faint);margin-top:3px">大量修改／複製／刪除…</div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#fff">
+        <b style="color:var(--ink-3);font-size:11px">匯出</b>
+        <div style="color:var(--faint);margin-top:3px">Excel／PDF／附件…</div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#fff">
+        <b style="color:var(--ink-3);font-size:11px">匯入</b>
+        <div style="color:var(--faint);margin-top:3px">從檔案匯入…</div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#fff">
+        <b style="color:var(--ink-3);font-size:11px">分享</b>
+        <div style="color:var(--faint);margin-top:3px">分享連結／嵌入…</div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#fff">
+        <b style="color:var(--ink-3);font-size:11px">報表</b>
+        <div style="color:var(--faint);margin-top:3px">產生報表／合併列印…</div>
+      </div>
+      <div style="border:2px solid var(--bad);border-radius:6px;padding:8px 10px;background:var(--bad-bg)">
+        <b style="color:var(--bad);font-size:11px">同步與通知</b>
+        <div style="margin-top:3px;color:var(--ink-3)">行事曆同步<br>SQL 資料同步<br>與其他系統整合<br>
+          <b style="color:var(--bad)">▸ Webhook</b> ← 點這個<br>通知設定<br>表單填寫捷徑</div>
+      </div>
+    </div>
+  </div>
+
   <div class="note bad">
-    <span class="t">⚠️ 中間那層「同步」很多人會漏看</span>
-    路徑是 <span class="path">工具 → 同步 → Webhook</span>，<b>不是</b>工具底下直接有 Webhook。
-    找不到就是漏了「同步」這一層——這是「明明設定了卻沒通知」的頭號原因。
+    <span class="t">⚠️ 不要找「工具 → 同步」這種下一層選單</span>
+    Ragic <b>沒有</b>叫「同步」的子選單。「<b>同步與通知</b>」是展開後<b>右下角那一區的標題</b>，
+    Webhook 就直接列在它下面。<br>
+    找不到的人多半是在找一個不存在的子選單——這是「明明設定了卻沒通知」的頭號原因。
   </div>
 </div>
 
@@ -460,7 +495,7 @@
     <div class="do">
       回第 3 節，依序確認：<br>
       ① 網址有貼進<b>那一張</b>表單嗎（不是別張）<br>
-      ② 路徑是 <span class="path">工具 → 同步 → Webhook</span> 嗎（中間那層「同步」）<br>
+      ② 有找對地方嗎——Webhook 在「工具」展開後<b>右下角「同步與通知」</b>那一區<br>
       ③ 貼完有<b>登出 Ragic 再登入</b>嗎
     </div>
   </div>

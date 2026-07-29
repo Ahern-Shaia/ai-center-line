@@ -248,7 +248,8 @@ curl "https://www.ragic.com/{apname}{path}/{sheetIndex}/metadata/schema?api" \
 ---
 
 ## 14. Webhook
-設定：表單 → 三角下拉 → 工具 → 同步 → Webhook。
+設定：表單 → 上方「工具」→ 展開選單**右下角「同步與通知」**區 → Webhook。
+（⚠️ 沒有叫「同步」的子選單 —— 那是區塊標題不是選單層級，2026-07-29 實機確認）
 - 精簡回應：`[1,2,4]`（變更的資料 id）
 - 完整回應：`{ "data":[{...}], "apname":"...", "path":"/sales", "sheetIndex":1, "eventType":"CREATE" }`
 - eventType：`CREATE` / `UPDATE` / `DELETE`
