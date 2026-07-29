@@ -59,7 +59,7 @@ export default function LogsTab() {
           {!status && (
             <div className="dm-empty-hint">
               一筆都沒有＝<b>事件從來沒有進到我們這裡</b>。若是 Ragic 規則，代表 Webhook 網址沒貼進該表單：
-              到規則列表按「複製網址」→ Ragic 該表單 → 右上三角下拉 → <b>工具 → 同步 → Webhook</b> → 貼上儲存 →
+              到規則列表按「複製網址」→ Ragic 該表單 → 上方「工具」→ 展開後<b>右下角「同步與通知」區 → Webhook</b> → 貼上儲存 →
               仍沒反應就<b>登出 Ragic 再登入</b>（設定有 session 快取）。
             </div>
           )}

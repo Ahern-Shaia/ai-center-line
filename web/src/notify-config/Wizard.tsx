@@ -237,7 +237,9 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
             <>
               <div className="nc-card-h"><span className="nc-step-n">✓</span>接上 Ragic Webhook</div>
               {/* Ragic 實際路徑多一層「同步」· 少寫這層使用者常找不到 */}
-              <div className="nc-card-sub">該表單 → 右上三角下拉 → <b>工具 → 同步 → Webhook</b> → 貼上此網址 → 儲存（一次即可）</div>
+              {/* ⚠️ Ragic 沒有叫「同步」的子選單 —— 那是展開選單裡右下角那一區的標題。
+                  舊文案寫「工具 → 同步 → Webhook」會讓人去找不存在的下一層（實機確認 2026-07-29）。*/}
+              <div className="nc-card-sub">該表單 → 上方「工具」→ 展開後<b>右下角「同步與通知」區 → Webhook</b> → 貼上此網址 → 儲存（一次即可）</div>
               <div className="nc-url-box">
                 <code>{url}</code>
                 <button className="nc-url-copy" onClick={() => { void navigator.clipboard?.writeText(url); toast.show("已複製", "ok"); }}>複製</button>

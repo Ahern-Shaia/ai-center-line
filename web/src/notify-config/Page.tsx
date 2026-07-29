@@ -38,7 +38,9 @@ export default function NotifyConfigPage() {
   function copyWebhook(token: string) {
     const url = notifyWebhookUrl(token);
     void navigator.clipboard?.writeText(url);
-    toast.show("已複製 · 貼到 Ragic 該表單「工具 → 同步 → Webhook」", "ok");
+    // ⚠️ Ragic 沒有叫「同步」的子選單 —— 那是展開選單裡右下角那一區的標題。
+    //    舊文案寫「工具 → 同步 → Webhook」會讓人去找一個不存在的下一層（實機確認 2026-07-29）。
+    toast.show("已複製 · 貼到 Ragic：工具 → 右下角「同步與通知」→ Webhook", "ok");
   }
 
   async function doDelete() {
