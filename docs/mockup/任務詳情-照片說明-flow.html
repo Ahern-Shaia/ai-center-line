@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>任務詳情 · 照片區的三種狀態 · UI Flow</title>
+<title>任務詳情 · 照片內嵌與三種狀態 · UI Flow</title>
 <style>
   :root{
     --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6;
@@ -22,12 +22,13 @@
   h1{font-size:25px;margin:0 0 6px;letter-spacing:-.01em}
   h2{font-size:18px;margin:44px 0 10px;padding-top:20px;border-top:1px solid var(--line)}
   h2 .n{color:var(--ink-3);font-family:var(--mono);font-size:13px;margin-right:8px}
+  h3{font-size:14px;margin:0 0 8px}
   .lede{color:var(--ink-2);margin:0 0 4px}
   .meta{color:var(--ink-3);font-size:13px;margin:0}
   .row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start;margin-top:16px}
-  @media(max-width:980px){.row{grid-template-columns:1fr}}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin-top:16px}
+  @media(max-width:980px){.row,.row2{grid-template-columns:1fr}}
 
-  /* 抽屜模擬 */
   .drawer{background:var(--surface);border:1px solid var(--line);border-radius:10px;
           box-shadow:0 1px 3px rgba(17,24,39,.06);overflow:hidden}
   .dw-hd{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;
@@ -40,8 +41,13 @@
   .tag.ok{background:var(--ok-tint);color:var(--ok);border-color:#A7F3D0}
   .sec{margin-top:14px}
   .sec-lbl{display:block;font-size:11.5px;color:var(--ink-3);letter-spacing:.03em;margin-bottom:6px}
+  .toggle{font-size:12.5px;color:var(--primary);background:none;border:none;padding:0;cursor:pointer}
   .msg{background:var(--well);border-radius:5px;padding:7px 9px;margin-bottom:5px;font-size:12.5px}
   .msg .who{color:var(--ink-3);font-size:11px;display:block}
+  .msg.has-img{padding-bottom:9px}
+  .inline-img{margin-top:5px;width:64px;height:64px;border-radius:5px;border:1px solid var(--line);
+              background:linear-gradient(135deg,#DBEAFE,#E0E7FF);display:grid;place-items:center;
+              color:#4F46E5;font-size:10px;line-height:1.3;text-align:center;cursor:zoom-in}
   .strip{display:flex;gap:8px;flex-wrap:wrap}
   .thumb{width:82px;height:82px;border-radius:6px;border:1px solid var(--line);
          background:linear-gradient(135deg,#DBEAFE,#E0E7FF);display:grid;place-items:center;
@@ -49,6 +55,8 @@
   .note{padding:9px 11px;border-radius:6px;font-size:12.5px;line-height:1.6}
   .note.warn{background:var(--warn-tint);border:1px solid var(--warn);color:#78350F}
   .note.mute{background:var(--well);border:1px solid var(--line);color:var(--ink-3)}
+  .strike{opacity:.5}
+  .strike .sec-lbl{text-decoration:line-through}
 
   .caption{margin-top:10px;font-size:13px;color:var(--ink-2)}
   .caption b{color:var(--ink)}
@@ -61,49 +69,92 @@
   th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
   th{background:var(--well);font-weight:600;font-size:12.5px}
   code{font-family:var(--mono);font-size:12.5px;background:var(--well);padding:1px 5px;border-radius:4px}
-  .kicker{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--warn);
+  .kicker{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--primary);
           border-radius:var(--r);padding:12px 15px;margin:16px 0;font-size:14px}
+  .kicker.w{border-left-color:var(--warn)}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-<h1>任務詳情 · 照片區的三種狀態</h1>
-<p class="lede">對照 <code>docs/modules/media-and-vision.md</code> · <code>web/src/warroom/SourceDrawer.tsx</code></p>
-<p class="meta">2026-07-29 · 主管在任務卡裡看不到照片，就無法判斷這該不該立案</p>
+<h1>任務詳情 · 照片內嵌與三種狀態</h1>
+<p class="lede">對照 <code>web/src/warroom/SourceDrawer.tsx</code> · <code>docs/modules/media-and-vision.md</code></p>
+<p class="meta">2026-07-29 v2 · 主管在任務卡裡看不到照片，就無法判斷這該不該立案</p>
 
 <div class="kicker">
-  <b>要解決的問題不是「加照片」，是「B 和 C 現在長得一模一樣」。</b><br>
-  照片區已經做好了（狀態 A）。但沒有照片時，畫面上什麼都不顯示 ——
-  於是「這則對話本來就沒傳照片」與「這張任務根本沒存來源連結」看起來完全相同，
-  主管無從判斷自己看到的是全部還是殘缺。
+  <b>兩件事：</b><br>
+  ① 照片<b>內嵌到它自己那一則訊息</b>，取代「[照片]」三個字 —— 分開列的話，
+  「這個可以嗎」指的是哪一張看不出來，而那正是主管要判斷的東西。<br>
+  ② <b>沒有照片時要說出為什麼</b> —— 現在 B 和 C 都顯示空白，兩種完全不同的事實共用同一個畫面。
 </div>
 
-<h2><span class="n">A</span>有照片 <span class="badge now">已上線</span></h2>
-<p class="meta">任務有來源訊息連結，而且那幾則訊息帶了照片</p>
-<div class="row">
+<h2><span class="n">0</span>「對話過長」外層已經解決了</h2>
+<div class="row2">
   <div>
+    <h3>收合狀態（預設）</h3>
+    <div class="drawer"><div class="dw-body">
+      <div><span class="tag ok">高信心</span></div>
+      <div class="sec"><button class="toggle">對照原始訊息 ▼</button></div>
+    </div></div>
+    <p class="caption">多數時候主管直接簽，不需要看原文。<b>這層折疊本來就有</b>（TaskBoard.tsx:347）。</p>
+  </div>
+  <div>
+    <h3>展開狀態</h3>
+    <div class="drawer"><div class="dw-body">
+      <div class="sec"><button class="toggle">收合原始訊息 ▲</button></div>
+      <div class="msg"><span class="who">10:18 維修客服</span>這個中區維修</div>
+      <div class="msg has-img"><span class="who">10:18 維修客服</span><div class="inline-img">點開<br>看大圖</div></div>
+    </div></div>
+    <p class="caption">展開的當下就是想看細節。<b>這時再要他點第二次才看得到圖，等於把最想看的東西藏在最深處</b>，所以不再加一層折疊。</p>
+  </div>
+</div>
+
+<h2><span class="n">A</span>有照片 · 內嵌 <span class="badge new">要改</span></h2>
+<div class="row2">
+  <div>
+    <h3>現在（照片另外列在下方）<span class="badge now">已上線</span></h3>
     <div class="drawer">
       <div class="dw-hd"><b>任務詳情</b><span class="dw-x">✕</span></div>
       <div class="dw-body">
-        <div><span class="tag ok">高信心</span></div>
         <div class="sec">
           <span class="sec-lbl">這是根據以下 3 則訊息整理的</span>
-          <div class="msg"><span class="who">10:18 台灣福祉維修客服</span>這個中區維修</div>
-          <div class="msg"><span class="who">10:18 台灣福祉維修客服</span>[照片]</div>
-          <div class="msg"><span class="who">10:19 台灣福祉維修客服</span>這個可以嗎</div>
+          <div class="msg"><span class="who">10:18 維修客服</span>這個中區維修</div>
+          <div class="msg"><span class="who">10:18 維修客服</span>[照片]</div>
+          <div class="msg"><span class="who">10:19 維修客服</span>這個可以嗎</div>
         </div>
-        <div class="sec">
+        <div class="sec strike">
           <span class="sec-lbl">這幾則訊息裡的照片（2 張）</span>
           <div class="strip"><div class="thumb">點開看大圖</div><div class="thumb">點開看大圖</div></div>
         </div>
       </div>
     </div>
-    <p class="caption"><b>不動。</b>縮圖點開看大圖，圖走 blob 帶 JWT，R2 網址不進瀏覽器。</p>
+    <p class="caption"><b>問題：</b>「這個可以嗎」指的是哪一張？兩張圖擺在下面看不出來。而且同一批圖顯示了兩次（訊息裡一次「[照片]」、下面一次縮圖）。</p>
   </div>
-
   <div>
-    <h3 style="margin-top:0">B · 沒有來源連結 <span class="badge new">要新增</span></h3>
+    <h3>改成內嵌</h3>
+    <div class="drawer">
+      <div class="dw-hd"><b>任務詳情</b><span class="dw-x">✕</span></div>
+      <div class="dw-body">
+        <div class="sec">
+          <span class="sec-lbl">這是根據以下 3 則訊息整理的</span>
+          <div class="msg"><span class="who">10:18 維修客服</span>這個中區維修</div>
+          <div class="msg has-img"><span class="who">10:18 維修客服</span><div class="inline-img">點開<br>看大圖</div></div>
+          <div class="msg"><span class="who">10:19 維修客服</span>這個可以嗎</div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">
+      「[照片]」三個字直接換成那張圖。<b>下方的獨立區段拿掉</b> ——
+      它查的就是同一批（<code>source_message_ids</code> 翻出來的），留著只是同一批圖顯示兩次。<br>
+      長度反而更短：內嵌 64px ×2 約 +130px，比「區段標題＋82px 縮圖列」少。
+    </p>
+  </div>
+</div>
+
+<h2><span class="n">B/C</span>沒有照片時要分得出來 <span class="badge new">要改</span></h2>
+<div class="row">
+  <div>
+    <h3>B · 沒有來源連結</h3>
     <div class="drawer">
       <div class="dw-hd"><b>任務詳情</b><span class="dw-x">✕</span></div>
       <div class="dw-body">
@@ -119,9 +170,8 @@
     </div>
     <p class="caption">prod 現況：<b>39 張任務裡 35 張是這種</b>（<code>source_message_ids</code> 是今天才加的欄位）。救不回來，但要講出來。</p>
   </div>
-
   <div>
-    <h3 style="margin-top:0">C · 有連結，但本來就沒照片 <span class="badge new">要新增</span></h3>
+    <h3>C · 有連結，但本來就沒照片</h3>
     <div class="drawer">
       <div class="dw-hd"><b>任務詳情</b><span class="dw-x">✕</span></div>
       <div class="dw-body">
@@ -131,59 +181,67 @@
           <div class="msg"><span class="who">14:02 業務-Sandy</span>雲林順益那台週四要交</div>
           <div class="msg"><span class="who">14:03 維修-志偉</span>收到，我排進去</div>
         </div>
-        <div class="sec">
-          <span class="sec-lbl">照片</span>
-          <div class="note mute">這幾則訊息沒有照片</div>
-        </div>
       </div>
     </div>
-    <p class="caption">一句話就夠。<b>重點是它與 B 不同</b> —— 主管知道自己看到的是全部。</p>
+    <p class="caption">
+      <b>什麼都不加。</b>訊息列表裡沒有「[照片]」，本身就說明了沒有照片 ——
+      再補一句「這幾則訊息沒有照片」是多餘的。<br>
+      C 與 B 的差別在於 <b>C 看得到訊息</b>，那就是分辨兩者的訊號。
+    </p>
+  </div>
+  <div>
+    <h3>為什麼不能兩個都留白</h3>
+    <table style="margin-top:0">
+      <tr><th style="width:30%">狀態</th><th>系統知道的事</th></tr>
+      <tr><td>B 沒連結</td><td><b>不知道</b>有沒有照片</td></tr>
+      <tr><td>C 有連結</td><td><b>確定</b>沒有照片</td></tr>
+    </table>
+    <p class="caption">
+      現在兩者都顯示空白。<b>「不確定」與「確定沒有」不可以共用同一個空白</b> ——
+      主管無從判斷自己看到的是全部還是殘缺。同 F-26 的紀律。
+    </p>
   </div>
 </div>
 
-<h2><span class="n">1</span>為什麼不能只留白</h2>
+<h2><span class="n">1</span>要動的地方</h2>
 <table>
-  <tr><th style="width:16%">狀態</th><th style="width:26%">系統實際知道的事</th><th style="width:29%">現在畫面顯示</th><th>問題</th></tr>
+  <tr><th style="width:24%">層</th><th>改動</th></tr>
   <tr>
-    <td>A 有照片</td><td>有 2 張</td><td>2 張縮圖</td><td>—</td>
+    <td><code>ticketSource()</code></td>
+    <td>
+      每一則訊息多回一個 <code>mediaId</code>（可為 null）。<br>
+      對照鏈已驗過是精準的：<code>analysis_result.messages[i].id</code> 是解析索引 →
+      <code>analysis_upload.source_message_ids[i]</code> 是該則的真實 LINE 訊息 id → join <code>line_media</code>。<br>
+      <span style="color:var(--ink-3)">prod 抽驗：批次 23 則、對照表 23 筆、記錄索引 [10..22] → 翻出 13 個 id，完全對齊。</span>
+    </td>
   </tr>
   <tr>
-    <td>B 沒有連結</td>
-    <td><b>不知道有沒有照片</b></td>
-    <td style="background:var(--danger-tint)">什麼都不顯示</td>
-    <td>主管以為「這件事沒有照片」，實際是我們掉了連結</td>
+    <td>同上</td>
+    <td>多回 <code>hasSourceLink: boolean</code> —— 前端靠它分辨 B 與 C。</td>
   </tr>
   <tr>
-    <td>C 有連結、無照片</td>
-    <td><b>確定沒有照片</b></td>
-    <td style="background:var(--danger-tint)">什麼都不顯示</td>
-    <td>跟 B 一模一樣 —— 兩種完全不同的事實共用同一個畫面</td>
+    <td><code>SourceDrawer.tsx</code></td>
+    <td>訊息內嵌縮圖（取代 <code>[照片]</code>）· 移除底部獨立照片區 · B 狀態顯示黃底說明。</td>
   </tr>
 </table>
-<p class="caption">
-  這跟今天修掉的那批是同一條紀律（F-26）：<b>畫面講的事要跟系統實際知道的事相符</b>。
-  「不確定」與「確定沒有」不可以共用同一個空白。
-</p>
 
-<h2><span class="n">2</span>判斷邏輯</h2>
-<table>
-  <tr><th style="width:34%">條件</th><th>顯示</th></tr>
-  <tr><td><code>media.length &gt; 0</code></td><td>A · 縮圖列</td></tr>
-  <tr><td><code>source_message_ids</code> 為 null</td><td>B · 黃底提示「建立於連結上線前」</td></tr>
-  <tr><td>有連結但 <code>media.length === 0</code></td><td>C · 灰字「這幾則訊息沒有照片」</td></tr>
-</table>
-<p class="caption">
-  後端要多回一個欄位：<code>hasSourceLink: boolean</code>。
-  現在 <code>ticketSource()</code> 只回 <code>media</code>，前端分不出 B 和 C。
-</p>
-
-<h2><span class="n">3</span>不做什麼</h2>
+<h2><span class="n">2</span>不做什麼</h2>
 <table>
   <tr><th style="width:34%">不做</th><th>為什麼</th></tr>
+  <tr><td>照片再加一層「顯示」折疊</td><td>外層已經折疊過一次。展開的人就是想看細節，第二次點擊是在懲罰他</td></tr>
+  <tr><td>超過 N 張就退回縮圖列</td><td>prod 目前每張任務最多 2 張照片、來源長度 2／3／4／13 則。現在做是為想像中的情況設計</td></tr>
+  <tr><td>C 狀態補一句「沒有照片」</td><td>訊息列表裡沒有 [照片] 就已經說明了。多一句話是雜訊</td></tr>
   <tr><td>回填舊任務的來源連結</td><td><code>analysis_upload</code> 那一層也沒存，補不出來。宣稱能補等於再造一個假象</td></tr>
   <tr><td>B 狀態放「重新分析」按鈕</td><td>重跑會產生<b>新</b>任務，不會修好舊的那張 —— 按了不會有預期的結果</td></tr>
-  <tr><td>把照片直接塞進任務卡（不用點開）</td><td>看板要能一眼掃過 30 張卡；縮圖進卡片會把密度打掉</td></tr>
+  <tr><td>把照片放進看板卡片（不用點開）</td><td>看板要能一眼掃過 30 張卡，縮圖進卡片會把密度打掉</td></tr>
 </table>
+
+<div class="kicker w" style="margin-top:26px">
+  <b>⚠️ 這些都只解決「看得到」。</b>
+  162 張照片 AI 一張都沒讀過 —— 一則「[照片][照片] 這個可以嗎」的對話，
+  抽出來的任務標題必然是空的。那是 <code>media-and-vision</code> 的 M0.5（先抽樣 30–50 張看內容值不值得做讀圖），
+  與本頁是兩件事。
+</div>
 
 </div>
 </body>
