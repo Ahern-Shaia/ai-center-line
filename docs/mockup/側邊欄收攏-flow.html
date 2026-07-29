@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>側邊欄收攏與能力分配 · UI Flow</title>
+<style>
+  :root{
+    --canvas:#F7F8FA; --surface:#FFFFFF; --well:#F1F3F6; --surface-2:#F5F6F8;
+    --line:#E5E7EB; --line-2:#F0F2F5;
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --primary:#4F46E5; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5;
+    --warn:#D97706; --warn-tint:#FFFBEB; --warn-line:#F3D9A4;
+    --danger:#E11D48; --danger-tint:#FFF1F2; --danger-line:#FBCFE0;
+    --r:6px; --r-lg:10px;
+    --sans:'Inter','Noto Sans TC',-apple-system,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --sh:0 1px 2px rgba(17,24,39,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px 20px 80px;background:var(--canvas);color:var(--ink);
+       font-family:var(--sans);font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1240px;margin:0 auto}
+  h1{font-size:26px;margin:0 0 6px;letter-spacing:-.01em}
+  h2{font-size:19px;margin:46px 0 6px;padding-top:20px;border-top:1px solid var(--line)}
+  h2 .n{color:var(--ink-3);font-family:var(--mono);font-size:14px;margin-right:8px}
+  h3{font-size:14.5px;margin:20px 0 8px}
+  .lede{color:var(--ink-2);margin:0 0 4px}
+  .meta{color:var(--ink-3);font-size:13px;margin:0}
+  p{margin:8px 0}
+
+  .callout{border:1px solid var(--line);border-left:3px solid var(--primary);border-radius:var(--r);
+           background:var(--surface);padding:12px 15px;margin:16px 0;font-size:14px;color:var(--ink-2)}
+  .callout b{color:var(--ink)}
+  .callout.bad{border-left-color:var(--danger);background:var(--danger-tint)}
+  .callout.good{border-left-color:var(--ok);background:var(--ok-tint)}
+  .callout.warn{border-left-color:var(--warn);background:var(--warn-tint)}
+
+  .vs{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:14px 0;align-items:start}
+  @media(max-width:1000px){.vs{grid-template-columns:1fr}}
+  .col{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
+       overflow:hidden;box-shadow:var(--sh)}
+  .col-hd{padding:10px 14px;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:8px;
+          border-bottom:1px solid var(--line-2)}
+  .col.old .col-hd{background:var(--danger-tint);color:#9F1239}
+  .col.new .col-hd{background:var(--ok-tint);color:#065F46}
+  .tag{font-family:var(--mono);font-size:10.5px;padding:1px 6px;border-radius:3px;
+       background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.06)}
+  .col-bd{padding:0}
+  .note{padding:10px 14px;font-size:12.5px;color:var(--ink-2);background:var(--well);
+        border-top:1px solid var(--line-2);line-height:1.65}
+
+  /* 側欄模擬 */
+  .sb{background:var(--surface);font-size:12.5px}
+  .sb-group{padding:12px 14px 5px;font-size:10.5px;font-weight:600;color:var(--ink-3);
+            text-transform:uppercase;letter-spacing:.05em}
+  .sb-link{display:flex;align-items:center;gap:8px;padding:6px 14px;color:var(--ink-2);line-height:1.6}
+  .sb-link .ic{width:14px;height:14px;flex:none;border-radius:3px;background:var(--line)}
+  .sb-link.on{background:var(--primary-tint);color:var(--primary);font-weight:600}
+  .sb-link.on .ic{background:var(--primary);opacity:.5}
+  .sb-link .badge{margin-left:auto;font-size:9.5px;padding:0 5px;border-radius:8px;white-space:nowrap}
+  .badge.new{background:var(--ok-tint);border:1px solid #A7E3C9;color:#065F46}
+  .badge.ren{background:var(--warn-tint);border:1px solid var(--warn-line);color:#92400E}
+  .badge.mrg{background:var(--primary-tint);border:1px solid #C7D2FE;color:#3730A3}
+  .badge.gone{background:var(--danger-tint);border:1px solid var(--danger-line);color:#9F1239}
+  .sb-sub{padding:1px 14px 1px 36px;font-size:11px;color:var(--ink-3);line-height:1.65}
+  .sb-count{padding:9px 14px;font-size:11px;color:var(--ink-3);background:var(--well);
+            border-top:1px solid var(--line-2);font-family:var(--mono)}
+
+  /* 頁面模擬 */
+  .scr{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden;margin:12px 0}
+  .scr-bar{background:var(--well);padding:7px 12px;font-size:11.5px;color:var(--ink-3);
+           border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:8px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ink-3);opacity:.35}
+  .scr-bd{padding:14px}
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  .tab{padding:6px 13px;font-size:12.5px;color:var(--ink-3);border-bottom:2px solid transparent}
+  .tab.on{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+  .sec{border:1px solid var(--line);border-radius:var(--r);padding:13px;margin-bottom:11px}
+  .sec-hd{font-size:13px;font-weight:600;margin-bottom:3px;display:flex;align-items:center;gap:7px}
+  .sec-sub{font-size:11.5px;color:var(--ink-3);margin-bottom:10px;line-height:1.6}
+  .perm{font-family:var(--mono);font-size:10px;background:var(--well);border:1px solid var(--line);
+        padding:0 6px;border-radius:3px;color:var(--ink-3);margin-left:auto}
+  .fld{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line-2)}
+  .fld:last-child{border-bottom:0}
+  .fld-l{font-size:12.5px;color:var(--ink-2);min-width:150px}
+  .inp{border:1px solid var(--line);border-radius:var(--r);padding:4px 9px;font-size:12.5px;
+       background:var(--surface);color:var(--ink);min-width:70px}
+  .inp.sel{min-width:180px}
+  .fld-hint{font-size:11px;color:var(--ink-3)}
+  .impact{font-size:11.5px;color:#92400E;background:var(--warn-tint);border:1px solid var(--warn-line);
+          border-radius:var(--r);padding:6px 10px;margin-top:9px;line-height:1.6}
+
+  /* 權限矩陣 */
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0}
+  th{text-align:left;font-size:11px;color:var(--ink-3);font-weight:600;padding:7px 9px;
+     border-bottom:1px solid var(--line);background:var(--well)}
+  td{padding:7px 9px;border-bottom:1px solid var(--line-2);vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  .tbl{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:var(--surface);box-shadow:var(--sh)}
+  .chk{width:15px;height:15px;border-radius:3px;border:1.5px solid var(--line);display:inline-block;
+       vertical-align:middle}
+  .chk.on{background:var(--primary);border-color:var(--primary);position:relative}
+  .chk.on::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;
+                 border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+  .mono{font-family:var(--mono);font-size:12px}
+  .muted{color:var(--ink-3)}
+  .bad{color:var(--danger);font-weight:600}
+  .good{color:var(--ok);font-weight:600}
+  ul{margin:8px 0;padding-left:20px} li{margin:4px 0;font-size:14px;color:var(--ink-2)}
+  li b{color:var(--ink)}
+  code{font-family:var(--mono);font-size:12.5px;background:var(--well);padding:1px 5px;border-radius:3px;
+       border:1px solid var(--line-2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>側邊欄收攏與能力分配 · UI Flow</h1>
+<p class="lede">導覽從「按內部模組」改成「按這是誰的東西」，並讓能力真正能用權限管理分配。</p>
+<p class="meta">2026-07-29 · 對應 <span class="mono">docs/modules/navigation-and-capability-gating.md v1.0</span>（OQ-NAV-1..13 已裁定）</p>
+
+<div class="callout bad">
+  <b>⚠️ 先講一個會擋住整個計畫的事實。</b>
+  aiproot 側欄 <b>26 項只有 9 項有權限碼</b>，15 項完全沒有 ——
+  靠 <code>App.tsx</code> 裡一個硬編的 <code>AIPROOT_ONLY_PAGES</code> 擋。
+  <b>要調整誰看得到，得改程式碼重新部署。</b><br><br>
+  而「通知設定」「資料來源」更糟：<b>權限碼寫了但被硬擋蓋掉，等於死碼</b> ——
+  以為調權限就能開放，實際完全沒作用。<br>
+  → <b>補權限碼是 M1，其餘都排在它後面。</b>
+</div>
+
+
+<h2><span class="n">01</span>兩層模型：內容歸客戶，權限由我司開</h2>
+
+<div class="vs">
+  <div class="col new" style="grid-column:1/-1">
+    <div class="col-hd"><span class="tag">原則</span>「客戶方自己控制」不是把頁面交出去</div>
+    <div class="col-bd" style="padding:14px">
+      <div class="tbl">
+      <table>
+        <thead><tr><th style="width:16%">層</th><th style="width:20%">誰決定</th><th>例子</th></tr></thead>
+        <tbody>
+          <tr><td><b>權限層</b></td><td class="good">aiproot（我司）</td>
+              <td>這家客戶的 tenant_admin 看不看得到「自動化」這一頁</td></tr>
+          <tr><td><b>內容層</b></td><td class="good">客戶自己</td>
+              <td>看得到之後，<b>幾點執行定時任務</b>、<b>任務卡幾天沒簽核算逾時</b></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="callout good" style="margin-bottom:0">
+        ⭐ <b>現成的正確範例就在旁邊：<code>定時任務</code></b> ——
+        有權限碼、不被硬擋、<code>scheduler_config</code> 有 per-tenant override。
+        prod 實例：<b>台灣福祉自己把批次改成 18:00</b>，平台預設是凌晨。<b>其餘照這個做。</b>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<h2><span class="n">02</span>租戶側欄 · 9 → 10 項</h2>
+
+<div class="vs">
+  <div class="col old">
+    <div class="col-hd"><span class="tag">現況</span>按內部模組分組</div>
+    <div class="col-bd">
+      <div class="sb">
+        <div class="sb-group">戰情室</div>
+        <div class="sb-link"><span class="ic"></span>我的日報</div>
+        <div class="sb-link"><span class="ic"></span>我的行程</div>
+        <div class="sb-link on"><span class="ic"></span>總覽儀表</div>
+        <div class="sb-sub">└ 內含 3 個 tab：總覽儀表 / 任務看板 / 今日日誌</div>
+        <div class="sb-group">資料 · 知識</div>
+        <div class="sb-link"><span class="ic"></span>素材看板</div>
+        <div class="sb-group">設定</div>
+        <div class="sb-link"><span class="ic"></span>部門/成員</div>
+        <div class="sb-link"><span class="ic"></span>LINE 群組</div>
+        <div class="sb-link"><span class="ic"></span>員工 LINE 綁定</div>
+        <div class="sb-link"><span class="ic"></span>定時任務<span class="badge gone">與「任務」撞名</span></div>
+        <div class="sb-link"><span class="ic"></span>稽核記錄</div>
+      </div>
+      <div class="sb-count">9 項 · 3 群</div>
+    </div>
+    <div class="note">
+      ①「<b>定時任務</b>」是 cron 排程，跟核心產出「任務」撞名 —— 客戶點進去想找任務，看到排程設定。<br>
+      ②「<b>任務看板</b>」藏在 tab 裡<b>要點兩次</b>，而次要的「素材看板」反而有一級入口。<br>
+      ③「戰情室」混了<b>個人</b>（我的日報/行程）與<b>主管</b>（總覽儀表）兩種身分。
+    </div>
+  </div>
+
+  <div class="col new">
+    <div class="col-hd"><span class="tag">A 案</span>按「這是誰的東西」分組</div>
+    <div class="col-bd">
+      <div class="sb">
+        <div class="sb-group">我的</div>
+        <div class="sb-link"><span class="ic"></span>我的日報</div>
+        <div class="sb-link"><span class="ic"></span>我的行程</div>
+        <div class="sb-group">營運</div>
+        <div class="sb-link on"><span class="ic"></span>任務看板<span class="badge new">升一級</span></div>
+        <div class="sb-link"><span class="ic"></span>總覽儀表</div>
+        <div class="sb-link"><span class="ic"></span>對話紀錄<span class="badge new">升一級</span></div>
+        <div class="sb-link"><span class="ic"></span>素材</div>
+        <div class="sb-group">設定</div>
+        <div class="sb-link"><span class="ic"></span>部門/成員</div>
+        <div class="sb-link"><span class="ic"></span>通訊管道<span class="badge mrg">2 合 1</span></div>
+        <div class="sb-sub">└ LINE 群組 · 員工綁定</div>
+        <div class="sb-link"><span class="ic"></span>任務設定<span class="badge new">新增</span></div>
+        <div class="sb-link"><span class="ic"></span>自動化<span class="badge ren">原「定時任務」</span></div>
+        <div class="sb-link"><span class="ic"></span>稽核記錄</div>
+      </div>
+      <div class="sb-count">10 項 · 3 群 · 每項都有權限碼</div>
+    </div>
+    <div class="note">
+      <b>任務看板與對話紀錄升為一級</b>（總覽儀表不再有 tab · OQ-NAV-3/4）。
+      「定時任務」改名<b>自動化</b>（含排程＋通知）解掉撞名。
+      「LINE 群組」＋「員工 LINE 綁定」合成<b>通訊管道</b>，未來接 Discord 就多一個 tab。
+    </div>
+  </div>
+</div>
+
+
+<h2><span class="n">03</span>aiproot 側欄 · 26 → 16 項</h2>
+
+<div class="vs">
+  <div class="col old">
+    <div class="col-hd"><span class="tag">現況</span>「AIPROOT 管理」12 項雜物櫃</div>
+    <div class="col-bd">
+      <div class="sb">
+        <div class="sb-group">AIPROOT 管理</div>
+        <div class="sb-link"><span class="ic"></span>開通新租戶</div>
+        <div class="sb-link"><span class="ic"></span>租戶管理</div>
+        <div class="sb-link"><span class="ic"></span>抽取健康度</div>
+        <div class="sb-link"><span class="ic"></span>任務完成追蹤</div>
+        <div class="sb-link"><span class="ic"></span>AI 成本管理</div>
+        <div class="sb-link"><span class="ic"></span>對話分析歷程</div>
+        <div class="sb-link"><span class="ic"></span>LINE 綁定稽核</div>
+        <div class="sb-link"><span class="ic"></span>地圖里程設定</div>
+        <div class="sb-link"><span class="ic"></span>通知設定</div>
+        <div class="sb-link"><span class="ic"></span>資料來源</div>
+        <div class="sb-link"><span class="ic"></span>分類管理</div>
+        <div class="sb-link"><span class="ic"></span>權限管理</div>
+      </div>
+      <div class="sb-count">全側欄 26 項 · 6 群</div>
+    </div>
+    <div class="note">
+      這 12 項裡：<b>4 個是同一件事的四個入口</b>（抽取健康度／任務完成追蹤／AI 成本／對話分析歷程
+      —— 都在回答「這套系統跑得好不好」）、<b>4 個本質是租戶級設定</b>被鎖在平台側、
+      「LINE 綁定稽核」跟租戶側的「員工 LINE 綁定」是<b>同一件事兩個入口</b>。
+    </div>
+  </div>
+
+  <div class="col new">
+    <div class="col-hd"><span class="tag">A 案</span>租戶那 10 項 ＋ 平台 6 項</div>
+    <div class="col-bd">
+      <div class="sb">
+        <div class="sb-group">我的 · 營運 · 設定</div>
+        <div class="sb-sub" style="padding-left:14px">同租戶的 10 項（看的是選定的租戶）</div>
+        <div class="sb-group">平台</div>
+        <div class="sb-link"><span class="ic"></span>租戶管理<span class="badge mrg">含開通</span></div>
+        <div class="sb-link on"><span class="ic"></span>系統健康<span class="badge mrg">4 合 1</span></div>
+        <div class="sb-sub">└ 抽取健康度 · 完成追蹤 · 分析歷程 · 成本</div>
+        <div class="sb-link"><span class="ic"></span>LINE 機器人</div>
+        <div class="sb-link"><span class="ic"></span>語言模型設定</div>
+        <div class="sb-link"><span class="ic"></span>資料來源</div>
+        <div class="sb-link"><span class="ic"></span>權限管理</div>
+      </div>
+      <div class="sb-count">16 項 · 4 群</div>
+    </div>
+    <div class="note">
+      <b>「系統健康」四合一</b>：那四頁回答的是同一個問題，而且資料互相解釋 ——
+      成本高不高要看分析量、接住率低要看抽取健康度。分四個入口的結果是每個都要點進去看一眼。<br>
+      各 tab <b>權限分開</b>（OQ-NAV-6）· 成本資料比抽取健康度敏感。tab 各自 lazy load（N-4）。
+    </div>
+  </div>
+</div>
+
+
+<h2><span class="n">04</span>⭐「任務設定」· 通用化的落點</h2>
+<p class="meta" style="margin-bottom:10px">這是回答「每家公司對 task 的性質要求不一樣」的地方。</p>
+
+<div class="scr">
+  <div class="scr-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span>設定 · 任務設定</span></div>
+  <div class="scr-bd">
+    <div class="sec">
+      <div class="sec-hd">任務長什麼樣<span class="perm">task-config:template</span></div>
+      <div class="sec-sub">AI 從對話抽出來的任務，要包含哪些欄位</div>
+      <div class="fld">
+        <span class="fld-l">抽取模板</span>
+        <span class="inp sel">工廠報工（機台／工單／產出數）▾</span>
+        <span class="fld-hint">另有：一般 · 服務工單（客戶／車輛／站點）</span>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-hd">分類<span class="perm">task-config:category</span></div>
+      <div class="sec-sub">AI 用的分類會自動累積 · 這裡改顯示名或封存不用的</div>
+      <div class="fld"><span class="fld-l">報工日報</span><span class="inp">改名</span><span class="fld-hint">使用 38 次</span></div>
+      <div class="fld"><span class="fld-l">維保異常</span><span class="inp">改名</span><span class="fld-hint">使用 21 次</span></div>
+      <div class="fld"><span class="fld-l muted">閒聊</span><span class="inp">封存</span><span class="fld-hint muted">使用 96 次 · 不建任務</span></div>
+    </div>
+
+    <div class="sec" style="border-color:var(--primary)">
+      <div class="sec-hd">時間 ⭐<span class="perm">task-config:timing</span></div>
+      <div class="sec-sub">
+        <b>裁定 1 說的「客戶按公司性質調整時間」就是這一格</b> ——
+        維修 7 天合理，詢價可能太長
+      </div>
+      <div class="fld">
+        <span class="fld-l">任務卡幾天沒簽核算逾時</span>
+        <span class="inp">7</span><span class="fld-hint">天 · 可設 1–90</span>
+      </div>
+      <div class="fld">
+        <span class="fld-l">提醒升級</span>
+        <span class="inp">3</span><span class="fld-hint">天內正常提醒 ·</span>
+        <span class="inp">7</span><span class="fld-hint">天後標天數 · 之後轉主管</span>
+      </div>
+      <div class="fld">
+        <span class="fld-l">每天幾點分析對話</span>
+        <span class="inp">18:00</span>
+        <span class="fld-hint">已可設（scheduler_config）· 這裡整併顯示</span>
+      </div>
+      <div class="impact">
+        ⚠️ 改成 <b>5</b> 天的話，目前有 <b>4 件</b>會從「正常」變成「逾時」。
+        <span class="muted">（N-5/N-6：先讓他看到後果，並留一筆稽核）</span>
+      </div>
+    </div>
+
+    <div class="callout" style="margin:12px 0 0;font-size:12.5px;padding:9px 12px">
+      🔒 <b>「流程」區塊（要不要簽核、誰能簽）本期不顯示。</b>
+      裁定 2 是「預留」—— 只在資料層留欄位，<b>不做灰掉的假按鈕</b>（N-7）。
+      畫一個點不下去的區塊只會讓客戶問「這什麼時候有」。
+    </div>
+  </div>
+</div>
+
+
+<h2><span class="n">05</span>權限管理 · 裁定 1 與 3 的落地處</h2>
+
+<div class="scr">
+  <div class="scr-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span>平台 · 權限管理 · 台灣福祉</span></div>
+  <div class="scr-bd">
+    <div class="tabs">
+      <span class="tab on">tenant_admin</span>
+      <span class="tab">group_owner</span>
+      <span class="tab">employee</span>
+    </div>
+    <div class="tbl">
+    <table>
+      <thead><tr>
+        <th style="width:26%">能力</th><th style="width:30%">權限碼</th>
+        <th style="width:12%">開放</th><th>說明</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>任務看板</td><td class="mono">warroom-tasks:view</td>
+            <td><span class="chk on"></span></td><td class="muted">看得到任務</td></tr>
+        <tr><td>簽核</td><td class="mono">signoff:action</td>
+            <td><span class="chk on"></span></td><td class="muted">能按簽核</td></tr>
+        <tr style="background:var(--primary-tint)">
+            <td><b>任務設定 · 時間</b></td><td class="mono">task-config:timing</td>
+            <td><span class="chk on"></span></td>
+            <td><b>客戶自己調幾天算逾時、幾點跑批次</b></td></tr>
+        <tr><td>任務設定 · 模板</td><td class="mono">task-config:template</td>
+            <td><span class="chk"></span></td>
+            <td class="muted">預設不給 · 按客戶成熟度再開（OQ-NAV-10）</td></tr>
+        <tr><td>自動化 · 通知規則</td><td class="mono">notify-config:view</td>
+            <td><span class="chk on"></span></td>
+            <td class="muted">⚠️ 現在這個碼被硬擋蓋掉，是死碼</td></tr>
+        <tr><td>資料來源（含金鑰）</td><td class="mono">master-data:manage</td>
+            <td><span class="chk"></span></td>
+            <td class="muted">預設不給 · 含 API 金鑰</td></tr>
+        <tr><td>系統健康 · 成本</td><td class="mono">sys-health:cost</td>
+            <td><span class="chk"></span></td>
+            <td class="muted">成本資料比其他 tab 敏感（OQ-NAV-6）</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="callout good" style="margin-bottom:0;font-size:12.5px;padding:9px 12px">
+      <b>這一頁存在的意義</b>：功能全部做出來，<b>誰看得到由我司逐家決定</b>，
+      不用改程式碼、不用重新部署。<br>
+      ⚠️ 但這要 <b>M1 補完 15 項權限碼</b>之後才是真的 —— 現在勾了也沒作用。
+    </div>
+  </div>
+</div>
+
+
+<h2><span class="n">06</span>要注意的兩個坑</h2>
+
+<div class="vs">
+  <div class="col old">
+    <div class="col-hd"><span class="tag">N-2 · P0</span>只擋側欄不擋 API</div>
+    <div class="col-bd" style="padding:14px">
+      <p style="font-size:13px;margin-top:0">
+        補權限碼時若只改了側欄顯示、沒加後端 guard ——
+        <b>前端藏起來但 API 仍然打得到</b>。
+      </p>
+      <p style="font-size:13px">
+        <b>這是資安問題不是 UI 問題</b>，而且本專案有過先例：
+        分析詳情曾經只擋前端，後端 <code>@Roles</code> 是放行的。
+      </p>
+      <div class="callout bad" style="margin-bottom:0;font-size:12.5px;padding:9px 12px">
+        每個新權限碼都要有<b>對應的後端 guard ＋ metadata 測試</b>。
+      </div>
+    </div>
+  </div>
+  <div class="col old">
+    <div class="col-hd"><span class="tag">N-3 · P1</span>改名之後找不到原本的頁</div>
+    <div class="col-bd" style="padding:14px">
+      <p style="font-size:13px;margin-top:0">
+        「定時任務 → 自動化」「素材看板 → 素材」「今日日誌 → 對話紀錄」——
+        既有使用者會找不到。
+      </p>
+      <div class="sb" style="border:1px solid var(--line);border-radius:var(--r)">
+        <div class="sb-link"><span class="ic"></span>自動化
+          <span class="badge ren">原「定時任務」</span></div>
+      </div>
+      <div class="callout warn" style="margin-bottom:0;font-size:12.5px;padding:9px 12px">
+        改名的項目在側欄掛一次性提示，看過就消失。比寄信或公告便宜得多。
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<h2><span class="n">07</span>里程碑</h2>
+<div class="tbl">
+<table>
+  <thead><tr><th style="width:10%">里程碑</th><th>內容</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">M0 ✅</td><td>design doc ＋ OQ-NAV-1..13 裁定</td></tr>
+    <tr><td class="mono">M0.5</td><td><b>本 mockup</b> ← 目前在這</td></tr>
+    <tr><td class="mono"><b>M1</b> ⭐</td>
+        <td><b>補完 15 項權限碼</b> ＋ 後端 guard ＋ metadata 測試 · 刪 <code>AIPROOT_ONLY_PAGES</code><br>
+        <span class="muted">裁定 1 與 3 都建立在這上面，而那目前是假的</span></td></tr>
+    <tr><td class="mono">M2</td><td><code>tenant_task_config</code> 表 ＋ 時間設定落地 · 收掉散落的硬編 7</td></tr>
+    <tr><td class="mono">M3</td><td>導覽重整：改名 · 任務看板升一級 · 分組改「我的／營運／設定」</td></tr>
+    <tr><td class="mono">M4</td><td>合併頁：通訊管道（2 tab）· 系統健康（4 tab · lazy load）· 租戶管理含開通</td></tr>
+    <tr><td class="mono">M5</td><td>「任務設定」頁三區塊（流程區塊不顯示）</td></tr>
+    <tr><td class="mono">M6</td><td>docs 收尾 ＋ FMEA 覆核 ＋ 變更說明</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout">
+  <b>M1 是所有事情的前置。</b>裁定 1（功能都做、用權限分配）與裁定 3（4 項設定走權限分配）
+  都建立在「權限管理調得動」上，而<b>那目前是假的</b> —— 26 項只有 9 項有權限碼。
+</div>
+
+</div>
+</body>
+</html>
