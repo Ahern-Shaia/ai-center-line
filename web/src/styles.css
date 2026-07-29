@@ -18,7 +18,11 @@
   --sans:'Inter','Noto Sans TC',system-ui,-apple-system,sans-serif;
   --mono:'JetBrains Mono','IBM Plex Mono',ui-monospace,SFMono-Regular,monospace;
   /* motion */
-  --ease:cubic-bezier(.32,.72,0,1);
+  --ease:cubic-bezier(.32,.72,0,1);          /* 進場 · ease-out 型（快進慢停）*/
+  --ease-in:cubic-bezier(.4,0,1,1);          /* 退場 · profile B0-OL「進 ease-out、出 ease-in」*/
+  /* 位移倍率 · prefers-reduced-motion 時設 0 ——
+     A4 要的是「只 fade、不位移」，不是把動效整個關掉（關掉＝瞬間彈出，違反同一條的第一句）*/
+  --m-shift:1;
   /* shape */
   --r-sm:4px; --r:6px; --r-lg:8px;
   /* elevation */
@@ -109,9 +113,9 @@ button { cursor:pointer; }
 
 /* Popover 由 Aria portal 掛在 body 根，用 CSS var 定位；無需 relative parent */
 .user-menu-pop { z-index:200; animation:menu-in .12s var(--ease); }
-.user-menu-pop[data-exiting] { animation:menu-out .1s var(--ease) forwards; }
-@keyframes menu-in { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
-@keyframes menu-out { to { opacity:0; transform:translateY(-4px); } }
+.user-menu-pop[data-exiting] { animation:menu-out .1s var(--ease-in) forwards; }
+@keyframes menu-in { from { opacity:0; transform:translateY(calc(-4px * var(--m-shift))); } to { opacity:1; transform:none; } }
+@keyframes menu-out { to { opacity:0; transform:translateY(calc(-4px * var(--m-shift))); } }
 .user-menu { min-width:240px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--sh); padding:6px; outline:none; }
 .user-menu-hdr { padding:10px 12px 8px; }
 .user-menu-hdr .n { font-size:13px; font-weight:600; color:var(--ink); }
@@ -146,7 +150,7 @@ button { cursor:pointer; }
 .tile .num .pct { font-size:18px; color:var(--ink-3); font-weight:500; margin-left:2px; }
 .tile .frac { font-family:var(--mono); font-size:12px; color:var(--ink-3); }
 .tile .bar { margin-top:12px; height:4px; border-radius:2px; background:var(--well); overflow:hidden; }
-.tile .bar > i { display:block; height:100%; border-radius:2px; transition:width .5s var(--ease); }
+.tile .bar > i { display:block; height:100%; border-radius:2px; transition:width .2s var(--ease); }
 
 /* Recharts 全圓 donut gauge tile — 狀態靠 donut 環本身承載，tile 中性 */
 .gauge-tile { background:var(--surface); border:1px solid var(--line); border-radius:3px; padding:14px 16px 12px; display:flex; flex-direction:column; align-items:center; }
@@ -271,9 +275,9 @@ button { cursor:pointer; }
 .infotip-target { display:inline-flex; align-items:center; outline:none; }
 .infotip-target:focus-visible { outline:2px solid var(--primary); outline-offset:2px; border-radius:var(--r-sm); }
 .tip { background:var(--ink); color:#F9FAFB; font-size:12px; line-height:1.5; padding:6px 10px; border-radius:var(--r); max-width:280px; z-index:300; box-shadow:0 4px 12px rgba(17,24,39,.16); animation:tip-in .12s var(--ease); }
-.tip[data-exiting] { animation:tip-out .1s var(--ease) forwards; }
-@keyframes tip-in { from { opacity:0; transform:translateY(2px); } to { opacity:1; transform:none; } }
-@keyframes tip-out { to { opacity:0; transform:translateY(2px); } }
+.tip[data-exiting] { animation:tip-out .1s var(--ease-in) forwards; }
+@keyframes tip-in { from { opacity:0; transform:translateY(calc(2px * var(--m-shift))); } to { opacity:1; transform:none; } }
+@keyframes tip-out { to { opacity:0; transform:translateY(calc(2px * var(--m-shift))); } }
 .tip-arrow svg { display:block; }
 .tip[data-placement="bottom"] .tip-arrow { transform:rotate(180deg); }
 .tip[data-placement="start"] .tip-arrow { transform:rotate(90deg); }
@@ -298,7 +302,7 @@ button { cursor:pointer; }
 .toast.warn .toast-tstamp .type { color:var(--warn); }
 .toast.danger .toast-tstamp .type { color:var(--danger); }
 .toast.info .toast-tstamp .type, .toast:not(.ok):not(.warn):not(.danger) .toast-tstamp .type { color:var(--ink-2); }
-@keyframes toast-in { from { opacity:0; transform:translateX(12px); } to { opacity:1; transform:none; } }
+@keyframes toast-in { from { opacity:0; transform:translateX(calc(12px * var(--m-shift))); } to { opacity:1; transform:none; } }
 
 /* ==================== SKELETON ==================== */
 .sk { background:linear-gradient(90deg,var(--well) 0%,var(--line-2) 50%,var(--well) 100%); background-size:200% 100%; animation:sk-shim 1.4s var(--ease) infinite; border-radius:var(--r-sm); }
@@ -363,7 +367,7 @@ button { cursor:pointer; }
     position:fixed; top:0; left:0; bottom:0; z-index:100;
     width:260px; max-width:80vw;
     transform:translateX(-100%);
-    transition:transform .22s var(--ease);
+    transition:transform .18s var(--ease);
     border-right:1px solid var(--line);
     box-shadow:2px 0 12px rgba(0,0,0,.08);
   }
@@ -454,13 +458,13 @@ button { cursor:pointer; }
 
 /* ==================== DRAWER（React Aria Modal + Dialog） ==================== */
 .drawer-scrim { position:fixed; inset:0; background:rgba(17,24,39,.35); z-index:100; display:flex; justify-content:flex-end; animation:scrim-in .12s var(--ease); }
-.drawer-scrim[data-exiting] { animation:scrim-out .12s var(--ease) forwards; }
+.drawer-scrim[data-exiting] { animation:scrim-out .1s var(--ease-in) forwards; }
 @keyframes scrim-in { from { opacity:0; } to { opacity:1; } }
 @keyframes scrim-out { to { opacity:0; } }
 .drawer { background:var(--surface); box-shadow:-8px 0 24px rgba(17,24,39,.12); height:100vh; animation:drawer-in .2s var(--ease); max-width:100vw; outline:none; }
-.drawer[data-exiting] { animation:drawer-out .18s var(--ease) forwards; }
-@keyframes drawer-in { from { transform:translateX(24px); opacity:0; } to { transform:none; opacity:1; } }
-@keyframes drawer-out { to { transform:translateX(24px); opacity:0; } }
+.drawer[data-exiting] { animation:drawer-out .18s var(--ease-in) forwards; }
+@keyframes drawer-in { from { transform:translateX(calc(24px * var(--m-shift))); opacity:0; } to { transform:none; opacity:1; } }
+@keyframes drawer-out { to { transform:translateX(calc(24px * var(--m-shift))); opacity:0; } }
 .drawer-dialog { display:flex; flex-direction:column; height:100%; outline:none; }
 .drawer-hdr { display:flex; align-items:flex-start; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--line); gap:10px; }
 .drawer-title { font-size:15px; font-weight:700; letter-spacing:-.01em; }
@@ -610,7 +614,7 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .rag-typing span { width:6px; height:6px; border-radius:50%; background:var(--ink-3); animation:typ 1s var(--ease) infinite; }
 .rag-typing span:nth-child(2) { animation-delay:.15s; }
 .rag-typing span:nth-child(3) { animation-delay:.3s; }
-@keyframes typ { 0%,60%,100% { opacity:.3; transform:translateY(0); } 30% { opacity:1; transform:translateY(-3px); } }
+@keyframes typ { 0%,60%,100% { opacity:.3; transform:translateY(0); } 30% { opacity:1; transform:translateY(calc(-3px * var(--m-shift))); } }
 
 .rag-suggestions { border-top:1px solid var(--line); padding:12px 22px 14px; background:var(--canvas); }
 .rag-sug-lbl { font-size:11px; font-weight:600; color:var(--ink-3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
@@ -890,15 +894,15 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 
 /* ==================== 頁面切換 · 視覺舒適動效 ==================== */
 /* 頁面 fade + slide-up 進場（key change 觸發 remount） */
-.page-fade { animation:page-in .22s var(--ease); }
+.page-fade { animation:page-in .2s var(--ease); }
 @keyframes page-in {
-  from { opacity:0; transform:translateY(8px); }
+  from { opacity:0; transform:translateY(calc(8px * var(--m-shift))); }
   to { opacity:1; transform:none; }
 }
 
 /* 卡片 grid 進場 stagger（媒體/KM 卡） · 前 12 個依序稍晚一點 */
 .ml-grid .ml-card, .kb-grid .kb-card {
-  animation:card-in .28s var(--ease) both;
+  animation:card-in .18s var(--ease) both;
 }
 .ml-grid .ml-card:nth-child(1), .kb-grid .kb-card:nth-child(1) { animation-delay:.02s; }
 .ml-grid .ml-card:nth-child(2), .kb-grid .kb-card:nth-child(2) { animation-delay:.04s; }
@@ -910,22 +914,22 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .ml-grid .ml-card:nth-child(8), .kb-grid .kb-card:nth-child(8) { animation-delay:.16s; }
 .ml-grid .ml-card:nth-child(n+9), .kb-grid .kb-card:nth-child(n+9) { animation-delay:.18s; }
 @keyframes card-in {
-  from { opacity:0; transform:translateY(6px); }
+  from { opacity:0; transform:translateY(calc(6px * var(--m-shift))); }
   to { opacity:1; transform:none; }
 }
 
 /* Tile / 儀表 gauge 進場（三張儀表統一）*/
-.tiles > * { animation:tile-in .32s var(--ease) both; }
+.tiles > * { animation:tile-in .2s var(--ease) both; }
 .tiles > *:nth-child(1) { animation-delay:.04s; }
 .tiles > *:nth-child(2) { animation-delay:.10s; }
 .tiles > *:nth-child(3) { animation-delay:.16s; }
 @keyframes tile-in {
-  from { opacity:0; transform:translateY(6px) scale(.98); }
+  from { opacity:0; transform:translateY(calc(6px * var(--m-shift))) scale(calc(1 - 0.02 * var(--m-shift))); }
   to { opacity:1; transform:none; }
 }
 
 /* signoff accordion 進場 stagger（部門列一個一個） */
-.signoff-list .so-item { animation:so-in .28s var(--ease) both; }
+.signoff-list .so-item { animation:so-in .18s var(--ease) both; }
 .signoff-list .so-item:nth-child(1) { animation-delay:.04s; }
 .signoff-list .so-item:nth-child(2) { animation-delay:.07s; }
 .signoff-list .so-item:nth-child(3) { animation-delay:.10s; }
@@ -934,19 +938,19 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .signoff-list .so-item:nth-child(6) { animation-delay:.19s; }
 .signoff-list .so-item:nth-child(n+7) { animation-delay:.22s; }
 @keyframes so-in {
-  from { opacity:0; transform:translateX(-6px); }
+  from { opacity:0; transform:translateX(calc(-6px * var(--m-shift))); }
   to { opacity:1; transform:none; }
 }
 
 /* 展開明細（點「展開」時內容淡入） */
 .so-detail { animation:detail-in .2s var(--ease); }
 @keyframes detail-in {
-  from { opacity:0; transform:translateY(-4px); }
+  from { opacity:0; transform:translateY(calc(-4px * var(--m-shift))); }
   to { opacity:1; transform:none; }
 }
 
 /* 表格列微淡入（部門/成員 · 稽核記錄）*/
-.dm-table tbody tr, .al-table tbody tr { animation:row-in .3s var(--ease) both; }
+.dm-table tbody tr, .al-table tbody tr { animation:row-in .18s var(--ease) both; }
 .dm-table tbody tr:nth-child(1), .al-table tbody tr:nth-child(1) { animation-delay:.03s; }
 .dm-table tbody tr:nth-child(2), .al-table tbody tr:nth-child(2) { animation-delay:.05s; }
 .dm-table tbody tr:nth-child(3), .al-table tbody tr:nth-child(3) { animation-delay:.07s; }
@@ -960,7 +964,7 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 }
 
 /* 設定 section stagger */
-.ts-list .ts-section { animation:tile-in .3s var(--ease) both; }
+.ts-list .ts-section { animation:tile-in .2s var(--ease) both; }
 .ts-list .ts-section:nth-child(1) { animation-delay:.03s; }
 .ts-list .ts-section:nth-child(2) { animation-delay:.08s; }
 .ts-list .ts-section:nth-child(3) { animation-delay:.13s; }
@@ -968,7 +972,7 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .ts-list .ts-section:nth-child(5) { animation-delay:.23s; }
 
 /* 客戶地圖左右兩塊淡入 */
-.cm-map-layout > * { animation:page-in .3s var(--ease) both; }
+.cm-map-layout > * { animation:page-in .2s var(--ease) both; }
 .cm-map-layout > *:nth-child(1) { animation-delay:.06s; }
 .cm-map-layout > *:nth-child(2) { animation-delay:.12s; }
 
@@ -980,7 +984,15 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 }
 
 @media (prefers-reduced-motion:reduce) {
-  * { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+  /* ⚠️ 這裡**不是**把動效關掉。
+     原本寫 `animation-duration:.01ms !important`，等於元件瞬間彈出 ——
+     而 A4 第一句就是「元件出現/消失不瞬間彈出或消失」。
+     一條規則不可以拿去違反同一條的另一句。
+     正確做法：保留 opacity 過場（出現/消失仍有交代），只把位移拿掉。 */
+  :root { --m-shift:0; }
+  /* 純裝飾的循環動畫關掉；spinner 不關 —— 它是「還在跑」的唯一訊號，
+     停住會讓人以為當掉了 */
+  .rag-typing span, .sk, .ml-thumb-load, .tm-thumb-loading { animation:none !important; }
 }
 
 /* === LLM Settings · observability-light profile === */
@@ -1123,7 +1135,7 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
   font-size:12px;
 }
 .detail-cov-bar { flex:1; height:6px; background:var(--surface); border-radius:999px; overflow:hidden; }
-.detail-cov-fill { height:100%; background:var(--ok); border-radius:999px; transition:width .3s var(--ease); }
+.detail-cov-fill { height:100%; background:var(--ok); border-radius:999px; transition:width .2s var(--ease); }
 .detail-cov-lbl { color:var(--ink-2); font-family:var(--mono); font-size:11.5px; }
 .detail-cov-lbl b { color:var(--ink); font-weight:600; }
 
@@ -1667,14 +1679,14 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
   display:flex; align-items:center; justify-content:center; padding:16px;
   animation:scrim-in .12s var(--ease);
 }
-.cd-scrim[data-exiting] { animation:scrim-out .12s var(--ease) forwards; }
+.cd-scrim[data-exiting] { animation:scrim-out .1s var(--ease-in) forwards; }
 .cd-modal {
   background:var(--surface); border-radius:var(--r-lg); box-shadow:0 10px 40px rgba(17,24,39,.16);
   max-width:440px; width:100%; outline:none; animation:cd-in .18s var(--ease);
 }
-.cd-modal[data-exiting] { animation:cd-out .14s var(--ease) forwards; }
-@keyframes cd-in { from { transform:scale(.96); opacity:0; } to { transform:none; opacity:1; } }
-@keyframes cd-out { to { transform:scale(.96); opacity:0; } }
+.cd-modal[data-exiting] { animation:cd-out .14s var(--ease-in) forwards; }
+@keyframes cd-in { from { transform:scale(calc(1 - 0.04 * var(--m-shift))); opacity:0; } to { transform:none; opacity:1; } }
+@keyframes cd-out { to { transform:scale(calc(1 - 0.04 * var(--m-shift))); opacity:0; } }
 .cd-dialog { padding:20px 22px; outline:none; display:flex; flex-direction:column; gap:12px; }
 .cd-title { font-size:15px; font-weight:700; letter-spacing:-.01em; margin:0; color:var(--ink); }
 .cd-body { font-size:13px; color:var(--ink-2); line-height:1.6; }
@@ -1988,8 +2000,11 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .nc-ev.on { border-color:var(--primary); background:var(--primary-tint); color:var(--primary-2); font-weight:600; }
 .nc-sw { width:32px; height:18px; border-radius:999px; background:var(--line); position:relative; flex-shrink:0; }
 .nc-ev.on .nc-sw { background:var(--primary); }
-.nc-sw::after { content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:left .15s; }
-.nc-ev.on .nc-sw::after { left:16px; }
+.nc-sw::after { content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff;
+  /* ⚠️ 原本 transition:left —— 動 left 會觸發 layout（A4「不抖 layout」），
+     而且沒指定曲線＝用瀏覽器預設 ease */
+  transition:transform .12s var(--ease); }
+.nc-ev.on .nc-sw::after { transform:translateX(14px); }
 /* webhook url */
 .nc-url-box { background:#0F172A; border-radius:var(--r); padding:12px 14px; display:flex; align-items:center; gap:12px; }
 .nc-url-box code { font-family:var(--mono, monospace); font-size:12.5px; color:#A5B4FC; flex:1; word-break:break-all; }
@@ -2149,7 +2164,7 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .eh-field-name { min-width:96px; color:var(--ink-2); display:flex; align-items:center; gap:5px; }
 .eh-layer { font-size:9.5px; font-family:var(--mono); color:var(--ink-3); border:1px solid var(--line); border-radius:2px; padding:0 3px; }
 .eh-bar { flex:1; height:5px; background:var(--well); border-radius:3px; overflow:hidden; min-width:40px; }
-.eh-bar-fill { display:block; height:100%; background:var(--ink-3); transition:width .3s var(--ease); }
+.eh-bar-fill { display:block; height:100%; background:var(--ink-3); transition:width .2s var(--ease); }
 .eh-bar-fill.ok { background:var(--ok); } .eh-bar-fill.warn { background:var(--warn); } .eh-bar-fill.danger { background:var(--danger); }
 .eh-rate { min-width:74px; text-align:right; font-variant-numeric:tabular-nums; color:var(--ink-3); }
 .eh-rate.ok { color:var(--ok); } .eh-rate.warn { color:var(--warn); } .eh-rate.danger { color:var(--danger); font-weight:600; }
@@ -2275,7 +2290,7 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 /* 來源訊息裡內嵌的照片（SourceDrawer → MessageMedia）*/
 .tm-thumb-btn { padding:0; margin-top:5px; border:none; background:none; cursor:zoom-in; line-height:0; display:block; }
 .tm-thumb { width:64px; height:64px; object-fit:cover; border-radius:5px; border:1px solid var(--line); background:var(--well); }
-.tm-thumb-loading { animation:tm-pulse 1.2s ease-in-out infinite; }
+.tm-thumb-loading { animation:tm-pulse 1.2s var(--ease) infinite; }
 .tm-thumb-failed { display:grid; place-items:center; font-size:11px; color:var(--ink-3); }
 @keyframes tm-pulse { 0%,100% { opacity:.45; } 50% { opacity:.8; } }
 .tm-lightbox { position:fixed; inset:0; z-index:80; background:rgba(15,23,42,.82);
