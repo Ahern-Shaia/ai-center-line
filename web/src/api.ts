@@ -1458,7 +1458,7 @@ export interface UnresolvedSignal {
 
 /** 未接住清單 · 平台管理員的除錯與校準訊號，不是客戶的待辦 */
 export const getUnresolvedSignals = (tenantId: string) =>
-  req<{ items: UnresolvedSignal[]; counts: { awaitingBatch: number; materializationGap: number } }>(
+  req<{ items: UnresolvedSignal[]; counts: { awaitingBatch: number; materializationGap: number; ticketGone: number } }>(
     `/completion-signals/unresolved?tenantId=${encodeURIComponent(tenantId)}`,
   );
 
@@ -1466,6 +1466,10 @@ export interface CompletionStats {
   windowDays: number;
   signals: {
     total: number; completion: number; caught: number;
+    /** 真的把任務關掉的 · 跟「接住」不同（進度回報也算接住） */
+    closedByReply: number;
+    /** 標籤說接住了，但掛到的任務已被刪除 */
+    ticketGone: number;
     materializationGap: number; awaitingBatch: number; catchRate: number | null;
   };
   tickets: {

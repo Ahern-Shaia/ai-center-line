@@ -87,12 +87,22 @@ export default function CompletionTracking() {
               <Stat v={String(stats.signals.total)} l="收到的引用回覆（筆）" />
               <Stat v={String(stats.signals.completion)} l="其中帶完成語意（筆）" />
               <Stat v={String(stats.signals.caught)} l="成功對上任務（筆）" />
+              {/* 「對上任務」與「真的把任務關掉」是兩件事 —— 進度回報也算對上，
+                  但任務還開著。混成一個數字會讓人以為結案量比實際高。 */}
+              <Stat v={String(stats.signals.closedByReply)} l="其中真的關掉任務（筆）" />
               <Stat
                 v={String(stats.signals.materializationGap)}
                 l="對不上 · 原訊息不是任務（筆）"
                 tone={stats.signals.materializationGap > 0 ? "warn" : undefined}
               />
               <Stat v={String(stats.signals.awaitingBatch)} l="等下一輪分析（筆）" />
+              {stats.signals.ticketGone > 0 && (
+                <Stat
+                  v={String(stats.signals.ticketGone)}
+                  l="掛到的任務已被刪除（筆）"
+                  tone="warn"
+                />
+              )}
             </div>
             <p className="wt-formula">
               接住率的分母<b>不含</b>「等下一輪分析」的 —— 那些只是批次還沒輪到，不是漏接。
