@@ -127,9 +127,16 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
           groupId: row.groupId,
           batchDate: row.batchDate,
         });
-        const zh = res.status === "completed" ? "完成" : res.status === "empty" ? "空群" : res.status === "failed" ? "失敗" : res.status;
-        toast.show(`批次 ${zh} · ${res.messageCount.toLocaleString()} 則訊息`,
-          res.status === "failed" ? "danger" : "ok");
+        // ⚠️ 不可以說「完成」。後端的 completed 是「訊息收齊、分析已排入」，
+        //    AI 分析在背景另外跑（prod 實測 109 則約 1 分鐘）。
+        //    說完成的話，使用者當下重新整理看到沒結果，會以為重跑失敗。
+        toast.show(
+          res.status === "failed" ? "重跑失敗"
+            : res.status === "empty" ? "這一天沒有訊息可分析"
+            : res.analysis === "already_done" ? `已分析過 · ${res.messageCount.toLocaleString()} 則訊息`
+            : `已排入分析 · ${res.messageCount.toLocaleString()} 則訊息 · 在背景進行，稍後重新整理看結果`,
+          res.status === "failed" ? "danger" : "ok",
+        );
       } else {
         // batch 永遠 tenant-scoped · 沒選租戶就不執行 (UI 按鈕已 disable · 這裡加保底)
         if (!selectedTenantId) {

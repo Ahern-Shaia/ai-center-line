@@ -1176,7 +1176,15 @@ export const listAnalysisBatches = (tenantId?: string) => {
 };
 
 export const rerunAnalysisBatch = (body: { tenantId: string; groupId: string; batchDate: string }) =>
-  req<{ batchId: string; status: string; uploadId: number | null; messageCount: number }>(
+  req<{
+    batchId: string;
+    /** ⚠️ 這是**批次**的狀態不是分析的 · completed = 訊息收齊、分析已排入 */
+    status: string;
+    /** 分析工作的去向 · queued = 在背景跑，**還沒有結果** */
+    analysis: "queued" | "none" | "already_done";
+    uploadId: number | null;
+    messageCount: number;
+  }>(
     "/aiproot-console/batches/rerun", { method: "POST", body: JSON.stringify(body) },
   );
 
