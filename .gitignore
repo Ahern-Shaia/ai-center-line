@@ -1,8 +1,13 @@
 node_modules/
 output/
 dist/
-.env
 .DS_Store
+
+# ⚠️ 憑證 · `.env` 這個 pattern **只比對確切檔名**，不會蓋到 .env.prod / .env.local。
+#    少了下面那行，新增的 .env.prod 會直接被 commit 上去。
+.env
+.env.*
+!.env.example
 
 # 內含真名/PII 與原始 prototype — 絕不進版控（更不可推上 Render 拉取的 repo）
 合夥人/
