@@ -393,15 +393,24 @@
     <div class="col-hd"><span class="tag">N-2 · P0</span>只擋側欄不擋 API</div>
     <div class="col-bd" style="padding:14px">
       <p style="font-size:13px;margin-top:0">
-        補權限碼時若只改了側欄顯示、沒加後端 guard ——
-        <b>前端藏起來但 API 仍然打得到</b>。
+        盤點結果：<b>135 個端點只有 9 個沒守衛</b>，而且都是刻意的
+        （打卡／改自己密碼／查自己權限，全走 <code>@CurrentUser</code>）。
+        <b>目前沒有已知漏洞。</b>
       </p>
       <p style="font-size:13px">
-        <b>這是資安問題不是 UI 問題</b>，而且本專案有過先例：
-        分析詳情曾經只擋前端，後端 <code>@Roles</code> 是放行的。
+        但機制是 <b>fail-open</b> —— <code>if (!roles) return true</code>，
+        <b>忘記寫的懲罰是「安靜放行」</b>。而 M1 要一次補 15 項，正是最容易漏的時候。
       </p>
-      <div class="callout bad" style="margin-bottom:0;font-size:12.5px;padding:9px 12px">
-        每個新權限碼都要有<b>對應的後端 guard ＋ metadata 測試</b>。
+      <div class="callout bad" style="font-size:12.5px;padding:9px 12px">
+        <b>真正危險的形狀</b>：<code>@Query("tenantId")</code> ＋ 內部開 aiproot_admin 上下文。
+        漏了 <code>@Roles</code> 就能傳別家 tenantId <b>跨租戶讀資料</b>。<br>
+        本次新增的 <code>/completion-signals/*</code> 正是這個形狀（有加，但只差一行）。
+      </div>
+      <div class="callout good" style="margin-bottom:0;font-size:12.5px;padding:9px 12px">
+        ✅ <b>M0.9：守衛改 fail-closed</b>（9 個端點加 <code>@AllowAnyUser()</code> 明示意圖）
+        ＋ <b>跨租戶形狀測試</b>。<br>
+        ❌ 不做 metadata 快照測試 —— 容易變成「壞了就更新快照」的橡皮圖章，
+        <b>比沒有更糟，因為它給人安全感</b>。
       </div>
     </div>
   </div>
@@ -431,8 +440,11 @@
   <tbody>
     <tr><td class="mono">M0 ✅</td><td>design doc ＋ OQ-NAV-1..13 裁定</td></tr>
     <tr><td class="mono">M0.5</td><td><b>本 mockup</b> ← 目前在這</td></tr>
+    <tr style="background:var(--warn-tint)"><td class="mono"><b>M0.9</b> ⭐</td>
+        <td><b>守衛改 fail-closed</b> ＋ 跨租戶形狀測試<br>
+        <span class="muted">⚠️ 必須在 M1 之前 —— 先架網再加東西，否則那 15 項是在沒有網的狀態下寫的</span></td></tr>
     <tr><td class="mono"><b>M1</b> ⭐</td>
-        <td><b>補完 15 項權限碼</b> ＋ 後端 guard ＋ metadata 測試 · 刪 <code>AIPROOT_ONLY_PAGES</code><br>
+        <td><b>補完 15 項權限碼</b> ＋ 後端 guard · 刪 <code>AIPROOT_ONLY_PAGES</code><br>
         <span class="muted">裁定 1 與 3 都建立在這上面，而那目前是假的</span></td></tr>
     <tr><td class="mono">M2</td><td><code>tenant_task_config</code> 表 ＋ 時間設定落地 · 收掉散落的硬編 7</td></tr>
     <tr><td class="mono">M3</td><td>導覽重整：改名 · 任務看板升一級 · 分組改「我的／營運／設定」</td></tr>
