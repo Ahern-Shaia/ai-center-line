@@ -36,8 +36,17 @@ const ROLE_LABEL: Record<UserRole, string> = {
  * 後端 DTO 的 `RoleEnum`，以及上面的 `ROLE_LABEL`。
  */
 function assignableRolesFor(callerRole: string | undefined): UserRole[] {
+  // ⚠️ 「助理」**只有 aiproot 能指派**。
+  //
+  // 它的兩個權限碼是 notify-config.view / notify-config.manage，那是**平台側**的能力
+  // （管全域的通知規則與 Ragic 帳號金鑰）。而那三張表的 RLS 是純角色白名單、
+  // **沒有租戶條件** —— 所以租戶管理員只要建一個「助理」，
+  // 那個人就會看到 aiproot 全部的通知設定與金鑰。
+  //
+  // 我在 0049 的第一版把它放進 tenant_admin 的清單裡，那是錯的（同日修正）。
+  // 判準：**角色的權限碼指向平台資源時，就只能由平台指派。**
   if (callerRole === "aiproot_admin") return ["tenant_admin", "group_owner", "assistant"];
-  if (callerRole === "tenant_admin") return ["group_owner", "assistant"];
+  if (callerRole === "tenant_admin") return ["group_owner"];
   return [];
 }
 
