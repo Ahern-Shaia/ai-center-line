@@ -4,7 +4,8 @@
 // ⭐ 樣式偵測用 prod 真實回報格式當案例。
 // 技術工程部組長群每晚固定 5 個人在發，而且是自願的 ——
 // 我們要搭的是這個既有習慣，不是另外建一個新動作。
-import { test } from "node:test";
+import { test, before, after } from "node:test";
+import pg from "pg";
 import { TaskConfigService } from "../src/task-config/task-config.service.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -63,25 +64,59 @@ interface Seed {
   cleanup: () => Promise<void>;
 }
 
+/**
+ * ⚠️ 專用租戶，**不可**用 `SELECT ... FROM line_group LIMIT 1` 撈現成的。
+ *
+ * 2026-07-29 實際炸過：另一個檔案（daily-log-and-media）會建立又刪除帶部門的群組，
+ * 而原本這裡的 `LIMIT 1` 沒有 ORDER BY —— Postgres 可能回它建的那一列，
+ * 然後那個檔案的 `after()` 把租戶刪掉（cascade 連 line_group / departments 一起），
+ * 這支測試跑到一半就找不到部門（`dept.rows[0]` undefined）。
+ * node --test 各檔案是平行的 process，拿共用可變資料當 fixture ＝ 自找 flake。
+ */
+const T_DR = "d2d2d2d2-0000-4000-8000-00000000d201";
+const DEPT_DR = "d2d2d2d2-0000-4000-8000-00000000de02";
+const BOT_DR = "d2d2d2d2-0000-4000-8000-0000000b0703";
+const GROUP_DR = "Cdr_reminder_00000000000000001";
+
+const adminClient = () => new pg.Client({ connectionString: process.env.MIGRATION_DATABASE_URL });
+
+before(async () => {
+  const c = adminClient();
+  await c.connect();
+  await c.query(`DELETE FROM tenants WHERE tenant_id = $1`, [T_DR]);
+  await c.query(`INSERT INTO tenants (tenant_id, tenant_name) VALUES ($1, 'DR-TEST')`, [T_DR]);
+  await c.query(
+    `INSERT INTO departments (department_id, tenant_id, department_name, line_group_id, extraction_schema, ragic_table)
+     VALUES ($1, $2, 'dr-dept', $3, 'x', 'x')`, [DEPT_DR, T_DR, GROUP_DR]);
+  const key = process.env.LINE_CONFIG_ENC_KEY ?? "test-only-line-enc-key-32chars---";
+  await c.query(
+    `INSERT INTO line_bot (bot_id, tenant_id, name, bot_user_id, channel_secret_enc, channel_access_token_enc)
+     VALUES ($1,$2,'dr-bot','U_dr_bot', pgp_sym_encrypt('s',$3), pgp_sym_encrypt('t',$3))`, [BOT_DR, T_DR, key]);
+  await c.query(
+    `INSERT INTO line_group (bot_id, group_id, department_id, analyze_enabled, display_name)
+     VALUES ($1,$2,$3,true,'提醒測試群')`, [BOT_DR, GROUP_DR, DEPT_DR]);
+  await c.end();
+});
+
+after(async () => {
+  const c = adminClient();
+  await c.connect();
+  await c.query(`DELETE FROM tenants WHERE tenant_id = $1`, [T_DR]);   // cascade 清其餘
+  await c.end();
+});
+
 async function seed(): Promise<Seed | null> {
   const name = `測試員_${randomUUID().slice(0, 6)}`;
   const lineUserId = `U_${randomUUID().slice(0, 10)}`;
   return withSystemTx(async (tx) => {
-    const g = await tx.execute<{ group_id: string; tenant_id: string; bot_id: string; department_id: string }>(sql`
-      SELECT g.group_id, b.tenant_id::text, b.bot_id::text, g.department_id::text
-        FROM line_group g JOIN line_bot b ON b.bot_id = g.bot_id
-       WHERE g.department_id IS NOT NULL LIMIT 1
-    `);
-    const grp = g.rows[0];
-    if (!grp) return null;
     await tx.execute(sql`
       INSERT INTO line_member (tenant_id, bot_id, group_id, user_id, display_name)
-      VALUES (${grp.tenant_id}::uuid, ${grp.bot_id}::uuid, ${grp.group_id}, ${lineUserId}, ${name})
+      VALUES (${T_DR}::uuid, ${BOT_DR}::uuid, ${GROUP_DR}, ${lineUserId}, ${name})
     `);
     return {
-      tenantId: grp.tenant_id, groupId: grp.group_id, lineUserId, name,
+      tenantId: T_DR, groupId: GROUP_DR, lineUserId, name,
       cleanup: async () => {
-        await withTenant({ tenantId: grp.tenant_id, role: "tenant_admin", departmentId: null, userId: null },
+        await withTenant({ tenantId: T_DR, role: "tenant_admin", departmentId: null, userId: null },
           (t) => t.execute(sql`DELETE FROM tickets WHERE assignee_display_name = ${name}`));
         await withSystemTx((t) => t.execute(sql`DELETE FROM line_member WHERE user_id = ${lineUserId}`));
       },
@@ -90,14 +125,11 @@ async function seed(): Promise<Seed | null> {
 }
 
 async function addTicket(s: Seed, summary: string, daysAgo: number, confirm = "待簽核") {
-  const dept = await withSystemTx((tx) => tx.execute<{ id: string }>(sql`
-    SELECT department_id::text AS id FROM line_group WHERE group_id = ${s.groupId} LIMIT 1
-  `));
   await withTenant({ tenantId: s.tenantId, role: "tenant_admin", departmentId: null, userId: null },
     (tx) => tx.execute(sql`
       INSERT INTO tickets (tenant_id, department_id, summary, confirm_status,
                            assignee_display_name, created_at)
-      VALUES (${s.tenantId}::uuid, ${dept.rows[0].id}::uuid, ${summary}, ${confirm},
+      VALUES (${s.tenantId}::uuid, ${DEPT_DR}::uuid, ${summary}, ${confirm},
               ${s.name}, now() - ${`${daysAgo} days`}::interval)
     `));
 }
