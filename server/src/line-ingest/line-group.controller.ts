@@ -1,7 +1,8 @@
-import { BadRequestException, Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
+import { resolveTenantId } from "../auth/resolve-tenant-id.js";
 import { LineGroupService } from "./line-group.service.js";
 import { LineGroupPatchSchema } from "./dto/line-bot.dto.js";
 
@@ -13,14 +14,18 @@ import { LineGroupPatchSchema } from "./dto/line-bot.dto.js";
 export class LineGroupController {
   constructor(private readonly svc: LineGroupService) {}
 
-  // list 自 tenant 所有 group · tenant_admin「LINE 群組」頁用
+  /**
+   * 列出某租戶的所有群組。
+   *
+   * ⚠️ 原本直接用 `user.tenant_id`，而 aiproot 沒有租戶 —— 於是平台端點開了
+   * 「通訊管道」卻什麼都看不到（前端因為 session.tenantId 為 null 直接不發請求，
+   * 連錯誤都沒有，就是一片空白）。改用 resolveTenantId：平台角色帶 tenantId
+   * 指定要看哪一家，客戶端一律用自己的、傳別家直接擋。
+   */
   @Get()
   @RequirePermission("line-groups:view")
-  async list(@CurrentUser() user: JwtUser) {
-    if (!user.tenant_id) {
-      throw new BadRequestException("需綁定 tenant");
-    }
-    const groups = await this.svc.listGroupsByTenant(user.tenant_id);
+  async list(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
+    const groups = await this.svc.listGroupsByTenant(resolveTenantId(user, tenantId));
     return { groups };
   }
 
