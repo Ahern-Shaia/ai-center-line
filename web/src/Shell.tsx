@@ -1,33 +1,38 @@
 import type { ReactNode } from "react";
 import { Button as AriaButton, Header as AriaHeader, Menu, MenuItem, MenuTrigger, Popover, Separator } from "react-aria-components";
 import { useState } from "react";
-import type { Role, Session } from "./api";
+import type { Session } from "./api";
 import { useToast } from "./Toast";
 import { usePermissions } from "./permission/PermissionContext";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
 
 // 對照 docs/roles-permissions-matrix.md · 每個 item 綁 permission
-// - 沒設 perm = 全角色可見 (基本頁如戰情室 · RLS 已 scope 內容)
-// - 設 perm = 依 usePermissions 過濾
+//
+// ⚠️ 這份表是**唯一**的閘門來源：側欄顯不顯示、路由進不進得去，都由它決定。
+//    2026-07-29（M1）之前還有第二套 —— App.tsx 裡一個硬編的 AIPROOT_ONLY_PAGES。
+//    兩套並存的後果實測過：「通知設定」「資料來源」明明寫了權限碼，
+//    卻被那個 Set 蓋掉，等於死碼；以為調權限就能開放，實際完全沒作用。
+//    所以要新增頁面，只加在這裡，不要在別處再開一個名單。
+//
+// - 沒設 perm = 全角色可見（RLS 已 scope 內容）
+// - 設 perm / permAny = 依 usePermissions 過濾
 const NAV: Array<{
   group: string;
-  roles?: Role[];              // 舊 · 未來全走 items[].perm
   items: Array<{
     key: string;
     label: string;
     ic: () => ReactNode;
     done: boolean;
-    perm?: string;              // 有這 perm 才顯示 (可選 · 沒設 = 全顯)
+    perm?: string;              // 有這 perm 才顯示（沒設 = 全顯）
     permAny?: string[];         // 任一 perm 有就顯
-    roles?: Role[];             // item 級角色限定 (可選 · 沒設 = 依 group / perm)
   }>;
 }> = [
   {
     group: "戰情室",
     items: [
       // 我的日報 / 我的行程 · 全角色可見 · employee 也看得到 · 主管也自己填/跑外勤
-      { key: "my-daily-report", label: "我的日報", ic: iconBook, done: true },
-      { key: "my-trips", label: "我的行程", ic: iconMap, done: true },
+      { key: "my-daily-report", label: "我的日報", ic: iconBook, done: true, perm: "personal-report:mine" },
+      { key: "my-trips", label: "我的行程", ic: iconMap, done: true, perm: "trips:mine" },
       // 總覽儀表 · 主管級才顯 (employee 只看得到我的日報)
       // 「每日簽核」已移除：它指向的就是 warroom 同一頁（簽核區塊在總覽儀表下半部），
       // 點了路由不變、側欄高亮也不會動 —— 對使用者就是「點了沒反應」。
@@ -37,39 +42,35 @@ const NAV: Array<{
   },
   {
     group: "資料 · 知識",
-    roles: ["aiproot_admin", "consultant", "tenant_admin", "group_owner"],   // employee 只看「我的日報」
     items: [
       // 智慧檢索 / 知識庫 / 客戶地圖 先不掛出來：這三頁還在吃寫死的示範資料，
       // 後端也尚未有對應端點。客戶看不到 > 客戶看到假的（同 2026-07-27 下架的公司設定頁）。
       // 各自的模組排上後再放回來。
-      { key: "media", label: "素材看板", ic: iconMedia, done: true },
+      { key: "media", label: "素材看板", ic: iconMedia, done: true, perm: "media:view" },
     ],
   },
   {
     group: "AI 對話分析",
-    roles: ["aiproot_admin", "consultant"],   // 分析設定屬 aiproot 側維護 · tenant 只在戰情室看最終結果
     items: [
-      { key: "convo-list", label: "分析列表", ic: iconChat, done: true },
-      { key: "convo-upload", label: "上傳新對話", ic: iconMedia, done: true },
-      { key: "llm-settings", label: "語言模型設定", ic: iconCog, done: true },
+      { key: "convo-list", label: "分析列表", ic: iconChat, done: true, perm: "convo:view" },
+      { key: "convo-upload", label: "上傳新對話", ic: iconMedia, done: true, perm: "convo:upload" },
+      { key: "llm-settings", label: "語言模型設定", ic: iconCog, done: true, perm: "llm-config:view" },
     ],
   },
   {
     group: "通訊接頭層",
-    roles: ["aiproot_admin", "consultant"],   // 我方平台管理項 · 客戶方看不到
     items: [
-      { key: "line-bots", label: "LINE 機器人", ic: iconChat, done: true },
+      { key: "line-bots", label: "LINE 機器人", ic: iconChat, done: true, perm: "line-bots:view" },
     ],
   },
   {
     group: "設定",
-    roles: ["aiproot_admin", "consultant", "tenant_admin", "group_owner"],   // employee 只看「我的日報」
     items: [
       // v2 · 部門/成員 開放給 tenant_admin (自 tenant) + aiproot
       { key: "depts", label: "部門/成員", ic: iconTeam, done: true, permAny: ["departments:view", "users:view"] },
       { key: "line-groups", label: "LINE 群組", ic: iconChat, done: true, perm: "line-groups:view" },
       // 客戶方自治 · 僅 tenant_admin 看得到 (aiproot 有自己的跨租戶版在 AIPROOT 管理)
-      { key: "tenant-binding", label: "員工 LINE 綁定", ic: iconTeam, done: true, roles: ["tenant_admin"] },
+      { key: "tenant-binding", label: "員工 LINE 綁定", ic: iconTeam, done: true, perm: "binding:view" },
       // 「公司設定」暫時下架（2026-07-27）：整頁 24 項全是示範資料，而且對客戶做假承諾 ——
       // 「工研院知識庫 已啟用 · 契約有效期至 2027-06」「員工 opt-out 已啟用」
       // 「影像自動遮罩 臉部/車牌/證件」這些功能都不存在。
@@ -82,25 +83,52 @@ const NAV: Array<{
   },
   {
     group: "AIPROOT 管理",
-    roles: ["aiproot_admin", "consultant"],
     items: [
-      { key: "onboard-tenant", label: "開通新租戶", ic: iconTeam, done: true },
+      { key: "onboard-tenant", label: "開通新租戶", ic: iconTeam, done: true, perm: "tenants:onboard" },
       // 含重設密碼 → 只給 aiproot_admin（顧問看得到卻點不動＝更糟的體驗）
-      { key: "tenant-mgmt", label: "租戶管理", ic: iconTeam, done: true, roles: ["aiproot_admin"] },
-      { key: "extraction-health", label: "抽取健康度", ic: iconGauge, done: true },
-      { key: "completion-tracking", label: "任務完成追蹤", ic: iconGauge, done: true },
-      { key: "cost-dashboard", label: "AI 成本管理", ic: iconGauge, done: true },
-      { key: "batch-history", label: "對話分析歷程", ic: iconChat, done: true },
-      { key: "binding-audit", label: "LINE 綁定稽核", ic: iconTeam, done: true },
-      { key: "map-config", label: "地圖里程設定", ic: iconCog, done: true },
+      { key: "tenant-mgmt", label: "租戶管理", ic: iconTeam, done: true, perm: "tenants:manage" },
+      { key: "extraction-health", label: "抽取健康度", ic: iconGauge, done: true, perm: "extraction-health:view" },
+      { key: "completion-tracking", label: "任務完成追蹤", ic: iconGauge, done: true, perm: "completion-tracking:view" },
+      { key: "cost-dashboard", label: "AI 成本管理", ic: iconGauge, done: true, perm: "cost-dashboard:view" },
+      { key: "batch-history", label: "對話分析歷程", ic: iconChat, done: true, perm: "batch-history:view" },
+      { key: "binding-audit", label: "LINE 綁定稽核", ic: iconTeam, done: true, perm: "binding:aiproot-view" },
+      { key: "map-config", label: "地圖里程設定", ic: iconCog, done: true, perm: "map-config:view" },
       { key: "notify-config", label: "通知設定", ic: iconChat, done: true, perm: "notify-config:view" },
       // 資料來源與通知設定共用同一組 Ragic 憑證，權限也一致（我方維護）
       { key: "master-data", label: "資料來源", ic: iconBook, done: true, perm: "notify-config:view" },
-      { key: "category-mgmt", label: "分類管理", ic: iconBook, done: true },
+      { key: "category-mgmt", label: "分類管理", ic: iconBook, done: true, perm: "categories:view" },
       { key: "roles-mgmt", label: "權限管理", ic: iconShield, done: true, perm: "roles:view" },
     ],
   },
 ];
+
+/**
+ * 頁面 → 所需權限（任一即可）。由上面的 NAV 推導，**不是**另一份手抄名單。
+ * App.tsx 的路由守衛吃這個，於是「側欄看得到」與「路由進得去」不可能再分岔。
+ */
+export const PAGE_PERM: Record<string, string[]> = {
+  ...Object.fromEntries(
+    NAV.flatMap((g) => g.items).flatMap((it) => {
+      const need = it.perm ? [it.perm] : it.permAny ?? [];
+      return need.length ? [[it.key, need] as const] : [];
+    }),
+  ),
+  // 不在側欄、但可從別頁點進去的子頁也要有閘門
+  "convo-detail": ["convo:view"],
+};
+
+/**
+ * 這個人進得去這一頁嗎？
+ *
+ * ⚠️ `ready` 為 false（權限還沒載回來）時一律放行 —— 否則登入後那一瞬間
+ * 權限是空集合，使用者會被彈回預設頁，看起來像「點什麼都沒反應」。
+ * 前端這道是體驗，真正的安全在後端：守衛已 fail-closed，端點各自要權限碼。
+ */
+export function canOpenPage(page: string, hasAny: (...p: string[]) => boolean, ready: boolean): boolean {
+  if (!ready) return true;
+  const need = PAGE_PERM[page];
+  return !need || hasAny(...need);
+}
 
 const COLLAPSED_KEY = "sb_collapsed_groups";
 
@@ -153,9 +181,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
   const [changePwOpen, setChangePwOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const perms = usePermissions();
-  // 若 item 有 roles / perm / permAny · 依序過濾 · 沒設就顯
-  const itemVisible = (it: { perm?: string; permAny?: string[]; roles?: Role[] }) => {
-    if (it.roles && !it.roles.includes(session.role)) return false;
+  const itemVisible = (it: { perm?: string; permAny?: string[] }) => {
     if (it.perm) return perms.has(it.perm);
     if (it.permAny) return perms.hasAny(...it.permAny);
     return true;
@@ -167,7 +193,6 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
   };
 
   const visibleNav = NAV
-    .filter((g) => !g.roles || g.roles.includes(session.role))
     .map((g) => ({ ...g, items: g.items.filter(itemVisible) }))
     .filter((g) => g.items.length > 0);
 

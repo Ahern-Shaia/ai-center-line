@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePermissions } from "./permission/PermissionContext";
 import Login from "./Login";
-import Shell from "./Shell";
+import Shell, { canOpenPage } from "./Shell";
 import WarRoom from "./warroom/WarRoom";
 import Rag from "./kb/Rag";
 import Onboarding from "./kb/Onboarding";
@@ -144,22 +145,12 @@ function defaultRouteFor(session: Session | null): Route {
   return { page: "warroom" };
 }
 
-// aiproot 平台方專屬頁面 · 對 tenant_admin / group_owner / employee 不該顯示
-// 注意 · "line-groups" 不在此 set · 開放給 tenant_admin（perm gate 在 sidebar 過濾）
-const AIPROOT_ONLY_PAGES = new Set([
-  "convo-list", "convo-upload", "convo-detail",
-  "llm-settings", "line-bots",
-  "onboard-tenant", "tenant-mgmt", "extraction-health", "completion-tracking", "cost-dashboard", "batch-history",
-  "binding-audit", "map-config", "notify-config", "category-mgmt", "roles-mgmt",
-  "master-data",
-]);
-
-function isPageAllowedForRole(page: string, role: string): boolean {
-  if (AIPROOT_ONLY_PAGES.has(page) && role !== "aiproot_admin" && role !== "consultant") return false;
-  if (page === "tenant-binding" && role !== "tenant_admin") return false;   // 客戶方自治頁 · 僅 tenant_admin
-  if (page === "warroom" && role === "employee") return false;
-  return true;
-}
+// ⚠️ 這裡原本有一個硬編的 AIPROOT_ONLY_PAGES —— 已於 2026-07-29（M1）刪除。
+//
+// 那是**第二套閘門**：側欄已經有權限碼，這個 Set 又擋一次，而且是後者說了算。
+// 實證後果：「通知設定」「資料來源」寫了權限碼卻被它蓋掉，成了死碼 ——
+// 以為調權限就能開放，實際完全沒作用，而且沒有任何檢查會紅。
+// 現在只剩一套：Shell.tsx 的 NAV 推導出 PAGE_PERM，側欄與這道守衛共吃同一份。
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(() => getSession());
@@ -167,6 +158,9 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [asOf, setAsOf] = useState<string | undefined>(undefined);
   const prevRoleRef = useRef<string | null>(session?.role ?? null);
+  const perms = usePermissions();
+  // 權限還沒載回來時不強制守衛（空集合 ≠ 沒有權限）· 見 canOpenPage 的說明
+  const permsReady = perms.permissions.size > 0;
 
   useEffect(() => {
     if (session) return;
@@ -205,10 +199,10 @@ export default function App() {
   // P0 defense in depth · 任何時刻 route 對當前 role 不允許 · 立即 reset
   // 防止 stale route / URL 直接 nav / 未來 nav 邏輯漏擋
   useEffect(() => {
-    if (session && !isPageAllowedForRole(route.page, session.role)) {
+    if (session && !canOpenPage(route.page, perms.hasAny, permsReady)) {
       setRoute(defaultRouteFor(session));
     }
-  }, [session, route.page]);
+  }, [session, route.page, perms.hasAny, permsReady]);
 
   const pageRef = useRef<{ refresh: () => Promise<void>; asOf: () => string | undefined }>({
     refresh: async () => undefined,
