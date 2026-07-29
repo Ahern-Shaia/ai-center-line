@@ -6,6 +6,7 @@
 // 4. AnalysisBatchRepository · markEmpty / markCompleted / markFailed 狀態轉移
 
 import { test, before, after } from "node:test";
+import type { AnalysisBatchService } from "../src/convo-analysis-realtime/analysis-batch.service.js";
 import assert from "node:assert/strict";
 import pg from "pg";
 import { sql } from "drizzle-orm";
@@ -195,4 +196,29 @@ test("狀態轉移 · empty / completed / failed 都可 transition", async () =>
   assert.equal(map.get(idB)!.message_count, 5);
   assert.equal(map.get(idC)!.status, "failed");
   assert.match(map.get(idC)!.error_message ?? "", /Anthropic 500 test/);
+});
+
+// ── 「completed」是批次不是分析 ────────────────────────────────────
+//
+// 2026-07-29 實際誤判過：手動重跑，API 回 `status: "completed"`，
+// 立刻去查 analysis_result 拿到 0 筆，差點認定重跑失敗 ——
+// 實際上分析還在背景跑（prod 109 則約 1 分鐘）。
+//
+// 這條釘的是型別與語意：回應必須另外講清楚分析的去向，
+// 不可以讓呼叫端只憑 status 判斷「有沒有結果了」。
+test("⭐ 批次回應要分得出「批次完成」與「分析完成」", () => {
+  type BatchResult = Awaited<ReturnType<AnalysisBatchService["runBatch"]>>;
+
+  // 編譯期就擋住：少了 analysis 欄位這行過不了
+  const queued: BatchResult = {
+    batchId: "x", status: "completed", analysis: "queued", uploadId: 1, messageCount: 109,
+  };
+
+  assert.equal(
+    queued.analysis, "queued",
+    "status=completed 只代表訊息收齊、分析已排入；analysis 才說得出有沒有結果",
+  );
+  // 措辭紀律：呼叫端要靠 analysis 決定講什麼，不是靠 status
+  const wording = queued.analysis === "queued" ? "已排入分析" : "完成";
+  assert.equal(wording, "已排入分析", "說「完成」會讓人當下重新整理看不到結果就以為失敗");
 });

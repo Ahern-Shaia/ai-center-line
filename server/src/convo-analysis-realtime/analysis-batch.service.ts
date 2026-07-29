@@ -44,7 +44,16 @@ export class AnalysisBatchService {
     triggeredBy: string;    // "cron" or "manual:<uuid>"
   }): Promise<{
     batchId: string;
+    /**
+     * ⚠️ 這是**批次**的狀態，不是分析的狀態。
+     * `completed` 的意思是「訊息收齊、upload 建好、分析工作已排入」——
+     * AI 分析在背景另外跑（prod 實測 109 則約 1 分鐘）。
+     * 2026-07-29 就因為這個誤判過：API 回 completed，去查結果 0 筆，
+     * 差點認定重跑失敗，實際只是還在跑。所以另外回一個 analysis 欄位。
+     */
     status: "completed" | "empty" | "failed";
+    /** 分析工作的去向 · queued = 已排入背景執行，**還沒有結果** */
+    analysis: "queued" | "none" | "already_done";
     uploadId: number | null;
     messageCount: number;
   }> {
@@ -61,6 +70,7 @@ export class AnalysisBatchService {
         return {
           batchId: existing.batchId,
           status: existing.status as "completed" | "empty",
+          analysis: "already_done" as const,
           uploadId: existing.uploadId,
           messageCount: existing.messageCount,
         };
@@ -81,7 +91,7 @@ export class AnalysisBatchService {
 
       if (messages.length === 0) {
         await withSystemTx((tx) => this.batchRepo.markEmpty(tx, batchId));
-        return { batchId, status: "empty", uploadId: null, messageCount: 0 };
+        return { batchId, status: "empty", analysis: "none", uploadId: null, messageCount: 0 };
       }
 
       // 3. 拼 blob · 群名從 line_group 或 line_bot 拉 · 這裡走簡版查詢
@@ -114,12 +124,12 @@ export class AnalysisBatchService {
       this.analyzeService.scheduleJob(upload.id);
 
       this.logger.log(`batch done · batchId=${batchId} · uploadId=${upload.id} · messages=${messages.length}`);
-      return { batchId, status: "completed", uploadId: upload.id, messageCount: messages.length };
+      return { batchId, status: "completed", analysis: "queued", uploadId: upload.id, messageCount: messages.length };
     } catch (err) {
       const errMsg = (err as Error).message ?? String(err);
       this.logger.error(`batch failed · batchId=${batchId} · ${errMsg}`);
       await withSystemTx((tx) => this.batchRepo.markFailed(tx, batchId, errMsg));
-      return { batchId, status: "failed", uploadId: null, messageCount: 0 };
+      return { batchId, status: "failed", analysis: "none", uploadId: null, messageCount: 0 };
     }
   }
 
