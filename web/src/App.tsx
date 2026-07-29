@@ -74,7 +74,7 @@ type Route =
 const PAGE_TITLE: Record<Route["page"], string> = {
   warroom: "總覽儀表",
   "task-board": "任務看板",
-  "daily-log": "對話紀錄",
+  "daily-log": "群組日誌",
   "task-config": "任務設定",
   "system-health": "系統健康",
   channels: "通訊管道",

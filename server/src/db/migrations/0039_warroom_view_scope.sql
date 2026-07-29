@@ -9,7 +9,7 @@
 -- 修法：戰情室三頁改成端點與側欄吃同一組權限碼
 --   總覽儀表  warroom:view        （0019 就建好但從沒被引用的死碼，這次接上）
 --   任務看板  warroom-tasks:view
---   對話紀錄  warroom-daily:view
+--   群組日誌  warroom-daily:view
 --
 -- ⚠️ warroom:view 目前也授權給 employee。接上線的那一刻，employee 就會
 --    看到「總覽儀表」—— 今天他看不到。行為保持優先，先收回；

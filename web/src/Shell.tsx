@@ -46,7 +46,7 @@ const NAV: Array<{
       { key: "task-board", label: "任務看板", ic: iconTask, done: true, perm: "warroom-tasks:view" },
       { key: "warroom", label: "總覽儀表", ic: iconGauge, done: true, perm: "warroom:view" },
       // 客戶驗證「AI 到底有沒有看到我的訊息」的地方（OQ-NAV-4）
-      { key: "daily-log", label: "對話紀錄", ic: iconChat, done: true, perm: "warroom-daily:view", renamedFrom: "今日日誌" },
+      { key: "daily-log", label: "群組日誌", ic: iconChat, done: true, perm: "warroom-daily:view", renamedFrom: "今日日誌" },
       { key: "media", label: "素材", ic: iconMedia, done: true, perm: "media:view", renamedFrom: "素材看板" },
     ],
   },

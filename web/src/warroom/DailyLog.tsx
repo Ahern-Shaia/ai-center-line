@@ -62,7 +62,7 @@ export default function DailyLog() {
     <>
       <div className="pane-hdr">
         <div>
-          <h1>對話紀錄</h1>
+          <h1>群組日誌</h1>
           <div className="sub">各 LINE 群組每日活動摘要 · 由 AI 從當日對話抽取</div>
         </div>
         <div className="hdr-toolbar">
