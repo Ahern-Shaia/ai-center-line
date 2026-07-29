@@ -210,6 +210,11 @@ test("ELB · listByTenant 只回同 tenant · RLS 不會 leak", async () => {
 });
 
 // 5. completeLiffBinding · 建 users + binding · 二次擋
+//
+// ⚠️ v2（7bc5636）起**部門由後端 derive**，不再接受 body 傳 primaryGroupId ——
+//    改看「近 30 天在哪個群發言最多」。本測試原本還在傳 primaryGroupId 並期待
+//    它決定部門，自那次改版起就一直紅（斷言 departmentName 拿到 null）。
+//    要測 derive 就得餵它 derive 的輸入：一則群發言。
 test("ELB · completeLiffBinding 建 users + binding · 二次擋", async () => {
   // 先移除該 line_user 已有 binding · 才能測 new flow
   await asAiproot((tx) => tx.execute(sql`
@@ -218,19 +223,30 @@ test("ELB · completeLiffBinding 建 users + binding · 二次擋", async () => 
   await asAiproot((tx) => tx.execute(sql`
     DELETE FROM users WHERE email = ${LINE_USER_UNBOUND + "@line.local"}
   `));
+  // derive 的依據：Charlie 在 elb 群 A 的發言
+  await asAiproot((tx) => tx.execute(sql`
+    INSERT INTO line_message
+      (message_id, tenant_id, bot_id, group_id, department_id,
+       sender_line_id, message_type, text_content, sent_at, raw_event, sender_user_id, chat_context)
+    VALUES
+      ('elbtest-msg-000', ${T_ELB_A}::uuid, ${BOT_ELB_A}::uuid, ${GROUP_ELB_A}, ${DEPT_ELB_A}::uuid,
+       ${LINE_USER_UNBOUND}, 'text', 'Charlie 在 A 群發言',
+       now() - interval '1 hour', '{"t":"elbtest"}'::jsonb, NULL, 'group')
+    ON CONFLICT (message_id) DO NOTHING
+  `));
 
   const result = await bindingService.completeLiffBinding({
     botId: BOT_ELB_A,
     lineUserId: LINE_USER_UNBOUND,
     displayName: "新員工 Charlie",
-    primaryGroupId: GROUP_ELB_A,
     metadata: { test: true },
   });
 
   assert.ok(result.userId, "應建 users · userId 有值");
   assert.ok(result.bindingId, "應建 binding · bindingId 有值");
   assert.equal(result.displayName, "新員工 Charlie");
-  assert.equal(result.departmentName, "elb-dept-A", "primaryGroupId 應查到 dept name");
+  assert.equal(result.departmentName, "elb-dept-A", "應由發言活躍度 derive 出部門");
+  assert.equal(result.departmentSource, "auto_from_group_activity", "有發言紀錄就不該是 unassigned");
 
   // 確認 users row · email 用 lineUserId@line.local 佔位
   const userCheck = await asAiproot((tx) => tx.execute<{ email: string; display_name: string; department_id: string | null }>(sql`
@@ -246,7 +262,6 @@ test("ELB · completeLiffBinding 建 users + binding · 二次擋", async () => 
       botId: BOT_ELB_A,
       lineUserId: LINE_USER_UNBOUND,
       displayName: "重複的 Charlie",
-      primaryGroupId: null,
       metadata: {},
     }),
     BadRequestException,
