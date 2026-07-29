@@ -15,3 +15,6 @@ dist/
 # Ragic 全量匯出（客戶原始資料，禁 commit）
 .ragic-export/
 .env.debug
+
+# SOP 靜態站的建置產物（Render build command 產生 · 不進版控）
+sop-site/
