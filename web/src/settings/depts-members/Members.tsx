@@ -20,13 +20,24 @@ const ROLE_LABEL: Record<UserRole, string> = {
   consultant: "顧問",
   tenant_admin: "總經理室",
   group_owner: "群組負責人",
+  assistant: "助理",
 };
 
-// caller role → 可指派的 role 清單 · 對應 docs/roles-permissions-matrix.md §2
-// aiproot_admin 全能 · tenant_admin 限 group_owner
+/**
+ * 可指派的角色清單 · 對應 `docs/roles-permissions-matrix.md` §2
+ *
+ * ⚠️ 這裡刻意**列舉內建角色**，不是去查 `roles` 表。
+ * 自訂角色功能已凍結（`docs/modules/custom-roles.md` §4）——
+ * 動態查表等於打開「任何人建的任何角色都能指派」，而那條路帶著 4 個 P0。
+ * 最主要的一個：**資料可見範圍不是由角色的權限碼決定的**，
+ * 一個 UI 上只勾了 2 個權限的角色，在 DB 層可能看得到全租戶。
+ *
+ * 要加角色就在這裡加一個，同時記得改 `users_role_check`、
+ * 後端 DTO 的 `RoleEnum`，以及上面的 `ROLE_LABEL`。
+ */
 function assignableRolesFor(callerRole: string | undefined): UserRole[] {
-  if (callerRole === "aiproot_admin") return ["tenant_admin", "group_owner"];
-  if (callerRole === "tenant_admin") return ["group_owner"];
+  if (callerRole === "aiproot_admin") return ["tenant_admin", "group_owner", "assistant"];
+  if (callerRole === "tenant_admin") return ["group_owner", "assistant"];
   return [];
 }
 
@@ -239,8 +250,8 @@ function MemberDrawer({
           />
           <div className="llm-hint">
             {session?.role === "tenant_admin"
-              ? "只可新增部門主管 (group_owner) · 總經理室級請聯繫 aiproot"
-              : "此頁可新增「總經理室」與「群組負責人」帳號 · 平台管理帳號由 AIPROOT 另行建立"}
+              ? "可新增「群組負責人」與「助理」· 總經理室級請聯繫 AIPROOT"
+              : "此頁可新增「總經理室」「群組負責人」「助理」· 平台管理帳號由 AIPROOT 另行建立"}
           </div>
         </div>
 

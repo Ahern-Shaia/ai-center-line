@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError,
-  createRole,
   deleteRole,
   listPermissions,
   listRoles,
@@ -23,11 +22,8 @@ export default function RolesManagement() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [editingPerms, setEditingPerms] = useState<Set<string>>(new Set());
-  const [createDialog, setCreateDialog] = useState(false);
   const [renameDialog, setRenameDialog] = useState<RoleDto | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<RoleDto | null>(null);
-  const [newRoleKey, setNewRoleKey] = useState("");
-  const [newRoleName, setNewRoleName] = useState("");
   const [renameValue, setRenameValue] = useState("");
 
   const refresh = useCallback(async () => {
@@ -92,28 +88,6 @@ export default function RolesManagement() {
     }
   }
 
-  async function doCreate() {
-    if (!newRoleKey.trim() || !newRoleName.trim()) return;
-    setBusy(true);
-    try {
-      await createRole({
-        roleKey: newRoleKey.trim(),
-        roleName: newRoleName.trim(),
-        tenantId: null,
-        permissionIds: [],
-      });
-      toast.show(`已建立 ${newRoleName}`, "ok");
-      setCreateDialog(false);
-      setNewRoleKey("");
-      setNewRoleName("");
-      void refresh();
-    } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "建立失敗", "danger");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function doRename() {
     if (!renameDialog || !renameValue.trim()) return;
     setBusy(true);
@@ -155,12 +129,18 @@ export default function RolesManagement() {
         <div>
           <h1>權限管理</h1>
           <div className="sub">
-            管理系統內 role · 每個 role 的 permission 打勾配置 · 內建 role 可改權限但不可刪 / 改代號
+            調整每個角色可以做哪些事 · 改完立即生效，套用到所有使用該角色的成員
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => setCreateDialog(true)} disabled={busy}>
-          + 新增自訂角色
-        </button>
+      </div>
+
+      {/* ⚠️ 「＋ 新增自訂角色」按鈕已移除（docs/modules/custom-roles.md §5.3）。
+          原本按下去建得出角色，但系統四層都寫死內建角色 —— 建出來的角色
+          **指派不了給任何人**，等於讓人完成一個到不了任何地方的動作。
+          完整的自訂角色功能已凍結（解凍判準見該 doc §4.2）。
+          這頁保留的「調整既有角色的權限」是真的會生效的，也是最常見的實際需求。 */}
+      <div className="rm-note">
+        需要新的角色？請聯繫 AIPROOT 並說明這個角色要做哪些事 —— 我們會幫你建立。
       </div>
 
       {loading && roles.length === 0 ? (
@@ -255,30 +235,6 @@ export default function RolesManagement() {
           </div>
         </div>
       )}
-
-      {/* Create dialog */}
-      <ConfirmDialog
-        open={createDialog}
-        onClose={() => !busy && setCreateDialog(false)}
-        onConfirm={() => void doCreate()}
-        busy={busy || !newRoleKey.trim() || !newRoleName.trim()}
-        title="新增自訂角色"
-        body={
-          <>
-            <div style={{ marginBottom: 10 }}>
-              <label style={{ display: "block", fontSize: 12, color: "var(--ink-3)", marginBottom: 4 }}>顯示名</label>
-              <input type="text" className="tf" value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} placeholder="例：主管副手" style={{ width: "100%" }} autoFocus />
-            </div>
-            <div>
-              <label style={{ display: "block", fontSize: 12, color: "var(--ink-3)", marginBottom: 4 }}>代號（英數 · 系統內部識別）</label>
-              <input type="text" className="tf" value={newRoleKey} onChange={(e) => setNewRoleKey(e.target.value.toLowerCase())} placeholder="例：deputy_supervisor" style={{ width: "100%" }} />
-              <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>建立後不可改 · 只允 a-z 0-9 _ - · 開頭需字母</div>
-            </div>
-          </>
-        }
-        confirmLabel="建立"
-        tone="primary"
-      />
 
       {/* Rename dialog */}
       <ConfirmDialog

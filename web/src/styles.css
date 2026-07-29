@@ -2055,6 +2055,8 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 /* ==============================================
    PE-M5 · 權限管理 UI
    ============================================== */
+/* 「新增角色請聯繫 AIPROOT」· 中性提示 · 刻意不用 .banner（那是警告色，這不是警告） */
+.rm-note { padding:10px 12px; margin-bottom:14px; background:var(--surface-2, #F5F6F8); border:1px solid var(--line); border-radius:4px; font-size:12.5px; color:var(--ink-2); }
 .rm-layout { display:grid; grid-template-columns:280px 1fr; gap:16px; min-height:calc(100vh - 260px); }
 @media (max-width:900px) { .rm-layout { grid-template-columns:1fr; } }
 .rm-sidebar { background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:8px; display:flex; flex-direction:column; gap:2px; }

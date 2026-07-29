@@ -925,7 +925,7 @@ export const probeLineGroupName = (groupRegistryId: string) =>
 
 // === Tenant Admin Console (aiproot 統包客戶方組織) ===
 
-export type UserRole = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owner";
+export type UserRole = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owner" | "assistant";
 
 export interface DepartmentDto {
   departmentId: string;
