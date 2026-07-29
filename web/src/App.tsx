@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePermissions } from "./permission/PermissionContext";
 import Login from "./Login";
-import Shell, { canOpenPage, PAGE_GROUP } from "./Shell";
+import Shell, { canOpenPage, firstAllowedPage, PAGE_GROUP } from "./Shell";
 import WarRoom from "./warroom/WarRoom";
 import TaskBoard from "./warroom/TaskBoard";
 import DailyLog from "./warroom/DailyLog";
@@ -100,8 +100,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "roles-mgmt": "權限管理",
 };
 
-// employee 沒 warroom-tasks:view · 若 default 進 warroom 會 toast 洗版
-// 依 role 決定 landing · employee → 我的日報 · 其他 → 總覽儀表
+// 權限還沒載回來時的暫時落地頁 · 載回來後由 firstAllowedPage 修正（見下方守衛）
 function defaultRouteFor(session: Session | null): Route {
   if (session?.role === "employee") return { page: "my-daily-report" };
   return { page: "warroom" };
@@ -123,6 +122,13 @@ export default function App() {
   const perms = usePermissions();
   // 權限還沒載回來時不強制守衛（空集合 ≠ 沒有權限）· 見 canOpenPage 的說明
   const permsReady = perms.permissions.size > 0;
+  /**
+   * ⚠️ 光有 permsReady 不夠。權限載回來的那一瞬間 route 仍是初始猜的那一頁，
+   * 而 effect 在 render 之後才跑 —— 中間那一次 render 會把不該掛的頁掛上去，
+   * 它一掛載就打自己沒權限的 API，使用者一登入就吃一個紅色 toast。
+   * 所以要等「權限到位**而且**這一頁真的打得開」才掛。
+   */
+  const pageReady = permsReady && canOpenPage(route.page, perms.hasAny, permsReady);
 
   useEffect(() => {
     if (session) return;
@@ -162,7 +168,9 @@ export default function App() {
   // 防止 stale route / URL 直接 nav / 未來 nav 邏輯漏擋
   useEffect(() => {
     if (session && !canOpenPage(route.page, perms.hasAny, permsReady)) {
-      setRoute(defaultRouteFor(session));
+      // ⚠️ 不可以退回 defaultRouteFor —— 那是硬編的，可能正是打不開的那一頁，
+      //    而 route.page 沒變的話這個 effect 不會再跑，人就卡在空白頁上。
+      setRoute({ page: firstAllowedPage(perms.hasAny) } as Route);
     }
   }, [session, route.page, perms.hasAny, permsReady]);
 
@@ -221,7 +229,12 @@ export default function App() {
         onLogout={() => { logout(); setSession(null); }}
         onHelp={() => setRoute({ page: "onboarding" })}
       >
-        {/* key 觸發 remount → CSS animation on mount，切換頁面時 fade+slide 進場 */}
+        {/* ⚠️ 權限還沒載回來之前不掛任何頁面。
+            初始 route 是猜的（defaultRouteFor），猜錯的話那一頁會先打一次
+            自己沒權限的 API —— 使用者一登入就看到紅色 toast，而那是我們自己
+            造成的噪音，不是他做錯什麼。 */}
+        {!pageReady && <div className="dm-empty">載入中…</div>}
+        {pageReady && (
         <div key={route.page} className="page-fade">
           {route.page === "warroom" && <WarRoom onRegister={onRegister} onLoadingChange={setRefreshing} />}
           {route.page === "task-board" && <TaskBoard />}
@@ -286,6 +299,7 @@ export default function App() {
           {route.page === "my-trips" && <MyTrips />}
           {route.page === "roles-mgmt" && <RolesManagement />}
         </div>
+        )}
       </Shell>
     </ToastProvider>
   );

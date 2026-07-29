@@ -108,6 +108,25 @@ export const PAGE_PERM: Record<string, string[]> = {
 };
 
 /**
+ * 這個人登入後該落在哪一頁 —— 側欄第一個他打得開的項目。
+ *
+ * ⚠️ 原本是硬編「employee 進我的日報、其餘進總覽儀表」。
+ * 那在角色與權限脫鉤之後就會壞：aiproot 一旦沒有 warroom:view，
+ * 就會落在一個側欄上根本沒有的頁，而路由守衛也救不回來
+ * （它把 route 設回同一個值，effect 的依賴沒變、不會再跑）。
+ * 改成問權限，跟側欄同一份來源。
+ */
+export function firstAllowedPage(hasAny: (...p: string[]) => boolean): string {
+  for (const g of NAV) {
+    for (const it of g.items) {
+      const need = it.perm ? [it.perm] : it.permAny ?? [];
+      if (need.length === 0 || hasAny(...need)) return it.key;
+    }
+  }
+  return "my-daily-report";
+}
+
+/**
  * 這個人進得去這一頁嗎？
  *
  * ⚠️ `ready` 為 false（權限還沒載回來）時一律放行 —— 否則登入後那一瞬間
