@@ -75,7 +75,12 @@ export class CompletionSignalService {
 function replyFor(intent: CompletionIntent): string | null {
   switch (intent) {
     case "completion":
-      return "✓ 已收到完成回報\n（若記錄有誤，回一句「更正」即可）";
+      // ⚠️ 這裡**不可以**寫「回一句『更正』即可」（舊版是這樣寫的）——
+      // 群組沒有實作撤銷：這條路的關閉是在當天批次才發生的，
+      // 而群組分支只在「有引用回覆」時才會進來，接不到一句單獨的「更正」。
+      // 承諾一個不存在的動作，比不承諾更糟（他會以為已經救回來了）。
+      // 私訊那條路的撤銷是真的（PrivateCompletionService.undoLastClose）。
+      return "✓ 已收到完成回報";
     case "ask":
       // 當下任務還不存在，所以問「你剛回覆的這件」而不是問某張任務
       return "收到。你剛回覆的這件算完成了嗎？\n完成的話回「完成」，還沒的話不用理我。";

@@ -38,6 +38,11 @@ export class PrivateCompletionService {
     messageId: string;
     quotedMessageId: string | null;
   }): Promise<unknown[] | null> {
+    // ⚠️ 更正要在 classifyIntent 之前判 —— 「更正」不是完成語意，
+    //    走到下面會被判成 progress 然後不接手，掉回通用的「✓ 已記錄」。
+    //    我們在確認訊息裡承諾了這個動作，它就必須真的會動。
+    if (CORRECTION.test(args.text.trim())) return this.undoLastClose(args);
+
     // 私訊沒有「自己引用自己＝催問」這種結構（他是在回 bot），所以 quotedSender 給 null
     const intent = classifyIntent({
       text: args.text,
@@ -52,6 +57,7 @@ export class PrivateCompletionService {
       { tenantId: args.tenantId, role: "tenant_admin", departmentId: null, userId: args.userId },
       async (tx) => {
         // 快路徑：他直接「回覆」我們推的那則指派通知
+        let quotedMissed = false;
         if (args.quotedMessageId) {
           const exact = await tx.execute<{ ticket_id: string; summary: string | null }>(sql`
             SELECT ticket_id::text, summary FROM tickets
@@ -64,6 +70,7 @@ export class PrivateCompletionService {
             await this.close(tx, t.ticket_id, args);
             return [{ type: "text", text: confirmText(t.summary) }];
           }
+          quotedMissed = true;
         }
 
         const open = await tx.execute<{ ticket_id: string; summary: string | null }>(sql`
@@ -74,6 +81,21 @@ export class PrivateCompletionService {
         // 他手上根本沒有指派任務 —— 這句話不是回報，別接手
         if (open.rows.length === 0) return null;
 
+        // ⚠️⚠️ 引用了但對不到 → **不可以**掉到下面「只有一張就是它」。
+        //
+        // 引用是明確的意圖表達：「我說的是這一件」。對不到最常見的原因是
+        // 主管把它改派給別人了（改派時 assign_notify_message_id 會被覆蓋成新那位的），
+        // 而他的聊天室裡還留著我們當初推給他的那則。
+        //
+        // 舊版在這裡直接掉下去，於是：他指甲、系統關掉乙，**雙方都以為成功**。
+        // 實測重現過（改派後他手上剛好還有另一張，那張就被關掉了）。
+        if (quotedMissed) {
+          this.logger.log(
+            `[private-completion] 引用對不到 · user=${args.userId.slice(0, 8)} · quoted=${args.quotedMessageId}`,
+          );
+          return [buildPicker(open.rows, "missed")];
+        }
+
         if (open.rows.length === 1) {
           await this.close(tx, open.rows[0].ticket_id, args);
           return [{ type: "text", text: confirmText(open.rows[0].summary) }];
@@ -83,7 +105,57 @@ export class PrivateCompletionService {
         this.logger.log(
           `[private-completion] 多張待選 · user=${args.userId.slice(0, 8)} · n=${open.rows.length}`,
         );
-        return [buildPicker(open.rows)];
+        return [buildPicker(open.rows, "multi")];
+      },
+    );
+  }
+
+  /**
+   * 「更正」—— 把他上一次回報完成的那張改回進行中。
+   *
+   * ⚠️ 這是**最後一道防線**，不是錦上添花。
+   * 事前判斷不可能 100% 正確：他手上只有一張、又沒有引用、而他講的其實是別的事，
+   * 這種情況沒有任何辦法在當下分辨（除非每次都問，那違反「判斷 0 次」的目標）。
+   * 所以「關錯了能一句話救回來」才是真正的保證。
+   *
+   * ⚠️ 舊版三處確認文案都寫「回一句『更正』即可」，但**完全沒有實作** ——
+   * 他回「更正」會被判成 progress、掉到通用的「✓ 已記錄」，
+   * 於是他以為更正生效了。承諾了就要做到，不然比不承諾更糟。
+   */
+  private async undoLastClose(args: {
+    tenantId: string; userId: string; lineUserId: string;
+  }): Promise<unknown[]> {
+    return withTenant(
+      { tenantId: args.tenantId, role: "tenant_admin", departmentId: null, userId: args.userId },
+      async (tx) => {
+        // 用 LINE 身分比對而不是 user_id：群組那條路關掉的票 work_closed_by 是空的，
+        // 只有 work_closed_line_user_id 一定有值。兩條路關的都救得回來。
+        const r = await tx.execute<{ ticket_id: string; summary: string | null }>(sql`
+          SELECT ticket_id::text, summary FROM tickets
+           WHERE work_status = 'closed'
+             AND work_closed_via = 'line_reply'
+             AND (work_closed_by = ${args.userId}::uuid
+                  OR work_closed_line_user_id = ${args.lineUserId})
+             AND work_closed_at > now() - interval '24 hours'
+           ORDER BY work_closed_at DESC LIMIT 1`);
+        const t = r.rows[0];
+        if (!t) {
+          return [{ type: "text", text: "最近 24 小時內沒有找到由你回報完成的任務，沒有東西需要更正。" }];
+        }
+
+        await tx.execute(sql`
+          UPDATE tickets
+             SET work_status = 'open',
+                 work_outcome = NULL, work_closed_at = NULL, work_closed_via = NULL,
+                 work_closed_by = NULL, work_closed_line_user_id = NULL, work_closed_message_id = NULL,
+                 -- 進度欄留痕：不要讓「被更正過」這件事消失得無影無蹤
+                 work_last_report_at = now(),
+                 work_last_report_note = '（當事人回報「更正」· 已從完成改回進行中）',
+                 updated_at = now()
+           WHERE ticket_id = ${t.ticket_id}::uuid`);
+        this.logger.log(`[private-completion] 更正 · 重開 ticket=${t.ticket_id}`);
+
+        return [{ type: "text", text: `已改回進行中：\n\n${truncate((t.summary ?? "").trim(), 100)}` }];
       },
     );
   }
@@ -150,6 +222,15 @@ export class PrivateCompletionService {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * 「更正」的說法。
+ *
+ * ⚠️ **整句錨定**（`^...$`），不可以用「包含」比對：
+ * 「客戶說地址弄錯了」這種正常的工作回報裡就含「弄錯了」，
+ * 用包含比對會把它當成撤銷指令，回頭把一張已完成的任務打開。
+ */
+const CORRECTION = /^(更正|弄錯了?|搞錯了?|打錯了?|報錯了?|不是這件|不是這個|不是這一件)[。.!！~～]*$/;
+
 /** 措辭一律「已收到完成回報」不寫「已完成」（F-26）· 我們收到的是回報，不是事實本身 */
 function confirmText(summary: string | null): string {
   const s = (summary ?? "").trim();
@@ -167,18 +248,26 @@ function confirmText(summary: string | null): string {
  *
  * LINE buttons template 上限 4 個 action、label 20 字、text 160 字 —— 超過的部分另外講。
  */
-function buildPicker(rows: Array<{ ticket_id: string; summary: string | null }>): unknown {
+function buildPicker(
+  rows: Array<{ ticket_id: string; summary: string | null }>,
+  reason: "multi" | "missed",
+): unknown {
   const shown = rows.slice(0, 4);
   const rest = rows.length - shown.length;
   const list = shown.map((r, i) => `${MARK[i]} ${truncate(r.summary ?? "（無摘要）", 24)}`).join("\n");
   const tail = rest > 0 ? `\n（另有 ${rest} 件較早的，可到系統操作）` : "";
+  // 對不到時要講出**為什麼**在問。只寫「是哪一件」的話，
+  // 他會以為系統沒看到他的引用，而不會想到那件已經不是他的了。
+  const lead = reason === "missed"
+    ? `你回覆的那一件我對不到（可能已改由他人處理，或已經結案）。\n你手上還有 ${rows.length} 件在進行：`
+    : `你手上有 ${rows.length} 件在進行，是哪一件做完了？`;
 
   return {
     type: "template",
     altText: "是哪一件做完了？",
     template: {
       type: "buttons",
-      text: truncate(`你手上有 ${rows.length} 件在進行，是哪一件做完了？\n\n${list}${tail}`, 160),
+      text: truncate(`${lead}\n\n${list}${tail}`, 160),
       actions: shown.map((r, i) => ({
         type: "postback",
         label: truncate(`${MARK[i]} ${(r.summary ?? "無摘要").trim()}`, 20),

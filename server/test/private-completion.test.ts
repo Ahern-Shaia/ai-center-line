@@ -144,6 +144,84 @@ test("⭐ 快路徑：回覆我們推的那則通知 → 即使手上有多張�
   assert.ok((reply![0] as { text: string }).text.includes("要對到的那件"));
 });
 
+// ── F1 · 引用對不到就不可以改猜別的 ────────────────────────────────
+//
+// 用戶問出來的情境：任務先派給 A，主管覺得不妥又改派給 B。
+// A 的聊天室裡還留著我們當初推給他的通知，他哪天拿那則回「好了」。
+//
+// 「B 的票會不會被 A 關掉」→ 不會（快路徑與慢路徑都比對 assignee_user_id）。
+// 但實測抓到更難發現的：對不到之後**掉到慢路徑**，
+// 看到 A 手上剛好只有另外一張，就把那張關掉了 —— A 指甲、系統關乙、雙方都以為成功。
+
+test("⭐⭐ 改派走的那張，原本的人引用舊通知也關不掉", async () => {
+  await clearTickets();
+  const moved = await assignedTicket("已改派給小華的那件", OTHER, "push-old");
+  const reply = await say("好了", "push-old");
+  assert.equal(await workStatus(moved), "open", "不是他的票，怎樣都不可以被他關掉");
+  assert.equal(reply, null, "他手上沒有任何任務時不接手");
+});
+
+test("⭐⭐ 引用對不到時，不可以改去關他手上那張不相干的", async () => {
+  await clearTickets();
+  const moved = await assignedTicket("已改派給小華的那件", OTHER, "push-old");
+  const mine = await assignedTicket("我自己的另一件", ME, null);
+
+  const reply = await say("好了", "push-old");
+  assert.equal(await workStatus(moved), "open");
+  assert.equal(
+    await workStatus(mine), "open",
+    "⚠️ 他引用的是別件 —— 掉到「只有一張就是它」會關錯，而雙方都以為成功",
+  );
+
+  // 不猜，但也不能沉默：要講出為什麼在問，否則他以為系統沒看到他的引用
+  const tpl = reply![0] as { template?: { text?: string; actions?: unknown[] } };
+  assert.ok(tpl.template?.text?.includes("對不到"), "要說明對不到，不是只問「是哪一件」");
+  assert.equal(tpl.template?.actions?.length, 1);
+});
+
+// ── F4 · 「更正」必須真的會動 ──────────────────────────────────────
+//
+// 確認訊息裡寫著「若對錯了，回一句『更正』即可」，但舊版**零實作**：
+// 「更正」會被判成 progress → 不接手 → 掉回通用的「✓ 已記錄」，
+// 於是他以為救回來了。事前判斷不可能 100% 正確，這是最後一道防線。
+
+test("⭐⭐ 回「更正」→ 把剛才關掉的那張改回進行中", async () => {
+  await clearTickets();
+  const id = await assignedTicket("其實還沒做完");
+  await say("好了");
+  assert.equal(await workStatus(id), "closed");
+
+  const reply = await say("更正");
+  assert.equal(await workStatus(id), "open", "承諾了就要做到，不然比不承諾更糟");
+  assert.ok((reply![0] as { text: string }).text.includes("已改回進行中"));
+});
+
+test("⭐ 更正要留痕 —— 不可以讓「被更正過」這件事消失", async () => {
+  await clearTickets();
+  const id = await assignedTicket("會被更正的");
+  await say("好了");
+  await say("更正");
+  const note = await asTenant(async () => (await currentTx().execute<{ n: string | null }>(
+    sql`SELECT work_last_report_note AS n FROM tickets WHERE ticket_id = ${id}::uuid`)).rows[0].n);
+  assert.ok(note?.includes("更正"));
+});
+
+test("⭐⭐ 「客戶說地址弄錯了」不是更正指令 —— 整句錨定，不可用包含比對", async () => {
+  await clearTickets();
+  const id = await assignedTicket("某件事");
+  await say("好了");
+  assert.equal(await workStatus(id), "closed");
+
+  await say("客戶說地址弄錯了");
+  assert.equal(await workStatus(id), "closed", "⚠️ 正常工作回報裡就含「弄錯了」，包含比對會亂開票");
+});
+
+test("沒有可更正的東西時講實話", async () => {
+  await clearTickets();
+  const reply = await say("更正");
+  assert.ok((reply![0] as { text: string }).text.includes("沒有找到"));
+});
+
 test("⭐⭐ 疑問句不算完成 —— 「好了嗎」裡面就含「好了」", async () => {
   await clearTickets();
   const id = await assignedTicket("軸承換好了沒");

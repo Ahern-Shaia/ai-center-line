@@ -56,9 +56,17 @@ export class AssignNotifyService {
     const prev = await tx.execute<{ notified_user: string | null }>(sql`
       SELECT assign_notified_user_id::text AS notified_user
         FROM tickets WHERE ticket_id = ${args.ticketId}::uuid`);
-    if (prev.rows[0]?.notified_user === args.assigneeUserId) {
+    const previous = prev.rows[0]?.notified_user;
+    if (previous === args.assigneeUserId) {
       return { notified: false, skipReason: "already_notified" };
     }
+
+    // ⚠️ 改派他人時，**原本推過的那個人也要知道**（A-6 的另一半）。
+    // 舊版只在「退回待認領」（assigneeUserId = null）時通知原本那位，
+    // 改派 A→B 時 A 完全不知情 —— 他手機裡還留著我們推給他的通知，
+    // 以為那件事還是他的，日後就會拿那則舊通知來回報完成。
+    // （那正是「引用對不到」的主要來源，見 private-completion.service.ts F1）
+    if (previous) await this.notifyTakenOver(tx, previous, args.summary, args.ticketId);
 
     const target = await this.lookupTarget(tx, args.assigneeUserId);
     if (!target) return { notified: false, skipReason: "no_binding" };
@@ -98,15 +106,26 @@ export class AssignNotifyService {
     if (!previous) return;
 
     const cfg = await this.taskConfig.forCurrentTenant(tx);
-    if (cfg.assignNotify) {
-      const target = await this.lookupTarget(tx, previous);
-      if (target) {
-        await this.push(target, `這件事已改由他人處理，你不用再跟：\n\n${args.summary}`, args.ticketId);
-      }
-    }
+    if (cfg.assignNotify) await this.notifyTakenOver(tx, previous, args.summary, args.ticketId);
+
     await tx.execute(sql`
-      UPDATE tickets SET assign_notified_at = NULL, assign_notified_user_id = NULL
+      UPDATE tickets SET assign_notified_at = NULL, assign_notified_user_id = NULL,
+                         assign_notify_message_id = NULL
        WHERE ticket_id = ${args.ticketId}::uuid`);
+  }
+
+  /**
+   * 跟原本被推播過的那個人說「這件事不用你跟了」。
+   *
+   * ⚠️ 送不到只記 log，不可以讓指派／改派失敗（同 A-8）——
+   * 主管的決定已經寫進 DB，通知只是把它送達。
+   */
+  private async notifyTakenOver(
+    tx: Db, previousUserId: string, summary: string, ticketId: string,
+  ): Promise<void> {
+    const target = await this.lookupTarget(tx, previousUserId);
+    if (!target) return;
+    await this.push(target, `這件事已改由他人處理，你不用再跟：\n\n${summary}`, ticketId);
   }
 
   /**

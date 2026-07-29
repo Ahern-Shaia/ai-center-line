@@ -153,6 +153,28 @@ test("⭐ 取消指派 → 只通知原本推過的那個人（A-6）", async ()
   assert.ok(sent[1].text.includes("改由他人處理"));
 });
 
+test("⭐⭐ 改派他人 → 原本推過的那個人也要被告知（A-6 的另一半）", async () => {
+  sent.length = 0;
+  const id = await newTicket(`改派-${randomUUID().slice(0, 6)}`);
+  await asTenant(() => svc.onAssigned(currentTx(), {
+    ticketId: id, assigneeUserId: U_BOUND, summary: "先派給小明", actorName: "王經理",
+  }));
+  assert.equal(sent.length, 1);
+
+  // 主管覺得不妥，改派給別人
+  const r = await asTenant(() => svc.onAssigned(currentTx(), {
+    ticketId: id, assigneeUserId: U_UNBOUND, summary: "先派給小明", actorName: "王經理",
+  }));
+
+  // ⚠️ 舊版只在「退回待認領」時通知原本那位，改派時他完全不知情 ——
+  //    手機裡還留著我們推給他的通知，日後就會拿那則來回報完成，
+  //    而那正是「引用對不到」的主要來源（private-completion F1）。
+  assert.equal(sent.length, 2, "原本推過的人要被告知不用再跟");
+  assert.equal(sent[1].to, LINE_ID, "告知的是原本那位，不是新的");
+  assert.ok(sent[1].text.includes("改由他人處理"));
+  assert.equal(r.skipReason, "no_binding", "新的那位沒綁定，照樣要把原因講出來");
+});
+
 test("沒推過的票取消時不通知（他根本不知道有這件事）", async () => {
   sent.length = 0;
   const id = await newTicket(`沒派過-${randomUUID().slice(0, 6)}`);
