@@ -170,3 +170,42 @@ test("MediaStorageService · S3 env 未設 · enabled=false 且 put 不炸", asy
     if (saved.S3_SECRET_ACCESS_KEY !== undefined) process.env.S3_SECRET_ACCESS_KEY = saved.S3_SECRET_ACCESS_KEY;
   }
 });
+
+// ── 0040 · 群組回話開關 ──────────────────────────────────────────────
+//
+// 起因：客戶群裡有人把截圖傳進群並回一句「好了」，bot 回了「✓ 已收到完成回報」。
+// 那句「好了」講的是「截圖傳好了」。誤判會被**整個群**看到，
+// 所以客戶要能自己關掉 —— 但關的只是「bot 出不出聲」，不是把功能停掉。
+
+test("⭐ 新群預設會回話（不改變現行行為）", async () => {
+  const ctx = { tenantId: T_A, role: "tenant_admin" as const };
+  const ref = await withTenant(ctx, (tx) => txStore.run(tx,
+    () => groupRepo.getRefForMessage(tx, BOT_A, GROUP_ID_A)));
+  assert.equal(ref?.replyEnabled, true, "預設 true —— 要關是客戶自己的決定");
+});
+
+test("⭐⭐ 關掉之後 replyEnabled 為 false，且與 AI 分析是兩個獨立的開關", async () => {
+  const c = new pg.Client({ connectionString: process.env.MIGRATION_DATABASE_URL });
+  await c.connect();
+  const ctx = { tenantId: T_A, role: "tenant_admin" as const };
+  try {
+    await c.query(
+      `UPDATE line_group SET reply_enabled = false, analyze_enabled = true
+        WHERE bot_id = $1 AND group_id = $2`, [BOT_A, GROUP_ID_A]);
+
+    const ref = await withTenant(ctx, (tx) => txStore.run(tx,
+      () => groupRepo.getRefForMessage(tx, BOT_A, GROUP_ID_A)));
+    assert.equal(ref?.replyEnabled, false, "webhook 靠這個欄位決定要不要回話");
+
+    const g = await c.query<{ analyze_enabled: boolean }>(
+      `SELECT analyze_enabled FROM line_group WHERE bot_id = $1 AND group_id = $2`, [BOT_A, GROUP_ID_A]);
+    assert.equal(
+      g.rows[0].analyze_enabled, true,
+      "關掉回話不可順手關掉 AI 分析 —— 客戶要的是分析照跑、只是 bot 別在群裡出聲",
+    );
+  } finally {
+    await c.query(`UPDATE line_group SET reply_enabled = true WHERE bot_id = $1 AND group_id = $2`,
+      [BOT_A, GROUP_ID_A]);
+    await c.end();
+  }
+});

@@ -12,6 +12,8 @@ export interface LineGroupRow {
   departmentId: string | null;
   departmentName: string | null;
   analyzeEnabled: boolean;
+  /** bot 在這個群要不要回話 · 與 analyzeEnabled 是兩件事 */
+  replyEnabled: boolean;
   firstSeenAt: string;
   lastEventAt: string;
   eventCount: number;
@@ -58,12 +60,12 @@ export class LineGroupRepository {
     const res = await tx.execute<{
       group_registry_id: string; bot_id: string; group_id: string;
       display_name: string | null; department_id: string | null;
-      department_name: string | null; analyze_enabled: boolean;
+      department_name: string | null; analyze_enabled: boolean; reply_enabled: boolean;
       first_seen_at: string; last_event_at: string; event_count: number;
       status: "active" | "left";
     }>(sql`
       SELECT g.group_registry_id, g.bot_id, g.group_id, g.display_name,
-             g.department_id, d.department_name, g.analyze_enabled,
+             g.department_id, d.department_name, g.analyze_enabled, g.reply_enabled,
              g.first_seen_at::text, g.last_event_at::text, g.event_count, g.status
       FROM line_group g
       LEFT JOIN departments d ON d.department_id = g.department_id
@@ -78,6 +80,7 @@ export class LineGroupRepository {
       departmentId: r.department_id,
       departmentName: r.department_name,
       analyzeEnabled: r.analyze_enabled,
+      replyEnabled: r.reply_enabled,
       firstSeenAt: r.first_seen_at,
       lastEventAt: r.last_event_at,
       eventCount: r.event_count,
@@ -94,12 +97,12 @@ export class LineGroupRepository {
     const res = await tx.execute<{
       group_registry_id: string; bot_id: string; group_id: string;
       display_name: string | null; department_id: string | null;
-      department_name: string | null; analyze_enabled: boolean;
+      department_name: string | null; analyze_enabled: boolean; reply_enabled: boolean;
       first_seen_at: string; last_event_at: string; event_count: number;
       status: "active" | "left";
     }>(sql`
       SELECT g.group_registry_id, g.bot_id, g.group_id, g.display_name,
-             g.department_id, d.department_name, g.analyze_enabled,
+             g.department_id, d.department_name, g.analyze_enabled, g.reply_enabled,
              g.first_seen_at::text, g.last_event_at::text, g.event_count, g.status
       FROM line_group g
       JOIN line_bot b ON b.bot_id = g.bot_id
@@ -115,6 +118,7 @@ export class LineGroupRepository {
       departmentId: r.department_id,
       departmentName: r.department_name,
       analyzeEnabled: r.analyze_enabled,
+      replyEnabled: r.reply_enabled,
       firstSeenAt: r.first_seen_at,
       lastEventAt: r.last_event_at,
       eventCount: r.event_count,
@@ -126,12 +130,12 @@ export class LineGroupRepository {
     const res = await tx.execute<{
       group_registry_id: string; bot_id: string; group_id: string;
       display_name: string | null; department_id: string | null;
-      department_name: string | null; analyze_enabled: boolean;
+      department_name: string | null; analyze_enabled: boolean; reply_enabled: boolean;
       first_seen_at: string; last_event_at: string; event_count: number;
       status: "active" | "left";
     }>(sql`
       SELECT g.group_registry_id, g.bot_id, g.group_id, g.display_name,
-             g.department_id, d.department_name, g.analyze_enabled,
+             g.department_id, d.department_name, g.analyze_enabled, g.reply_enabled,
              g.first_seen_at::text, g.last_event_at::text, g.event_count, g.status
       FROM line_group g
       LEFT JOIN departments d ON d.department_id = g.department_id
@@ -148,6 +152,7 @@ export class LineGroupRepository {
       departmentId: r.department_id,
       departmentName: r.department_name,
       analyzeEnabled: r.analyze_enabled,
+      replyEnabled: r.reply_enabled,
       firstSeenAt: r.first_seen_at,
       lastEventAt: r.last_event_at,
       eventCount: r.event_count,
@@ -160,9 +165,13 @@ export class LineGroupRepository {
   async getRefForMessage(tx: Db, botId: string, groupId: string): Promise<{
     tenantId: string | null;
     departmentId: string | null;
+    /** bot 在這個群要不要回話（0040）· 與 analyzeEnabled 是兩件事 */
+    replyEnabled: boolean;
   } | null> {
-    const res = await tx.execute<{ tenant_id: string | null; department_id: string | null }>(sql`
-      SELECT b.tenant_id, g.department_id
+    const res = await tx.execute<{
+      tenant_id: string | null; department_id: string | null; reply_enabled: boolean;
+    }>(sql`
+      SELECT b.tenant_id, g.department_id, g.reply_enabled
       FROM line_group g
       JOIN line_bot b ON b.bot_id = g.bot_id
       WHERE g.bot_id = ${botId} AND g.group_id = ${groupId}
@@ -170,20 +179,22 @@ export class LineGroupRepository {
     `);
     const r = res.rows[0];
     if (!r) return null;
-    return { tenantId: r.tenant_id, departmentId: r.department_id };
+    return { tenantId: r.tenant_id, departmentId: r.department_id, replyEnabled: r.reply_enabled };
   }
 
   async patchAssignment(tx: Db, groupRegistryId: string, patch: {
     departmentId?: string | null;
     displayName?: string;
     analyzeEnabled?: boolean;
+    replyEnabled?: boolean;
   }): Promise<void> {
     await tx.execute(sql`
       UPDATE line_group SET
         department_id = CASE WHEN ${patch.departmentId !== undefined}::boolean
           THEN ${patch.departmentId ?? null} ELSE department_id END,
         display_name = COALESCE(${patch.displayName ?? null}, display_name),
-        analyze_enabled = COALESCE(${patch.analyzeEnabled ?? null}, analyze_enabled)
+        analyze_enabled = COALESCE(${patch.analyzeEnabled ?? null}, analyze_enabled),
+        reply_enabled = COALESCE(${patch.replyEnabled ?? null}, reply_enabled)
       WHERE group_registry_id = ${groupRegistryId}
     `);
   }

@@ -218,7 +218,8 @@ export class LineWebhookService {
                 replierDisplayName: null,          // member profile 另有 cache · 這裡不擋
                 text: textContent ?? "",
               });
-              if (r.reply && event.replyToken) {
+              // 客戶把這個群的回話關掉了 —— 訊號照樣落地，只是 bot 不出聲（0040）
+              if (r.reply && event.replyToken && ref.replyEnabled) {
                 replyTasks.push({ replyToken: event.replyToken, accessToken: bot.channelAccessToken, text: r.reply });
               }
             } catch (err) {
@@ -230,7 +231,8 @@ export class LineWebhookService {
           // 0036 · M3.5 · 他自己發的每日回報 → 回一份「尚未確認完成」清單
           // ⚠️ 這裡只收集，實際查詢在 tx 結束後做 ——
           //    要讀 tickets，而 tickets 的 RLS 在 systemTx 底下會靜默回 0 筆。
-          if (inserted && msg.type === "text" && !msg.quotedMessageId && senderUid && event.replyToken) {
+          if (inserted && msg.type === "text" && !msg.quotedMessageId && senderUid && event.replyToken
+              && ref.replyEnabled) {
             reminderTasks.push({
               tenantId: ref.tenantId,
               groupId,

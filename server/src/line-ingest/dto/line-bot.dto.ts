@@ -23,6 +23,8 @@ export const LineGroupPatchSchema = z.object({
   departmentId: z.string().regex(uuidRegex).nullable().optional(),
   displayName: z.string().trim().min(1).max(200).optional(),
   analyzeEnabled: z.boolean().optional(),
+  /** bot 在這個群要不要回話 · 與 analyzeEnabled 是兩件事（0040）*/
+  replyEnabled: z.boolean().optional(),
 });
 
 export type LineBotCreateDto = z.infer<typeof LineBotCreateSchema>;
