@@ -4,6 +4,7 @@ import type { JwtUser } from "../auth/jwt-user.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { UserService } from "./user.service.js";
 import { UserCreateSchema, UserDeleteSchema, UserUpdateSchema } from "./dto/user.dto.js";
+import { resolveTenantId } from "../auth/resolve-tenant-id.js";
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -18,11 +19,13 @@ export class UserController {
 
   @Get()
   @RequirePermission("users:view")
-  async list(@Query("tenantId") tenantId: string) {
-    if (!tenantId || !uuidRegex.test(tenantId)) {
+  async list(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
+    // ⚠️ 同 department.controller：svc.list 會覆蓋 RLS 上下文，不可信 client 傳的值
+    const t = resolveTenantId(user, tenantId);
+    if (!uuidRegex.test(t)) {
       throw new BadRequestException({ status: "tenant_id_required", message: "需傳 tenantId" });
     }
-    const users = await this.svc.list(tenantId);
+    const users = await this.svc.list(t);
     return { users };
   }
 

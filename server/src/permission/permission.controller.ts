@@ -4,6 +4,7 @@ import { Roles } from "../auth/roles.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { RequirePermission } from "./require-permission.decorator.js";
 import { PermissionService } from "./permission.service.js";
+import { AllowAnyUser } from "../auth/allow-any-user.decorator.js";
 
 @Controller()
 export class PermissionController {
@@ -11,6 +12,7 @@ export class PermissionController {
 
   // GET /me/permissions · 目前登入使用者的 permission set
   @Get("me/permissions")
+  @AllowAnyUser()
   async myPermissions(@CurrentUser() user: JwtUser) {
     const perms = await this.svc.getUserPermissions(user.user_id);
     return { permissions: Array.from(perms) };

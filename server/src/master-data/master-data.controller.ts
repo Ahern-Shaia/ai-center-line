@@ -6,6 +6,7 @@ import { currentTx } from "../db/client.js";
 import { RagicAccountRepository } from "../ragic/ragic-account.repository.js";
 import { MasterDataRepository } from "./master-data.repository.js";
 import { MasterDataSyncService } from "./master-data-sync.service.js";
+import { AllowAnyUser } from "../auth/allow-any-user.decorator.js";
 
 // 主檔（客戶名冊）· docs/modules/master-data-sync.md
 //
@@ -78,6 +79,7 @@ export class MasterDataController {
    * 只回名稱與編號（本來就只存這兩個欄位）。
    */
   @Get("customers")
+  @AllowAnyUser()
   async customers(@CurrentUser() user: JwtUser, @Query("q") q?: string) {
     if (!user.tenant_id) return { customers: [] };
     const rows = await this.repo.searchCustomers(currentTx(), user.tenant_id, q ?? "");

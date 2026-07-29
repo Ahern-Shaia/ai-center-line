@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query }
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { AttendanceService } from "./attendance.service.js";
+import { AllowAnyUser } from "../auth/allow-any-user.decorator.js";
 
 const PUNCH_TYPES = ["clock_in", "arrive_site", "clock_out"] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -13,6 +14,7 @@ export class AttendanceController {
   constructor(private readonly svc: AttendanceService) {}
 
   @Post("punch")
+  @AllowAnyUser()
   async punch(
     @CurrentUser() user: JwtUser,
     @Body() body: { punchType?: string; lat?: number; lng?: number; accuracyM?: number; customerName?: string },
@@ -38,6 +40,7 @@ export class AttendanceController {
 
   // 補填/修正地點名稱（只改標籤，不動座標/時間/里程）· 員工只能改自己的
   @Patch("punch/:punchId/label")
+  @AllowAnyUser()
   async relabel(
     @CurrentUser() user: JwtUser,
     @Param("punchId") punchId: string,
@@ -49,18 +52,21 @@ export class AttendanceController {
 
   /** 地點候選 · 自己去過的地方（選單是加速不是限制 · 前端仍保留自由輸入） */
   @Get("places")
+  @AllowAnyUser()
   async places(@CurrentUser() user: JwtUser, @Query("q") q?: string) {
     return this.svc.placeSuggestions(user, typeof q === "string" ? q : null);
   }
 
   /** 本月外勤摘要 · 只回自己的（打卡完給同仁看自己的數字 · 4FR §7） */
   @Get("my-month")
+  @AllowAnyUser()
   async myMonth(@CurrentUser() user: JwtUser) {
     return this.svc.myMonthSummary(user);
   }
 
   // date 選填（YYYY-MM-DD，台北日）· 省略＝當日 · 只回自己的行程 + 打卡序列
   @Get("trips")
+  @AllowAnyUser()
   async trips(@CurrentUser() user: JwtUser, @Query("date") date?: string) {
     const d = typeof date === "string" && date ? date : null;
     return this.svc.tripsByDate(user, d);
@@ -68,6 +74,7 @@ export class AttendanceController {
 
   // 地圖圖磚設定（前端 Leaflet 用）· tileApiKey 為 client-side key（osm 為 null）· 任何登入者可讀
   @Get("map-tile-config")
+  @AllowAnyUser()
   async mapTileConfig() {
     return this.svc.tileConfig();
   }

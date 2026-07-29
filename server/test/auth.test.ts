@@ -69,14 +69,51 @@ test("JwtAuthGuard 有效 token → 過並掛 req.user", async () => {
   assert.equal(req.user?.role, "group_owner");
 });
 
+/**
+ * ⚠️ 假 Reflector 必須**依 key 回不同值**。
+ * 原本寫成 `getAllAndOverride: () => [...]` —— 對每一個 key 都回同一個陣列，
+ * 於是守衛查 IS_PUBLIC_KEY 時拿到 truthy 就直接放行，測試「為了錯的理由」而過。
+ * 守衛從 fail-open 改 fail-closed 多了分支之後，這個偷懶就穿幫了。
+ */
+const reflector = (m: Record<string, unknown>) =>
+  ({ getAllAndOverride: (key: string) => m[key] } as never);
+
 test("RolesGuard 角色不符 → 擋", () => {
-  const guard = new RolesGuard({ getAllAndOverride: () => ["tenant_admin"] } as never);
-  assert.throws(() => guard.canActivate(ctx({ user: { role: "group_owner" } })));
+  const guard = new RolesGuard(reflector({ roles: ["tenant_admin"] }));
+  assert.throws(() => guard.canActivate(ctx({ user: { role: "group_owner" } })), /角色無權限/);
 });
 
 test("RolesGuard 角色相符 → 過", () => {
-  const guard = new RolesGuard({ getAllAndOverride: () => ["tenant_admin", "group_owner"] } as never);
+  const guard = new RolesGuard(reflector({ roles: ["tenant_admin", "group_owner"] }));
   assert.equal(guard.canActivate(ctx({ user: { role: "group_owner" } })), true);
+});
+
+// ── fail-closed（M0.9）──────────────────────────────────────────
+// 沒有宣告存取層級 = 拒絕。忘記寫的懲罰要是「炸在開發階段」，
+// 不是「安靜地放行到 prod」。
+
+test("⭐ RolesGuard 沒有任何宣告 → 擋（fail-closed）", () => {
+  const guard = new RolesGuard(reflector({}));
+  assert.throws(
+    () => guard.canActivate(ctx({ user: { role: "tenant_admin" } })),
+    /未宣告存取層級/,
+    "改回 fail-open 的話這條會紅 —— 那正是本專案踩過的坑",
+  );
+});
+
+test("@AllowAnyUser 明示不限角色 → 過", () => {
+  const guard = new RolesGuard(reflector({ allowAnyUser: true }));
+  assert.equal(guard.canActivate(ctx({ user: { role: "employee" } })), true);
+});
+
+test("@RequirePermission 交給下一道 PermissionGuard 判 → 這裡放行", () => {
+  const guard = new RolesGuard(reflector({ require_permission: ["departments:view"] }));
+  assert.equal(guard.canActivate(ctx({ user: { role: "employee" } })), true);
+});
+
+test("@Public → 過（JwtAuthGuard 負責）", () => {
+  const guard = new RolesGuard(reflector({ isPublic: true }));
+  assert.equal(guard.canActivate(ctx({})), true);
 });
 
 // 登入是公開路由 · TenantTxInterceptor 看到沒有 req.user 就跳過，

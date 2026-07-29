@@ -5,6 +5,7 @@ import type { JwtUser } from "./jwt-user.js";
 import { LineOauthService } from "./line-oauth.service.js";
 import { Public } from "./public.decorator.js";
 import { ChangePasswordSchema } from "./dto/change-password.dto.js";
+import { AllowAnyUser } from "../auth/allow-any-user.decorator.js";
 
 @Controller("auth")
 export class AuthController {
@@ -24,6 +25,7 @@ export class AuthController {
 
   // 自服務改密碼 · 任何登入使用者皆可（改自己的）
   @Post("change-password")
+  @AllowAnyUser()
   async changePassword(@CurrentUser() user: JwtUser, @Body() body: unknown) {
     const parsed = ChangePasswordSchema.safeParse(body);
     if (!parsed.success) {

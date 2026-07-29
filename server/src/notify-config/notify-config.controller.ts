@@ -5,6 +5,7 @@ import type { JwtUser } from "../auth/jwt-user.js";
 import { RagicAccountService } from "../ragic/ragic-account.service.js";
 import { NotifyConfigService, type CreateRuleInput } from "./notify-config.service.js";
 import { HubAuditRepository } from "../notification-hub/audit.repository.js";
+import { resolveTenantId } from "../auth/resolve-tenant-id.js";
 
 // aiproot「通知設定」API · 通用規則（來源/管道無關）
 // 全掛 permission gate（notify-config:view/manage · 給 aiproot_admin+consultant）
@@ -69,8 +70,8 @@ export class NotifyConfigController {
   @Get("notifiable-users")
   @RequirePermission("notify-config:view")
   notifiableUsers(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
-    const t = tenantId || user.tenant_id;
-    if (!t) throw new BadRequestException("需指定 tenantId");
+    // ⚠️ 原本是 `tenantId || user.tenant_id` —— 非平台角色傳別家 id 就照收
+    const t = resolveTenantId(user, tenantId);
     return this.configs.listNotifiableUsers(t);
   }
 
