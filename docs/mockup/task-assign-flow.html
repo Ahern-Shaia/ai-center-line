@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>任務分派流程 · 現況與缺口（2026-07-29）</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#fff; --border:#e4e7eb; --border-strong:#cbd2d9;
+    --text:#171a1d; --muted:#6b7280; --faint:#9aa1ab;
+    --ok:#047857;   --ok-bg:#ecfdf5;  --ok-bd:#a7f3d0;
+    --warn:#b45309; --warn-bg:#fffbeb; --warn-bd:#fde68a;
+    --bad:#be123c;  --bad-bg:#fff1f2;  --bad-bd:#fecdd3;
+    --info:#475569; --info-bg:#f1f5f9; --info-bd:#cbd5e1;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:32px 28px 56px; background:var(--bg); color:var(--text);
+    font-family:Inter,-apple-system,"Segoe UI","Noto Sans TC","PingFang TC",
+                "Microsoft JhengHei",sans-serif;
+    font-size:13px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1160px;margin:0 auto}
+
+  header{border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:24px}
+  h1{font-size:19px;font-weight:650;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:12.5px}
+  .sub b{color:var(--text);font-weight:600}
+
+  /* 圖例 */
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px}
+  .lg{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)}
+  .dot.bad{background:var(--bad)} .dot.info{background:var(--faint)}
+
+  /* 階段 */
+  .stage{display:grid;grid-template-columns:92px 1fr;gap:20px;margin-bottom:6px}
+  .rail{padding-top:12px}
+  .rail .no{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.04em}
+  .rail .nm{font-size:12px;font-weight:600;color:var(--muted);margin-top:1px}
+
+  .arrow{grid-column:2;height:22px;position:relative}
+  .arrow::before{content:"";position:absolute;left:26px;top:0;bottom:6px;width:1.5px;background:var(--border-strong)}
+  .arrow::after{content:"";position:absolute;left:22px;bottom:0;border:5px solid transparent;border-top-color:var(--border-strong)}
+  .arrow span{position:absolute;left:44px;top:2px;font-size:11.5px;color:var(--muted)}
+
+  /* 卡片 */
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    padding:12px 14px;box-shadow:0 1px 2px rgba(16,24,40,.04);
+  }
+  .card h3{margin:0;font-size:13.5px;font-weight:640;display:flex;align-items:center;gap:8px}
+  .card p{margin:5px 0 0;color:var(--muted);font-size:12px}
+  .card .code{font-family:var(--mono);font-size:11px;color:var(--faint)}
+
+  .chip{
+    font-size:10.5px;font-weight:600;padding:1.5px 7px;border-radius:99px;
+    border:1px solid;white-space:nowrap;letter-spacing:.01em;
+  }
+  .chip.ok{color:var(--ok);background:var(--ok-bg);border-color:var(--ok-bd)}
+  .chip.warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn-bd)}
+  .chip.bad{color:var(--bad);background:var(--bad-bg);border-color:var(--bad-bd)}
+  .chip.info{color:var(--info);background:var(--info-bg);border-color:var(--info-bd)}
+
+  .n{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text)}
+  .n small{font-family:Inter,sans-serif;font-weight:400;color:var(--faint);font-size:11px}
+
+  /* 分岔 */
+  .branch{display:grid;gap:12px;position:relative;padding-top:16px}
+  .branch::before{
+    content:"";position:absolute;top:0;height:16px;left:0;right:0;
+    border-top:1.5px solid var(--border-strong);
+    border-left:1.5px solid var(--border-strong);border-right:1.5px solid var(--border-strong);
+    border-radius:6px 6px 0 0;
+  }
+  .b3{grid-template-columns:repeat(3,1fr)}
+  .b2{grid-template-columns:repeat(2,1fr)}
+  .branch > .card{position:relative}
+  .branch > .card::before{
+    content:"";position:absolute;top:-16px;left:50%;width:1.5px;height:16px;background:var(--border-strong);
+  }
+
+  .lane{font-size:11px;color:var(--faint);margin:0 0 6px;font-weight:600;letter-spacing:.02em}
+
+  /* 缺口註記 */
+  .gap{
+    margin-top:10px;padding:8px 10px;border-radius:6px;font-size:11.5px;
+    border:1px solid;line-height:1.5;
+  }
+  .gap.warn{background:var(--warn-bg);border-color:var(--warn-bd);color:#78350f}
+  .gap.bad{background:var(--bad-bg);border-color:var(--bad-bd);color:#881337}
+  .gap.info{background:var(--info-bg);border-color:var(--info-bd);color:#334155}
+  .gap b{font-weight:650}
+  .gap .tag{font-family:var(--mono);font-size:10px;font-weight:700;opacity:.75;margin-right:5px}
+
+  /* 表 */
+  h2{font-size:14px;font-weight:640;margin:34px 0 10px;padding-top:22px;border-top:1px solid var(--border)}
+  table{width:100%;border-collapse:collapse;background:var(--surface);
+        border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:12px}
+  th{text-align:left;font-weight:600;font-size:11px;color:var(--muted);
+     background:#fafbfc;padding:8px 12px;border-bottom:1px solid var(--border);letter-spacing:.02em}
+  td{padding:9px 12px;border-bottom:1px solid #f0f2f4;vertical-align:top;color:var(--text)}
+  tr:last-child td{border-bottom:none}
+  td.g{font-family:var(--mono);font-size:11px;font-weight:700;white-space:nowrap}
+  td small{color:var(--muted)}
+  footer{margin-top:24px;font-size:11px;color:var(--faint);line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>LINE 群組 → 任務分派 → 送達當事人 · 流程現況</h1>
+  <div class="sub">
+    台灣福祉 · prod 實際資料，查詢時間 <b>2026-07-29</b> · 數字為當下累計，非示意值
+  </div>
+  <div class="legend">
+    <span class="lg"><i class="dot ok"></i>已實作且在跑</span>
+    <span class="lg"><i class="dot warn"></i>缺口 · 這條路沒接上</span>
+    <span class="lg"><i class="dot bad"></i>斷點 · 人會以為成功但其實沒有</span>
+    <span class="lg"><i class="dot info"></i>刻意這樣設計 · 不是缺口</span>
+  </div>
+</header>
+
+<!-- ① -->
+<div class="stage">
+  <div class="rail"><div class="no">01</div><div class="nm">收訊息</div></div>
+  <div class="card">
+    <h3>LINE 群組 <span class="chip ok">已實作</span></h3>
+    <p>webhook 即時落庫；照片／影片即收即存（LINE content URL 有時效）。
+       <span class="code">line_message · chat_context='group'</span></p>
+  </div>
+</div>
+<div class="stage"><div></div><div class="arrow"><span>每天排程批次（台灣福祉設 18:00）</span></div></div>
+
+<!-- ② -->
+<div class="stage">
+  <div class="rail"><div class="no">02</div><div class="nm">AI 分析</div></div>
+  <div class="card">
+    <h3>分類 + 結構化抽取 <span class="chip ok">已實作</span></h3>
+    <p>Claude 讀當天對話，抽出「這是一件要做的事」以及<b>它是誰的</b>（人名字串）。
+       每筆都附 <span class="code">source_message_ids</span> 可回溯原始訊息。</p>
+  </div>
+</div>
+<div class="stage"><div></div><div class="arrow"><span>materializer 寫入 tickets</span></div></div>
+
+<!-- ③ -->
+<div class="stage">
+  <div class="rail"><div class="no">03</div><div class="nm">建立任務</div></div>
+  <div class="card">
+    <h3>任務落庫 <span class="chip ok">已實作</span> <span class="n">45 <small>張累計</small></span></h3>
+    <p>同時嘗試把 AI 抽到的人名對到系統帳號（<span class="code">assigneeResolver</span>）。
+       對得到就直接掛上去 —— <b>這就是「AI 分派」</b>。</p>
+  </div>
+</div>
+<div class="stage"><div></div><div class="arrow"><span>依「有沒有抽到人名 / 對不對得到帳號」分三路</span></div></div>
+
+<!-- ④ AI 分派三路 -->
+<div class="stage">
+  <div class="rail"><div class="no">04</div><div class="nm">AI 分派</div></div>
+  <div>
+    <div class="lane">AI 自動判定 · 批次當下發生，沒有人在看螢幕</div>
+    <div class="branch b3">
+
+      <div class="card">
+        <h3>對到帳號 <span class="chip ok">已實作</span></h3>
+        <p><span class="n">5 <small>張</small></span> ·
+           <span class="code">assign_status='assigned'</span></p>
+        <div class="gap warn">
+          <span class="tag">G1</span><b>不會發任何通知。</b>
+          <code>AssignNotifyService</code> 只被人工指派端點呼叫，批次這條路沒接。
+          當事人只有自己打開日報才會發現這件事是他的。
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>抽到名字但對不到 <span class="chip ok">已實作</span></h3>
+        <p><span class="n">24 <small>張</small></span> ·
+           <span class="code">assign_status='unclaimed'</span></p>
+        <div class="gap info">
+          <span class="tag">—</span>AI 抽到的是群裡的暱稱（「佳慧」「小星星」），
+          對不到系統帳號。<b>落到主管的待派清單</b>，這是刻意的 —— 猜錯人比不猜貴。
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>沒抽到人名 <span class="chip ok">已實作</span></h3>
+        <p><span class="n">14 <small>張</small></span> ·
+           <span class="code">assign_status='none'</span></p>
+        <div class="gap info">
+          <span class="tag">—</span>對話裡就沒講是誰要做。任務仍在看板上，
+          等主管決定歸屬。
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div class="stage"><div></div><div class="arrow"><span>主管在戰情室看板上手動指派 · unclaimed / none 兩堆都從這裡走</span></div></div>
+
+<!-- ⑤ 人工分派 -->
+<div class="stage">
+  <div class="rail"><div class="no">05</div><div class="nm">人工分派</div></div>
+  <div>
+    <div class="lane">主管的決定 · 會覆蓋 AI 的判定，且重跑分析不會被洗掉</div>
+    <div class="branch b2">
+
+      <div class="card">
+        <h3>當事人有綁 LINE <span class="chip ok">已實作</span></h3>
+        <p><span class="n">7 <small>張的當事人全部有綁</small></span> ·
+           走該租戶<b>自己的 bot</b> 私訊推播</p>
+        <div class="gap info">
+          <span class="tag">—</span>訊息只帶摘要不帶原始對話（任務可能來自他不在的群），
+          且不寫期限（<code>due_at</code> 目前 100% 為空，寫了就是編一個不存在的期限）。
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>當事人沒綁 LINE <span class="chip ok">已實作</span></h3>
+        <p><span class="n">0 <small>張 · 但這是巧合，不是覆蓋率</small></span><br>
+           <small style="color:var(--muted)">台灣福祉 9 個帳號只有 <b>4</b> 個綁了 LINE；
+           被指派到的剛好都在這 4 個裡面。</small></p>
+        <div class="gap info">
+          <span class="tag">—</span><b>在主管畫面上明說「無法通知」</b>，讓他知道要另外講一聲。
+          不在群組裡 @ 他 —— 那會為了一個人打擾 40 幾人。
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div class="stage"><div></div><div class="arrow"><span>指派完成後，兩件事同時發生（不是先後）</span></div></div>
+
+<!-- ⑥ 送達 -->
+<div class="stage">
+  <div class="rail"><div class="no">06</div><div class="nm">送達</div></div>
+  <div>
+    <div class="branch b2">
+
+      <div class="card">
+        <h3>個人日報列出 <span class="chip ok">已實作</span></h3>
+        <p>他的日報頁會列出「指派給我、還沒回報完成」的任務。</p>
+        <div class="gap info">
+          <span class="tag">—</span><b>刻意不自動寫進日報</b>，由本人勾選要不要納入。
+          AI 可能對錯人，<b>本人是歸屬錯誤的最後一道防線</b>。
+          另外以「本人有沒有回報完成」為準，不是以主管簽核為準 ——
+          簽核代表「AI 抽對了」，不代表「事情做完了」。
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>LINE 私訊通知 <span class="chip ok">已實作</span></h3>
+        <p>「📋 王經理指派了一件事給你 / {摘要} / 做完後回我一句「好了」就行」</p>
+        <div class="gap info">
+          <span class="tag">—</span>同一張票對同一人<b>只推第一次</b>；
+          改派他人時只通知<b>原本推過</b>的那位。
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div class="stage"><div></div><div class="arrow"><span>他做完了，在同一個私訊裡回報</span></div></div>
+
+<!-- ⑦ 回報 -->
+<div class="stage">
+  <div class="rail"><div class="no">07</div><div class="nm">回報完成</div></div>
+  <div>
+    <div class="lane">一對一聊天室裡「是誰」永遠確定，缺的只有「哪一張」—— 所以規則是不猜</div>
+    <div class="branch b3">
+      <div class="card">
+        <h3>回覆那則通知 <span class="chip ok">已實作</span></h3>
+        <p>精準對到那一張 · 他要做 <span class="n">0</span> 次判斷</p>
+      </div>
+      <div class="card">
+        <h3>手上只有一張 <span class="chip ok">已實作</span></h3>
+        <p>就是它，直接關 · 他要做 <span class="n">0</span> 次判斷</p>
+      </div>
+      <div class="card">
+        <h3>手上有多張 <span class="chip ok">已實作</span></h3>
+        <p>出按鈕<b>問他是哪一件</b> · <span class="n">1</span> 個 tap</p>
+        <div class="gap info">
+          <span class="tag">—</span>按鈕帶 ticket id 不帶編號：編號會在他回覆前有票被關掉時錯位，
+          而錯位的下場是<b>關掉另一件沒做完的事</b>。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 缺口表 -->
+<h2>缺口清單</h2>
+<table>
+  <thead><tr>
+    <th style="width:52px">#</th><th style="width:190px">在哪一步</th><th>問題</th>
+    <th style="width:230px">影響</th><th style="width:64px">嚴重度</th>
+  </tr></thead>
+  <tbody>
+    <tr>
+      <td class="g" style="color:var(--warn)">G1</td>
+      <td>04 · AI 分派對到帳號</td>
+      <td><b>AI 分派不會發任何通知</b>。<code>AssignNotifyService</code> 只掛在人工指派端點上，
+          批次 materializer 這條路沒接。<br>
+          <small>技術上不難接，但要先決定：AI 判斷的歸屬有沒有把握到可以直接打擾人。
+          目前 AI 對到帳號的準確度沒有量測過。</small></td>
+      <td>當事人不知道有事情是他的，除非自己打開日報。<br>
+          <small>目前只影響 5 張，但這是 AI 分派唯一的出口。</small></td>
+      <td><span class="chip warn">P1</span></td>
+    </tr>
+    <tr>
+      <td class="g" style="color:var(--warn)">G2</td>
+      <td>04 · unclaimed</td>
+      <td>24 張卡在「AI 抽到名字但對不到帳號」。<br>
+          <b>AI 一共抽到 18 個不同的人名，只有 3 個對得到系統帳號。</b>
+          <small>抽到的是群裡的暱稱（「佳慧」「小星星」），而台灣福祉系統裡總共只有 9 個帳號 ——
+          這條靠這個模組解決不了，要補的是主檔層。</small></td>
+      <td>超過一半的任務要主管手動派，否則沒有歸屬。</td>
+      <td><span class="chip warn">P1</span></td>
+    </tr>
+    <tr>
+      <td class="g" style="color:var(--warn)">G4</td>
+      <td>05／06 · 通知送得到誰</td>
+      <td><b>台灣福祉 9 個帳號只有 4 個綁了 LINE（44%）。</b>
+          <small>「0 張沒綁定」看起來很好，但那是因為目前被指派到的 3 個人剛好都綁了 ——
+          派給另外 5 個人時就通知不到。</small><br>
+          <small style="color:var(--bad)">⚠️ 舊 doc 寫「9 個帳號綁了 8 個（89%）」是錯的 ——
+          那個 8 把另一個租戶（鮮湧）的綁定也算進去了。已於本日更正。</small></td>
+      <td>指派範圍一旦擴大，通知覆蓋率會立刻掉下來。</td>
+      <td><span class="chip warn">P1</span></td>
+    </tr>
+    <tr>
+      <td class="g" style="color:var(--faint)">G3</td>
+      <td>06 · LINE 私訊通知</td>
+      <td>推播出去那則的 message id 靠 LINE 回傳，<b>但這件事還沒實測過</b>
+          （要對真人發測試私訊）。</td>
+      <td>拿不到只是退回「問他是哪一件」的慢路徑，功能不會壞，而且會在 log 講一聲。</td>
+      <td><span class="chip info">P2</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<footer>
+  數字來源：prod 唯讀查詢（<code>scripts/prod-query.sh</code>），2026-07-29。<br>
+  設計依據：<code>docs/frontend-design-principles.md</code> §B <code>observability-light</code>。
+  規格對應：<code>docs/modules/task-assign-notify.md</code>、<code>task-completion-tracking.md</code>。
+</footer>
+
+</div>
+</body>
+</html>
