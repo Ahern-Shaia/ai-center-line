@@ -37,14 +37,21 @@ const asTenant = <T>(tenantId: string, fn: () => Promise<T>) =>
   withTenant({ tenantId, role: "tenant_admin", departmentId: null, userId: null },
     (tx) => txStore.run(tx, fn));
 
-/** 建一張 N 天前的待簽核票（N 可為小數，用來打門檻邊界） */
+/**
+ * 建一張 N 天前的待簽核票（N 可為小數，用來打門檻邊界）。
+ *
+ * ⚠️ 多減 1 小時是**刻意的**。`now() - '600 hours'` 會把資料放在整天的邊界上，
+ * 而年齡是 `Math.floor(毫秒差 / 一天)` —— 插入與讀取之間任何毫秒級抖動都會
+ * 讓 25.0000 掉到 24.9999，floor 就少 1，於是同一支測試時綠時紅（實際發生過）。
+ * 測試想表達的是「25 天前」，不是「精準 600 小時前」。
+ */
 async function addAged(s: { tenantId: string; deptId: string }, tag: string, daysAgo: number) {
   await asTenant(s.tenantId, async () => {
     const { currentTx } = await import("../src/db/client.js");
     await currentTx().execute(sql`
       INSERT INTO tickets (tenant_id, department_id, summary, confirm_status, created_at)
       VALUES (${s.tenantId}::uuid, ${s.deptId}::uuid, ${tag}, '待簽核',
-              now() - ${`${daysAgo * 24} hours`}::interval)
+              now() - ${`${daysAgo * 24 + 1} hours`}::interval)
     `);
   });
 }

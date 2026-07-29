@@ -1,4 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch, Query } from "@nestjs/common";
+import { currentTx } from "../db/client.js";
+import { schedulerTimeLabel } from "../scheduler-config/scheduler-time.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
@@ -33,8 +35,13 @@ export class WarroomController {
   // WTB-M3 · 日誌 view
   @Get("daily-reports")
   @RequirePermission("warroom-daily:view")
-  async dailyReports(@Query("from") fromDate?: string, @Query("to") toDate?: string) {
-    return this.tasksService.listDailyReports({ fromDate, toDate });
+  async dailyReports(
+    @CurrentUser() user: JwtUser,
+    @Query("from") fromDate?: string, @Query("to") toDate?: string,
+  ) {
+    const r = await this.tasksService.listDailyReports({ fromDate, toDate });
+    // 批次幾點跑 · 每家自己設（前端原本寫死 17:30，客戶改成 18:00 之後畫面就在說謊）
+    return { ...r, batchRunAt: await schedulerTimeLabel(currentTx(), user.tenant_id, "group_batch") };
   }
 
   /** 可指派的成員 · 手動派發下拉用 */

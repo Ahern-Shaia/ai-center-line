@@ -60,11 +60,12 @@ const clearConfig = (tenantId: string) =>
   asTenant(tenantId, () => currentTx().execute(
     sql`DELETE FROM tenant_task_config WHERE tenant_id = ${tenantId}::uuid`));
 
+/** ⚠️ 多減 1 小時：整天邊界上的資料會讓 floor 因毫秒抖動少 1，測試就時綠時紅 */
 const addAged = (s: { tenantId: string; deptId: string }, tag: string, daysAgo: number) =>
   asTenant(s.tenantId, () => currentTx().execute(sql`
     INSERT INTO tickets (tenant_id, department_id, summary, confirm_status, created_at)
     VALUES (${s.tenantId}::uuid, ${s.deptId}::uuid, ${tag}, '待簽核',
-            now() - ${`${daysAgo * 24} hours`}::interval)`));
+            now() - ${`${daysAgo * 24 + 1} hours`}::interval)`));
 
 const cleanup = (tenantId: string, tag: string) =>
   asTenant(tenantId, () => currentTx().execute(

@@ -1,4 +1,6 @@
 import { BadRequestException, Body, Controller, ForbiddenException, Get, NotFoundException, Post, Query } from "@nestjs/common";
+import { friendlyAiError } from "../llm/ai-error-message.js";
+import { schedulerTimeLabel } from "../scheduler-config/scheduler-time.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import { Public } from "../auth/public.decorator.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
@@ -69,16 +71,20 @@ export class PersonalDailyReportController {
     const pendingMessages = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.repo.listPersonalMessagesForDate(tx, userId, date));
 
     // 撈員工姓名 · 顯示用
-    const info = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{ display_name: string; tenant_name: string }>(sql_import`
-      SELECT u.display_name, t.tenant_name
+    const info = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{ display_name: string; tenant_name: string; tenant_id: string }>(sql_import`
+      SELECT u.display_name, t.tenant_name, t.tenant_id::text
       FROM users u JOIN tenants t ON t.tenant_id = u.tenant_id
       WHERE u.user_id = ${userId}::uuid
     `));
     const user = info.rows[0];
+    const liffAiRunAt = await withTenant({ tenantId: null, role: "aiproot_admin" },
+      (tx) => schedulerTimeLabel(tx, user?.tenant_id ?? null, "pdr"));
 
     return {
-      report: row,
+      report: reportForClient(row),
       requestedDate: date,
+      // AI 幾點會整理 · 每家自己設，不可在前端寫死（prod 實例：台灣福祉改成 18:00）
+      aiRunAt: liffAiRunAt,
       userDisplayName: user?.display_name ?? "",
       tenantName: user?.tenant_name ?? "",
       pendingMessageCount,
@@ -213,8 +219,10 @@ export class PersonalDailyReportController {
     `);
 
     return {
-      report: row,
+      report: reportForClient(row),
       requestedDate: date,
+      // AI 幾點會整理 · 每家自己設，不可在前端寫死（prod 實例：台灣福祉改成 18:00）
+      aiRunAt: await schedulerTimeLabel(tx, user.tenant_id, "pdr"),
       pendingMessageCount,
       pendingMessages,
       todayVisits: visits.rows.map((v) => ({ place: v.place, at: v.at })),
@@ -286,7 +294,8 @@ export class PersonalDailyReportController {
       userId: user.user_id,
       reportDate: date,
     });
-    return res;
+    // 原始英文訊息只留在 log 與 DB，不回給使用者
+    return { ...res, errorMessage: friendlyAiError(res.errorMessage) ?? undefined };
   }
 
   @Get("team")
@@ -321,4 +330,13 @@ function subtractDays(iso: string, days: number): string {
   const d = new Date(iso);
   d.setDate(d.getDate() - days);
   return d.toISOString().slice(0, 10);
+}
+
+/**
+ * 回給前端之前把 AI 的原始錯誤換成中文。
+ * ⚠️ DB 裡仍存原文供我們排查 —— 換的是**這一層**，不是資料。
+ */
+function reportForClient<T extends { errorMessage: string | null } | null>(row: T): T {
+  if (!row) return row;
+  return { ...row, errorMessage: friendlyAiError(row.errorMessage) };
 }

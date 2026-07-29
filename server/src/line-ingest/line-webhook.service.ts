@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { withSystemTx, type Db } from "../db/client.js";
+import { schedulerTimeLabel } from "../scheduler-config/scheduler-time.js";
 import { LineBotRepository } from "./line-bot.repository.js";
 import { LineGroupRepository } from "./line-group.repository.js";
 import { LineMessageRepository } from "./line-message.repository.js";
@@ -447,9 +448,12 @@ export class LineWebhookService {
         // bot 輕回應 · 讓 Alice 知道已收到 · 首則額外提示可用「日報」查
         if (event.replyToken) {
           try {
+            // ⚠️ 時間不可寫死 · 每家自己設（prod 實例：台灣福祉把批次改成 18:00）
+            const at = await schedulerTimeLabel(tx, bot.tenantId, "pdr");
+            const tail = at ? `${at} 由 AI 整理成日報` : "AI 會整理成日報";
             await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
-              // 文案要誠實：訊息是「立刻記錄、立刻看得到」；AI 整理是另一件事（17:30 或手動）
-              { type: "text", text: "✓ 已記錄\n\n傳「日報」可隨時查看今日記錄 · 17:30 由 AI 整理成日報" },
+              // 文案要誠實：訊息是「立刻記錄、立刻看得到」；AI 整理是另一件事
+              { type: "text", text: `✓ 已記錄\n\n傳「日報」可隨時查看今日記錄 · ${tail}` },
             ]);
           } catch (err) {
             this.logger.warn(`personal msg ack reply 失敗 · ${(err as Error).message}`);

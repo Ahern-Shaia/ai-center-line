@@ -13,6 +13,15 @@ import { TaskConfigService } from "../task-config/task-config.service.js";
  * · role-scoped filter · RLS 已處理 group_owner 限 own department
  */
 
+export interface TicketMedia {
+  mediaId: string;
+  /** image / video / file */
+  kind: string;
+  contentType: string | null;
+  sender: string;
+  at: string;
+}
+
 export interface WarroomTicket {
   ticketId: string;
   category: string | null;
@@ -62,6 +71,8 @@ export interface WarroomDaily {
   uploadId: number;
   groupId: string;
   groupName: string | null;
+  /** null = 這個群還沒分派部門 —— 分析會跑，但**一張任務都不會建**（materializer 直接 skip）*/
+  departmentId: string | null;
   departmentName: string | null;
   batchDate: string;
   dailyReports: Array<Record<string, unknown>>;
@@ -290,13 +301,20 @@ export class WarroomTasksService {
       daily_reports: unknown;
       records: unknown;
       group_name: string | null;
+      department_id: string | null;
       department_name: string | null;
     }>(sql`
-      SELECT au.id, au.group_id, au.batch_date::text, au.status,
+      -- ⚠️ DISTINCT ON：同一群同一天可能有**多次**分析（排程跑一次、有人手動重跑一次），
+      --    每次都是一列 analysis_upload。原本全列出來，畫面上就是同一個群的卡片
+      --    重複兩張、內容還略有出入（2026-07-27 客戶回報）。
+      --    重跑的用意是取代前一次，所以只留最新那次。
+      SELECT DISTINCT ON (au.group_id, au.batch_date)
+             au.id, au.group_id, au.batch_date::text, au.status,
              au.uploaded_at::text,
              ar.daily_reports,
              ar.records,
              lg.display_name AS group_name,
+             lg.department_id::text AS department_id,
              d.department_name
       FROM analysis_upload au
       LEFT JOIN analysis_result ar ON ar.upload_id = au.id
@@ -307,7 +325,7 @@ export class WarroomTasksService {
         AND au.status = 'done'
         -- Bug fix · 私訊佔位 group 不進群組日誌
         AND au.group_id NOT LIKE '\\_\\_personal\\_\\_%' ESCAPE '\\'
-      ORDER BY au.batch_date DESC, au.uploaded_at DESC
+      ORDER BY au.group_id, au.batch_date DESC, au.uploaded_at DESC
       LIMIT 200
     `);
 
@@ -319,6 +337,7 @@ export class WarroomTasksService {
         uploadId: r.id,
         groupId: r.group_id ?? "",
         groupName: r.group_name,
+        departmentId: r.department_id,
         departmentName: r.department_name,
         batchDate: r.batch_date,
         dailyReports: (r.daily_reports as Array<Record<string, unknown>>) ?? [],
@@ -352,22 +371,64 @@ export class WarroomTasksService {
    * ticket 走 currentTx()，RLS 已經把範圍切好（group_owner 只看得到自己部門的），
    * 查不到就代表無權查看 → 回 404，不另外做一套判斷。
    */
+  /**
+   * 這張任務的來源訊息帶了哪些照片／影片。
+   *
+   * ⚠️ 走 `withSystemTx` 是因為上一步已用 tickets 的 RLS 授權過這張票；
+   *    line_media 沒有自己的租戶欄位，只能靠 line_message join 回去。
+   *    這裡只回 id 與型別，內容仍走 `GET /media/:id/content`（需 media:view，
+   *    且每次存取都會進 audit_log）—— 網址一個都不外流。
+   */
+  private async mediaOfTicket(messageIds: string[] | null): Promise<TicketMedia[]> {
+    if (!messageIds || messageIds.length === 0) return [];
+    const r = await withSystemTx((stx) => stx.execute<{
+      media_id: string; media_type: string; content_type: string | null;
+      sender: string | null; sent_at: string;
+    }>(sql`
+      SELECT md.media_id::text, md.media_type, md.content_type,
+             COALESCE(mem.display_name, m.sender_line_id) AS sender,
+             to_char(m.sent_at AT TIME ZONE 'Asia/Taipei', 'MM/DD HH24:MI') AS sent_at
+        FROM line_media md
+        JOIN line_message m ON m.message_id = md.message_id
+        LEFT JOIN line_member mem
+               ON mem.group_id = m.group_id AND mem.user_id = m.sender_line_id
+       WHERE md.message_id = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(messageIds)}::jsonb)))
+         AND md.deleted_at IS NULL
+       ORDER BY m.sent_at
+       LIMIT 20`));
+    return r.rows.map((x) => ({
+      mediaId: x.media_id,
+      kind: x.media_type,
+      contentType: x.content_type,
+      sender: x.sender ?? "",
+      at: x.sent_at,
+    }));
+  }
+
   async ticketSource(ticketId: string): Promise<{
     summary: string;
     extracted: Record<string, unknown> | null;
     messages: Array<{ id: number; time: string; sender: string; text: string; kind: string }>;
+    media: TicketMedia[];
     unavailableReason: string | null;
   }> {
     const tx = currentTx();
-    const t = await tx.execute<{ summary: string; source_upload_id: number | null; source_record_index: number | null }>(sql`
-      SELECT summary, source_upload_id, source_record_index
+    const t = await tx.execute<{
+      summary: string; source_upload_id: number | null; source_record_index: number | null;
+      source_message_ids: string[] | null;
+    }>(sql`
+      SELECT summary, source_upload_id, source_record_index, source_message_ids
       FROM tickets WHERE ticket_id = ${ticketId}::uuid LIMIT 1
     `);
     const ticket = t.rows[0];
     if (!ticket) throw new NotFoundException("找不到這張任務，或你沒有權限查看");
 
+    // ⭐ 原文裡的「[照片]」只是一段文字，看不到內容就無法判斷這該不該變成任務。
+    //    照片本身早就存下來了（line_media），只是從沒接到這裡。
+    const media = await this.mediaOfTicket(ticket.source_message_ids);
+
     const empty = (reason: string) => ({
-      summary: ticket.summary, extracted: null, messages: [], unavailableReason: reason,
+      summary: ticket.summary, extracted: null, messages: [], media, unavailableReason: reason,
     });
     if (ticket.source_upload_id == null || ticket.source_record_index == null) {
       return empty("這張任務沒有對應的來源分析（可能是手動建立，或來源分析已被刪除）");
@@ -392,6 +453,7 @@ export class WarroomTasksService {
       summary: ticket.summary,
       extracted: rec,
       messages,
+      media,
       // 抽取結果有標 source_ids 卻對不到訊息 → 要說出來，不能讓人以為「本來就沒有原文」
       unavailableReason: sourceIds.size > 0 && messages.length === 0
         ? "這筆抽取有標記來源訊息，但在分析結果中找不到對應內容" : null,
