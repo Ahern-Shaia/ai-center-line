@@ -6,13 +6,14 @@
 // 於是 7～8 天之間的票**在逾時欄裡卻沒有 pill**，看起來像 pill 壞了。
 // 型別檢查與畫面截圖都看不出來，只有剛好卡在那一天的資料才會現形。
 import { test } from "node:test";
+import { TaskConfigService } from "../src/task-config/task-config.service.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { withTenant, txStore } from "../src/db/client.js";
 import { WarroomTasksService } from "../src/warroom/warroom-tasks.service.js";
 
-const svc = new WarroomTasksService();
+const svc = new WarroomTasksService(new TaskConfigService());
 
 async function seed() {
   return withTenant({ tenantId: null, role: "aiproot_admin", departmentId: null, userId: null },

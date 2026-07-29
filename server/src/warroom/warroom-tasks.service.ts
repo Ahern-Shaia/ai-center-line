@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { currentTx, withSystemTx } from "../db/client.js";
 import { displayState, type ConfirmStatus } from "../warroom-task-board/ticket-lane.js";
+import { TaskConfigService } from "../task-config/task-config.service.js";
 
 /**
  * WarroomTasksService · WTB-M3
@@ -71,6 +72,8 @@ export interface WarroomDaily {
 
 @Injectable()
 export class WarroomTasksService {
+  constructor(private readonly taskConfig: TaskConfigService) {}
+
   /**
    * List tickets · Kanban 用 · RLS 已 tenant + department 隔離
    * · 依 confirm_status 分組回傳
@@ -155,11 +158,13 @@ export class WarroomTasksService {
      *    於是 7～8 天之間的票**在欄裡卻沒有 pill**，看起來像 pill 壞了。
      *
      * ⚠️ 數字的意思是「**超過期限幾天**」不是「建立至今幾天」。
-     *    due_at 是 null 時（prod 100%），隱含期限＝建立後 7 天，
-     *    所以逾時＝天數 − 7。先前直接顯示 age，25 天的票寫「逾時 25 天」是誇大 ——
+     *    due_at 是 null 時（prod 100%），隱含期限＝建立後「寬限期」那麼多天，
+     *    所以逾時＝天數 − 寬限期。先前直接顯示 age，25 天的票寫「逾時 25 天」是誇大 ——
      *    實際只逾了 18 天。標籤講的事要跟實際相符（同「未完成 vs 未確認完成」的紀律）。
+     *
+     * ⚠️ 寬限期不再硬編：每家公司對 task 的性質要求不一樣（維修 7 天合理、詢價太長）。
      */
-    const GRACE_DAYS = 7;
+    const { graceDays: GRACE_DAYS } = await this.taskConfig.forCurrentTenant(currentTx());
     /**
      * 卡住＝已簽核、工作還開著、且超過寬限期。
      * ⚠️「卡住 N 天」的 N 是**持續多久**（duration），跟「逾時 N 天」的

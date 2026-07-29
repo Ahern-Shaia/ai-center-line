@@ -5,6 +5,7 @@
 // 2026-07-28 就在這條路徑上寫了 `= ANY(${jsArray})`——Drizzle 展成 tuple、
 // Postgres 42809，型別檢查與單元測試全綠，要真的跑一次分析才會炸。
 import { test } from "node:test";
+import { constraintOf } from "./pg-constraint.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
@@ -163,23 +164,6 @@ test("沒人動過的區可以隨重新分析改變（狀態從公告變成待�
 // 這條鏈在 prod 斷了很久（35 張任務 0 張有 source_message_ids），
 // 而 LINE 引用回覆要靠它才知道該關哪一張任務。斷了就整個功能落空，
 // 所以這裡用斷言把它釘住。
-
-/**
- * 從錯誤鏈裡挖出違反的約束名。
- *
- * ⚠️ Drizzle 會把 pg 的錯誤包一層，`err.message` 只剩「Failed query: ...」，
- * 約束名在 `err.cause.constraint`。對 message 下 regex 永遠不會中 ——
- * 而 `assert.rejects` 沒帶 matcher 的話會**為了錯的理由通過**（RLS 擋掉也算 reject）。
- */
-function constraintOf(e: unknown): string | undefined {
-  let cur: unknown = e;
-  for (let i = 0; i < 5 && cur; i++) {
-    const c = (cur as { constraint?: string }).constraint;
-    if (c) return c;
-    cur = (cur as { cause?: unknown }).cause;
-  }
-  return undefined;
-}
 
 const recWithSrc = (title: string, srcIds: number[]) => ({
   category: "maintenance", title, detail: title, status: "open",

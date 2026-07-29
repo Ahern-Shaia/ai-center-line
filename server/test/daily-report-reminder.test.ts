@@ -5,6 +5,7 @@
 // 技術工程部組長群每晚固定 5 個人在發，而且是自願的 ——
 // 我們要搭的是這個既有習慣，不是另外建一個新動作。
 import { test } from "node:test";
+import { TaskConfigService } from "../src/task-config/task-config.service.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
@@ -38,17 +39,24 @@ test("單行訊息一律不算回報", () => {
 });
 
 test("⭐ 提醒的升級階梯：不重複而是往上送", () => {
-  assert.equal(tierFor(1), "normal");
-  assert.equal(tierFor(3), "normal");
-  assert.equal(tierFor(4), "aged");
-  assert.equal(tierFor(7), "aged");
-  assert.equal(tierFor(8), "escalate", "8 天起改浮到主管端，不再對他重複");
-  assert.equal(tierFor(30), "escalate");
+  const D: [number, number] = [3, 7];        // DEFAULT_TASK_CONFIG.tierDays
+  assert.equal(tierFor(1, D), "normal");
+  assert.equal(tierFor(3, D), "normal");
+  assert.equal(tierFor(4, D), "aged");
+  assert.equal(tierFor(7, D), "aged");
+  assert.equal(tierFor(8, D), "escalate", "8 天起改浮到主管端，不再對他重複");
+  assert.equal(tierFor(30, D), "escalate");
+
+  // ⭐ 階梯是 per-tenant 的（維修 7 天合理、詢價太長）· tenant_task_config
+  const short: [number, number] = [1, 2];
+  assert.equal(tierFor(2, short), "aged", "同樣 2 天，短階梯的公司已經升級");
+  assert.equal(tierFor(3, short), "escalate");
+  assert.equal(tierFor(3, D), "normal", "同一個天數在不同公司會落在不同級 —— 這正是要的");
 });
 
 // ── 端到端 ────────────────────────────────────────────────────────
 
-const svc = new OpenTaskReminderService();
+const svc = new OpenTaskReminderService(new TaskConfigService());
 
 interface Seed {
   tenantId: string; groupId: string; lineUserId: string; name: string;

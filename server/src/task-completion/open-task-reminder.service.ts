@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { withTenant, withSystemTx } from "../db/client.js";
 import { isDailyReport, tierFor } from "./daily-report-pattern.js";
+import { TaskConfigService } from "../task-config/task-config.service.js";
 
 /**
  * 每日回報 → 回覆「尚未確認完成」清單（M3.5）
@@ -25,6 +26,8 @@ import { isDailyReport, tierFor } from "./daily-report-pattern.js";
 @Injectable()
 export class OpenTaskReminderService {
   private readonly logger = new Logger(OpenTaskReminderService.name);
+
+  constructor(private readonly taskConfig: TaskConfigService) {}
 
   /** @returns 要回的話 · null = 不回 */
   async replyForDailyReport(args: {
@@ -75,8 +78,10 @@ export class OpenTaskReminderService {
            LIMIT 20
         `);
 
-        // 8 天起的不再對他重複，改由主管端處理（F-25 升級階梯）
-        const mine = open.rows.filter((r) => tierFor(r.open_days) !== "escalate");
+        // 超過後段的不再對他重複，改由主管端處理（F-25 升級階梯）
+        // 階梯天數每家不一樣（維修 7 天合理、詢價太長）· tenant_task_config
+        const { tierDays } = await this.taskConfig.forTenant(tx, args.tenantId);
+        const mine = open.rows.filter((r) => tierFor(r.open_days, tierDays) !== "escalate");
         if (mine.length === 0) return null;
 
         await tx.execute(sql`
@@ -87,7 +92,7 @@ export class OpenTaskReminderService {
         `);
 
         this.logger.log(`[reminder] ${name} · ${mine.length} 件尚未確認完成 · group=${args.groupId}`);
-        return compose(mine);
+        return compose(mine, tierDays);
       },
     );
   }
@@ -98,10 +103,13 @@ export class OpenTaskReminderService {
  * 後者說的是工作狀態 —— 人做完但還沒回報時它是**假的**，
  * 而那正是讓人不再信任提醒的原因。
  */
-function compose(rows: Array<{ summary: string | null; open_days: number; last_note: string | null }>): string {
+function compose(
+  rows: Array<{ summary: string | null; open_days: number; last_note: string | null }>,
+  tierDays: [number, number],
+): string {
   const lines = rows.map((r) => {
     const title = (r.summary ?? "（無標題）").split("\n")[0].slice(0, 40);
-    const aged = tierFor(r.open_days) === "aged" ? `已 ${r.open_days} 天未確認` : `第 ${r.open_days} 天`;
+    const aged = tierFor(r.open_days, tierDays) === "aged" ? `已 ${r.open_days} 天未確認` : `第 ${r.open_days} 天`;
     const note = r.last_note ? ` · 最後回報：${r.last_note.split("\n")[0].slice(0, 20)}` : "";
     return `· ${title}（${aged}${note}）`;
   });

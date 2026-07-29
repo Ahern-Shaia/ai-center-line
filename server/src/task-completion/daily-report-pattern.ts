@@ -51,8 +51,12 @@ export function isDailyReport(text: string | null | undefined): boolean {
  */
 export type ReminderTier = "normal" | "aged" | "escalate";
 
-export function tierFor(openDays: number): ReminderTier {
-  if (openDays <= 3) return "normal";
-  if (openDays <= 7) return "aged";
-  return "escalate";        // 8 天起改浮到主管端，不再對他重複
+/**
+ * @param tiers [normal 上限, aged 上限] · 每家公司不一樣（維修 7 天合理、詢價太長），
+ *              由 tenant_task_config 決定。預設 [3, 7] 見 DEFAULT_TASK_CONFIG。
+ */
+export function tierFor(openDays: number, tiers: [number, number]): ReminderTier {
+  if (openDays <= tiers[0]) return "normal";
+  if (openDays <= tiers[1]) return "aged";
+  return "escalate";        // 超過後段改浮到主管端，不再對他重複
 }

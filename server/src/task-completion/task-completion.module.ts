@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { CompletionSignalService } from "./completion-signal.service.js";
 import { OpenTaskReminderService } from "./open-task-reminder.service.js";
+import { TaskConfigModule } from "../task-config/task-config.module.js";
 import { SignalResolverService } from "./signal-resolver.service.js";
 import { WorkStatusService } from "./work-status.service.js";
 import { CompletionSignalController } from "./completion-signal.controller.js";
@@ -14,6 +15,7 @@ import { CompletionSignalController } from "./completion-signal.controller.js";
  *   OpenTaskReminderService  · 每日回報附清單（M3.5）· 由 line-ingest 呼叫
  */
 @Module({
+  imports: [TaskConfigModule],
   controllers: [CompletionSignalController],
   providers: [CompletionSignalService, OpenTaskReminderService, SignalResolverService, WorkStatusService],
   exports: [CompletionSignalService, OpenTaskReminderService, SignalResolverService, WorkStatusService],

@@ -4,6 +4,7 @@
 // 修正門檻時**不可以讓真的待辦無聲消失**（F-1 P0），
 // 也**不可以讓簽核率掉到 0%**（F-2 P0）。
 import { test } from "node:test";
+import { TaskConfigService } from "../src/task-config/task-config.service.js";
 import assert from "node:assert/strict";
 import { laneFor, inSignoffScope, isActionable, RECOMPUTABLE_LANES } from "../src/warroom-task-board/ticket-lane.js";
 
@@ -95,7 +96,7 @@ import { sql } from "drizzle-orm";
 import { withTenant, txStore, type Db } from "../src/db/client.js";
 import { WarroomTasksService } from "../src/warroom/warroom-tasks.service.js";
 
-const tasksSvc = new WarroomTasksService();
+const tasksSvc = new WarroomTasksService(new TaskConfigService());
 
 async function seedTicket(lane: string): Promise<{ tenantId: string; ticketId: string } | null> {
   return withTenant({ tenantId: null, role: "aiproot_admin", departmentId: null, userId: null }, async (tx) => {

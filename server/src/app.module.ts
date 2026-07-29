@@ -33,6 +33,7 @@ import { EmployeeBindingModule } from "./employee-binding/employee-binding.modul
 import { WarroomTaskBoardModule } from "./warroom-task-board/warroom-task-board.module.js";
 import { PersonalDailyReportModule } from "./personal-daily-report/personal-daily-report.module.js";
 import { SchedulerConfigModule } from "./scheduler-config/scheduler-config.module.js";
+import { TaskConfigModule } from "./task-config/task-config.module.js";
 import { AttendanceModule } from "./attendance/attendance.module.js";
 import { NotifyConfigModule } from "./notify-config/notify-config.module.js";
 import { NotificationHubModule } from "./notification-hub/notification-hub.module.js";
@@ -62,6 +63,7 @@ import { AuditModule } from "./audit/audit.module.js";
     WarroomTaskBoardModule,
     PersonalDailyReportModule,
     SchedulerConfigModule,
+    TaskConfigModule,
     AttendanceModule,
     NotificationHubModule,
     NotifyConfigModule,
