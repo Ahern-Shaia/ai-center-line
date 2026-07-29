@@ -319,38 +319,71 @@
 </div>
 
 <h3>步驟 4 · 通知對象</h3>
+
 <div class="step">
   <div class="step-h"><span class="i">6</span>先選「管道」——要發到群組還是私訊</div>
-  <p>卡片最上面有兩顆按鈕，預設是「LINE 群組」。點哪一顆，下面出現的欄位就不一樣。</p>
+  <p>卡片最上面是「管道」，兩個開關，<b>預設是「LINE 群組」</b>（會亮起紫色）。
+     點哪一個，下面出現的欄位就不一樣。</p>
   <div class="screen">
-    <div class="screen-cap">畫面上會看到（「管道」那一列）</div>
-    <span class="btn">● LINE 群組</span>　<span class="btn g">○ LINE 私訊</span>
+    <div class="screen-cap">畫面上會看到</div>
+    <div style="font-size:11.5px;color:var(--faint);margin-bottom:6px">管道</div>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1;border:1.5px solid var(--brand);background:var(--brand-bg);border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:9px">
+        <span style="width:26px;height:15px;background:var(--brand);border-radius:99px;position:relative;flex:none">
+          <span style="position:absolute;right:2px;top:2px;width:11px;height:11px;background:#fff;border-radius:50%"></span></span>
+        <b style="color:var(--brand)">LINE 群組</b>
+      </div>
+      <div style="flex:1;border:1px solid var(--line-strong);background:#fff;border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:9px">
+        <span style="width:26px;height:15px;background:#e5e7eb;border-radius:99px;position:relative;flex:none">
+          <span style="position:absolute;left:2px;top:2px;width:11px;height:11px;background:#fff;border-radius:50%"></span></span>
+        <span>LINE 私訊</span>
+      </div>
+    </div>
   </div>
-  <p><b>選「LINE 私訊」的話</b>，下面會變成挑一位同仁 —— 而且<b>那個人必須已經綁定 LINE</b>，
-     沒綁的人不會出現在清單裡。</p>
+  <p><b>選「LINE 私訊」的話</b>，下面會變成挑一位同仁——而且<b>那個人必須已經綁定 LINE</b>，
+     沒綁的不會出現在清單裡。</p>
 </div>
 
 <div class="step">
-  <div class="step-h"><span class="i">7</span>選「LINE 目標群」</div>
-  <p>下拉裡會列出所有已登錄的群，格式是「<b>公司名 · 群組名</b>」。
-     一個人管好幾家公司時，靠前面那段分辨是哪一家的群。</p>
-  <div class="screen">
-    <div class="screen-cap">畫面上會看到</div>
-    <div class="fld"><span>台灣福祉 · 技術工程群</span><span class="cv">▾</span></div>
-  </div>
-  <div class="note warn">
-    <span class="t">清單裡找不到你要的群？</span>
-    下拉只會列出<b>機器人已經收過訊息的群</b>——群組是收到訊息才會被登錄的。
-    兩個做法：<br>
-    ① 在那個群裡隨便發一句話，回來重新整理，它就會出現；<br>
-    ② 或點下拉底下的「<b>改成手動輸入群組 ID</b>」，直接貼 ID。
-  </div>
+  <div class="step-h"><span class="i">7</span>填「LINE 目標群」</div>
+  <p>這一格<b>會依你的帳號權限長成兩種樣子其中一種</b>。看到哪一種就照哪一種做，
+     兩種都能完成設定。</p>
 
-  <div class="note">
-    <span class="t">群組 ID 去哪裡拿？</span>
-    <b>LINE App 裡看不到群組 ID</b>，唯一的取得處是我們自己的
-    <span class="path">通訊管道</span> 頁——那一列的灰色小字點一下就會複製完整的 ID。
+  <div class="screen">
+    <div class="screen-cap">情況 A · 你看到一個輸入框（多數帳號是這種）</div>
+    <div style="font-size:11.5px;color:var(--faint);margin-bottom:4px">LINE 目標群</div>
+    <div class="fld"><span class="ph">貼上 LINE 群組 ID（Cxxxx...）</span></div>
+    <div style="font-size:11.5px;color:var(--faint);margin-top:6px;line-height:1.6">
+      看不到群組清單有兩個可能：這個帳號沒有檢視 LINE 群組的權限，
+      或該 bot 還沒在任何群裡收過訊息（群組是收到訊息才會登錄）。
+    </div>
   </div>
+  <p><b>怎麼做：</b>去下面那段拿到群組 ID，貼進去即可。</p>
+
+  <div class="screen" style="margin-top:14px">
+    <div class="screen-cap">情況 B · 你看到一個下拉選單</div>
+    <div style="font-size:11.5px;color:var(--faint);margin-bottom:4px">LINE 目標群</div>
+    <div class="fld"><span>台灣福祉 · 技術工程群</span><span class="cv">▾</span></div>
+    <div style="font-size:11.5px;color:var(--faint);margin-top:6px">
+      清單裡找不到？<span style="color:var(--brand)">改成手動輸入群組 ID</span>
+    </div>
+  </div>
+  <p><b>怎麼做：</b>直接選。格式是「<b>公司名 · 群組名</b>」，一個人管好幾家時靠前面那段分辨。
+     要的群不在清單裡就點下面那行切成手動輸入。</p>
+</div>
+
+<div class="note ok">
+  <span class="t">群組 ID 去哪裡拿？</span>
+  <b>LINE App 裡看不到群組 ID</b>——它不是給使用者看的東西。
+  唯一的取得處是我們自己的 <span class="path">通訊管道</span> 頁：
+  找到那個群，<b>點一下群名下面那行灰色小字</b>，就會複製完整的 ID。
+</div>
+
+<div class="note warn">
+  <span class="t">為什麼有些帳號看得到清單、有些看不到？</span>
+  清單只列出<b>機器人已經收過訊息的群</b>（群組要收到訊息才會被登錄），
+  而且需要「檢視 LINE 群組」的權限。兩者缺一就會變成情況 A。
+  <b>這不影響設定結果</b>——手動貼 ID 跟從清單選，存進去是一樣的東西。
 </div>
 
 <div class="step">
