@@ -41,7 +41,7 @@ export class SignalResolverService {
          ORDER BY received_at
       `);
 
-      let closed = 0, created = 0, noMatch = 0, asked = 0;
+      let closed = 0, progressLogged = 0, created = 0, noMatch = 0, asked = 0;
 
       for (const sig of pending.rows) {
         // 問過但還沒回答的先留著 —— 人可能等一下才按
@@ -65,8 +65,11 @@ export class SignalResolverService {
                  SET work_last_report_at = now(), work_last_report_note = ${sig.note}, updated_at = now()
                WHERE ticket_id = ${ticket.ticket_id}::uuid AND work_status = 'open'
             `);
-            await this.markResolved(tx, sig.signal_id, ticket.ticket_id, "closed_ticket");
-            closed++;
+            // ⚠️ 這裡**不是** closed —— 任務還開著，只是多了一筆進度。
+            //    原本標成 closed_ticket，prod 上 2 筆「已關閉」全都是這種，
+            //    零筆真的關掉任務。標籤講的事要跟實際相符（同 F-26）。
+            await this.markResolved(tx, sig.signal_id, ticket.ticket_id, "progress_logged");
+            progressLogged++;
             continue;
           }
           // 已經被結掉就不要再蓋一次（人可能已經在網頁上補登過）
@@ -109,10 +112,11 @@ export class SignalResolverService {
       if (pending.rows.length > 0) {
         this.logger.log(
           `resolvePending · tenant=${tenantId}${groupId ? ` group=${groupId}` : ""} · `
-          + `closed=${closed} created=${created} noMatch=${noMatch} asked=${asked}`,
+          + `closed=${closed} progress=${progressLogged} created=${created} `
+          + `noMatch=${noMatch} asked=${asked}`,
         );
       }
-      return { closed, created, noMatch, asked };
+      return { closed, progressLogged, created, noMatch, asked };
     });
   }
 
@@ -160,7 +164,7 @@ export class SignalResolverService {
     tx: Parameters<Parameters<typeof withTenant>[1]>[0],
     signalId: string,
     ticketId: string | null,
-    resolution: "closed_ticket" | "created_ticket" | "no_match" | "superseded",
+    resolution: "closed_ticket" | "progress_logged" | "created_ticket" | "no_match" | "superseded",
   ): Promise<void> {
     await tx.execute(sql`
       UPDATE pending_completion_signal

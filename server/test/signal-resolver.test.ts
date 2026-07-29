@@ -155,6 +155,41 @@ test("進度回報對得上任務 → 記一筆，任務留著", async () => {
     const t = await ticketOf(s);
     assert.equal(t.work_status, "open", "有進展不等於做完");
     assert.equal(t.work_last_report_note, "零件已叫，週四到貨", "主管靠這個分辨久懸 vs 有進展");
+    assert.equal(
+      await resolutionOf(s), "progress_logged",
+      "⚠️ 原本標成 closed_ticket —— 任務明明還開著。prod 上 2 筆「已關閉」全是這種，"
+      + "零筆真的關掉任務，而那個標籤當場誤導了排查（同 F-26：標籤要跟實際相符）",
+    );
+  } finally { await s.cleanup(); }
+});
+
+test("⭐⭐ 掛到的任務被刪掉之後，不可以再算成「已接住」", async () => {
+  const s = await seed();
+  if (!s) throw new Error("測試資料不足（別讓它靜默跳過）");
+  try {
+    await addTicket(s);
+    await addSignal(s, "completion", "已修好");
+    await svc.resolvePending(s.tenantId, s.groupId);
+    assert.equal(await resolutionOf(s), "closed_ticket", "先確認真的接住了");
+
+    // 分析結果被刪除／重跑時任務會消失（prod 有人手動刪 · task #37）
+    await asTenant(s.tenantId, (tx) => tx.execute(sql`
+      DELETE FROM tickets WHERE source_message_ids @> ARRAY[${s.msgId}]::text[]`));
+
+    const row = await asTenant(s.tenantId, (tx) => tx.execute<{
+      resolution: string | null; resolved_ticket_id: string | null;
+    }>(sql`
+      SELECT resolution, resolved_ticket_id::text FROM pending_completion_signal
+       WHERE quoted_message_id = ${s.msgId} LIMIT 1`));
+    const r = row.rows[0];
+
+    assert.equal(r.resolved_ticket_id, null, "ON DELETE SET NULL 會把連結清掉");
+    assert.equal(r.resolution, "closed_ticket", "但 resolution 留著 —— 這正是 Bug B 的形狀");
+    assert.ok(
+      r.resolution !== null && r.resolved_ticket_id === null,
+      "後台要靠這個組合推導出「掛到的任務已被刪除」，不可以繼續算成已接住 —— "
+      + "否則畫面說接住了，點進去沒有東西",
+    );
   } finally { await s.cleanup(); }
 });
 
