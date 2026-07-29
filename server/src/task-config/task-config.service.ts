@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { currentTx, type Db } from "../db/client.js";
+import { TEMPLATE_REGISTRY, type ExtractionTemplate } from "../conversation-analysis/pipeline/templates.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 
 export interface TaskConfig {
@@ -55,13 +56,26 @@ export class TaskConfigService {
   }
 
   /** ⚠️ tenantId 必須是 controller 用 resolveTenantId 解過的，不可直接吃 client 傳的值 */
-  async read(tenantId: string): Promise<TaskConfig & { isDefault: boolean }> {
-    const cfg = await this.forTenant(currentTx(), tenantId);
+  async read(tenantId: string): Promise<TaskConfig & {
+    isDefault: boolean; template: { key: string; label: string; description: string } | null;
+  }> {
+    const tx = currentTx();
+    const cfg = await this.forTenant(tx, tenantId);
+    // 「任務長什麼樣」由抽取模板決定 —— 客戶看得到自己是哪一種，但改由 aiproot 操作
+    // （OQ-NAV-10：走 task-config:template，**預設不給**，按客戶成熟度再開）
+    const t = await tx.execute<{ extraction_template: string }>(sql`
+      SELECT extraction_template FROM tenants WHERE tenant_id = ${tenantId}::uuid LIMIT 1`);
+    const key = t.rows[0]?.extraction_template ?? null;
+    const meta = key && key in TEMPLATE_REGISTRY ? TEMPLATE_REGISTRY[key as ExtractionTemplate] : null;
     // isDefault 讓 UI 能說「目前用平台預設」而不是假裝這是客戶設過的值
     const same = cfg.graceDays === DEFAULT_TASK_CONFIG.graceDays
       && cfg.tierDays[0] === DEFAULT_TASK_CONFIG.tierDays[0]
       && cfg.tierDays[1] === DEFAULT_TASK_CONFIG.tierDays[1];
-    return { ...cfg, isDefault: same };
+    return {
+      ...cfg,
+      isDefault: same,
+      template: meta ? { key: key!, label: meta.label, description: meta.description } : null,
+    };
   }
 
   /**
@@ -86,11 +100,18 @@ export class TaskConfigService {
         updated_at = now(),
         updated_by = EXCLUDED.updated_by`);
 
+    // ⚠️ 條件必須跟看板的逾時欄**完全一致**（warroom-tasks.service.ts：
+    //    confirm_status = 待簽核 且 已過期）。第一版寫成 `status <> 'closed'`，
+    //    而 status 多半是 NULL —— `NULL <> 'closed'` 的結果是 NULL，整批被濾掉，
+    //    於是 toast 說「沒有任務落在逾時範圍」而看板同時顯示「逾時 15 天」。
+    //    數字對不上比沒有數字更糟：它會讓人不再相信畫面上的其他數字。
     const r = await tx.execute<{ n: number }>(sql`
       SELECT count(*)::int AS n FROM tickets
-      WHERE due_at IS NULL
-        AND status <> 'closed'
-        AND created_at < now() - make_interval(days => ${graceDays})`);
+      WHERE confirm_status = '待簽核'
+        AND (
+          (due_at IS NOT NULL AND due_at < now())
+          OR (due_at IS NULL AND created_at < now() - make_interval(days => ${graceDays}))
+        )`);
 
     return { graceDays, tierDays, affectedTickets: r.rows[0]?.n ?? 0 };
   }

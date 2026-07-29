@@ -6,9 +6,10 @@
 // 「設定沒有生效」與「設定剛好等於預設」在畫面上完全無法分辨。
 //
 // 所以這裡不驗「函式有沒有被呼叫」，驗的是**同一張票在不同設定下算出不同答案**。
-import { test, after } from "node:test";
+import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import pg from "pg";
 import { sql } from "drizzle-orm";
 import { withTenant, txStore, currentTx, closeDb } from "../src/db/client.js";
 import { WarroomTasksService } from "../src/warroom/warroom-tasks.service.js";
@@ -22,16 +23,29 @@ const asTenant = <T>(tenantId: string, fn: () => Promise<T>) =>
   withTenant({ tenantId, role: "tenant_admin", departmentId: null, userId: null },
     (tx) => txStore.run(tx, fn));
 
+/**
+ * ⚠️ 專用租戶，**不可**共用現成的。
+ * 這支測試會改該租戶的寬限期，而 overdue-threshold.test.ts 同時在同一家算逾時天數 ——
+ * node --test 各檔案是平行的 process，於是那邊會拿到這邊改到一半的設定，
+ * 出現「單獨跑綠、全套跑紅」的鬼打牆。改設定的測試一定要有自己的租戶。
+ */
+const T = "c0c0c0c0-0000-4000-8000-00000000c0f6";
+const DEPT = "c0c0c0c0-0000-4000-8000-00000000de07";
+const admin = () => new pg.Client({ connectionString: process.env.MIGRATION_DATABASE_URL });
+
+before(async () => {
+  const c = admin();
+  await c.connect();
+  await c.query(`DELETE FROM tenants WHERE tenant_id = $1`, [T]);
+  await c.query(`INSERT INTO tenants (tenant_id, tenant_name) VALUES ($1, 'TTC-TEST')`, [T]);
+  await c.query(
+    `INSERT INTO departments (department_id, tenant_id, department_name, line_group_id, extraction_schema, ragic_table)
+     VALUES ($1, $2, 'ttc-dept', 'ttc-grp', 'x', 'x')`, [DEPT, T]);
+  await c.end();
+});
+
 async function seed() {
-  return withTenant({ tenantId: null, role: "aiproot_admin", departmentId: null, userId: null },
-    async (tx) => {
-      const g = await tx.execute<{ tenant_id: string; department_id: string }>(sql`
-        SELECT b.tenant_id::text, g.department_id::text
-          FROM line_group g JOIN line_bot b ON b.bot_id = g.bot_id
-         WHERE g.department_id IS NOT NULL LIMIT 1`);
-      if (!g.rows[0]) throw new Error("測試資料不足：找不到已分派部門的群（別讓它靜默跳過）");
-      return { tenantId: g.rows[0].tenant_id, deptId: g.rows[0].department_id };
-    });
+  return { tenantId: T, deptId: DEPT };
 }
 
 const setGrace = (tenantId: string, days: number, tiers: [number, number] = [3, 7]) =>
@@ -99,6 +113,32 @@ test("⭐ 寬限期拉長之後，原本逾時的票會退出逾時欄（即時�
   }
 });
 
+test("⭐ 「受影響筆數」必須跟看板的逾時欄算出同一組票", async () => {
+  // 2026-07-29 實測到的不一致：儲存後 toast 說「沒有任務落在逾時範圍」，
+  // 而同一刻看板顯示「逾時 15 天」。原因是計數寫成 `status <> 'closed'`，
+  // 而 status 多半是 NULL —— `NULL <> 'closed'` 是 NULL，整批被濾掉。
+  // 數字對不上比沒有數字更糟：它會讓人不再相信畫面上的其他數字。
+  const s = await seed();
+  const tag = `ttc3-${randomUUID().slice(0, 8)}`;
+  try {
+    await addAged(s, `${tag}-a`, 12);
+    await addAged(s, `${tag}-b`, 12);
+    await addAged(s, `${tag}-c`, 1);                 // 沒過寬限期
+    const user = { user_id: null, role: "tenant_admin", tenant_id: s.tenantId } as never;
+    const r = await asTenant(s.tenantId,
+      () => cfgSvc.update(user, s.tenantId, { graceDays: 5, tierDays: [3, 7] }));
+    const board = await asTenant(s.tenantId, () => svc.listTasks({}));
+    assert.equal(
+      r.affectedTickets, board.kanban.overdue.length,
+      "toast 講的數字要跟看板算出來的是同一組票",
+    );
+    assert.equal(r.affectedTickets, 2, "12 天的兩張過了 5 天寬限期，1 天的那張沒有");
+  } finally {
+    await clearConfig(s.tenantId);
+    await cleanup(s.tenantId, tag);
+  }
+});
+
 test("沒有設定列 = 用預設，不是錯誤（不強迫每家 onboarding 先建一列）", async () => {
   const s = await seed();
   await clearConfig(s.tenantId);
@@ -133,4 +173,10 @@ test("範圍與形狀在 DB 就擋掉（N-5：0 全部逾時 / 999 永不逾時�
     "tenant_task_config_tier_shape", "階梯寫反了");
 });
 
-after(async () => { await closeDb(); });
+after(async () => {
+  const c = admin();
+  await c.connect();
+  await c.query(`DELETE FROM tenants WHERE tenant_id = $1`, [T]);   // cascade 清 departments / tickets / config
+  await c.end();
+  await closeDb();
+});

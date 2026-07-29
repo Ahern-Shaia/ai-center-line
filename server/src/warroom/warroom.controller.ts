@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch, Query } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
-import { Roles } from "../auth/roles.decorator.js";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { WarroomService } from "./warroom.service.js";
 import { WarroomTasksService } from "./warroom-tasks.service.js";
 import { WorkStatusService } from "../task-completion/work-status.service.js";
@@ -18,28 +18,28 @@ export class WarroomController {
 
   // 三環指標（÷N）＋各群組狀態。RLS 自動限本租戶（group_owner 再限本部門）。
   @Get()
-  @Roles("tenant_admin", "group_owner", "consultant")
+  @RequirePermission("warroom:view")
   async warroom() {
     return this.svc.warroom();
   }
 
   // WTB-M3 · 任務看板 Kanban
   @Get("tasks")
-  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  @RequirePermission("warroom-tasks:view")
   async tasks(@Query("signed") includeSigned?: string) {
     return this.tasksService.listTasks({ includeSignedOff: includeSigned !== "false" });
   }
 
   // WTB-M3 · 日誌 view
   @Get("daily-reports")
-  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  @RequirePermission("warroom-daily:view")
   async dailyReports(@Query("from") fromDate?: string, @Query("to") toDate?: string) {
     return this.tasksService.listDailyReports({ fromDate, toDate });
   }
 
   /** 可指派的成員 · 手動派發下拉用 */
   @Get("assignable-members")
-  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  @RequirePermission("warroom-tasks:view")
   async assignableMembers() {
     return { members: await this.tasksService.assignableMembers() };
   }
@@ -49,7 +49,7 @@ export class WarroomController {
    * 導入期的主要流程 —— 員工還沒綁定 LINE 時，AI 對不到人，由主管指定。
    */
   @Patch("tickets/:ticketId/assignee")
-  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  @RequirePermission("warroom-tasks:view")
   async assign(
     @CurrentUser() user: JwtUser,
     @Param("ticketId") ticketId: string,
@@ -66,7 +66,7 @@ export class WarroomController {
    * 權限同簽核 —— 決定一件事要不要追，跟確認它抽得對不對是同一層的判斷。
    */
   @Patch("tickets/:ticketId/decision")
-  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  @RequirePermission("warroom-tasks:view")
   async decide(
     @CurrentUser() user: JwtUser,
     @Param("ticketId") ticketId: string,
@@ -84,7 +84,7 @@ export class WarroomController {
    * 且看板要顯示「由 ○○ 代為結束」（doc F-5）。
    */
   @Patch("tickets/:ticketId/work-close")
-  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  @RequirePermission("warroom-tasks:view")
   async workClose(
     @CurrentUser() user: JwtUser,
     @Param("ticketId") ticketId: string,
@@ -97,7 +97,7 @@ export class WarroomController {
 
   /** 還原成「尚未確認完成」· 標錯了要有補救途徑，否則沒人敢按（F-4） */
   @Patch("tickets/:ticketId/work-reopen")
-  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  @RequirePermission("warroom-tasks:view")
   async workReopen(@CurrentUser() user: JwtUser, @Param("ticketId") ticketId: string) {
     if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
     return this.workStatus.reopen(ticketId, user.user_id);
@@ -105,7 +105,7 @@ export class WarroomController {
 
   /** 回報進度 · 低承諾動作 · 任務留在進行中（§2.1） */
   @Patch("tickets/:ticketId/work-report")
-  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  @RequirePermission("warroom-tasks:view")
   async workReport(
     @CurrentUser() user: JwtUser,
     @Param("ticketId") ticketId: string,
@@ -118,7 +118,7 @@ export class WarroomController {
   // 某張任務卡的來源原文 · 簽核前拿 AI 抽取結果與原始訊息對照
   // 權限：能看到 ticket 就能看到來源（RLS 已切範圍）· 不另設 permission
   @Get("tickets/:ticketId/source")
-  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  @RequirePermission("warroom-tasks:view")
   async ticketSource(@Param("ticketId") ticketId: string) {
     if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
     return this.tasksService.ticketSource(ticketId);
@@ -127,7 +127,7 @@ export class WarroomController {
   // 群組原始訊息 · tenant_admin 想看「bot 收到什麼」用
   // 對照 PDR empty state pattern · 展開讓使用者確認訊息確實進 DB (只是 AI 抽不出)
   @Get("group-messages")
-  @Roles("tenant_admin", "group_owner", "consultant", "aiproot_admin")
+  @RequirePermission("warroom-daily:view")
   async groupMessages(
     @Query("groupId") groupId?: string,
     @Query("date") date?: string,
