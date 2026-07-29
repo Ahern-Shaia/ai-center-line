@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import DemoDataBanner from "../shared/DemoDataBanner";
 import { KM_CARDS, type KnowledgeCard } from "../mockdata/knowledgeCards";
 
 function fmtDate(iso: string): string {
@@ -24,6 +25,7 @@ export default function KnowledgeBase() {
 
   return (
     <>
+      <DemoDataBanner doc="docs/modules/rag-conversations.md（知識卡抽取尚未實作）" />
       <div className="pane-hdr">
         <div>
           <h1>知識庫</h1>

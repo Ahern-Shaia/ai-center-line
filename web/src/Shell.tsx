@@ -76,6 +76,13 @@ const NAV: Array<{
       { key: "notify-config", label: "通知設定", ic: iconChat, done: true, perm: "notify-config:view" },
       { key: "master-data", label: "資料來源", ic: iconBook, done: true, perm: "notify-config:view" },
       { key: "roles-mgmt", label: "權限管理", ic: iconShield, done: true, perm: "roles:view" },
+      // ⚠️ 這兩頁跑的是**寫死的示範資料**（ragQA.ts 是 177 行預錄問答對）。
+      //    2026-07-27 因為「不可在客戶畫面上放做不到的東西」下架，
+      //    2026-07-29 掛回來但只給平台側 —— 對內討論規格、對客戶簡報方向要用。
+      //    對應的權限碼已於 migration 0043 從客戶端三個角色收回。
+      //    接真資料的設計見 docs/modules/rag-conversations.md（M0 待裁定）。
+      { key: "rag", label: "智慧檢索", ic: iconChat, done: true, perm: "rag:view" },
+      { key: "km", label: "知識庫", ic: iconBook, done: true, perm: "km:view" },
     ],
   },
 ];

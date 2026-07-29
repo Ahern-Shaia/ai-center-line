@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import DemoDataBanner from "../shared/DemoDataBanner";
 import { RAG_QA, type Citation, type RagQA } from "../mockdata/ragQA";
 import { useToast } from "../Toast";
 
@@ -104,6 +105,7 @@ export default function Rag() {
 
   return (
     <>
+      <DemoDataBanner doc="docs/modules/rag-conversations.md（M0 待裁定）" />
       <div className="pane-hdr">
         <div>
           <h1>智慧檢索</h1>
