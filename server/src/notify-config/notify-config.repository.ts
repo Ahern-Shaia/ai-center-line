@@ -7,17 +7,32 @@ import type { Db } from "../db/client.js";
 // 本 repo 只留設定 UI 需要的周邊查詢。
 @Injectable()
 export class NotifyConfigRepository {
-  /** 該 Ragic 帳號對應租戶的 LINE 群（供設定 UI 下拉）· 沿用 line-ingest 的 line_group */
-  async listLineGroupsForAccount(tx: Db, accountId: string): Promise<Array<{ groupId: string; displayName: string | null }>> {
-    const res = await tx.execute<{ group_id: string; display_name: string | null }>(sql`
-      SELECT g.group_id, g.display_name
-      FROM ragic_account a
-      JOIN line_bot b   ON b.tenant_id = a.tenant_id AND b.status = 'active'
-      JOIN line_group g ON g.bot_id = b.bot_id
-      WHERE a.account_id = ${accountId}::uuid
-      ORDER BY g.display_name NULLS LAST
+  /**
+   * 目標群下拉用 · 所有看得到的 LINE 群（帶租戶名，因為 aiproot 一個人管多家）。
+   *
+   * ⚠️ 刻意**不經過 `ragic_account`**。原本只有 `listLineGroupsForAccount(accountId)`，
+   * 它從 ragic 帳號 join 到租戶再 join 到 bot —— 但 prod 上三個 ragic 帳號的
+   * `tenant_id` **全是 NULL**，那條 join 一列都回不來，所以下拉永遠是空的、
+   * 前端永遠掉回「手貼 group id」。而系統事件那條路根本沒有 ragic 帳號，本來就用不到那支。
+   *
+   * ⚠️ 這裡不自己過濾租戶 —— 交給 `line_group` 的 RLS：
+   * aiproot / consultant 看得到全部，其他角色只看得到自己租戶的。
+   */
+  async listAllLineGroups(tx: Db): Promise<Array<{
+    groupId: string; displayName: string | null; tenantName: string | null;
+  }>> {
+    const res = await tx.execute<{
+      group_id: string; display_name: string | null; tenant_name: string | null;
+    }>(sql`
+      SELECT g.group_id, g.display_name, t.tenant_name
+        FROM line_group g
+        JOIN line_bot b     ON b.bot_id = g.bot_id AND b.status = 'active'
+        LEFT JOIN tenants t ON t.tenant_id = b.tenant_id
+       ORDER BY t.tenant_name NULLS LAST, g.display_name NULLS LAST, g.group_id
     `);
-    return res.rows.map((r) => ({ groupId: r.group_id, displayName: r.display_name }));
+    return res.rows.map((r) => ({
+      groupId: r.group_id, displayName: r.display_name, tenantName: r.tenant_name,
+    }));
   }
 
   /** 列表顯示用 · groupId → 群名 */

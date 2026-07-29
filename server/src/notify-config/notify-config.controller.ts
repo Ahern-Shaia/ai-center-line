@@ -60,10 +60,15 @@ export class NotifyConfigController {
   }
 
   // ===== 管道對象 =====
-  @Get("accounts/:id/line-groups")
+  /**
+   * 目標群下拉的資料來源。
+   * ⚠️ 不吃任何 client 傳的租戶參數 —— 範圍完全交給 line_group 的 RLS 決定，
+   *    所以這裡沒有 IDOR 的面（同 pitfall_permission_code_is_not_tenant_boundary）。
+   */
+  @Get("line-groups")
   @RequirePermission("notify-config:view")
-  lineGroups(@Param("id") id: string) {
-    return this.configs.listLineGroupsForAccount(id);
+  allLineGroups() {
+    return this.configs.listAllLineGroups();
   }
 
   /** 可私訊的成員（已綁 LINE）· tenantId 選填，未帶用自己的 */

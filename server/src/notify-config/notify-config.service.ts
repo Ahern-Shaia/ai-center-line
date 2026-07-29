@@ -58,8 +58,9 @@ export class NotifyConfigService {
     return EVENT_CATALOG;
   }
 
-  listLineGroupsForAccount(accountId: string) {
-    return this.repo.listLineGroupsForAccount(currentTx(), accountId);
+  /** 目標群下拉 · 不經 ragic 帳號（見 repository 的說明）*/
+  listAllLineGroups() {
+    return this.repo.listAllLineGroups(currentTx());
   }
 
   listNotifiableUsers(tenantId: string) {
