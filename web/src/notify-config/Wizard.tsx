@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ApiError, ncCreateAccount, ncCreateRule, ncEventCatalog, ncFetchFields, ncGetRule, ncLineGroups,
+  ApiError, ncCreateAccount, ncCreateRule, ncEventCatalog, ncFetchFields, ncGetRule, ncAllLineGroups,
   ncListAccounts, ncNotifiableUsers, ncUpdateRule, notifyWebhookUrl,
-  type EventDef, type LineGroupOption, type NotifiableUser, type NotifyChannelType,
+  type EventDef, type NcLineGroup, type NotifiableUser, type NotifyChannelType,
   type NotifySourceType, type RagicAccountRow,
 } from "../api";
 import { useToast } from "../Toast";
@@ -54,7 +54,7 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
   const [selected, setSelected] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [channelType, setChannelType] = useState<NotifyChannelType>("line_group");
-  const [lineGroups, setLineGroups] = useState<LineGroupOption[]>([]);
+  const [lineGroups, setLineGroups] = useState<NcLineGroup[]>([]);
   const [users, setUsers] = useState<NotifiableUser[]>([]);
   const [channelTarget, setChannelTarget] = useState("");
   const [saving, setSaving] = useState(false);
@@ -111,10 +111,10 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
   useEffect(() => { void loadAccounts(); }, [loadAccounts]);
   useEffect(() => { ncEventCatalog().then(setCatalog).catch(() => setCatalog([])); }, []);
   useEffect(() => { ncNotifiableUsers().then(setUsers).catch(() => setUsers([])); }, []);
-  useEffect(() => {
-    if (!accountId) { setLineGroups([]); return; }
-    ncLineGroups(accountId).then(setLineGroups).catch(() => setLineGroups([]));
-  }, [accountId]);
+  // ⚠️ 刻意不綁 accountId。舊版是 ncLineGroups(accountId)，但那支從 ragic 帳號
+  //    join 到租戶，而 prod 上帳號的 tenant_id 全是 NULL → 永遠回空陣列 →
+  //    下拉永遠不出現、使用者永遠得手貼 group id。而且系統事件那條路沒有帳號。
+  useEffect(() => { ncAllLineGroups().then(setLineGroups).catch(() => setLineGroups([])); }, []);
 
   // 切來源 → 清空欄位選擇
   useEffect(() => { setFields([]); setSelected([]); }, [sourceType]);
@@ -166,6 +166,16 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
 
   function toggleField(path: string) {
     setSelected((s) => (s.includes(path) ? s.filter((x) => x !== path) : [...s, path]));
+  }
+
+  /**
+   * 全選 / 全部取消。
+   *
+   * ⚠️ 全選要照**欄位在表單裡的原始順序**填，不是把已選的接在後面 ——
+   * 勾選順序決定訊息裡的行序，全選後如果順序是亂的，使用者得一個一個取消再重點。
+   */
+  function toggleAllFields() {
+    setSelected((s) => (s.length === fields.length ? [] : fields.map((f) => f.path)));
   }
 
   async function save() {
@@ -358,7 +368,14 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
       {/* Step 3 · 欄位 */}
       {showRest && fields.length > 0 && (
         <div className="nc-card">
-          <div className="nc-card-h"><span className="nc-step-n">3</span>選擇要通知的欄位</div>
+          <div className="nc-card-h">
+            <span className="nc-step-n">3</span>選擇要通知的欄位
+            {/* 表單常有數十個欄位，一個一個點很痛。全選／全不選都用同一顆按鈕，
+                因為「已經全選了」的時候唯一想做的事就是清掉重來。 */}
+            <button className="nc-selall" onClick={toggleAllFields}>
+              {selected.length === fields.length ? "全部取消" : `全選 ${fields.length} 個`}
+            </button>
+          </div>
           <div className="nc-card-sub">勾選 · 依勾選順序逐行列在訊息裡（已選 {selected.length} 個）</div>
           <div className="nc-flds">
             {fields.map((f) => {
@@ -399,7 +416,11 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
               {lineGroups.length > 0 ? (
                 <StyledSelect ariaLabel="LINE 目標群" value={channelTarget} onChange={setChannelTarget} placeholder="選擇 LINE 群"
                   items={[
-                    ...lineGroups.map((g) => ({ id: g.groupId, label: g.displayName || g.groupId })),
+                    ...lineGroups.map((g) => ({
+                      id: g.groupId,
+                      // 帶租戶名：aiproot 一個人管多家，只看群名分不出是哪家的
+                      label: [g.tenantName, g.displayName || g.groupId].filter(Boolean).join(" · "),
+                    })),
                     ...(channelTarget && !lineGroups.some((g) => g.groupId === channelTarget)
                       ? [{ id: channelTarget, label: `${channelTarget}（目前設定 · 清單中查無此群）` }]
                       : []),

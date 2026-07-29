@@ -381,8 +381,9 @@ export const ncUpdateKey = (accountId: string, apiKey: string) =>
 export interface RagicSchemaResult { sheetName: string; fields: RagicSchemaField[] }
 export const ncFetchFields = (accountId: string, sheetPath: string) =>
   req<RagicSchemaResult>(`/notify-config/accounts/${accountId}/fields?sheetPath=${encodeURIComponent(sheetPath)}`);
-export const ncLineGroups = (accountId: string) =>
-  req<LineGroupOption[]>(`/notify-config/accounts/${accountId}/line-groups`);
+// 目標群下拉 · 不經 ragic 帳號（prod 上那些帳號的 tenant_id 是 NULL，走帳號會永遠回空）
+export interface NcLineGroup { groupId: string; displayName: string | null; tenantName: string | null }
+export const ncAllLineGroups = () => req<NcLineGroup[]>("/notify-config/line-groups");
 export const ncEventCatalog = () => req<EventDef[]>("/notify-config/event-catalog");
 export const ncNotifiableUsers = (tenantId?: string) =>
   req<NotifiableUser[]>(`/notify-config/notifiable-users${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);

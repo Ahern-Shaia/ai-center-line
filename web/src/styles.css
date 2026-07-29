@@ -1983,6 +1983,8 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .nc-row { display:flex; gap:12px; align-items:flex-end; }
 .nc-ok { font-size:12px; color:var(--ok); margin-top:8px; }
 /* 欄位勾選 */
+.nc-selall { margin-left:auto; font-size:12px; padding:3px 10px; border:1px solid var(--line); background:var(--surface); border-radius:3px; cursor:pointer; color:var(--ink-2); }
+.nc-selall:hover { background:var(--surface-2, #F5F6F8); }
 .nc-flds { border:1px solid var(--line); border-radius:var(--r); overflow:hidden; }
 .nc-fld { display:flex; align-items:center; gap:12px; padding:10px 14px; border-bottom:1px solid var(--line-2); cursor:pointer; background:var(--surface); width:100%; text-align:left; font:inherit; color:inherit; }
 .nc-fld:last-child { border-bottom:none; }

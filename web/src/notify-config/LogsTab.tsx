@@ -78,7 +78,7 @@ export default function LogsTab() {
                 <tr key={i} onClick={() => setOpen(open === i ? null : i)} style={{ cursor: "pointer" }}>
                   <td className="nc-t-mono" style={{ fontSize: 12 }}>{formatTime(r.receivedAt)}</td>
                   <td>
-                    <div className="nc-t-name">{r.ruleName ?? "（規則已刪除）"}</div>
+                    <div className="nc-t-name">{ruleLabel(r.ruleId, r.ruleName)}</div>
                     {open === i && r.messageText && <div className="nc-log-msg">{r.messageText}</div>}
                     {open === i && <Diagnostics audit={r.audit} />}
                   </td>
@@ -133,6 +133,20 @@ function Diagnostics({ audit }: { audit: Record<string, unknown> | null }) {
       {a.webhookBody ? <div>Ragic 送來的原始內容：<code>{a.webhookBody}</code></div> : null}
     </div>
   );
+}
+
+/**
+ * 「規則」欄要講得跟資料一樣確定，不可以多講。
+ *
+ * ⚠️ 原本一律寫「（規則已刪除）」，但 prod 53 筆日誌裡有 **48 筆的 `rule_id` 是 NULL** ——
+ * 那是舊版 pipeline 留下的，當時根本沒有記錄是哪條規則觸發的。
+ * 「沒記錄」跟「被刪掉」是兩件事，寫成後者等於宣稱一個沒發生過的事件，
+ * 排查時會往「誰刪了規則」的方向找，而那個方向是空的。
+ */
+function ruleLabel(ruleId: string | null, ruleName: string | null): string {
+  if (ruleName) return ruleName;
+  if (!ruleId) return "—（舊版記錄 · 未留規則）";
+  return "（規則已刪除）";
 }
 
 function formatTime(iso: string): string {
