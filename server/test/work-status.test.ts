@@ -6,31 +6,46 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { withTenant, withSystemTx } from "../src/db/client.js";
+import { withTenant, withSystemTx, txStore } from "../src/db/client.js";
 import { WorkStatusService } from "../src/task-completion/work-status.service.js";
 
 const svc = new WorkStatusService();
 
+/**
+ * ⚠️ 一定要找「**同時**有已分派部門與 users」的租戶。
+ *
+ * 原本是「拿第一個有部門的群，再查它的 users」—— 那個租戶剛好沒有 users，
+ * 於是 seed 回 null，5 個測試全部在 `if (!s) return` 就退出，**綠燈是假的**。
+ * 這支測試從寫出來到被發現，一次都沒有真的執行過。
+ */
 async function seed() {
-  return withSystemTx(async (tx) => {
-    const g = await tx.execute<{ tenant_id: string; department_id: string }>(sql`
-      SELECT b.tenant_id::text, g.department_id::text
-        FROM line_group g JOIN line_bot b ON b.bot_id = g.bot_id
-       WHERE g.department_id IS NOT NULL LIMIT 1
+  // ⚠️ 用 aiproot_admin 不用 withSystemTx —— `users` 的 RLS **不含 system**，
+  //    在 withSystemTx 底下查會**靜默回 0 筆**（不報錯），
+  //    於是 seed 回 null、測試全部靜默跳過。本專案第 8 次踩「RLS 靜默回 0」。
+  return withTenant({ tenantId: null, role: "aiproot_admin", departmentId: null, userId: null }, async (tx) => {
+    const r = await tx.execute<{ tenant_id: string; department_id: string; user_id: string }>(sql`
+      SELECT b.tenant_id::text, g.department_id::text, u.user_id::text
+        FROM line_group g
+        JOIN line_bot b ON b.bot_id = g.bot_id
+        JOIN users u ON u.tenant_id = b.tenant_id
+       WHERE g.department_id IS NOT NULL
+       LIMIT 1
     `);
-    const grp = g.rows[0];
-    if (!grp) return null;
-    const u = await tx.execute<{ user_id: string }>(sql`
-      SELECT user_id::text FROM users WHERE tenant_id = ${grp.tenant_id}::uuid LIMIT 1
-    `);
-    if (!u.rows[0]) return null;
-    return { tenantId: grp.tenant_id, deptId: grp.department_id, userId: u.rows[0].user_id };
+    const row = r.rows[0];
+    if (!row) throw new Error("測試資料不足：找不到同時有部門與 users 的租戶（別讓它靜默跳過）");
+    return { tenantId: row.tenant_id, deptId: row.department_id, userId: row.user_id };
   });
 }
 
-/** WorkStatusService 走 currentTx()，所以測試要在同一個 tenant tx 內跑 */
+/**
+ * WorkStatusService 走 `currentTx()`，那是從 AsyncLocalStorage 取的 ——
+ * ⚠️ `withTenant` **只把 tx 當參數傳進來、不會設 ALS**（正式路徑是
+ * TenantTxInterceptor 設的）。少了 txStore.run 這一層，service 會直接拋
+ * 「無租戶交易上下文」。
+ */
 const run = <T>(tenantId: string, userId: string, fn: () => Promise<T>) =>
-  withTenant({ tenantId, role: "tenant_admin", departmentId: null, userId }, fn);
+  withTenant({ tenantId, role: "tenant_admin", departmentId: null, userId },
+    (tx) => txStore.run(tx, fn));
 
 async function newTicket(s: NonNullable<Awaited<ReturnType<typeof seed>>>): Promise<string> {
   return run(s.tenantId, s.userId, async () => {

@@ -146,8 +146,32 @@ export class WarroomTasksService {
     `);
 
     const now = Date.now();
-    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
     const daysSince = (iso: string) => Math.floor((now - new Date(iso).getTime()) / 86_400_000);
+
+    /**
+     * 逾時幾天 · null = 沒逾時。**進欄與 pill 都用這一個判準**，不可能再漂移。
+     *
+     * ⚠️ 先前進欄用 `now - created > 7天`、pill 用 `floor(天數) > 7`，
+     *    於是 7～8 天之間的票**在欄裡卻沒有 pill**，看起來像 pill 壞了。
+     *
+     * ⚠️ 數字的意思是「**超過期限幾天**」不是「建立至今幾天」。
+     *    due_at 是 null 時（prod 100%），隱含期限＝建立後 7 天，
+     *    所以逾時＝天數 − 7。先前直接顯示 age，25 天的票寫「逾時 25 天」是誇大 ——
+     *    實際只逾了 18 天。標籤講的事要跟實際相符（同「未完成 vs 未確認完成」的紀律）。
+     */
+    const GRACE_DAYS = 7;
+    /**
+     * 卡住＝已簽核、工作還開著、且超過寬限期。
+     * ⚠️「卡住 N 天」的 N 是**持續多久**（duration），跟「逾時 N 天」的
+     *   **超出多少**（excess）語意不同，所以這裡顯示 age 而不是 age − 寬限期。
+     */
+    const isStuck = (r: { work_status: string; confirm_status: string; created_at: string }) =>
+      r.work_status === "open" && r.confirm_status === "已簽核"
+      && daysSince(r.created_at) > GRACE_DAYS;
+    const overdueDaysOf = (t: { dueAt: string | null; createdAt: string }): number | null => {
+      const d = t.dueAt ? daysSince(t.dueAt) : daysSince(t.createdAt) - GRACE_DAYS;
+      return d >= 1 ? d : null;
+    };
 
     const all = rows.rows.map<WarroomTicket>((r) => ({
       ticketId: r.ticket_id,
@@ -178,18 +202,14 @@ export class WarroomTasksService {
       // ── 量級（不是歸屬）· design-research-taskboard.md §2 弱點 #3 ──
       // 卡住＝已簽核、工作還開著、且超過 7 天。正常的卡片這兩欄是 null，不長 pill
       //（同「信心度只在中／低顯」的克制原則：全部都顯眼＝沒有重點）
-      stuckDays: (r.work_status === "open" && r.confirm_status === "已簽核"
-        && daysSince(r.created_at) > 7) ? daysSince(r.created_at) : null,
-      stuckKind: (r.work_status === "open" && r.confirm_status === "已簽核"
-        && daysSince(r.created_at) > 7)
+      // ⚠️ 用同一個 GRACE_DAYS，不要再寫一個獨立的 7 —— 兩個魔術數字遲早各自漂移
+      stuckDays: isStuck(r) ? daysSince(r.created_at) : null,
+      stuckKind: isStuck(r)
         ? (r.assign_status === "assigned" ? "no_report" as const : "unassigned" as const)
         : null,
       // ⚠️ due_at 在 prod 100% 是 null（抽取 schema 還沒有時間欄位），
-      //    只吃 due_at 的話這個 pill 永遠不會顯示 —— 那正是 §4 那行 ⬜ 掛了五天的原因。
-      //    退回用建立日算，跟 overdue 的判定基準一致。
-      overdueDays: r.due_at
-        ? Math.max(0, daysSince(r.due_at)) || null
-        : (daysSince(r.created_at) > 7 ? daysSince(r.created_at) : null),
+      //    只吃 due_at 的舊寫法讓這個 pill 永遠不會顯示 —— §4 那行 ⬜ 掛了五天的原因。
+      overdueDays: overdueDaysOf({ dueAt: r.due_at, createdAt: r.created_at }),
       // 四軸投影成對外一個狀態 —— 四個下拉並排丟給現場主管沒人看得懂
       displayState: displayState({
         workStatus: r.work_status,
@@ -202,11 +222,9 @@ export class WarroomTasksService {
       }),
     }));
 
-    const overdue = all.filter((t) => {
-      if (t.confirmStatus !== "待簽核") return false;
-      if (t.dueAt) return new Date(t.dueAt).getTime() < now;
-      return now - new Date(t.createdAt).getTime() > SEVEN_DAYS;
-    });
+    const overdue = all.filter(
+      (t) => t.confirmStatus === "待簽核" && t.overdueDays !== null,
+    );
     const overdueSet = new Set(overdue.map((t) => t.ticketId));
     const pending = all.filter((t) => t.confirmStatus === "待簽核" && !overdueSet.has(t.ticketId));
     // ⚠️ 卡住的**留在這一欄**，只是排到最前面。
