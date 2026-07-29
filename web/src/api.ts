@@ -1259,6 +1259,22 @@ export const getTenantUnboundStats = () =>
 // scheduler-config · 平台化定時任務
 // ============================================================
 export type SchedulerId = "pdr" | "group_batch";
+// ── 任務設定（navigation-and-capability-gating M2/M5）──────────────
+export interface TaskConfig {
+  graceDays: number;
+  tierDays: [number, number];
+  /** true = 這家還沒動過，用的是平台預設 */
+  isDefault: boolean;
+  template: { key: string; label: string; description: string } | null;
+}
+
+export const getTaskConfig = (tenantId?: string) =>
+  req<TaskConfig>(`/task-config${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
+
+export const updateTaskTiming = (body: { tenantId?: string; graceDays: number; tierDays: [number, number] }) =>
+  req<{ graceDays: number; tierDays: [number, number]; affectedTickets: number }>(
+    "/task-config/timing", { method: "PATCH", body: JSON.stringify(body) });
+
 export interface SchedulerConfigRow {
   schedulerId: SchedulerId;
   tenantId: string | null;

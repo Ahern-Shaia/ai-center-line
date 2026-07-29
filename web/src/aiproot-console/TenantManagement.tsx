@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { usePermissions } from "../permission/PermissionContext";
+import OnboardWizard from "./OnboardWizard";
 import {
   ApiError, listAiprootTenants, listExtractionTemplates, listTenantLoginAccounts,
   resetUserPassword, setExtractionTemplate, unlockUser,
@@ -16,6 +18,8 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export default function TenantManagement() {
+  const perms = usePermissions();
+  const [onboarding, setOnboarding] = useState(false);
   const toast = useToast();
   const [tenants, setTenants] = useState<AiprootTenantOption[]>([]);
   const [selected, setSelected] = useState<AiprootTenantOption | null>(null);
@@ -114,12 +118,31 @@ export default function TenantManagement() {
     );
   }
 
+  if (onboarding) {
+    return (
+      <div className="pane">
+        <div className="pane-hdr">
+          <div><h1>新增租戶</h1></div>
+          <button className="btn btn-ghost" onClick={() => setOnboarding(false)}>返回租戶管理</button>
+        </div>
+        <OnboardWizard />
+      </div>
+    );
+  }
+
   return (
     <div className="pane">
-      <div className="pane-hdr"><div>
-        <h1>租戶管理</h1>
-        <div className="sub">查已開通的租戶與其登入帳號 · 忘記密碼可在此重設（產新密碼，無法查看舊的）</div>
-      </div></div>
+      {/* 「開通新租戶」原本是獨立的側欄項目 —— 但它是租戶管理的一個動作，
+          不是一個要常駐在導覽上的地方（M4 合併）。 */}
+      <div className="pane-hdr">
+        <div>
+          <h1>租戶管理</h1>
+          <div className="sub">查已開通的租戶與其登入帳號 · 忘記密碼可在此重設（產新密碼，無法查看舊的）</div>
+        </div>
+        {perms.has("tenants:onboard") && (
+          <button className="btn btn-primary" onClick={() => setOnboarding(true)}>新增租戶</button>
+        )}
+      </div>
 
       {loading ? (
         <div className="dm-empty">載入中…</div>

@@ -4,20 +4,15 @@ import { useToast } from "../Toast";
 import SourceDrawer from "./SourceDrawer";
 import { InfoTip } from "../shared/InfoTip";
 import Gauge from "../shared/Gauge";
-import TaskBoard from "./TaskBoard";
-import DailyLog from "./DailyLog";
 
 interface Props {
   onRegister: (fns: { refresh: () => Promise<void>; asOf: () => string | undefined }) => void;
   onLoadingChange?: (loading: boolean) => void;
 }
 
-type Tab = "dashboard" | "tasks" | "daily";
-
 interface SourceOpen { ticketId: string; summary: string; confidence: WarroomTicket["confidence"]; needsReview: boolean }
 
 export default function WarRoom({ onRegister, onLoadingChange }: Props) {
-  const [tab, setTab] = useState<Tab>("dashboard");
   const [wr, setWr] = useState<Warroom | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,35 +79,27 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
     }
   }
 
-  const tabs = (
-    <div className="wr-tabs" role="tablist">
-      <button role="tab" aria-selected={tab === "dashboard"} className={`wr-tab${tab === "dashboard" ? " active" : ""}`} onClick={() => setTab("dashboard")}>總覽儀表</button>
-      <button role="tab" aria-selected={tab === "tasks"} className={`wr-tab${tab === "tasks" ? " active" : ""}`} onClick={() => setTab("tasks")}>任務看板</button>
-      <button role="tab" aria-selected={tab === "daily"} className={`wr-tab${tab === "daily" ? " active" : ""}`} onClick={() => setTab("daily")}>今日日誌</button>
-    </div>
-  );
-
-  if (tab === "tasks") return <>{tabs}<TaskBoard /></>;
-  if (tab === "daily") return <>{tabs}<DailyLog /></>;
+  // ⚠️ 這裡原本有三個 tab（總覽儀表／任務看板／今日日誌）。
+  // 任務看板是我們整天在做的核心產出，卻要先點「總覽儀表」再點 tab 才到得了，
+  // 而次要的「素材看板」有一級入口 —— 導覽上找不到自己的主產品。
+  // 2026-07-29（M3）三者都升成一級入口，tab 全數移除（OQ-NAV-3：不保留，
+  // tab 與側欄同時存在會讓人不知道該從哪進去）。
 
   // Dashboard tab
-  if (loading && !wr) return <>{tabs}<WarRoomSkeleton /></>;
+  if (loading && !wr) return <WarRoomSkeleton />;
   if (err && !wr) {
     return (
-      <>{tabs}
       <div className="state">
         <h3>無法載入戰情室資料</h3>
         <p>{err}</p>
         <button className="btn btn-ghost" onClick={refresh}>重試</button>
       </div>
-      </>
     );
   }
-  if (!wr) return <>{tabs}</>;
+  if (!wr) return null;
 
   return (
     <>
-      {tabs}
       <div className="pane-hdr">
         <div>
           <h1>總覽儀表</h1>

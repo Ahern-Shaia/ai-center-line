@@ -69,6 +69,9 @@ button { cursor:pointer; }
 .sb-link.planned { color:var(--ink-3); }
 .sb-link.planned .ic { opacity:.5; }
 .sb-link.planned:hover { background:var(--well); color:var(--ink-2); }
+/* 改名的一次性提示 · 點過就消失（Shell.tsx seenRenames） */
+.sb-renamed { margin-left:auto; font-size:10px; line-height:1; padding:2px 5px; border-radius:4px;
+  background:var(--well); color:var(--ink-3); white-space:nowrap; flex-shrink:0; }
 .sb-plan-dot { margin-left:auto; width:5px; height:5px; border-radius:50%; background:var(--ink-3); opacity:.55; flex-shrink:0; }
 /* 保留舊 badge / soon 以免 css 引用其他頁面時掉 class */
 .sb-link.soon { color:var(--ink-3); cursor:default; }

@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePermissions } from "./permission/PermissionContext";
 import Login from "./Login";
-import Shell, { canOpenPage } from "./Shell";
+import Shell, { canOpenPage, PAGE_GROUP } from "./Shell";
 import WarRoom from "./warroom/WarRoom";
+import TaskBoard from "./warroom/TaskBoard";
+import DailyLog from "./warroom/DailyLog";
+import TaskConfigPage from "./settings/task-config/Page";
+import PageTabs from "./shared/PageTabs";
 import Rag from "./kb/Rag";
 import Onboarding from "./kb/Onboarding";
 import MediaLibrary from "./kb/MediaLibrary";
@@ -19,7 +23,6 @@ import ConversationAnalysisList from "./convo-analysis/List";
 import ConversationAnalysisDetail from "./convo-analysis/Detail";
 import LlmSettings from "./settings/LlmSettings";
 import LineBots from "./line-bots/Page";
-import OnboardWizard from "./aiproot-console/OnboardWizard";
 import TenantManagement from "./aiproot-console/TenantManagement";
 import ExtractionHealth from "./aiproot-console/ExtractionHealth";
 import CompletionTracking from "./aiproot-console/CompletionTracking";
@@ -27,7 +30,6 @@ import { NAV_EVENT, type NavTarget } from "./nav";
 import CostDashboard from "./aiproot-console/CostDashboard";
 import BatchHistory from "./aiproot-console/BatchHistory";
 import BindingAudit from "./aiproot-console/BindingAudit";
-import CategoryManagement from "./aiproot-console/CategoryManagement";
 import MapConfig from "./aiproot-console/MapConfig";
 import NotifyConfigPage from "./notify-config/Page";
 import MyDailyReport from "./personal-report/MyDailyReport";
@@ -40,6 +42,11 @@ import { ToastProvider } from "./Toast";
 
 type Route =
   | { page: "warroom" }
+  | { page: "task-board" }
+  | { page: "daily-log" }
+  | { page: "task-config" }
+  | { page: "system-health" }
+  | { page: "channels" }
   | { page: "rag" }
   | { page: "onboarding" }
   | { page: "media" }
@@ -48,91 +55,46 @@ type Route =
   | { page: "depts" }
   | { page: "audit" }
   | { page: "scheduler-config" }
-  | { page: "line-groups" }
-  | { page: "tenant-binding" }
   | { page: "master-data" }
   | { page: "convo-list" }
   | { page: "convo-upload" }
   | { page: "convo-detail"; uploadId: number }
   | { page: "llm-settings" }
   | { page: "line-bots" }
-  | { page: "onboard-tenant" }
   | { page: "tenant-mgmt" }
-  | { page: "extraction-health" }
-  | { page: "completion-tracking" }
-  | { page: "cost-dashboard" }
-  | { page: "batch-history" }
-  | { page: "binding-audit" }
   | { page: "map-config" }
   | { page: "notify-config" }
-  | { page: "category-mgmt" }
   | { page: "my-daily-report" }
   | { page: "my-trips" }
   | { page: "roles-mgmt" };
 
 // crumb 顯示上層分類（非當前頁名），避免與 pane h1 重複。
 // pane h1 對應 PAGE_TITLE，同步設定 document.title 提供瀏覽器 tab 辨識。
-const CRUMB: Record<Route["page"], string> = {
-  warroom: "戰情室",
-  rag: "資料 · 知識",
-  onboarding: "說明",
-  media: "資料 · 知識",
-  km: "資料 · 知識",
-  map: "資料 · 知識",
-  depts: "設定",
-  audit: "設定",
-  "scheduler-config": "設定",
-  "line-groups": "設定",
-  "tenant-binding": "設定",
-  "master-data": "資料來源",
-  "convo-list": "AI 對話分析",
-  "convo-upload": "AI 對話分析",
-  "convo-detail": "AI 對話分析",
-  "llm-settings": "AI 對話分析",
-  "line-bots": "通訊接頭層",
-  "onboard-tenant": "AIPROOT 管理",
-  "tenant-mgmt": "AIPROOT 管理",
-  "extraction-health": "AIPROOT 管理",
-  "completion-tracking": "AIPROOT 管理",
-  "cost-dashboard": "AIPROOT 管理",
-  "batch-history": "AIPROOT 管理",
-  "binding-audit": "AIPROOT 管理",
-  "map-config": "AIPROOT 管理",
-  "notify-config": "AIPROOT 管理",
-  "category-mgmt": "AIPROOT 管理",
-  "my-daily-report": "戰情室",
-  "my-trips": "戰情室",
-  "roles-mgmt": "AIPROOT 管理",
-};
-
+// ⚠️ 分組名從 Shell 的 NAV 推導，不在這裡手抄一份 —— 抄的那份改了分組就會對不上。
 const PAGE_TITLE: Record<Route["page"], string> = {
   warroom: "總覽儀表",
+  "task-board": "任務看板",
+  "daily-log": "對話紀錄",
+  "task-config": "任務設定",
+  "system-health": "系統健康",
+  channels: "通訊管道",
   rag: "智慧檢索",
   onboarding: "運作原理",
-  media: "素材看板",
+  media: "素材",
   km: "知識庫",
   map: "客戶地圖",
   depts: "部門 / 成員",
   audit: "稽核記錄",
-  "scheduler-config": "定時任務",
-  "line-groups": "LINE 群組",
-  "tenant-binding": "員工 LINE 綁定",
+  "scheduler-config": "自動化",
   "master-data": "資料來源",
   "convo-list": "分析列表",
   "convo-upload": "上傳新對話",
   "convo-detail": "分析詳情",
   "llm-settings": "語言模型設定",
   "line-bots": "LINE 機器人管理",
-  "onboard-tenant": "開通新租戶",
   "tenant-mgmt": "租戶管理",
-  "extraction-health": "抽取健康度",
-  "completion-tracking": "任務完成追蹤",
-  "cost-dashboard": "AI 成本管理",
-  "batch-history": "對話分析歷程",
-  "binding-audit": "LINE 綁定稽核",
   "map-config": "地圖里程設定",
   "notify-config": "通知設定",
-  "category-mgmt": "分類管理",
   "my-daily-report": "我的日報",
   "my-trips": "我的行程",
   "roles-mgmt": "權限管理",
@@ -229,65 +191,20 @@ export default function App() {
   }
 
   const navActive = route.page === "warroom" ? "warroom" : route.page;
-  const crumb = CRUMB[route.page];
+  const crumb = PAGE_GROUP[route.page] ?? "";
 
+  /**
+   * ⚠️ 這裡原本是一長串逐 key 的 `if (session.role !== ...) return` ——
+   * 那是**第三套**閘門（側欄一套、路由守衛一套、這裡再一套），
+   * 而且它是硬編角色的，跟 M1 把權限搬進權限表的目的直接抵觸：
+   * aiproot 在權限管理頁上把某頁開給客戶，側欄會出現、路由會放行，
+   * 但點下去被這裡擋掉 —— 「看得到卻點不動」比看不到更難查。
+   * 現在一律問 canOpenPage，跟側欄與路由守衛同一份來源。
+   */
   const onNav = (key: string) => {
-    if (key === "warroom") setRoute({ page: "warroom" });
-    else if (key === "rag" || key === "media" || key === "km" || key === "map"
-      || key === "depts" || key === "audit" || key === "scheduler-config" || key === "line-groups"
-      || key === "master-data") {
-      setRoute({ page: key });
-    } else if (key === "tenant-binding") {
-      // 客戶方自治 · 僅 tenant_admin（自租戶 LINE 綁定管理）
-      if (session.role !== "tenant_admin") return;
-      setRoute({ page: "tenant-binding" });
-    } else if (key === "convo-list" || key === "convo-upload" || key === "llm-settings") {
-      // AI 對話分析設定屬 aiproot 側維護 · tenant 只在戰情室看結果
-      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
-      setRoute({ page: key });
-    } else if (key === "line-bots") {
-      // 通訊接頭層屬 aiproot 平台方管理 · 非 aiproot_admin / consultant 擋下
-      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
-      setRoute({ page: "line-bots" });
-    } else if (key === "onboard-tenant") {
-      if (session.role !== "aiproot_admin") return;
-      setRoute({ page: "onboard-tenant" });
-    } else if (key === "tenant-mgmt") {
-      // 含重設密碼 · 僅 aiproot_admin（consultant 不給動客戶帳號）
-      if (session.role !== "aiproot_admin") return;
-      setRoute({ page: "tenant-mgmt" });
-    } else if (key === "extraction-health") {
-      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
-      setRoute({ page: "extraction-health" });
-    } else if (key === "completion-tracking") {
-      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
-      setRoute({ page: "completion-tracking" });
-    } else if (key === "cost-dashboard") {
-      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
-      setRoute({ page: "cost-dashboard" });
-    } else if (key === "batch-history") {
-      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
-      setRoute({ page: "batch-history" });
-    } else if (key === "binding-audit") {
-      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
-      setRoute({ page: "binding-audit" });
-    } else if (key === "map-config") {
-      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
-      setRoute({ page: "map-config" });
-    } else if (key === "notify-config") {
-      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
-      setRoute({ page: "notify-config" });
-    } else if (key === "category-mgmt") {
-      if (session.role !== "aiproot_admin" && session.role !== "consultant") return;
-      setRoute({ page: "category-mgmt" });
-    } else if (key === "my-daily-report") {
-      setRoute({ page: "my-daily-report" });
-    } else if (key === "my-trips") {
-      setRoute({ page: "my-trips" });
-    } else if (key === "roles-mgmt") {
-      if (session.role !== "aiproot_admin") return;
-      setRoute({ page: "roles-mgmt" });
-    }
+    if (!canOpenPage(key, perms.hasAny, permsReady)) return;
+    if (key === "convo-detail") return;              // 需要 uploadId，只能由卡片點進去
+    setRoute({ page: key } as Route);
   };
 
   return (
@@ -307,6 +224,9 @@ export default function App() {
         {/* key 觸發 remount → CSS animation on mount，切換頁面時 fade+slide 進場 */}
         <div key={route.page} className="page-fade">
           {route.page === "warroom" && <WarRoom onRegister={onRegister} onLoadingChange={setRefreshing} />}
+          {route.page === "task-board" && <TaskBoard />}
+          {route.page === "daily-log" && <DailyLog />}
+          {route.page === "task-config" && <TaskConfigPage />}
           {route.page === "rag" && <Rag />}
           {route.page === "onboarding" && <Onboarding onDone={() => setRoute({ page: "warroom" })} />}
           {route.page === "media" && <MediaLibrary />}
@@ -316,8 +236,17 @@ export default function App() {
           {route.page === "depts" && <DepartmentsMembers />}
           {route.page === "audit" && <AuditLog />}
           {route.page === "scheduler-config" && <SchedulerConfigPage />}
-          {route.page === "line-groups" && <LineGroupsPage />}
-          {route.page === "tenant-binding" && <TenantBindingAudit />}
+          {/* 通訊管道 · 兩頁合一（M4）。群組與員工綁定都是「誰在哪個管道上」，
+              未來接 Discord 等就是同一頁多一個 tab（對齊 channel-adapter 的方向）。 */}
+          {route.page === "channels" && (
+            <PageTabs ariaLabel="通訊管道" tabs={[
+              { key: "groups", label: "LINE 群組", perm: "line-groups:view", render: () => <LineGroupsPage /> },
+              { key: "binding", label: "員工綁定", perm: "binding:view", render: () => <TenantBindingAudit /> },
+              // aiproot 的跨租戶版。原本是另一個側欄項目「LINE 綁定稽核」——
+              // 跟上面那個 tab 是同一件事，只是看的範圍不同（§1.3 兩個入口）
+              { key: "binding-audit", label: "綁定稽核", perm: "binding:aiproot-view", render: () => <BindingAudit /> },
+            ]} />
+          )}
           {route.page === "convo-list" && (
             <ConversationAnalysisList
               onOpen={(id) => setRoute({ page: "convo-detail", uploadId: id })}
@@ -337,20 +266,22 @@ export default function App() {
           )}
           {route.page === "llm-settings" && <LlmSettings />}
           {route.page === "line-bots" && <LineBots />}
-          {route.page === "onboard-tenant" && <OnboardWizard />}
           {route.page === "tenant-mgmt" && <TenantManagement />}
-          {route.page === "extraction-health" && <ExtractionHealth />}
-          {route.page === "completion-tracking" && <CompletionTracking />}
-          {route.page === "cost-dashboard" && (
-            <CostDashboard onOpenAnalysis={(id) => setRoute({ page: "convo-detail", uploadId: id })} />
+          {/* 系統健康 · 四頁合一（M4）。這四頁回答的是同一個問題「這套系統跑得好不好」，
+              而且互相解釋 —— 成本高不高要看分析量、接住率低要看抽取健康度。
+              分成四個入口的結果是每一個都要點進去看一眼。 */}
+          {route.page === "system-health" && (
+            <PageTabs ariaLabel="系統健康" tabs={[
+              { key: "extraction", label: "抽取健康度", perm: "extraction-health:view", render: () => <ExtractionHealth /> },
+              { key: "completion", label: "任務完成追蹤", perm: "completion-tracking:view", render: () => <CompletionTracking /> },
+              { key: "batches", label: "對話分析歷程", perm: "batch-history:view",
+                render: () => <BatchHistory onOpenAnalysis={(id) => setRoute({ page: "convo-detail", uploadId: id })} /> },
+              { key: "cost", label: "AI 成本", perm: "cost-dashboard:view",
+                render: () => <CostDashboard onOpenAnalysis={(id) => setRoute({ page: "convo-detail", uploadId: id })} /> },
+            ]} />
           )}
-          {route.page === "batch-history" && (
-            <BatchHistory onOpenAnalysis={(id) => setRoute({ page: "convo-detail", uploadId: id })} />
-          )}
-          {route.page === "binding-audit" && <BindingAudit />}
           {route.page === "map-config" && <MapConfig />}
           {route.page === "notify-config" && <NotifyConfigPage />}
-          {route.page === "category-mgmt" && <CategoryManagement />}
           {route.page === "my-daily-report" && <MyDailyReport />}
           {route.page === "my-trips" && <MyTrips />}
           {route.page === "roles-mgmt" && <RolesManagement />}

@@ -25,82 +25,65 @@ const NAV: Array<{
     done: boolean;
     perm?: string;              // 有這 perm 才顯示（沒設 = 全顯）
     permAny?: string[];         // 任一 perm 有就顯
+    renamedFrom?: string;       // 改過名的項目 · 一次性提示（N-3）
   }>;
 }> = [
   {
-    group: "戰情室",
+    // ⚠️ 分組是按「這是誰的東西」，不是按我們的內部模組。
+    // 原本的「AI 對話分析／通訊接頭層／AIPROOT 管理」是**我們的架構圖**，
+    // 對使用者沒有意義 —— 客戶不知道自己要找的東西屬於哪個模組。
+    group: "我的",
     items: [
-      // 我的日報 / 我的行程 · 全角色可見 · employee 也看得到 · 主管也自己填/跑外勤
       { key: "my-daily-report", label: "我的日報", ic: iconBook, done: true, perm: "personal-report:mine" },
       { key: "my-trips", label: "我的行程", ic: iconMap, done: true, perm: "trips:mine" },
-      // 總覽儀表 · 主管級才顯 (employee 只看得到我的日報)
-      // 「每日簽核」已移除：它指向的就是 warroom 同一頁（簽核區塊在總覽儀表下半部），
-      // 點了路由不變、側欄高亮也不會動 —— 對使用者就是「點了沒反應」。
-      // 單筆簽核在任務看板的卡片抽屜；部門每日確認在總覽儀表。
-      { key: "warroom", label: "總覽儀表", ic: iconGauge, done: true, perm: "warroom-tasks:view" },
     ],
   },
   {
-    group: "資料 · 知識",
+    group: "營運",
     items: [
-      // 智慧檢索 / 知識庫 / 客戶地圖 先不掛出來：這三頁還在吃寫死的示範資料，
-      // 後端也尚未有對應端點。客戶看不到 > 客戶看到假的（同 2026-07-27 下架的公司設定頁）。
-      // 各自的模組排上後再放回來。
-      { key: "media", label: "素材看板", ic: iconMedia, done: true, perm: "media:view" },
-    ],
-  },
-  {
-    group: "AI 對話分析",
-    items: [
-      { key: "convo-list", label: "分析列表", ic: iconChat, done: true, perm: "convo:view" },
-      { key: "convo-upload", label: "上傳新對話", ic: iconMedia, done: true, perm: "convo:upload" },
-      { key: "llm-settings", label: "語言模型設定", ic: iconCog, done: true, perm: "llm-config:view" },
-    ],
-  },
-  {
-    group: "通訊接頭層",
-    items: [
-      { key: "line-bots", label: "LINE 機器人", ic: iconChat, done: true, perm: "line-bots:view" },
+      // ⭐ 任務看板放第一個：這是整套系統每天在產出的東西。
+      // 原本它藏在「總覽儀表」的 tab 裡要點兩次，而次要的素材看板有一級入口。
+      { key: "task-board", label: "任務看板", ic: iconTask, done: true, perm: "warroom-tasks:view" },
+      { key: "warroom", label: "總覽儀表", ic: iconGauge, done: true, perm: "warroom:view" },
+      // 客戶驗證「AI 到底有沒有看到我的訊息」的地方（OQ-NAV-4）
+      { key: "daily-log", label: "對話紀錄", ic: iconChat, done: true, perm: "warroom-daily:view", renamedFrom: "今日日誌" },
+      { key: "media", label: "素材", ic: iconMedia, done: true, perm: "media:view", renamedFrom: "素材看板" },
     ],
   },
   {
     group: "設定",
     items: [
-      // v2 · 部門/成員 開放給 tenant_admin (自 tenant) + aiproot
       { key: "depts", label: "部門/成員", ic: iconTeam, done: true, permAny: ["departments:view", "users:view"] },
-      { key: "line-groups", label: "LINE 群組", ic: iconChat, done: true, perm: "line-groups:view" },
-      // 客戶方自治 · 僅 tenant_admin 看得到 (aiproot 有自己的跨租戶版在 AIPROOT 管理)
-      { key: "tenant-binding", label: "員工 LINE 綁定", ic: iconTeam, done: true, perm: "binding:view" },
-      // 「公司設定」暫時下架（2026-07-27）：整頁 24 項全是示範資料，而且對客戶做假承諾 ——
-      // 「工研院知識庫 已啟用 · 契約有效期至 2027-06」「員工 opt-out 已啟用」
-      // 「影像自動遮罩 臉部/車牌/證件」這些功能都不存在。
-      // 寧可沒有這頁，也不可在客戶畫面上放做不到的東西。真實設定散在
-      // 定時任務 / 語言模型設定 / LINE 群組 各頁，等有真資料再重做。
-      // { key: "config", label: "公司設定", ic: iconCog, done: true, perm: "tenant-config:view" },
-      { key: "scheduler-config", label: "定時任務", ic: iconCog, done: true, perm: "scheduler-config:view" },
+      { key: "channels", label: "通訊管道", ic: iconChat, done: true, permAny: ["line-groups:view", "binding:view", "binding:aiproot-view"], renamedFrom: "LINE 群組" },
+      { key: "task-config", label: "任務設定", ic: iconTask, done: true, permAny: ["task-config:view", "categories:view"] },
+      // 「定時任務」與本產品的核心產出「任務」撞名 —— 客戶點進去想找任務，
+      // 看到的是 cron 排程設定。改名就能解，是硬傷裡最便宜的一個。
+      { key: "scheduler-config", label: "自動化", ic: iconCog, done: true, perm: "scheduler-config:view", renamedFrom: "定時任務" },
       { key: "audit", label: "稽核記錄", ic: iconShield, done: true, perm: "audit:view" },
     ],
   },
   {
-    group: "AIPROOT 管理",
+    group: "平台",
     items: [
-      { key: "onboard-tenant", label: "開通新租戶", ic: iconTeam, done: true, perm: "tenants:onboard" },
-      // 含重設密碼 → 只給 aiproot_admin（顧問看得到卻點不動＝更糟的體驗）
       { key: "tenant-mgmt", label: "租戶管理", ic: iconTeam, done: true, perm: "tenants:manage" },
-      { key: "extraction-health", label: "抽取健康度", ic: iconGauge, done: true, perm: "extraction-health:view" },
-      { key: "completion-tracking", label: "任務完成追蹤", ic: iconGauge, done: true, perm: "completion-tracking:view" },
-      { key: "cost-dashboard", label: "AI 成本管理", ic: iconGauge, done: true, perm: "cost-dashboard:view" },
-      { key: "batch-history", label: "對話分析歷程", ic: iconChat, done: true, perm: "batch-history:view" },
-      { key: "binding-audit", label: "LINE 綁定稽核", ic: iconTeam, done: true, perm: "binding:aiproot-view" },
+      { key: "system-health", label: "系統健康", ic: iconGauge, done: true,
+        permAny: ["extraction-health:view", "completion-tracking:view", "batch-history:view", "cost-dashboard:view"] },
+      { key: "convo-list", label: "分析列表", ic: iconChat, done: true, perm: "convo:view" },
+      { key: "convo-upload", label: "上傳新對話", ic: iconMedia, done: true, perm: "convo:upload" },
+      { key: "llm-settings", label: "語言模型設定", ic: iconCog, done: true, perm: "llm-config:view" },
+      { key: "line-bots", label: "LINE 機器人", ic: iconChat, done: true, perm: "line-bots:view" },
       { key: "map-config", label: "地圖里程設定", ic: iconCog, done: true, perm: "map-config:view" },
       { key: "notify-config", label: "通知設定", ic: iconChat, done: true, perm: "notify-config:view" },
-      // 資料來源與通知設定共用同一組 Ragic 憑證，權限也一致（我方維護）
       { key: "master-data", label: "資料來源", ic: iconBook, done: true, perm: "notify-config:view" },
-      { key: "category-mgmt", label: "分類管理", ic: iconBook, done: true, perm: "categories:view" },
       { key: "roles-mgmt", label: "權限管理", ic: iconShield, done: true, perm: "roles:view" },
     ],
   },
 ];
+
+/** 頁面 → 所屬分組（麵包屑用）。手抄一份的話，改了分組名就會兩邊對不上 */
+export const PAGE_GROUP: Record<string, string> = Object.fromEntries(
+  NAV.flatMap((g) => g.items.map((it) => [it.key, g.group] as const)),
+);
 
 /**
  * 頁面 → 所需權限（任一即可）。由上面的 NAV 推導，**不是**另一份手抄名單。
@@ -131,6 +114,7 @@ export function canOpenPage(page: string, hasAny: (...p: string[]) => boolean, r
 }
 
 const COLLAPSED_KEY = "sb_collapsed_groups";
+const SEEN_RENAMES_KEY = "sb_seen_renames";
 
 const ROLE_LABEL: Record<string, string> = {
   aiproot_admin: "AIPROOT 管理員",
@@ -187,8 +171,20 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
     return true;
   };
 
+  // 改名提示看過就收 —— 常駐的話它就從「提示」變成永久的雜訊
+  const [seenRenames, setSeenRenames] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(SEEN_RENAMES_KEY) ?? "[]") as string[]; }
+    catch { return []; }
+  });
+
   const handleNav = (key: string) => {
     setMobileNavOpen(false);
+    setSeenRenames((prev) => {
+      if (prev.includes(key)) return prev;
+      const next = [...prev, key];
+      localStorage.setItem(SEEN_RENAMES_KEY, JSON.stringify(next));
+      return next;
+    });
     onNav(key);
   };
 
@@ -248,6 +244,11 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
                   >
                     <it.ic />
                     <span>{it.label}</span>
+                    {/* N-3：改過名的項目掛一次性提示，點過就不再出現。
+                        沒有它的話，客戶會以為原本那頁被拿掉了。 */}
+                    {it.renamedFrom && !seenRenames.includes(it.key) && (
+                      <span className="sb-renamed" title={`原「${it.renamedFrom}」`}>原：{it.renamedFrom}</span>
+                    )}
                     {!it.done && <span className="sb-plan-dot" aria-label="規劃中" title="規劃中" />}
                   </button>
                 ))}
@@ -330,6 +331,8 @@ function iconBook() { return svg(<><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1
 function iconMap() { return svg(<><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2V6z" /><path d="M9 4v14M15 6v14" /></>); }
 function iconTeam() { return svg(<><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0" /><circle cx="17" cy="9" r="2.5" /><path d="M15 20a5 5 0 0 1 6-4" /></>); }
 function iconCog() { return svg(<><circle cx="12" cy="12" r="3" /><path d="M12 3v2M12 19v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M3 12h2M19 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>); }
+// 任務看板 / 任務設定 · 打勾清單
+function iconTask() { return svg(<><path d="M9 5h10M9 12h10M9 19h10" /><path d="m3 5 1.5 1.5L7 4" /><path d="m3 12 1.5 1.5L7 11" /><path d="m3 19 1.5 1.5L7 18" /></>); }
 function iconShield() { return svg(<><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3z" /></>); }
 function IconRefresh() { return svg(<><path d="M4 12a8 8 0 0 1 14-5.3L20 9" /><path d="M20 4v5h-5" /><path d="M20 12a8 8 0 0 1-14 5.3L4 15" /><path d="M4 20v-5h5" /></>); }
 function IconHelp() { return svg(<><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2.5-2.5 4M12 17h.01" /></>); }
