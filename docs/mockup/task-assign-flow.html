@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<title>任務分派流程 · 現況與缺口（2026-07-29）</title>
+<title>任務分派流程 · 現況與裁定（2026-07-29）</title>
 <style>
   :root{
     --bg:#f6f7f9; --surface:#fff; --border:#e4e7eb; --border-strong:#cbd2d9;
@@ -113,13 +113,17 @@
 <header>
   <h1>LINE 群組 → 任務分派 → 送達當事人 · 流程現況</h1>
   <div class="sub">
-    台灣福祉 · prod 實際資料，查詢時間 <b>2026-07-29</b> · 數字為當下累計，非示意值
+    台灣福祉 · prod 實際資料，查詢時間 <b>2026-07-29 19:20</b>（當日 18:00 排程批次跑完後）· 數字為當下累計，非示意值
   </div>
   <div class="legend">
     <span class="lg"><i class="dot ok"></i>已實作且在跑</span>
-    <span class="lg"><i class="dot warn"></i>缺口 · 這條路沒接上</span>
+    <span class="lg"><i class="dot info"></i>刻意這樣設計 / 已裁定 · 不是缺口</span>
+    <span class="lg"><i class="dot warn"></i>導入項 · 靠推進導入解決，非程式問題</span>
     <span class="lg"><i class="dot bad"></i>斷點 · 人會以為成功但其實沒有</span>
-    <span class="lg"><i class="dot info"></i>刻意這樣設計 · 不是缺口</span>
+  </div>
+  <div class="sub" style="margin-top:12px">
+    <b>2026-07-29 裁定：</b>AI 分派<b>不主動推播</b>（只進個人日報，先預留）·
+    對不到帳號在試用期是<b>預期狀態</b>，正式導入的前提是全員綁定 LINE。
   </div>
 </header>
 
@@ -149,7 +153,7 @@
 <div class="stage">
   <div class="rail"><div class="no">03</div><div class="nm">建立任務</div></div>
   <div class="card">
-    <h3>任務落庫 <span class="chip ok">已實作</span> <span class="n">45 <small>張累計</small></span></h3>
+    <h3>任務落庫 <span class="chip ok">已實作</span> <span class="n">51 <small>張累計</small></span></h3>
     <p>同時嘗試把 AI 抽到的人名對到系統帳號（<span class="code">assigneeResolver</span>）。
        對得到就直接掛上去 —— <b>這就是「AI 分派」</b>。</p>
   </div>
@@ -167,20 +171,23 @@
         <h3>對到帳號 <span class="chip ok">已實作</span></h3>
         <p><span class="n">5 <small>張</small></span> ·
            <span class="code">assign_status='assigned'</span></p>
-        <div class="gap warn">
-          <span class="tag">G1</span><b>不會發任何通知。</b>
-          <code>AssignNotifyService</code> 只被人工指派端點呼叫，批次這條路沒接。
-          當事人只有自己打開日報才會發現這件事是他的。
+        <div class="gap info">
+          <span class="tag">裁定</span><b>刻意不發 LINE 通知</b>，只出現在當事人的個人日報。
+          AI 判斷歸屬的準確度<b>還沒有量測過</b>，而主動私訊是打擾人 ——
+          打擾錯的人比不打擾貴。人工指派會推播，是因為那是<b>主管做的決定</b>、有人負責。
+          <br>要開的前置條件：先量測準確度。接法很短，所以不預先加開關。
         </div>
       </div>
 
       <div class="card">
         <h3>抽到名字但對不到 <span class="chip ok">已實作</span></h3>
-        <p><span class="n">24 <small>張</small></span> ·
+        <p><span class="n">30 <small>張</small></span> ·
            <span class="code">assign_status='unclaimed'</span></p>
         <div class="gap info">
-          <span class="tag">—</span>AI 抽到的是群裡的暱稱（「佳慧」「小星星」），
-          對不到系統帳號。<b>落到主管的待派清單</b>，這是刻意的 —— 猜錯人比不猜貴。
+          <span class="tag">裁定</span>AI 抽到的是群裡的暱稱（「佳慧」「小星星」），
+          對不到系統帳號 → <b>落到主管的待派清單</b>。
+          <br><b>這是試用期的預期狀態，不是缺陷</b> —— 正式導入的前提就是全員綁定 LINE。
+          ⚠️ 不可以改用暱稱模糊比對去衝覆蓋率，那會把任務派給錯的人、而且他會收到私訊。
         </div>
       </div>
 
@@ -290,7 +297,7 @@
 </div>
 
 <!-- 缺口表 -->
-<h2>缺口清單</h2>
+<h2>缺口與裁定</h2>
 <table>
   <thead><tr>
     <th style="width:52px">#</th><th style="width:190px">在哪一步</th><th>問題</th>
@@ -298,36 +305,37 @@
   </tr></thead>
   <tbody>
     <tr>
-      <td class="g" style="color:var(--warn)">G1</td>
+      <td class="g" style="color:var(--info)">G1</td>
       <td>04 · AI 分派對到帳號</td>
-      <td><b>AI 分派不會發任何通知</b>。<code>AssignNotifyService</code> 只掛在人工指派端點上，
-          批次 materializer 這條路沒接。<br>
-          <small>技術上不難接，但要先決定：AI 判斷的歸屬有沒有把握到可以直接打擾人。
-          目前 AI 對到帳號的準確度沒有量測過。</small></td>
-      <td>當事人不知道有事情是他的，除非自己打開日報。<br>
-          <small>目前只影響 5 張，但這是 AI 分派唯一的出口。</small></td>
-      <td><span class="chip warn">P1</span></td>
+      <td><b>AI 分派刻意不發通知</b>，只出現在當事人的個人日報。<br>
+          <small>AI 判斷歸屬的準確度<b>還沒有量測過</b>，而主動私訊是打擾人 ——
+          打擾錯的人比不打擾貴。人工指派會推播，是因為那是主管做的決定、有人負責。
+          要開的前置條件是先量測準確度；接法很短（materializer 對到帳號後呼叫既有的
+          <code>onAssigned</code>），所以不預先加開關。</small></td>
+      <td>當事人靠自己打開日報得知。<b>可接受</b>。</td>
+      <td><span class="chip info">已裁定</span></td>
     </tr>
     <tr>
-      <td class="g" style="color:var(--warn)">G2</td>
+      <td class="g" style="color:var(--info)">G2</td>
       <td>04 · unclaimed</td>
-      <td>24 張卡在「AI 抽到名字但對不到帳號」。<br>
-          <b>AI 一共抽到 18 個不同的人名，只有 3 個對得到系統帳號。</b>
-          <small>抽到的是群裡的暱稱（「佳慧」「小星星」），而台灣福祉系統裡總共只有 9 個帳號 ——
-          這條靠這個模組解決不了，要補的是主檔層。</small></td>
-      <td>超過一半的任務要主管手動派，否則沒有歸屬。</td>
-      <td><span class="chip warn">P1</span></td>
+      <td>30 張卡在「AI 抽到名字但對不到帳號」（AI 抽到 18 個不同人名，只有 3 個對得到）。<br>
+          <b>這是試用期的預期狀態，不是缺陷</b> —— 導入模型本來就是
+          <b>全員綁定 LINE 作為橋樑</b>，目前尚未正式導入。<br>
+          <small style="color:var(--bad)">⚠️ 不可以改用暱稱模糊比對去衝覆蓋率：
+          那會把任務指派給錯的人，<b>而且他會收到私訊</b>（FMEA A-2 · P0）。</small></td>
+      <td>試用期間主管手動派。正式導入後由綁定率解決。</td>
+      <td><span class="chip info">已裁定</span></td>
     </tr>
     <tr>
       <td class="g" style="color:var(--warn)">G4</td>
       <td>05／06 · 通知送得到誰</td>
       <td><b>台灣福祉 9 個帳號只有 4 個綁了 LINE（44%）。</b>
-          <small>「0 張沒綁定」看起來很好，但那是因為目前被指派到的 3 個人剛好都綁了 ——
-          派給另外 5 個人時就通知不到。</small><br>
+          <small>「0 張沒綁定」看起來很好，但那是因為目前被指派到的 3 個人剛好都綁了。
+          同 G2 —— 這是導入進度的指標，不是程式缺陷；但它<b>是要推進的事</b>。</small><br>
           <small style="color:var(--bad)">⚠️ 舊 doc 寫「9 個帳號綁了 8 個（89%）」是錯的 ——
           那個 8 把另一個租戶（鮮湧）的綁定也算進去了。已於本日更正。</small></td>
-      <td>指派範圍一旦擴大，通知覆蓋率會立刻掉下來。</td>
-      <td><span class="chip warn">P1</span></td>
+      <td>正式導入前，通知覆蓋率就是綁定率。</td>
+      <td><span class="chip warn">導入項</span></td>
     </tr>
     <tr>
       <td class="g" style="color:var(--faint)">G3</td>

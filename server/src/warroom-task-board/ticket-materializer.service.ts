@@ -111,6 +111,18 @@ export class TicketMaterializerService {
         const assignee = rec.person ? truncate(rec.person, 100) : null;
         const category = rec.category ? truncate(rec.category, 100) : null;
         // 對到系統帳號才自動歸屬；對不到一律 unclaimed 由主管手動派（doc §2 寧可不歸屬不可歸錯人）
+        //
+        // ⚠️ 對到之後**刻意不發 LINE 通知**（2026-07-29 用戶裁定）。不是漏接，不要「修好」它 ——
+        //    只讓它出現在當事人的個人日報裡。
+        //    理由：AI 判斷歸屬的準確度**從來沒有量測過**，而主動私訊是打擾人，
+        //    打擾錯的人比不打擾貴得多。人工指派會推播，是因為那是**主管做的決定**、有人負責
+        //    （界線見 docs/modules/task-assign-notify.md §2.2）。
+        //    要開之前的前置條件是先量測準確度；接法就是在這裡呼叫 AssignNotifyService.onAssigned，
+        //    很短，所以現在不預先加 config flag —— 沒人用的開關只會變成要維護的死碼。
+        //
+        // ⚠️ 對不到帳號（unclaimed）在試用期是**預期狀態**，不是缺陷：
+        //    正式導入的前提就是全員綁定 LINE。**不可以**改用暱稱模糊比對去提高覆蓋率，
+        //    那會直接踩 A-2（P0）把任務指派給錯的人、而且他會收到私訊。
         const resolved = await this.assigneeResolver.resolve(tx, bundle.tenantId, assignee);
 
         // R11 可溯源 · 把 source_ids 的索引翻成真實訊息 id（越界的丟掉不硬湊）
