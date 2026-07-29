@@ -834,6 +834,8 @@ export interface LineGroupRow {
   departmentId: string | null;
   departmentName: string | null;
   analyzeEnabled: boolean;
+  /** bot 在這個群要不要回話（完成回報確認 / 每日回報清單）· 與 analyzeEnabled 是兩件事 */
+  replyEnabled: boolean;
   firstSeenAt: string;
   lastEventAt: string;
   eventCount: number;
@@ -902,6 +904,7 @@ export const patchLineGroup = (groupRegistryId: string, patch: {
   departmentId?: string | null;
   displayName?: string;
   analyzeEnabled?: boolean;
+  replyEnabled?: boolean;
 }) =>
   req<{ group: LineGroupRow }>(`/line-groups/${groupRegistryId}`, {
     method: "PATCH",

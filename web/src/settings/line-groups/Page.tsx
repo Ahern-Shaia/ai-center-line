@@ -63,12 +63,19 @@ export default function LineGroupsPage() {
     }
   }
 
-  async function handleToggleAnalyze(groupRegistryId: string, enabled: boolean) {
+  /**
+   * @param field analyzeEnabled = 要不要跑 AI 分析 · replyEnabled = bot 要不要在群裡回話
+   * 兩者刻意分開：客戶可能想要分析照跑，只是不要 bot 在群裡出聲。
+   */
+  async function handleToggle(
+    groupRegistryId: string, field: "analyzeEnabled" | "replyEnabled", enabled: boolean,
+  ) {
+    const label = field === "analyzeEnabled" ? "AI 分析" : "群組回話";
     setSavingIds((s) => new Set(s).add(groupRegistryId));
     try {
-      const res = await patchLineGroup(groupRegistryId, { analyzeEnabled: enabled });
+      const res = await patchLineGroup(groupRegistryId, { [field]: enabled });
       setGroups((s) => s.map((g) => g.groupRegistryId === groupRegistryId ? res.group : g));
-      toast.show(enabled ? "已啟用 AI 分析" : "已停用 AI 分析", "ok");
+      toast.show(`已${enabled ? "啟用" : "停用"}${label}`, "ok");
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "更新失敗", "danger");
     } finally {
@@ -118,6 +125,7 @@ export default function LineGroupsPage() {
               <th style={{ minWidth: 180 }}>群組</th>
               <th style={{ minWidth: 160 }}>部門</th>
               <th style={{ minWidth: 90 }}>AI 分析</th>
+              <th style={{ minWidth: 100 }}>群組回話</th>
               <th style={{ minWidth: 90, textAlign: "right" }}>訊息數</th>
               <th style={{ minWidth: 120 }}>最後活動</th>
             </tr>
@@ -146,25 +154,18 @@ export default function LineGroupsPage() {
                       <span>{g.departmentName ?? "(未分派)"}</span>
                     )}
                   </td>
-                  <td>
-                    {canAssign ? (
-                      <label style={{ cursor: saving ? "not-allowed" : "pointer" }}>
-                        <input
-                          type="checkbox"
-                          checked={g.analyzeEnabled}
-                          disabled={saving}
-                          onChange={(e) => void handleToggleAnalyze(g.groupRegistryId, e.target.checked)}
-                        />{" "}
-                        <span style={{ fontSize: 12, color: g.analyzeEnabled ? "var(--ok, #059669)" : "var(--ink-3)" }}>
-                          {g.analyzeEnabled ? "啟用" : "停用"}
-                        </span>
-                      </label>
-                    ) : (
-                      <span style={{ fontSize: 12, color: g.analyzeEnabled ? "var(--ok, #059669)" : "var(--ink-3)" }}>
-                        {g.analyzeEnabled ? "啟用" : "停用"}
-                      </span>
-                    )}
-                  </td>
+                  <ToggleCell
+                    on={g.analyzeEnabled} editable={canAssign} saving={saving}
+                    label={`「${g.displayName ?? g.groupId}」的 AI 分析`}
+                    onChange={(v) => void handleToggle(g.groupRegistryId, "analyzeEnabled", v)}
+                  />
+                  {/* bot 在群裡回「已收到完成回報」那類訊息。誤判會被整個群看到，
+                      所以客戶要能自己關掉（2026-07-29 回報）。關掉不影響分析與訊號落地。 */}
+                  <ToggleCell
+                    on={g.replyEnabled} editable={canAssign} saving={saving}
+                    label={`「${g.displayName ?? g.groupId}」的群組回話`}
+                    onChange={(v) => void handleToggle(g.groupRegistryId, "replyEnabled", v)}
+                  />
                   <td style={{ textAlign: "right", fontFamily: "var(--mono, ui-monospace, monospace)", fontSize: 12 }}>{g.eventCount}</td>
                   <td style={{ fontSize: 12, color: "var(--ink-3)" }}>{formatDateTime(g.lastEventAt)}</td>
                 </tr>
@@ -206,4 +207,26 @@ export default function LineGroupsPage() {
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("zh-TW", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+/** 表格裡的開關格 · 沒有編輯權限時只顯示狀態 */
+function ToggleCell({ on, editable, saving, label, onChange }: {
+  on: boolean; editable: boolean; saving: boolean; label: string; onChange: (v: boolean) => void;
+}) {
+  const text = (
+    <span style={{ fontSize: 12, color: on ? "var(--ok, #059669)" : "var(--ink-3)" }}>
+      {on ? "啟用" : "停用"}
+    </span>
+  );
+  return (
+    <td>
+      {editable ? (
+        <label style={{ cursor: saving ? "not-allowed" : "pointer" }}>
+          <input type="checkbox" checked={on} disabled={saving} aria-label={label}
+            onChange={(e) => onChange(e.target.checked)} />{" "}
+          {text}
+        </label>
+      ) : text}
+    </td>
+  );
 }
