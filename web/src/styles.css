@@ -2058,6 +2058,11 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
    PE-M5 · 權限管理 UI
    ============================================== */
 /* 「新增角色請聯繫 AIPROOT」· 中性提示 · 刻意不用 .banner（那是警告色，這不是警告） */
+/* 群組 ID · 點一下複製完整值（LINE App 裡看不到 ID，這是唯一取得處） */
+.lg-gid { background:none; border:none; padding:0; cursor:pointer; text-align:left;
+          font-size:11px; color:var(--ink-3); font-family:var(--mono, ui-monospace, monospace); }
+.lg-gid:hover .lg-gid-cp { text-decoration:underline; }
+.lg-gid-cp { color:var(--brand, #4f46e5); font-family:Inter,sans-serif; }
 .rm-note { padding:10px 12px; margin-bottom:14px; background:var(--surface-2, #F5F6F8); border:1px solid var(--line); border-radius:4px; font-size:12.5px; color:var(--ink-2); }
 .rm-layout { display:grid; grid-template-columns:280px 1fr; gap:16px; min-height:calc(100vh - 260px); }
 @media (max-width:900px) { .rm-layout { grid-template-columns:1fr; } }

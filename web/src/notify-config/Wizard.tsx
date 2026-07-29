@@ -55,6 +55,8 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
   const [title, setTitle] = useState("");
   const [channelType, setChannelType] = useState<NotifyChannelType>("line_group");
   const [lineGroups, setLineGroups] = useState<NcLineGroup[]>([]);
+  // 目標群改用手動輸入 · 下拉表達不了不在登錄表裡的群（webhook 沒收過訊息就不會有列）
+  const [manualTarget, setManualTarget] = useState(false);
   const [users, setUsers] = useState<NotifiableUser[]>([]);
   const [channelTarget, setChannelTarget] = useState("");
   const [saving, setSaving] = useState(false);
@@ -413,29 +415,41 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
               否則下拉只顯示空的 placeholder，看起來像從沒設定過。*/}
           {channelType === "line_group" ? (
             <div className="field" style={{ margin: 0 }}><label>LINE 目標群</label>
-              {lineGroups.length > 0 ? (
-                <StyledSelect ariaLabel="LINE 目標群" value={channelTarget} onChange={setChannelTarget} placeholder="選擇 LINE 群"
-                  items={[
-                    ...lineGroups.map((g) => ({
-                      id: g.groupId,
-                      // 帶租戶名：aiproot 一個人管多家，只看群名分不出是哪家的
-                      label: [g.tenantName, g.displayName || g.groupId].filter(Boolean).join(" · "),
-                    })),
-                    ...(channelTarget && !lineGroups.some((g) => g.groupId === channelTarget)
-                      ? [{ id: channelTarget, label: `${channelTarget}（目前設定 · 清單中查無此群）` }]
-                      : []),
-                  ]} />
+              {/*
+                下拉為主、手動輸入為輔。
+                ⚠️ 不做成「只能手動輸入」——群組 ID 在 LINE App 裡看不到，
+                   而我們自己的畫面上也是截斷顯示的，那樣等於逼人去問工程師查資料庫。
+                ⚠️ 也不做成「只能下拉」——line_group 是 webhook 驅動的登錄表，
+                   群裡沒人發過話就不會有列（prod 現有 3 條規則指的群就不在裡面）。
+              */}
+              {manualTarget || lineGroups.length === 0 ? (
+                <>
+                  <input className="tf" value={channelTarget} onChange={(e) => setChannelTarget(e.target.value)}
+                    placeholder="貼上 LINE 群組 ID（Cxxxx…）" />
+                  <div className="hint" style={{ marginTop: 6, fontSize: 12, color: "var(--ink-3)" }}>
+                    {lineGroups.length > 0
+                      ? <>群組 ID 可在「通訊管道」頁複製。<button type="button" className="nc-lnk"
+                          onClick={() => setManualTarget(false)}>改回從清單挑</button></>
+                      : <>看不到群組清單有兩個可能：這個帳號沒有檢視 LINE 群組的權限，
+                         或該 bot 還沒在任何群裡收過訊息（群組是收到訊息才會登錄）。</>}
+                  </div>
+                </>
               ) : (
                 <>
-                  {/* ⚠️ 這裡原本寫「先選 Ragic 帳號 · 或直接貼 LINE group id」。
-                      群組清單改成不經 Ragic 帳號之後，那句話就是叫人去做一件沒有用的事 ——
-                      選了帳號清單也不會出現，而使用者會以為是自己漏了步驟。
-                      清單空的真正原因只有兩個，直接講出來。*/}
-                  <input className="tf" value={channelTarget} onChange={(e) => setChannelTarget(e.target.value)}
-                    placeholder="貼上 LINE group id（Cxxxx…）" />
+                  <StyledSelect ariaLabel="LINE 目標群" value={channelTarget} onChange={setChannelTarget} placeholder="選擇 LINE 群"
+                    items={[
+                      ...lineGroups.map((g) => ({
+                        id: g.groupId,
+                        // 帶租戶名：aiproot 一個人管多家，只看群名分不出是哪家的
+                        label: [g.tenantName, g.displayName || g.groupId].filter(Boolean).join(" · "),
+                      })),
+                      ...(channelTarget && !lineGroups.some((g) => g.groupId === channelTarget)
+                        ? [{ id: channelTarget, label: `${channelTarget}（目前設定 · 清單中查無此群）` }]
+                        : []),
+                    ]} />
                   <div className="hint" style={{ marginTop: 6, fontSize: 12, color: "var(--ink-3)" }}>
-                    看不到群組清單有兩個可能：這個帳號沒有檢視 LINE 群組的權限，
-                    或該 bot 還沒在任何群裡收過訊息（群組是收到訊息才會登錄）。
+                    清單裡找不到？<button type="button" className="nc-lnk"
+                      onClick={() => setManualTarget(true)}>改成手動輸入群組 ID</button>
                   </div>
                 </>
               )}

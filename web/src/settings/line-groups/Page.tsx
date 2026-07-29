@@ -144,7 +144,18 @@ export default function LineGroupsPage() {
                 <tr key={g.groupRegistryId}>
                   <td>
                     <div style={{ fontWeight: 600 }}>{g.displayName ?? "(群名未同步)"}</div>
-                    <div style={{ fontSize: 11, color: "var(--ink-3)", fontFamily: "var(--mono, ui-monospace, monospace)" }}>{g.groupId.slice(0, 16)}…</div>
+                    {/* ⚠️ 要能複製**完整**的 ID。原本只顯示 slice(0,16)…，
+                        而群組 ID 在 LINE App 裡本來就看不到 —— 這裡截斷就等於沒有人拿得到它，
+                        「通知設定」那邊的「手動輸入群組 ID」也跟著變成一條死路。*/}
+                    <button
+                      type="button"
+                      className="lg-gid"
+                      title={`點一下複製完整 ID：${g.groupId}`}
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(g.groupId);
+                        toast.show("已複製完整群組 ID", "ok");
+                      }}
+                    >{g.groupId.slice(0, 16)}… <span className="lg-gid-cp">複製</span></button>
                   </td>
                   <td>
                     {canAssign ? (
