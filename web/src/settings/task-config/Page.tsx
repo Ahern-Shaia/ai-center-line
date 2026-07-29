@@ -81,6 +81,7 @@ function TaskTiming({ tenantId, ready }: { tenantId?: string; ready: boolean }) 
   const [grace, setGrace] = useState("");
   const [tier1, setTier1] = useState("");
   const [tier2, setTier2] = useState("");
+  const [assignNotify, setAssignNotify] = useState(true);
 
   const refresh = useCallback(async () => {
     if (!ready) return;
@@ -91,6 +92,7 @@ function TaskTiming({ tenantId, ready }: { tenantId?: string; ready: boolean }) 
       setGrace(String(r.graceDays));
       setTier1(String(r.tierDays[0]));
       setTier2(String(r.tierDays[1]));
+      setAssignNotify(r.assignNotify);
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
     } finally {
@@ -102,14 +104,15 @@ function TaskTiming({ tenantId, ready }: { tenantId?: string; ready: boolean }) 
 
   const n = (v: string) => Number.parseInt(v, 10);
   const dirty = !!cfg && (n(grace) !== cfg.graceDays
-    || n(tier1) !== cfg.tierDays[0] || n(tier2) !== cfg.tierDays[1]);
+    || n(tier1) !== cfg.tierDays[0] || n(tier2) !== cfg.tierDays[1]
+    || assignNotify !== cfg.assignNotify);
   const invalid = [grace, tier1, tier2].some((v) => !Number.isInteger(n(v)) || n(v) < 1 || n(v) > 90)
     || n(tier1) >= n(tier2);
 
   async function save() {
     setSaving(true);
     try {
-      const r = await updateTaskTiming({ tenantId, graceDays: n(grace), tierDays: [n(tier1), n(tier2)] });
+      const r = await updateTaskTiming({ tenantId, graceDays: n(grace), tierDays: [n(tier1), n(tier2)], assignNotify });
       // N-6：改動會即時重算歷史任務的「逾時 N 天」。不講的話主管會以為資料被人改過
       toast.show(
         r.affectedTickets > 0
@@ -162,6 +165,24 @@ function TaskTiming({ tenantId, ready }: { tenantId?: string; ready: boolean }) 
               value={tier2} disabled={!canEditTiming}
               onChange={(e) => setTier2(e.target.value)} />
             <span className="sc-row-hint">天內附上天數 · 超過就不再對當事人重複，改浮到主管端</span>
+          </div>
+        </div>
+
+        <div className="sc-row">
+          <div className="sc-row-lbl">
+            指派後通知當事人
+            <span className="sc-row-hint">主管把任務指派給某人時，用貴公司的 LINE 機器人私訊他</span>
+          </div>
+          <div className="sc-row-val">
+            <label style={{ cursor: canEditTiming ? "pointer" : "default" }}>
+              <input type="checkbox" checked={assignNotify} disabled={!canEditTiming}
+                onChange={(e) => setAssignNotify(e.target.checked)} />{" "}
+              <span style={{ fontSize: 12, color: assignNotify ? "var(--ok, #059669)" : "var(--ink-3)" }}>
+                {assignNotify ? "開啟" : "關閉"}
+              </span>
+            </label>
+            {/* 只私訊當事人一個人，群組看不到 —— 這件事要講，否則主管會怕打擾全群 */}
+            <span className="sc-row-hint">只私訊被指派的那一位 · 群組不會看到</span>
           </div>
         </div>
 

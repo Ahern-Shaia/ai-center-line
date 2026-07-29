@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { currentTx, withSystemTx } from "../db/client.js";
 import { displayState, type ConfirmStatus } from "../warroom-task-board/ticket-lane.js";
 import { TaskConfigService } from "../task-config/task-config.service.js";
+import { AssignNotifyService } from "./assign-notify.service.js";
 
 /**
  * WarroomTasksService · WTB-M3
@@ -84,7 +85,10 @@ export interface WarroomDaily {
 
 @Injectable()
 export class WarroomTasksService {
-  constructor(private readonly taskConfig: TaskConfigService) {}
+  constructor(
+    private readonly taskConfig: TaskConfigService,
+    private readonly assignNotify: AssignNotifyService,
+  ) {}
 
   /**
    * List tickets · Kanban 用 · RLS 已 tenant + department 隔離
@@ -478,8 +482,15 @@ export class WarroomTasksService {
    * 權限走 RLS：tickets policy 已限本租戶、group_owner 再限本部門，
    * 查不到就是無權操作 → 404，不另做一套判斷。
    */
+  /**
+   * 手動指派。指派成功後私訊當事人（task-assign-notify M1）。
+   *
+   * ⚠️ 通知結果一定要回傳。送不出去而畫面沒說的話，**主管會以為對方知道了**，
+   *    事情就卡在那裡 —— 那是本模組 FMEA 的 A-1（P0）。
+   */
   async assignTicket(ticketId: string, assigneeUserId: string | null, actorUserId: string): Promise<{
     ticketId: string; assignStatus: string; assigneeUserId: string | null; assigneeName: string | null;
+    notified: boolean; notifySkipReason: string | null;
   }> {
     const tx = currentTx();
     if (assigneeUserId) {
@@ -502,9 +513,30 @@ export class WarroomTasksService {
                 (SELECT display_name FROM users WHERE user_id = ${assigneeUserId}::uuid) AS name
     `);
     if (res.rows.length === 0) throw new NotFoundException("找不到這張任務，或你沒有權限操作");
+
+    // 摘要與操作者姓名 —— 通知內文要用
+    const meta = await tx.execute<{ summary: string; actor: string | null }>(sql`
+      SELECT t.summary,
+             (SELECT display_name FROM users WHERE user_id = ${actorUserId}::uuid) AS actor
+        FROM tickets t WHERE t.ticket_id = ${ticketId}::uuid`);
+    const summary = meta.rows[0]?.summary ?? "（無摘要）";
+    const actorName = meta.rows[0]?.actor ?? "主管";
+
+    if (assigneeUserId) {
+      const n = await this.assignNotify.onAssigned(tx, {
+        ticketId, assigneeUserId, summary, actorName,
+      });
+      return {
+        ticketId, assignStatus: status, assigneeUserId, assigneeName: res.rows[0].name,
+        notified: n.notified, notifySkipReason: n.skipReason,
+      };
+    }
+
+    // 退回待認領 → 只通知原本推過的那個人（A-6）
+    await this.assignNotify.onUnassigned(tx, { ticketId, summary });
     return {
-      ticketId, assignStatus: status, assigneeUserId,
-      assigneeName: res.rows[0].name,
+      ticketId, assignStatus: status, assigneeUserId: null, assigneeName: null,
+      notified: false, notifySkipReason: null,
     };
   }
 

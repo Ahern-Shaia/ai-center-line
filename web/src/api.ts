@@ -454,7 +454,12 @@ export interface AssignableMember { userId: string; name: string; hasLineBinding
 export const getAssignableMembers = () =>
   req<{ members: AssignableMember[] }>("/warroom/assignable-members");
 export const assignTicket = (ticketId: string, assigneeUserId: string | null) =>
-  req<{ ticketId: string; assignStatus: string; assigneeUserId: string | null; assigneeName: string | null }>(
+  req<{
+    ticketId: string; assignStatus: string; assigneeUserId: string | null; assigneeName: string | null;
+    /** 有沒有真的私訊到當事人 · 送不出去而畫面沒說，主管會以為對方知道了 */
+    notified: boolean;
+    notifySkipReason: "no_binding" | "no_bot" | "disabled" | "already_notified" | "push_failed" | null;
+  }>(
     `/warroom/tickets/${ticketId}/assignee`,
     { method: "PATCH", body: JSON.stringify({ assigneeUserId }) },
   );
@@ -1295,6 +1300,8 @@ export type SchedulerId = "pdr" | "group_batch";
 export interface TaskConfig {
   graceDays: number;
   tierDays: [number, number];
+  /** 指派後要不要私訊當事人 */
+  assignNotify: boolean;
   /** true = 這家還沒動過，用的是平台預設 */
   isDefault: boolean;
   template: { key: string; label: string; description: string } | null;
@@ -1303,7 +1310,7 @@ export interface TaskConfig {
 export const getTaskConfig = (tenantId?: string) =>
   req<TaskConfig>(`/task-config${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
 
-export const updateTaskTiming = (body: { tenantId?: string; graceDays: number; tierDays: [number, number] }) =>
+export const updateTaskTiming = (body: { tenantId?: string; graceDays: number; tierDays: [number, number]; assignNotify?: boolean }) =>
   req<{ graceDays: number; tierDays: [number, number]; affectedTickets: number }>(
     "/task-config/timing", { method: "PATCH", body: JSON.stringify(body) });
 

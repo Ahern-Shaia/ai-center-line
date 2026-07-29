@@ -9,6 +9,8 @@ export interface TaskConfig {
   graceDays: number;
   /** 提醒升級階梯 [normal 上限, aged 上限] */
   tierDays: [number, number];
+  /** 指派後要不要私訊當事人（task-assign-notify · OQ-TAN-4）*/
+  assignNotify: boolean;
 }
 
 /**
@@ -16,7 +18,7 @@ export interface TaskConfig {
  * migration 刻意沒給 SQL DEFAULT —— 兩邊各寫一次的話，改了其中一個就會出現
  * 「新租戶 7 天、舊租戶 5 天」這種沒人講得出原因的差異。
  */
-export const DEFAULT_TASK_CONFIG: TaskConfig = { graceDays: 7, tierDays: [3, 7] };
+export const DEFAULT_TASK_CONFIG: TaskConfig = { graceDays: 7, tierDays: [3, 7], assignNotify: true };
 
 const RANGE = { min: 1, max: 90 };
 
@@ -28,15 +30,13 @@ export class TaskConfigService {
    */
   async forTenant(tx: Db, tenantId: string | null): Promise<TaskConfig> {
     if (!tenantId) return DEFAULT_TASK_CONFIG;
-    const r = await tx.execute<{ overdue_grace_days: number; reminder_tier_days: number[] }>(sql`
-      SELECT overdue_grace_days, reminder_tier_days
+    const r = await tx.execute<{
+      overdue_grace_days: number; reminder_tier_days: number[]; assign_notify_enabled: boolean | null;
+    }>(sql`
+      SELECT overdue_grace_days, reminder_tier_days, assign_notify_enabled
       FROM tenant_task_config WHERE tenant_id = ${tenantId}::uuid LIMIT 1`);
     const row = r.rows[0];
-    if (!row) return DEFAULT_TASK_CONFIG;
-    return {
-      graceDays: row.overdue_grace_days,
-      tierDays: [row.reminder_tier_days[0], row.reminder_tier_days[1]],
-    };
+    return row ? rowToConfig(row) : DEFAULT_TASK_CONFIG;
   }
 
   /**
@@ -45,14 +45,14 @@ export class TaskConfigService {
    * 有跨租戶逃生門，那樣會撈到**別家**的設定當成自己的。
    */
   async forCurrentTenant(tx: Db): Promise<TaskConfig> {
-    const r = await tx.execute<{ overdue_grace_days: number; reminder_tier_days: number[] }>(sql`
-      SELECT overdue_grace_days, reminder_tier_days FROM tenant_task_config
+    const r = await tx.execute<{
+      overdue_grace_days: number; reminder_tier_days: number[]; assign_notify_enabled: boolean | null;
+    }>(sql`
+      SELECT overdue_grace_days, reminder_tier_days, assign_notify_enabled FROM tenant_task_config
       WHERE tenant_id = nullif(current_setting('app.current_tenant', true), '')::uuid
       LIMIT 1`);
     const row = r.rows[0];
-    return row
-      ? { graceDays: row.overdue_grace_days, tierDays: [row.reminder_tier_days[0], row.reminder_tier_days[1]] }
-      : DEFAULT_TASK_CONFIG;
+    return row ? rowToConfig(row) : DEFAULT_TASK_CONFIG;
   }
 
   /** ⚠️ tenantId 必須是 controller 用 resolveTenantId 解過的，不可直接吃 client 傳的值 */
@@ -70,7 +70,8 @@ export class TaskConfigService {
     // isDefault 讓 UI 能說「目前用平台預設」而不是假裝這是客戶設過的值
     const same = cfg.graceDays === DEFAULT_TASK_CONFIG.graceDays
       && cfg.tierDays[0] === DEFAULT_TASK_CONFIG.tierDays[0]
-      && cfg.tierDays[1] === DEFAULT_TASK_CONFIG.tierDays[1];
+      && cfg.tierDays[1] === DEFAULT_TASK_CONFIG.tierDays[1]
+      && cfg.assignNotify === DEFAULT_TASK_CONFIG.assignNotify;
     return {
       ...cfg,
       isDefault: same,
@@ -84,19 +85,21 @@ export class TaskConfigService {
    * 稽核由 TenantTxInterceptor 每請求寫一筆（R5），這裡不重複寫。
    */
   async update(user: JwtUser, tenantId: string, body: {
-    graceDays: number; tierDays: [number, number];
+    graceDays: number; tierDays: [number, number]; assignNotify?: boolean;
   }): Promise<TaskConfig & { affectedTickets: number }> {
     const { graceDays, tierDays } = validate(body);
     const tx = currentTx();
 
+    const assignNotify = body.assignNotify ?? DEFAULT_TASK_CONFIG.assignNotify;
     await tx.execute(sql`
       INSERT INTO tenant_task_config
-        (tenant_id, overdue_grace_days, reminder_tier_days, updated_by)
+        (tenant_id, overdue_grace_days, reminder_tier_days, assign_notify_enabled, updated_by)
       VALUES (${tenantId}::uuid, ${graceDays},
-              ARRAY[${tierDays[0]}, ${tierDays[1]}]::int[], ${user.user_id}::uuid)
+              ARRAY[${tierDays[0]}, ${tierDays[1]}]::int[], ${assignNotify}, ${user.user_id}::uuid)
       ON CONFLICT (tenant_id) DO UPDATE SET
-        overdue_grace_days = EXCLUDED.overdue_grace_days,
-        reminder_tier_days = EXCLUDED.reminder_tier_days,
+        overdue_grace_days    = EXCLUDED.overdue_grace_days,
+        reminder_tier_days    = EXCLUDED.reminder_tier_days,
+        assign_notify_enabled = EXCLUDED.assign_notify_enabled,
         updated_at = now(),
         updated_by = EXCLUDED.updated_by`);
 
@@ -113,11 +116,22 @@ export class TaskConfigService {
           OR (due_at IS NULL AND created_at < now() - make_interval(days => ${graceDays}))
         )`);
 
-    return { graceDays, tierDays, affectedTickets: r.rows[0]?.n ?? 0 };
+    return { graceDays, tierDays, assignNotify, affectedTickets: r.rows[0]?.n ?? 0 };
   }
 }
 
-function validate(b: { graceDays: number; tierDays: [number, number] }): TaskConfig {
+/** ⚠️ assign_notify_enabled 可為 NULL＝沿用預設 · 預設值只留在 DEFAULT_TASK_CONFIG 一處 */
+function rowToConfig(row: {
+  overdue_grace_days: number; reminder_tier_days: number[]; assign_notify_enabled: boolean | null;
+}): TaskConfig {
+  return {
+    graceDays: row.overdue_grace_days,
+    tierDays: [row.reminder_tier_days[0], row.reminder_tier_days[1]],
+    assignNotify: row.assign_notify_enabled ?? DEFAULT_TASK_CONFIG.assignNotify,
+  };
+}
+
+function validate(b: { graceDays: number; tierDays: [number, number] }): Omit<TaskConfig, "assignNotify"> {
   const nums = [b.graceDays, b.tierDays?.[0], b.tierDays?.[1]];
   if (nums.some((n) => !Number.isInteger(n) || n < RANGE.min || n > RANGE.max)) {
     throw new BadRequestException(`天數需為 ${RANGE.min}–${RANGE.max} 的整數`);

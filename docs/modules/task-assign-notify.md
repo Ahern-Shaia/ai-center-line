@@ -1,6 +1,6 @@
 # task-assign-notify · 人工指派後通知當事人
 
-> 🚧 **狀態：M0 DRAFT v0.1**（2026-07-29）· 待裁定 OQ-TAN-1..8
+> ✅ **M1–M3 SHIPPED v1.0**（2026-07-29）· OQ-TAN-1..8 全採建議 · ⚠️ 待 push + prod migration 0045
 >
 > 觸發：用戶問「如果『人工指派』能透過商戶綁定的 LINE Bot 通知成員嗎（推播通知）？」
 >
@@ -174,11 +174,11 @@ assignTicket()  ← 已存在
 
 | # | 內容 | 依賴 |
 |---|---|---|
-| **M0** | 本 doc · 待裁定 OQ-TAN-1..8 | — |
-| **M1** | `assignTicket` 後推播 ＋ `notified` 回傳 ＋ 前端明說 | OQ 裁定 |
-| **M2** | 指派下拉標示「可通知 / 未綁定」· 讓主管選之前就知道 | M1 |
-| **M3** | 「任務設定」加開關（OQ-TAN-4）· 取消指派的通知（A-6）| M1 ＋ 任務設定頁 |
-| **M4** | docs 收尾 ＋ FMEA 覆核 | — |
+| **M0** ✅ | 本 doc · 待裁定 OQ-TAN-1..8 | — |
+| **M1** ✅ | `assignTicket` 後推播 ＋ `notified` 回傳 ＋ 前端明說 | OQ 裁定 |
+| **M2** ✅ | 指派下拉標示「可通知 / 未綁定」<br>⭐ 實作時發現**後端早就回 `hasLineBinding`、前端也早就顯示「未綁 LINE」** —— 這一段本來就做完了 | M1 |
+| **M3** ✅ | 「任務設定」加開關（OQ-TAN-4）· 取消指派的通知（A-6）| M1 ＋ 任務設定頁 |
+| **M4** ✅ | docs 收尾 ＋ FMEA 覆核 | — |
 
 ---
 
@@ -203,3 +203,4 @@ assignTicket()  ← 已存在
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
 | 2026-07-29 | v0.1 | M0 首版 · 起於用戶問「人工指派能不能透過商戶的 bot 推播通知」· ⭐ 查驗發現**零件全都在**（推播能力、綁定表、`line_user` 管道 notify v3 早就支援、個人日報已在用 push），接起來只是一段程式 · ⭐ 真正的限制是**只有 7/45 張任務指得到有帳號的人**，而瓶頸不是綁定率（9 個帳號綁了 8 個）是**帳號數**——AI 抽到的是群裡的暱稱 · 同時更正舊 doc 用「群成員數」當綁定率分母是錯的 · ⭐⭐ 主張真正要裁定的不是技術而是**要不要開始主動推播**，並提出界線：「有人對他做了決定」可推、「狀態廣播 / 系統定時提醒」不可推 · 對不到帳號時**明說無法通知**，不在群裡 @ 他（為覆蓋率打擾 40 幾人）· FMEA 8 條含 3 個 P0（靜默失敗／推給錯的人／跨租戶用錯 bot token）· §8 誠實寫明一開始大概率一天 0–2 則，並給出兩週後的量測點 | ahern + Claude Code |
+| 2026-07-29 | v1.0 | **M1–M3 落地** · migration 0045（`tickets.assign_notified_at/_user_id` ＋ `tenant_task_config.assign_notify_enabled`）· `AssignNotifyService` ＋ `assignTicket` 回傳 `notified`/`notifySkipReason` · 前端 toast 說出通知結果、任務設定頁加開關 · **M2 發現本來就做完了**（後端早已回 `hasLineBinding`、下拉早已顯示「未綁 LINE」）· ⚠️⚠️ **實作時踩到本專案第 11 次 RLS 靜默回 0**：`lookupTarget` 第一版用 `withSystemTx`，而 `user_line_binding` 的 policy 內含 `EXISTS (SELECT 1 FROM users ...)`，`users` 的逃生門只有 `aiproot_admin`／`auth_lookup`**沒有 `system`** → 子查詢回 0 列 → 綁定永遠看不見 · ⭐ 最可怕的是**它失敗的樣子跟「真的沒綁定」一模一樣**：主管看到「對方未綁定 LINE」就自己去講一聲，永遠不會有人回報這是 bug · 靠測試才抓到（假的 LineApiClient ＋ 真的 DB）· 7 條新測試涵蓋 A-1/A-4/A-6/A-8 與開關 · 352/352 綠 | ahern + Claude Code |

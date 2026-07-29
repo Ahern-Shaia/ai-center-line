@@ -273,12 +273,27 @@ function AssignBox({ ticket, onAssigned }: { ticket: WarroomKanbanTicket; onAssi
   const [busy, setBusy] = useState(false);
   const toast = useToast();
 
-  async function pick(userId: string | null) {
+  const NOTIFY_SKIP_LABEL: Record<string, string> = {
+  no_binding: "⚠️ 對方未綁定 LINE，沒有通知到，請另外跟他說一聲",
+  no_bot: "⚠️ 這家還沒設定 LINE 機器人，沒有通知到",
+  disabled: "指派通知已關閉（可在「任務設定」開啟）",
+  already_notified: "先前已通知過，不重複打擾",
+  push_failed: "⚠️ 通知送出失敗，請另外跟他說一聲",
+};
+
+async function pick(userId: string | null) {
     if (busy) return;
     setBusy(true);
     try {
       const r = await assignTicket(ticket.ticketId, userId);
-      toast.show(userId ? `已派給 ${r.assigneeName ?? ""}` : "已退回待認領", "ok");
+      // ⚠️ 通知結果一定要說出來。只講「已派給 X」而私訊沒送出的話，
+      //    主管會以為對方知道了，事情就卡在那裡（FMEA A-1 · P0）。
+      toast.show(
+        !userId ? "已退回待認領"
+          : r.notified ? `已派給 ${r.assigneeName ?? ""} · 已私訊通知`
+          : `已派給 ${r.assigneeName ?? ""} · ${NOTIFY_SKIP_LABEL[r.notifySkipReason ?? "push_failed"]}`,
+        !userId || r.notified ? "ok" : "warn",
+      );
       setOpen(false);
       onAssigned();
     } catch (e) { toast.show(e instanceof ApiError ? e.message : "派發失敗", "danger"); }
