@@ -35,19 +35,30 @@ const factoryReportSchema = z.object({
 });
 
 // ── L2 · 服務工單型（客戶/車輛/施作項目/金額）──────────────────────
-// ⚠️ 尚未啟用：欄位必須由客戶確認，我方不猜（OQ-ESO-1）。
-//    這裡先放草案供 review，選用此模板前請先完成 extraction-schema-service-order M0。
+// ⚠️ 尚未啟用（selectable: false）。
+//    v0.2（2026-07-30）：欄位已**用 prod 真實資料量出來**，不再是憑想像的草案 ——
+//    8 天內 9 則「今日進度回報」固定格式，量出三個要加（items 的 vehicle/status/warranty）
+//    與三個不加（聯絡人/電話 只 2 則且是 PII、業務分區屬主檔、車牌併入 vehicle）。
+//    詳見 docs/modules/extraction-schema-service-order.md §3.4／§3.5。
+//    要開放前仍需裁定 OQ-ESO-2..10。
 const serviceOrderSchema = z.object({
   date: z.string().nullable(),
   reporter: z.string().nullable(),
-  customer: z.string().nullable(),          // 客戶／案場
-  site: z.string().nullable(),              // 站點／區域
-  vehicle: z.string().nullable(),           // 車型／車號
+  customer: z.string().nullable(),          // 客戶／案場：屏東恆基醫院、嘉義安道基金會
+  site: z.string().nullable(),              // 站點：朴子站、長庚站（同一客戶多站點）
   items: z.array(z.object({
-    name: z.string(),
-    qty: z.number().nullable(),
+    name: z.string(),                       // 施作項目：主機馬達查修、更換右後鏡頭
+    qty: z.number().nullable(),             // 「一台」→ 1
     amount: z.number().nullable(),          // 金額只抄不算（R11）
+    // ⚠️ 以下三個是 v0.2 依 prod 真實資料補的（doc §3.4）——
+    //    9 則「今日進度回報」量出來的，不是憑想像加的。
+    vehicle: z.string().nullable(),         // 車型／車號 · **在項目層**：同一客戶可能多台不同車
+    status: z.string().nullable(),          // 該項目自己的狀態：待報價單同意後維修／待領料安裝／安排中
+    warranty: z.string().nullable(),        // 保內／保外 · **原文照抄**：我方沒有保固起訖資料，不可自行判斷
   })),
+  // ⚠️ record 層仍留一個 status，但細節看 items[].status ——
+  //    真實案例：同一客戶「洽談側踏（待領料安裝）」與「保養一台（已完成）」狀態不同，
+  //    record 層只有一個欄位時會丟掉其中一個。
   status: z.string().nullable(),
   issues: z.string().nullable(),
   source_ids: z.array(z.number()),

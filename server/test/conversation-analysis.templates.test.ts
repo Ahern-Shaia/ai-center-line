@@ -55,20 +55,57 @@ test("factory_report · 保有 daily_reports 且欄位與改版前一致（compa
   assert.ok(ok.success, "改版前的 daily_report 形狀必須仍然合法");
 });
 
-test("service_order · 支援一則多客戶 + 多施作項目（doc §0.2 真實格式）", () => {
+test("service_order · 一則多客戶 + 多項目，且**每個項目各有狀態**（prod 07-24 真實訊息）", () => {
+  // 真實訊息（doc §3.4）：
+  //   今日進度回報 / 嘉義中正高齡 / 辦公室 / 洽談側踏一台 / 待領料安裝 / 保養一台（3500）
+  // ⚠️ 重點在「同一客戶、同一則回報，兩個項目狀態不同」——
+  //    record 層只有一個 status 時會丟掉其中一個，這是 v0.2 把 status 下移到 items 的理由。
   const ok = buildAnalysisSchema("service_order").safeParse({
     ...L1_FIXTURE,
     service_reports: [{
-      date: "2026-07-24", reporter: "志銓", customer: "台中智障者協會", site: "2 區",
-      vehicle: null,
+      date: "2026-07-24", reporter: "志銓", customer: "嘉義中正高齡", site: "辦公室",
       items: [
-        { name: "更換後鏡頭", qty: 1, amount: 3500 },
-        { name: "更換行車記錄器硬碟", qty: null, amount: 6300 },
+        { name: "洽談側踏", qty: 1, amount: null,
+          vehicle: null, status: "待領料安裝", warranty: null },
+        { name: "保養", qty: 1, amount: 3500,
+          vehicle: null, status: "完成", warranty: "保內" },
       ],
-      status: "完成", issues: null, source_ids: [12], confidence: "high",
+      status: null, issues: null, source_ids: [12], confidence: "high",
+    }],
+  });
+  assert.ok(ok.success, ok.success ? "" : JSON.stringify(ok.error.issues.slice(0, 3)));
+});
+
+test("⭐ service_order · 車型在**項目層**（同一客戶多台不同車 · prod 07-27 真實訊息）", () => {
+  // 真實訊息：高雄宜萃日照「旅玩家查修一台」/ 高雄林自用戶「凌厲斜坡板」
+  // 車型綁在施作項目上 —— 放 record 層只記得一台。
+  const ok = buildAnalysisSchema("service_order").safeParse({
+    ...L1_FIXTURE,
+    service_reports: [{
+      date: "2026-07-27", reporter: "汪", customer: "高雄宜萃日照", site: null,
+      items: [
+        { name: "查修", qty: 1, amount: null, vehicle: "旅玩家", status: "待討論", warranty: "保內" },
+        { name: "斜坡板止滑膠帶除膠", qty: 1, amount: null, vehicle: "JS", status: null, warranty: null },
+      ],
+      status: null, issues: null, source_ids: [7], confidence: "medium",
     }],
   });
   assert.ok(ok.success);
+});
+
+test("⭐⭐ service_order · 新增的三個項目欄位不可省略（必須明確給 null）", () => {
+  // R11 紀律：缺漏一律填 null，不是省略 key。
+  // 允許省略的話，模型會在「沒把握」時直接不輸出，我們就分不出
+  // 「這個項目沒有保固資訊」與「模型忘了想這件事」。
+  const missing = buildAnalysisSchema("service_order").safeParse({
+    ...L1_FIXTURE,
+    service_reports: [{
+      date: "2026-07-24", reporter: null, customer: "X", site: null,
+      items: [{ name: "保養", qty: 1, amount: null }],   // ← 少了 vehicle/status/warranty
+      status: null, issues: null, source_ids: [1], confidence: "high",
+    }],
+  });
+  assert.equal(missing.success, false, "省略新欄位應被 schema 擋下");
 });
 
 // ── prompt 拆分：不可在拆的過程中漏掉規則 ────────────────────────
