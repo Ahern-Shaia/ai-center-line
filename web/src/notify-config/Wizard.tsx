@@ -426,8 +426,18 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
                       : []),
                   ]} />
               ) : (
-                <input className="tf" value={channelTarget} onChange={(e) => setChannelTarget(e.target.value)}
-                  placeholder={sourceType === "ragic_form" ? "先選 Ragic 帳號 · 或直接貼 LINE group id" : "貼上 LINE group id"} />
+                <>
+                  {/* ⚠️ 這裡原本寫「先選 Ragic 帳號 · 或直接貼 LINE group id」。
+                      群組清單改成不經 Ragic 帳號之後，那句話就是叫人去做一件沒有用的事 ——
+                      選了帳號清單也不會出現，而使用者會以為是自己漏了步驟。
+                      清單空的真正原因只有兩個，直接講出來。*/}
+                  <input className="tf" value={channelTarget} onChange={(e) => setChannelTarget(e.target.value)}
+                    placeholder="貼上 LINE group id（Cxxxx…）" />
+                  <div className="hint" style={{ marginTop: 6, fontSize: 12, color: "var(--ink-3)" }}>
+                    看不到群組清單有兩個可能：這個帳號沒有檢視 LINE 群組的權限，
+                    或該 bot 還沒在任何群裡收過訊息（群組是收到訊息才會登錄）。
+                  </div>
+                </>
               )}
             </div>
           ) : (
