@@ -103,34 +103,69 @@ test("⭐ 沒分派部門的群要看得出來（不然使用者只能猜為什�
   assert.ok(withDept?.departmentId, "有部門的群不可被誤標成沒有");
 });
 
-test("⭐ 任務詳情要帶出來源訊息裡的照片（原文只有「[照片]」看不出內容）", async () => {
-  const msgId = `dl-msg-${randomUUID().slice(0, 8)}`;
+test("⭐⭐ 照片要掛在它自己那一則訊息上（索引對齊）", async () => {
+  // 這支驗的是整條對照鏈：
+  //   analysis_result.messages[i].id  是解析索引
+  //   → analysis_upload.source_message_ids[i] 是該則的真實 LINE 訊息 id
+  //   → line_media
+  // 對錯一格就會把照片掛到隔壁那則訊息上，而畫面看起來一樣正常 ——
+  // 所以中間那則刻意是照片，前後刻意是文字。
+  const tag = randomUUID().slice(0, 8);
+  const ids = [`dl-a-${tag}`, `dl-b-${tag}`, `dl-c-${tag}`];
   const mediaId = randomUUID();
-  await withTenant({ tenantId: null, role: "system", departmentId: null, userId: null }, async (tx) => {
-    await tx.execute(sql`
-      INSERT INTO line_message
-        (message_id, tenant_id, bot_id, group_id, department_id, sender_line_id,
-         message_type, text_content, sent_at, raw_event, chat_context)
-      VALUES (${msgId}, ${T}::uuid, ${BOT}::uuid, ${G_OK}, ${DEPT}::uuid, 'Udltest',
-              'image', NULL, now(), '{}'::jsonb, 'group')`);
-    await tx.execute(sql`
-      INSERT INTO line_media (media_id, tenant_id, message_id, media_type, storage_backend, content_type)
-      VALUES (${mediaId}::uuid, ${T}::uuid, ${msgId}, 'image', 's3', 'image/jpeg')`);
-  });
+
+  const uploadId = await withTenant({ tenantId: null, role: "system", departmentId: null, userId: null },
+    async (tx) => {
+      for (const [i, mid] of ids.entries()) {
+        await tx.execute(sql`
+          INSERT INTO line_message
+            (message_id, tenant_id, bot_id, group_id, department_id, sender_line_id,
+             message_type, text_content, sent_at, raw_event, chat_context)
+          VALUES (${mid}, ${T}::uuid, ${BOT}::uuid, ${G_OK}, ${DEPT}::uuid, 'Udltest',
+                  ${i === 1 ? "image" : "text"}, ${i === 1 ? null : `第 ${i} 則`},
+                  now(), '{}'::jsonb, 'group')`);
+      }
+      await tx.execute(sql`
+        INSERT INTO line_media (media_id, tenant_id, message_id, media_type, storage_backend, content_type)
+        VALUES (${mediaId}::uuid, ${T}::uuid, ${ids[1]}, 'image', 's3', 'image/jpeg')`);
+
+      const up = await tx.execute<{ id: number }>(sql`
+        INSERT INTO analysis_upload
+          (tenant_id, tenant_slug, filename, raw_content, status, source, group_id, batch_date, source_message_ids)
+        VALUES (${T}::uuid, 'batch', ${`chain-${tag}`}, '', 'done', 'webhook', ${G_OK}, ${TODAY}::date,
+                ARRAY[${ids[0]}, ${ids[1]}, ${ids[2]}]::text[])
+        RETURNING id`);
+      const id = up.rows[0].id;
+      await tx.execute(sql`
+        INSERT INTO analysis_result (upload_id, messages, records, daily_reports)
+        VALUES (${id},
+          '[{"id":0,"time":"10:18","sender":"客服","text":"這個中區維修","kind":"text"},
+            {"id":1,"time":"10:18","sender":"客服","text":"[照片]","kind":"image"},
+            {"id":2,"time":"10:19","sender":"客服","text":"這個可以嗎","kind":"text"}]'::jsonb,
+          '[{"title":"中區維修確認","source_ids":[0,1,2],"confidence":"high"}]'::jsonb,
+          '[]'::jsonb)`);
+      return id;
+    });
 
   const ticketId = await asTenant(async () => {
     const r = await currentTx().execute<{ id: string }>(sql`
-      INSERT INTO tickets (tenant_id, department_id, summary, confirm_status, source_message_ids)
-      VALUES (${T}::uuid, ${DEPT}::uuid, 'dl-有照片的任務', '待簽核',
-              ARRAY[${msgId}]::text[])
+      INSERT INTO tickets (tenant_id, department_id, summary, confirm_status,
+                           source_upload_id, source_record_index, source_message_ids)
+      VALUES (${T}::uuid, ${DEPT}::uuid, 'dl-鏈結測試', '待簽核',
+              ${uploadId}, 0, ARRAY[${ids[0]}, ${ids[1]}, ${ids[2]}]::text[])
       RETURNING ticket_id::text AS id`);
     return r.rows[0].id;
   });
 
   const src = await asTenant(() => svc.ticketSource(ticketId));
-  assert.equal(src.media.length, 1, "來源訊息帶了一張照片，就要回一張");
-  assert.equal(src.media[0].mediaId, mediaId);
-  assert.equal(src.media[0].kind, "image");
+  assert.equal(src.hasSourceLink, true);
+  assert.equal(src.messages.length, 3, "三則來源訊息都要回");
+  assert.equal(src.messages[0].media, null, "第 0 則是文字");
+  assert.equal(
+    src.messages[1].media?.mediaId, mediaId,
+    "照片要掛在第 1 則 —— 掛到 0 或 2 的話畫面一樣正常，但「這個可以嗎」就指錯圖了",
+  );
+  assert.equal(src.messages[2].media, null, "第 2 則是文字");
 });
 
 test("沒有來源訊息 id 的舊任務不會炸，只是沒有照片", async () => {
@@ -142,5 +177,9 @@ test("沒有來源訊息 id 的舊任務不會炸，只是沒有照片", async (
     return r.rows[0].id;
   });
   const src = await asTenant(() => svc.ticketSource(ticketId));
-  assert.deepEqual(src.media, []);
+  assert.equal(
+    src.hasSourceLink, false,
+    "沒有連結要講出來 —— 跟「這幾則訊息確定沒有照片」是兩件事，都留白的話分不出來",
+  );
+  assert.deepEqual(src.messages.filter((m) => m.media), [], "沒有連結就沒有照片可掛");
 });

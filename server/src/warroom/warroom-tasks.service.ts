@@ -13,13 +13,14 @@ import { TaskConfigService } from "../task-config/task-config.service.js";
  * · role-scoped filter · RLS 已處理 group_owner 限 own department
  */
 
-export interface TicketMedia {
-  mediaId: string;
-  /** image / video / file */
-  kind: string;
-  contentType: string | null;
+/** 來源訊息 · media 為 null 代表這一則不是照片／影片 */
+export interface SourceMessage {
+  id: number;
+  time: string;
   sender: string;
-  at: string;
+  text: string;
+  kind: string;
+  media: { mediaId: string; kind: string } | null;
 }
 
 export interface WarroomTicket {
@@ -372,44 +373,49 @@ export class WarroomTasksService {
    * 查不到就代表無權查看 → 回 404，不另外做一套判斷。
    */
   /**
-   * 這張任務的來源訊息帶了哪些照片／影片。
+   * 把照片掛回它自己那一則訊息。
+   *
+   * 對照鏈（prod 抽驗過是精準的）：
+   *   `analysis_result.messages[i].id` 是**解析索引**
+   *   → `analysis_upload.source_message_ids[i]` 是該則的真實 LINE 訊息 id
+   *   → join `line_media`
    *
    * ⚠️ 走 `withSystemTx` 是因為上一步已用 tickets 的 RLS 授權過這張票；
-   *    line_media 沒有自己的租戶欄位，只能靠 line_message join 回去。
+   *    line_media 沒有租戶欄位，只能靠 line_message join 回去。
    *    這裡只回 id 與型別，內容仍走 `GET /media/:id/content`（需 media:view，
    *    且每次存取都會進 audit_log）—— 網址一個都不外流。
    */
-  private async mediaOfTicket(messageIds: string[] | null): Promise<TicketMedia[]> {
-    if (!messageIds || messageIds.length === 0) return [];
+  private async attachMedia(uploadId: number, msgs: Array<{
+    id: number; time: string; sender: string; text: string; kind: string;
+  }>): Promise<SourceMessage[]> {
+    if (msgs.length === 0) return [];
+
     const r = await withSystemTx((stx) => stx.execute<{
-      media_id: string; media_type: string; content_type: string | null;
-      sender: string | null; sent_at: string;
+      idx: number; media_id: string; media_type: string;
     }>(sql`
-      SELECT md.media_id::text, md.media_type, md.content_type,
-             COALESCE(mem.display_name, m.sender_line_id) AS sender,
-             to_char(m.sent_at AT TIME ZONE 'Asia/Taipei', 'MM/DD HH24:MI') AS sent_at
-        FROM line_media md
-        JOIN line_message m ON m.message_id = md.message_id
-        LEFT JOIN line_member mem
-               ON mem.group_id = m.group_id AND mem.user_id = m.sender_line_id
-       WHERE md.message_id = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(messageIds)}::jsonb)))
-         AND md.deleted_at IS NULL
-       ORDER BY m.sent_at
-       LIMIT 20`));
-    return r.rows.map((x) => ({
-      mediaId: x.media_id,
-      kind: x.media_type,
-      contentType: x.content_type,
-      sender: x.sender ?? "",
-      at: x.sent_at,
-    }));
+      WITH idmap AS (
+        SELECT generate_subscripts(source_message_ids, 1) - 1 AS idx,
+               unnest(source_message_ids) AS message_id
+          FROM analysis_upload WHERE id = ${uploadId}
+      )
+      SELECT idmap.idx, md.media_id::text, md.media_type
+        FROM idmap
+        JOIN line_media md ON md.message_id = idmap.message_id AND md.deleted_at IS NULL`));
+
+    const byIdx = new Map(r.rows.map((x) => [Number(x.idx), { mediaId: x.media_id, kind: x.media_type }]));
+    return msgs.map((m) => ({ ...m, media: byIdx.get(m.id) ?? null }));
   }
 
   async ticketSource(ticketId: string): Promise<{
     summary: string;
     extracted: Record<string, unknown> | null;
-    messages: Array<{ id: number; time: string; sender: string; text: string; kind: string }>;
-    media: TicketMedia[];
+    messages: SourceMessage[];
+    /**
+     * 這張任務有沒有留下「哪幾則訊息」的連結。
+     * ⚠️ false 與「這幾則訊息沒有照片」是**兩件事**，前端要分開講 ——
+     * 前者是我們不知道，後者是確定沒有。都留白的話主管無從判斷自己看到的是全部還是殘缺。
+     */
+    hasSourceLink: boolean;
     unavailableReason: string | null;
   }> {
     const tx = currentTx();
@@ -423,12 +429,9 @@ export class WarroomTasksService {
     const ticket = t.rows[0];
     if (!ticket) throw new NotFoundException("找不到這張任務，或你沒有權限查看");
 
-    // ⭐ 原文裡的「[照片]」只是一段文字，看不到內容就無法判斷這該不該變成任務。
-    //    照片本身早就存下來了（line_media），只是從沒接到這裡。
-    const media = await this.mediaOfTicket(ticket.source_message_ids);
-
+    const hasSourceLink = (ticket.source_message_ids?.length ?? 0) > 0;
     const empty = (reason: string) => ({
-      summary: ticket.summary, extracted: null, messages: [], media, unavailableReason: reason,
+      summary: ticket.summary, extracted: null, messages: [], hasSourceLink, unavailableReason: reason,
     });
     if (ticket.source_upload_id == null || ticket.source_record_index == null) {
       return empty("這張任務沒有對應的來源分析（可能是手動建立，或來源分析已被刪除）");
@@ -447,13 +450,18 @@ export class WarroomTasksService {
 
     const sourceIds = new Set((rec.source_ids as number[] | undefined) ?? []);
     const all = (row.messages as Array<{ id: number; time: string; sender: string; text: string; kind: string }> | null) ?? [];
-    const messages = all.filter((m) => sourceIds.has(m.id));
+    const picked = all.filter((m) => sourceIds.has(m.id));
+
+    // ⭐ 原文裡的「[照片]」只是一段文字，看不到內容就無法判斷這該不該變成任務。
+    //    照片早就存在 line_media，把它掛回**它自己那一則**訊息 ——
+    //    另外列一排的話，「這個可以嗎」指的是哪一張就看不出來。
+    const messages = await this.attachMedia(ticket.source_upload_id, picked);
 
     return {
       summary: ticket.summary,
       extracted: rec,
       messages,
-      media,
+      hasSourceLink,
       // 抽取結果有標 source_ids 卻對不到訊息 → 要說出來，不能讓人以為「本來就沒有原文」
       unavailableReason: sourceIds.size > 0 && messages.length === 0
         ? "這筆抽取有標記來源訊息，但在分析結果中找不到對應內容" : null,
