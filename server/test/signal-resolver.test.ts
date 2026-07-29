@@ -24,7 +24,8 @@ interface Seed {
   msgId: string; cleanup: () => Promise<void>;
 }
 
-async function seed(msgText = "@小陳 麻煩把三號機軸承換一下"): Promise<Seed | null> {
+async function seed(msgText: string | null = "@小陳 麻煩把三號機軸承換一下",
+                    messageType = "text"): Promise<Seed | null> {
   return withSystemTx(async (tx) => {
     const g = await tx.execute<{ group_id: string; tenant_id: string; bot_id: string; department_id: string }>(sql`
       SELECT g.group_id, b.tenant_id::text, b.bot_id::text, g.department_id::text
@@ -38,7 +39,7 @@ async function seed(msgText = "@小陳 麻煩把三號機軸承換一下"): Prom
       INSERT INTO line_message (message_id, tenant_id, bot_id, group_id, sender_line_id,
                                 message_type, text_content, chat_context, sent_at, raw_event)
       VALUES (${msgId}, ${grp.tenant_id}::uuid, ${grp.bot_id}::uuid, ${grp.group_id}, 'U_boss',
-              'text', ${msgText}, 'group', now(), '{}'::jsonb)
+              ${messageType}, ${msgText}, 'group', now(), '{}'::jsonb)
     `);
     return {
       tenantId: grp.tenant_id, groupId: grp.group_id, botId: grp.bot_id,
@@ -314,4 +315,38 @@ test("票沒有當責人 → 維持現狀，誰回報都算（38/45 是這種，
     assert.equal(r.closed, 1);
     assert.equal(r.notAssignee, 0);
   } finally { await s.cleanup(); }
+});
+
+test("⭐⭐ 引用的是照片（沒有文字）→ 補建的摘要要講得出是什麼，不可以是通用字串", async () => {
+  // prod 上線後第一筆真實補建就是這種：有人傳照片、別人引用它回「好了」。
+  // 舊版摘要一律落到「（來自 LINE 完成回報）」—— 任務建出來了、照片也存著、
+  // 點開看得到圖，但**看板上那一行完全不知道發生了什麼事**。
+  const s = await seed(null, "image");
+  if (!s) return;
+  try {
+    await asTenant(s.tenantId, (tx) => tx.execute(sql`
+      INSERT INTO line_member (tenant_id, bot_id, group_id, user_id, display_name)
+      VALUES (${s.tenantId}::uuid, ${s.botId}::uuid, ${s.groupId}, 'U_boss', '陳師傅')
+      ON CONFLICT (bot_id, group_id, user_id) DO UPDATE SET display_name = '陳師傅'`));
+    await addSignal(s, "completion", "好了");
+
+    const r = await svc.resolvePending(s.tenantId, s.groupId);
+    assert.equal(r.created, 1);
+
+    const t = await ticketOf(s);
+    assert.equal(t.work_status, "closed");
+    const sum = await withTenant(
+      { tenantId: s.tenantId, role: "aiproot_admin", departmentId: null, userId: null },
+      async (tx) => (await tx.execute<{ summary: string }>(sql`
+        SELECT summary FROM tickets WHERE source_message_ids @> ARRAY[${s.msgId}]::text[] LIMIT 1`)
+      ).rows[0].summary);
+
+    assert.ok(!sum.includes("來自 LINE 完成回報"), "不可以再落到那句通用字串");
+    assert.ok(sum.includes("照片"), "要講出是什麼型別");
+    assert.ok(sum.includes("陳師傅"), "要講出是誰傳的 —— 主管才判斷得出要不要點開");
+  } finally {
+    await asTenant(s.tenantId, (tx) => tx.execute(
+      sql`DELETE FROM line_member WHERE bot_id = ${s.botId}::uuid AND user_id = 'U_boss'`));
+    await s.cleanup();
+  }
 });

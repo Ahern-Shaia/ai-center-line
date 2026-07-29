@@ -174,10 +174,17 @@ export class SignalResolverService {
     tenantId: string,
     sig: { quoted_message_id: string; replier_line_user_id: string; note: string | null; group_id: string },
   ): Promise<string | null> {
-    const src = await tx.execute<{ text_content: string | null; department_id: string | null }>(sql`
-      SELECT m.text_content, lg.department_id::text
+    const src = await tx.execute<{
+      text_content: string | null; department_id: string | null;
+      message_type: string; sender: string | null; sent_at_label: string;
+    }>(sql`
+      SELECT m.text_content, lg.department_id::text, m.message_type,
+             mem.display_name AS sender,
+             to_char(m.sent_at AT TIME ZONE 'Asia/Taipei', 'MM/DD HH24:MI') AS sent_at_label
         FROM line_message m
         LEFT JOIN line_group lg ON lg.group_id = m.group_id
+        LEFT JOIN line_member mem
+               ON mem.group_id = m.group_id AND mem.user_id = m.sender_line_id
        WHERE m.message_id = ${sig.quoted_message_id} AND m.tenant_id = ${tenantId}::uuid
        LIMIT 1
     `);
@@ -185,7 +192,8 @@ export class SignalResolverService {
     // 沒有部門就掛不上（tickets.department_id NOT NULL）· 留成 no_match 讓後台看得到
     if (!row?.department_id) return null;
 
-    const summary = (row.text_content ?? "").trim().slice(0, 500) || "（來自 LINE 完成回報）";
+    const summary = (row.text_content ?? "").trim().slice(0, 500)
+      || mediaSummary(row.message_type, row.sender, row.sent_at_label);
     const ins = await tx.execute<{ ticket_id: string }>(sql`
       INSERT INTO tickets (
         tenant_id, department_id, summary, status, confidence, confirm_status,
@@ -216,3 +224,27 @@ export class SignalResolverService {
     `);
   }
 }
+
+/**
+ * 被引用的原訊息沒有文字時（照片／影片／檔案）的摘要。
+ *
+ * ⚠️ 原本一律落到「（來自 LINE 完成回報）」這句通用字串。
+ * prod 上線後第一筆真實補建就是這種：11:06 有人傳了一張照片，
+ * 11:20 有人引用它回「好了」—— 任務建出來了、照片也存著、點開看得到圖，
+ * 但**看板上那一行完全不知道發生了什麼事**。
+ * 資料沒丟，可是主管掃過去等於沒看到，跟沒接住差不多。
+ *
+ * 帶上型別、是誰、什麼時候，主管至少判斷得出要不要點開。
+ */
+function mediaSummary(
+  messageType: string, sender: string | null, sentAtLabel: string,
+): string {
+  const kind = MEDIA_LABEL[messageType] ?? "訊息";
+  const who = sender?.trim() ? `${sender.trim()} ` : "";
+  return `${who}${sentAtLabel} 的${kind}（LINE 回報完成 · 點開看原始內容）`;
+}
+
+const MEDIA_LABEL: Record<string, string> = {
+  image: "照片", video: "影片", audio: "語音", file: "檔案",
+  sticker: "貼圖", location: "位置",
+};
