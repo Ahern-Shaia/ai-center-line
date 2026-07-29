@@ -174,9 +174,34 @@ Jira 有人建了叫 `Unresolved` 的，結果那些票**全被當成已解決**
 | | 自動化 | ⭐ 「定時任務」改名（含排程＋通知），解掉撞名 |
 | | 稽核記錄 | — |
 
-### 3.3 aiproot 視角（26 → 16 項）
+### 3.3 aiproot 視角（26 → 17 項）· ⚠️ 2026-07-29 方向改變
 
-租戶那 10 項照舊（看的是選定的租戶），另加：
+> **原本寫的是「租戶那 10 項照舊（看的是選定的租戶）」—— 那個方向已撤回。**
+>
+> 它要求一個全域租戶切換器（沒做），結果就是 aiproot 側欄有 6 個項目
+> 點進去必然是空的：`tickets` / `daily_reports` 的 RLS 是 AND-only，
+> 而 aiproot 沒有租戶 → 永遠 0 筆。「我的日報／我的行程」對他更沒有意義。
+>
+> ⭐ 用戶指出正確的框架：**那是兩個產品，不是一棵樹**。
+> 而這件事**程式碼裡早就有了** —— `brandFor()` 已經把 aiproot 顯示成
+> 「AIPROOT 平台後台」、客戶顯示成「戰情室」，只是導覽沒跟上。
+>
+> **新的線：aiproot 做「設定」，不做「營運」。**
+>
+> | 群 | aiproot 有嗎 | 理由 |
+> |---|---|---|
+> | 我的 | ❌ | 他不是任何一家公司的員工 |
+> | 營運 | ❌ | 任務看板／總覽儀表／群組日誌／素材是客戶每天在用的 |
+> | 設定 | ✅ | 幫客戶分派群組、調排程、設模板 —— 那是我們的工作 |
+> | 平台 | ✅ | 跨租戶 |
+>
+> 實作成本：**一支 migration（0044）、零行程式碼** ——
+> M1 已經把側欄改成 100% 由權限碼驅動，收回碼就消失，空群組自動隱藏。
+>
+> ⚠️ 明確的代價：客戶回報「這張任務怎麼沒被歸屬」時我們看不到那張卡。
+> 要解是之後在「租戶管理」加「以該租戶身分檢視」的入口，不是現在。
+
+平台側的項目：
 
 | 群 | 項目 | 變更 |
 |---|---|---|
@@ -409,3 +434,4 @@ DepartmentService    setTenantContext(tx, <client 傳的 B>)  ← 把它蓋掉
 | 2026-07-29 | v1.2 | **M0.9 落地**：`roles.guard.ts` 改 fail-closed（新增 `@AllowAnyUser()` 明示那 9 個刻意不限角色的端點）· 新增 `test/route-guard.test.ts` 兩條語意斷言 · ⚠️ **照形狀測試去驗，抓到一個真實的跨租戶 IDOR**：`GET /tenant-admin/departments?tenantId=<別家>` 讀得到別家部門 —— 根因是 service 用 client 傳的值 `setTenantContext` 覆蓋掉 interceptor 依 JWT 設好的上下文，`@RequirePermission` 擋不住（權限碼 ≠ 租戶邊界）· 修法：新增 `auth/resolve-tenant-id.ts` 在 controller 層決定 tenantId，並補 `test/cross-tenant-idor.test.ts` 4 條 · 同時修掉兩個假綠：`auth.test.ts` 的假 Reflector 對所有 key 回同值（守衛一多分支就穿幫）、`employee-binding.test.ts` 自 7bc5636「部門改後端 derive」起就沒跟上 · 全套 331/331 綠 | ahern + Claude Code |
 | 2026-07-29 | v1.3 | **M1 落地**（backend `455fae2` / web `7ae0c60`）· ⚠️ 盤點更正：15 項裡 12 項的權限碼早就存在但**全庫零引用**＝死碼，M1 主要是接線不是補碼；migration 0037 只補真正缺的 7 個，並**收回 3 筆從未生效的授權**避免接線當下無聲開放頁面給客戶 · M0.9 的形狀測試當場擋下 7 支端點（拿掉 `@Roles` 後變成任何有權限的人都能傳別家 tenantId），補 `resolveTenantId` / 新增 `resolveTenantFilter`（列表用 · 平台角色不傳＝看全部）· 形狀測試從只認 `@Query` 擴到 `@Param`（原本 4 支在網子外），並接受 platform scope 權限碼作為把關方式 · `analysis-access.test.ts` 斷言搬家而非放寬：改釘「掛 convo:*」＋「convo:* 不可授予客戶端角色」（讀授權表，比讀 decorator 更嚴）· web 端刪 `AIPROOT_ONLY_PAGES`，NAV 推導 `PAGE_PERM` 供側欄與路由守衛共用，並移除 group／item 層 roles 後門 · 已用瀏覽器驗 aiproot_admin／tenant_admin 側欄、對授權表核對 group_owner／employee，**五種角色所見與改版前一致** · 331/331 綠 | ahern + Claude Code |
 | 2026-07-29 | v1.4 | **M2–M6 落地 · 模組結案**（`5dc4de8` / `b0f7e7d` / `86febe9`）· **M2**：`tenant_task_config` 表，寬限期與提醒階梯改 per-tenant，收掉兩處各自漂移的硬編 7；預設值只留 TS 一處（migration 刻意不給 SQL DEFAULT）· **M3**：分組改「我的／營運／設定／平台」、任務看板與對話紀錄升一級、戰情室三 tab 移除、「定時任務」改名「自動化」（與核心產出撞名）＋一次性提示 · **M4**：通訊管道（3 tab）／系統健康（4 tab · 只 render 當前）／租戶管理含新增鈕／分類管理收進任務設定 · **M5**：任務設定頁（模板唯讀＋時間可改＋分類）· ⚠️ 過程中又抓到兩個「兩套閘門」的殘留：戰情室端點與側欄不一致造成 aiproot 一登入就 403、`onNav` 裡逐 key 的角色硬編是第三套閘門，都已收斂到 `canOpenPage` / 權限碼 · FMEA 新增 N-9..N-14（實作期間才看得到的失效模式）· 側欄 26→21（客戶側 11）· 337/337 綠 · 已用瀏覽器走過兩種角色的每一個項目 | ahern + Claude Code |
+| 2026-07-29 | v1.5 | ⚠️ **§3.3 方向撤回**：原本主張「aiproot 看租戶那 10 項（看選定的租戶）」，那需要全域租戶切換器（沒做），實際結果是 aiproot 側欄 6 個項目點進去必然空白（`tickets`/`daily_reports` 的 RLS 是 AND-only，aiproot 沒有租戶）· ⭐ 用戶指出正確框架：**那是兩個產品不是一棵樹**，而且 `brandFor()` 早就把 aiproot 顯示成「AIPROOT 平台後台」、客戶顯示成「戰情室」—— 品牌層已經分開，導覽沒跟上 · 新線＝**aiproot 做設定不做營運**（migration 0044 收回 6 個營運權限碼）· 成本：一支 migration、零行程式碼（M1 的權限驅動側欄的回報）· ⚠️ 實作時抓到兩個會壞掉的地方：①`defaultRouteFor` 硬編「非 employee 進 warroom」，收回權限後 aiproot 會落在側欄上沒有的頁而**守衛救不回來**（route.page 沒變、effect 不再跑）→ 改成 `firstAllowedPage` 問權限；②權限載回來的那一瞬間 route 仍是初始猜的那頁，effect 在 render 之後才跑，中間那次 render 會把不該掛的頁掛上去並打自己沒權限的 API → 加 `pageReady`（權限到位**且**這頁打得開才掛）· aiproot 17 項／客戶 11 項，兩者所有頁面實測皆可開、零 console error | ahern + Claude Code |
