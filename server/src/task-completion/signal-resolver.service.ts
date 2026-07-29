@@ -26,7 +26,7 @@ export class SignalResolverService {
    * @param groupId 限縮到剛跑完的那個群 · 不給則掃該租戶全部
    */
   async resolvePending(tenantId: string, groupId?: string): Promise<{
-    closed: number; created: number; noMatch: number; asked: number;
+    closed: number; created: number; noMatch: number; asked: number; ambiguous: number;
   }> {
     return withTenant({ tenantId, role: "tenant_admin", departmentId: null, userId: null }, async (tx) => {
       const pending = await tx.execute<{
@@ -41,7 +41,7 @@ export class SignalResolverService {
          ORDER BY received_at
       `);
 
-      let closed = 0, progressLogged = 0, created = 0, noMatch = 0, asked = 0;
+      let closed = 0, progressLogged = 0, created = 0, noMatch = 0, asked = 0, ambiguous = 0;
 
       for (const sig of pending.rows) {
         // 問過但還沒回答的先留著 —— 人可能等一下才按
@@ -49,12 +49,27 @@ export class SignalResolverService {
 
         const isDone = sig.intent === "completion" || sig.intent === "answered_done";
 
+        // ⚠️ 刻意**不加 LIMIT 1**。原本是 `ORDER BY created_at DESC LIMIT 1`：
+        // 同一段對話若被抽成兩筆記錄（source_message_ids 重疊），就會**靜默關掉比較新的那一張**，
+        // 而它發生的樣子跟正常關閉一模一樣 —— 不會有人發現關錯了。
+        // prod 查過現況是 1:1（71 則來源訊息無一對到兩張），但那是資料剛好，不是機制擋著。
         const hit = await tx.execute<{ ticket_id: string; work_status: string }>(sql`
           SELECT ticket_id::text, work_status FROM tickets
            WHERE tenant_id = ${tenantId}::uuid
              AND source_message_ids @> ARRAY[${sig.quoted_message_id}]::text[]
-           ORDER BY created_at DESC LIMIT 1
+           ORDER BY created_at DESC
         `);
+
+        // 對到多張 → 我們無從得知他指的是哪一件。不動任何狀態，留給後台的未接住清單。
+        // （私訊路徑有 postback 按鈕可以問他；群組路徑問了會在所有人面前洗版，不划算。）
+        if (hit.rows.length > 1) {
+          this.logger.warn(
+            `[signal] 一則訊息對到 ${hit.rows.length} 張任務 · 不自動處理 · signal=${sig.signal_id}`,
+          );
+          await this.markResolved(tx, sig.signal_id, null, "ambiguous");
+          ambiguous++;
+          continue;
+        }
         const ticket = hit.rows[0];
 
         if (ticket) {
@@ -113,10 +128,10 @@ export class SignalResolverService {
         this.logger.log(
           `resolvePending · tenant=${tenantId}${groupId ? ` group=${groupId}` : ""} · `
           + `closed=${closed} progress=${progressLogged} created=${created} `
-          + `noMatch=${noMatch} asked=${asked}`,
+          + `noMatch=${noMatch} asked=${asked} ambiguous=${ambiguous}`,
         );
       }
-      return { closed, progressLogged, created, noMatch, asked };
+      return { closed, progressLogged, created, noMatch, asked, ambiguous };
     });
   }
 
@@ -164,7 +179,7 @@ export class SignalResolverService {
     tx: Parameters<Parameters<typeof withTenant>[1]>[0],
     signalId: string,
     ticketId: string | null,
-    resolution: "closed_ticket" | "progress_logged" | "created_ticket" | "no_match" | "superseded",
+    resolution: "closed_ticket" | "progress_logged" | "created_ticket" | "no_match" | "superseded" | "ambiguous",
   ): Promise<void> {
     await tx.execute(sql`
       UPDATE pending_completion_signal

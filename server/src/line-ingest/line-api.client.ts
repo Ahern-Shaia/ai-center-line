@@ -70,8 +70,19 @@ export class LineApiClient {
     }
   }
 
-  // POST /v2/bot/message/push · 主動推 push (有 quota 計費 · 只用於主管通知等主動場景)
-  async pushMessage(accessToken: string, toUserId: string, messages: unknown[]): Promise<void> {
+  /**
+   * POST /v2/bot/message/push · 主動推 push (有 quota 計費 · 只用於主管通知等主動場景)
+   *
+   * 回傳送出那則的 messageId —— 當事人「回覆」這則通知時，webhook 收到的
+   * quotedMessageId 就是它，可以精準對回那一張任務（免去問他是哪一件）。
+   *
+   * ⚠️ `messageId` 可能是 null，呼叫端**必須**吃得下 null：
+   * LINE 會不會回 `sentMessages[].id` 我們沒有實測過（這支原本直接丟棄回應）。
+   * 拿不到就退回慢路徑，不可以因此讓推播失敗。
+   */
+  async pushMessage(
+    accessToken: string, toUserId: string, messages: unknown[],
+  ): Promise<{ messageId: string | null }> {
     const res = await fetch(`${this.baseUrl}/v2/bot/message/push`, {
       method: "POST",
       headers: {
@@ -84,6 +95,11 @@ export class LineApiClient {
       const body = await res.text().catch(() => "");
       throw new Error(`LINE pushMessage failed · status=${res.status} · body=${body.slice(0, 200)}`);
     }
+    const body = await res.json().catch(() => null) as { sentMessages?: Array<{ id?: string }> } | null;
+    const messageId = body?.sentMessages?.[0]?.id ?? null;
+    // 拿不到就講一聲 —— 靜默的話，快路徑永遠不生效而沒人知道為什麼
+    if (!messageId) this.logger.warn("[line-api] push 回應沒有 sentMessages[].id · 完成回報只能走慢路徑");
+    return { messageId };
   }
 
   // GET /v2/bot/group/{groupId}/member/{userId} · 拉群組成員 displayName + pictureUrl

@@ -28,6 +28,7 @@ const sent: Array<{ token: string; to: string; text: string }> = [];
 const fakeLine = {
   pushMessage: async (token: string, to: string, messages: unknown[]) => {
     sent.push({ token, to, text: (messages[0] as { text: string }).text });
+    return { messageId: `push-${sent.length}` };
   },
 } as unknown as LineApiClient;
 
@@ -94,6 +95,20 @@ test("⭐ 指派給有綁定的人 → 用該租戶自己的 bot 私訊他", asy
   assert.ok(sent[0].text.includes("王經理"), "要說是誰指派的");
   assert.ok(sent[0].text.includes("三號機軸承要換"), "要帶摘要");
   assert.ok(!/日前完成|期限/.test(sent[0].text), "不可寫期限 —— due_at 在 prod 是 100% null");
+  // 0046：第一版寫「去群組裡引用訊息回覆」，但完成訊號當時只掛在群組分支，
+  // 而人收到私訊會直接在私訊回 → 得到「✓ 已記錄」、任務不動、他以為回報過了。
+  assert.ok(!/群組/.test(sent[0].text), "⚠️ 不可以把他導去群組 —— 回報要能在這個私訊裡完成");
+});
+
+test("⭐ 記下推播那則的 messageId · 他回覆它時才對得回這張票（快路徑）", async () => {
+  sent.length = 0;
+  const id = await newTicket(`記 messageId-${randomUUID().slice(0, 6)}`);
+  await asTenant(() => svc.onAssigned(currentTx(), {
+    ticketId: id, assigneeUserId: U_BOUND, summary: "要記 id", actorName: "王經理",
+  }));
+  const r = await asTenant(() => currentTx().execute<{ mid: string | null }>(sql`
+    SELECT assign_notify_message_id AS mid FROM tickets WHERE ticket_id = ${id}::uuid`));
+  assert.equal(r.rows[0].mid, "push-1");
 });
 
 test("⭐⭐ 對方沒綁定 → 不推，而且要把原因講出來（A-1 · P0）", async () => {

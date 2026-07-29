@@ -66,14 +66,22 @@ export class AssignNotifyService {
     // ⚠️ 只帶摘要不帶原始對話（A-5）—— 任務可能來自他不在的群組。
     // ⚠️ 不寫「請於 X 日前完成」—— due_at 在 prod 是 100% null，寫了就是編一個不存在的期限。
     // ⚠️ 不附「查看任務」連結（OQ-TAN-7）—— 當事人多半沒有系統帳號，點進去要登入＝死路。
+    //
+    // ⚠️ 不可以再寫「去群組裡引用訊息回覆」（第一版是這樣寫的）——
+    // 完成訊號原本只掛在群組分支，而人收到私訊的自然反應是**在私訊回**，
+    // 回了會得到「✓ 已記錄」然後任務不動 —— 他以為回報過了。
+    // 現在回報收在私訊本身（private-completion.service.ts），文案就照著寫。
     const text = `📋 ${args.actorName} 指派了一件事給你\n\n${args.summary}\n\n`
-      + "做完後在群組裡引用相關訊息回一句「好了」即可";
+      + "做完後回我一句「好了」就行";
 
-    const ok = await this.push(target, text, args.ticketId);
-    if (!ok) return { notified: false, skipReason: "push_failed" };
+    const sentId = await this.push(target, text, args.ticketId);
+    if (sentId === false) return { notified: false, skipReason: "push_failed" };
 
+    // sentId 為 null = LINE 沒回訊息 id，快路徑失效但功能還在（慢路徑會問他是哪一件）
     await tx.execute(sql`
-      UPDATE tickets SET assign_notified_at = now(), assign_notified_user_id = ${args.assigneeUserId}::uuid
+      UPDATE tickets SET assign_notified_at = now(),
+                         assign_notified_user_id  = ${args.assigneeUserId}::uuid,
+                         assign_notify_message_id = ${sentId}
        WHERE ticket_id = ${args.ticketId}::uuid`);
     return { notified: true, skipReason: null };
   }
@@ -131,13 +139,15 @@ export class AssignNotifyService {
    * ⚠️ 推播失敗**不可以**讓指派失敗（A-8）。
    * 指派是主管的決定，已經寫進 DB；通知只是把它送達。
    * 送不到就回 false，由呼叫端在畫面上說出來。
+   *
+   * @returns `false` = 沒送出去 · `string` = 送出那則的 id · `null` = 送出了但 LINE 沒給 id
    */
   private async push(
     target: { token: string; lineUserId: string }, text: string, ticketId: string,
-  ): Promise<boolean> {
+  ): Promise<string | null | false> {
     try {
-      await this.lineApi.pushMessage(target.token, target.lineUserId, [{ type: "text", text }]);
-      return true;
+      const r = await this.lineApi.pushMessage(target.token, target.lineUserId, [{ type: "text", text }]);
+      return r.messageId;
     } catch (err) {
       // A-3：失敗要看得到，不可只吞
       this.logger.warn(`[assign-notify] push 失敗 · ticket=${ticketId} · ${(err as Error).message}`);

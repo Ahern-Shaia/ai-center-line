@@ -9,6 +9,7 @@ import { MediaDownloadService } from "./media-download.service.js";
 import { MemberFetchService } from "./member-fetch.service.js";
 import { CompletionSignalService } from "../task-completion/completion-signal.service.js";
 import { OpenTaskReminderService } from "../task-completion/open-task-reminder.service.js";
+import { PrivateCompletionService } from "../task-completion/private-completion.service.js";
 import { LineApiClient } from "./line-api.client.js";
 import { EmployeeBindingService } from "../employee-binding/employee-binding.service.js";
 
@@ -41,6 +42,9 @@ interface LineWebhookEvent {
     quotedMessageId?: string;                      // 0036 · 引用回覆指到的原訊息 —— 任務完成訊號的鑰匙
     [key: string]: unknown;
   };
+  postback?: {
+    data: string;                                  // 0046 · 「是哪一件做完了」按鈕帶回的 `done:<ticketId>`
+  };
 }
 
 interface LineWebhookPayload {
@@ -65,6 +69,7 @@ export class LineWebhookService {
     private readonly lineApi: LineApiClient,
     private readonly completionSignal: CompletionSignalService,
     private readonly openTaskReminder: OpenTaskReminderService,
+    private readonly privateCompletion: PrivateCompletionService,
   ) {}
 
   // 主入口 · rawBody 用於 HMAC 驗證 · payload 解析後可 access destination + events
@@ -337,6 +342,23 @@ export class LineWebhookService {
       return;
     }
 
+    // 他點了「是哪一件做完了」的按鈕 —— 多張任務時的消歧義（private-completion.service.ts）
+    if (event.type === "postback") {
+      const data = event.postback?.data;
+      if (!data || !event.replyToken) return;
+      const uid = await this.bindingService.resolveUserByLineUserId(bot.botId, userId);
+      if (!uid) return;                              // 未綁定不可能收到我們發的按鈕
+      try {
+        const reply = await this.privateCompletion.handlePostback({
+          tenantId: bot.tenantId, userId: uid, lineUserId: userId, messageId: "", data,
+        });
+        if (reply) await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, reply);
+      } catch (err) {
+        this.logger.warn(`[private-completion] postback 失敗 · data=${data} · ${(err as Error).message}`);
+      }
+      return;
+    }
+
     // 1-on-1 message
     if (event.type === "message") {
       // 查 binding · 未綁定一律回綁定提示（不論訊息型別 · 貼圖/照片/文字皆可）
@@ -446,6 +468,29 @@ export class LineWebhookService {
           sentAtMs: event.timestamp,
           rawEvent: event as unknown as Record<string, unknown>,
         });
+
+        // 私訊裡的完成回報 —— 指派通知是私訊推的，他自然會在私訊回。
+        // ⚠️ 這支自己開 tenant tx（不吃這裡的 systemTx）· 見 private-completion.service.ts 的說明。
+        // 接住了就回它的話並 return，不再回下面那句「✓ 已記錄」（兩句都回等於自打嘴巴）。
+        if (event.replyToken && textContent) {
+          try {
+            const reply = await this.privateCompletion.handleText({
+              tenantId: bot.tenantId,
+              userId: senderUserId,
+              lineUserId: userId,
+              text: textContent,
+              messageId: msg.id,
+              quotedMessageId: typeof msg.quotedMessageId === "string" ? msg.quotedMessageId : null,
+            });
+            if (reply) {
+              await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, reply);
+              return;
+            }
+          } catch (err) {
+            // 接不住不影響訊息已落庫 —— 掉回下面的 ack，至少他知道我們收到了
+            this.logger.warn(`[private-completion] 失敗 · messageId=${msg.id} · ${(err as Error).message}`);
+          }
+        }
 
         // bot 輕回應 · 讓 Alice 知道已收到 · 首則額外提示可用「日報」查
         if (event.replyToken) {
