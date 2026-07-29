@@ -22,6 +22,8 @@ export default function MyDailyReport() {
   const [assignedTasks, setAssignedTasks] = useState<Array<{ ticketId: string; summary: string | null }>>([]);
   // 今天去過哪 · 系統本來就知道，只是這一頁看不到（4FR §5）
   const [todayVisits, setTodayVisits] = useState<Array<{ place: string; at: string }>>([]);
+  // AI 幾點自動整理 · 每家自己設（原本前端寫死 17:30，客戶改了時間畫面就在說謊）
+  const [aiRunAt, setAiRunAt] = useState<string | null>(null);
   const [userDisplayName, setUserDisplayName] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -34,6 +36,7 @@ export default function MyDailyReport() {
     try {
       const res = await getMyPersonalReport(date);
       setReport(res.report);
+      setAiRunAt(res.aiRunAt);
       setPendingMessageCount(res.pendingMessageCount ?? 0);
       setPendingMessages(res.pendingMessages ?? []);
       setAssignedTasks(res.assignedTasks ?? []);
@@ -169,7 +172,7 @@ export default function MyDailyReport() {
           <div>
             <div className="dm-empty" style={{ marginBottom: 12 }}>
               <div>你今日已私訊 bot <b>{pendingMessageCount}</b> 則 · AI 尚未整理</div>
-              <div className="dm-empty-hint">下方是 bot 收到的原始訊息 · 按「立即整理」讓 AI 抽成日報項目 · 或等 17:30 scheduler 自動觸發</div>
+              <div className="dm-empty-hint">下方是 bot 收到的原始訊息 · 按「立即整理」讓 AI 抽成日報項目 · {aiRunAt ? `或等 ${aiRunAt} 自動整理` : "或等系統自動整理"}</div>
               <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => void doRegenerate()} disabled={regenerating}>
                 {regenerating ? "生成中…" : "立即整理"}
               </button>
@@ -192,7 +195,7 @@ export default function MyDailyReport() {
         ) : (
           <div className="dm-empty">
             <div>今日尚未有記錄</div>
-            <div className="dm-empty-hint">私訊台灣福祉 bot 幾則今日工作 · AI 會自動整理 · 17:30 也會自動觸發</div>
+            <div className="dm-empty-hint">私訊台灣福祉 bot 幾則今日工作 · AI 會自動整理{aiRunAt ? ` · ${aiRunAt} 也會自動觸發` : ""}</div>
           </div>
         )
       )}

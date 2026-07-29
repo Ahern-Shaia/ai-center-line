@@ -97,7 +97,7 @@ export default function DailyLog() {
           <div>
             將對本 tenant 所有 LINE 群組立即跑 AI 分析今日對話 · 需 30–60 秒
             <div style={{ marginTop: 10, padding: 10, background: "var(--warn-tint)", border: "1px solid #F5D5A6", borderRadius: 6, fontSize: 12, color: "#7A4E1B" }}>
-              提示 · 若當日訊息還在持續 · 分析後新來的訊息不會即時進入 · 建議 17:30 後再手動觸發 · 或等隔天自動跑
+              提示 · 若當日訊息還在持續 · 分析後新來的訊息不會即時進入 · {data?.batchRunAt ? `建議 ${data.batchRunAt} 後再手動觸發` : "建議當日訊息結束後再手動觸發"} · 或等隔天自動跑
             </div>
           </div>
         }
@@ -148,6 +148,7 @@ function DaySection({ day, defaultOpen }: { day: WarroomDailyDays["days"][number
               key={u.uploadId}
               groupId={u.groupId}
               groupName={u.groupName}
+              departmentId={u.departmentId}
               departmentName={u.departmentName}
               batchDate={u.batchDate}
               dailyReports={u.dailyReports}
@@ -178,10 +179,11 @@ function DaySection({ day, defaultOpen }: { day: WarroomDailyDays["days"][number
 }
 
 function GroupCard({
-  groupId, groupName, departmentName, batchDate, dailyReports, records, uploadId,
+  groupId, groupName, departmentId, departmentName, batchDate, dailyReports, records, uploadId,
 }: {
   groupId: string;
   groupName: string | null;
+  departmentId: string | null;
   departmentName: string | null;
   batchDate: string;
   dailyReports: Array<Record<string, unknown>>;
@@ -220,6 +222,16 @@ function GroupCard({
         <span className="dl-card-group">{groupName ?? `未命名群組 · ${groupId.slice(-6)}`}</span>
         {departmentName && <span className="dl-card-dept">{departmentName}</span>}
       </div>
+      {/* ⚠️ 沒有部門 = materializer 直接 skip 整批，**一張任務都不會建**。
+          原本只有 server log 有一行 warn，畫面上什麼都沒有 ——
+          使用者看到 AI 抽出 11 項卻在任務看板找不到，只能猜是不是內容不夠格。
+          （2026-07-29 客戶就是這樣問的） */}
+      {!departmentId && (
+        <div className="dl-card-nodept">
+          此群尚未分派部門 · 分析結果<b>不會變成任務</b>
+          <span className="dl-card-nodept-hint">到「設定 → 通訊管道 → LINE 群組」分派部門後，下次分析才會建立任務</span>
+        </div>
+      )}
       {dailyReports.length > 0 ? (
         <ul className="dl-report-list">
           {dailyReports.slice(0, MAX_ITEMS).map((r, i) => (

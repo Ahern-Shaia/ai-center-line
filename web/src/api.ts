@@ -425,10 +425,21 @@ export const confirmSignoff = (ticket_ids: string[]) =>
 // === Warroom Task Board · WTB-M3 ===
 
 // 任務卡來源原文 · 簽核前對照 AI 抽取結果與原始訊息
+export interface TicketMedia {
+  mediaId: string;
+  /** image / video / file */
+  kind: string;
+  contentType: string | null;
+  sender: string;
+  at: string;
+}
+
 export interface TicketSource {
   summary: string;
   extracted: Record<string, unknown> | null;
   messages: Array<{ id: number; time: string; sender: string; text: string; kind: string }>;
+  /** 來源訊息裡的照片／影片 · 原文只寫「[照片]」，看不到內容就無法判斷該不該變成任務 */
+  media: TicketMedia[];
   unavailableReason: string | null;
 }
 export const getTicketSource = (ticketId: string) =>
@@ -502,6 +513,8 @@ export interface WarroomDailyReport {
   uploadId: number;
   groupId: string;
   groupName: string | null;
+  /** null = 這個群還沒分派部門 —— 分析會跑，但一張任務都不會建 */
+  departmentId: string | null;
   departmentName: string | null;
   batchDate: string;
   dailyReports: Array<Record<string, unknown>>;
@@ -512,6 +525,8 @@ export interface WarroomDailyReport {
 
 export interface WarroomDailyDays {
   days: Array<{ batchDate: string; uploads: WarroomDailyReport[] }>;
+  /** 批次幾點自動跑 · 每家自己設 · null = 已關閉 */
+  batchRunAt?: string | null;
 }
 
 export const getWarroomTasks = (opts: { includeSigned?: boolean } = {}) => {
@@ -593,6 +608,8 @@ export const getMyPersonalReport = (date?: string) => {
   return req<{
     report: PersonalDailyReportRow | null;
     requestedDate: string;
+    /** AI 幾點自動整理 · 每家自己設 · null = 已關閉或看不懂的 cron，文案要改成泛稱 */
+    aiRunAt: string | null;
     pendingMessageCount: number;
   assignedTasks?: Array<{ ticketId: string; summary: string | null; category: string | null; createdAt: string }>;
   /** 今天打卡去過的地方 · 由本人決定要不要納入日報（4FR §5） */
