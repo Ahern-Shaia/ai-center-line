@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch } from "@nestjs/common";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { sql } from "drizzle-orm";
-import { Roles } from "../auth/roles.decorator.js";
 import { currentTx } from "../db/client.js";
 import { EXTRACTION_TEMPLATES, TEMPLATE_REGISTRY, type ExtractionTemplate } from "../conversation-analysis/pipeline/templates.js";
 
@@ -20,7 +20,7 @@ type RawUserRow = {
 @Controller("aiproot-console/tenants")
 export class AiprootTenantsController {
   @Get()
-  @Roles("aiproot_admin", "consultant")
+  @RequirePermission("tenants:view")
   async list() {
     const tx = currentTx();
     const res = await tx.execute<{
@@ -46,7 +46,7 @@ export class AiprootTenantsController {
    * 這裡只回「是誰、狀態如何」，密碼一律不回（雜湊也不回），要救就走 reset-password 產新的。
    */
   @Get(":tenantId/users")
-  @Roles("aiproot_admin")
+  @RequirePermission("tenants:manage")
   async users(@Param("tenantId") tenantId: string) {
     if (!UUID_RE.test(tenantId)) throw new BadRequestException("tenantId 格式不正確");
     const res = await currentTx().execute<RawUserRow>(sql`
@@ -78,7 +78,7 @@ export class AiprootTenantsController {
 
   /** 可選的 L2 業種模板 · service_order 未開放（欄位待客戶確認）*/
   @Get("extraction-templates")
-  @Roles("aiproot_admin", "consultant")
+  @RequirePermission("tenants:view")
   templates() {
     return {
       templates: EXTRACTION_TEMPLATES
@@ -93,7 +93,7 @@ export class AiprootTenantsController {
    *    analysis_result.extraction_template 記著當時用的是哪個，歷史仍可正確解讀。
    */
   @Patch(":tenantId/extraction-template")
-  @Roles("aiproot_admin")
+  @RequirePermission("tenants:manage")
   async setExtractionTemplate(
     @Param("tenantId") tenantId: string,
     @Body() body: { template?: string },
@@ -114,7 +114,7 @@ export class AiprootTenantsController {
 
   // 切 batch_enabled · convo-analysis-realtime cron 是否掃該 tenant
   @Patch(":tenantId/batch-enabled")
-  @Roles("aiproot_admin")
+  @RequirePermission("tenants:manage")
   async setBatchEnabled(
     @Param("tenantId") tenantId: string,
     @Body() body: { enabled: boolean },

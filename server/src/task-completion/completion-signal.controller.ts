@@ -1,6 +1,9 @@
 import { BadRequestException, Controller, Get, Query } from "@nestjs/common";
+import type { JwtUser } from "../auth/jwt-user.js";
+import { CurrentUser } from "../auth/current-user.decorator.js";
+import { resolveTenantId } from "../auth/resolve-tenant-id.js";
 import { sql } from "drizzle-orm";
-import { Roles } from "../auth/roles.decorator.js";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { withTenant } from "../db/client.js";
 
 /**
@@ -18,11 +21,10 @@ import { withTenant } from "../db/client.js";
 @Controller("completion-signals")
 export class CompletionSignalController {
   @Get("unresolved")
-  @Roles("aiproot_admin", "consultant")
-  async unresolved(@Query("tenantId") tenantId?: string) {
-    if (!tenantId) throw new BadRequestException("tenantId 必要");
-
-    return withTenant({ tenantId, role: "aiproot_admin", departmentId: null, userId: null }, async (tx) => {
+  @RequirePermission("completion-tracking:view")
+  async unresolved(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
+    const t = resolveTenantId(user, tenantId);
+    return withTenant({ tenantId: t, role: "aiproot_admin", departmentId: null, userId: null }, async (tx) => {
       const rows = await tx.execute<{
         signal_id: string; intent: string; note: string | null;
         received_at: string; resolution: string | null;
@@ -74,12 +76,12 @@ export class CompletionSignalController {
    * 那時候去催同仁按按鈕是完全搞錯方向。
    */
   @Get("stats")
-  @Roles("aiproot_admin", "consultant")
-  async stats(@Query("tenantId") tenantId?: string, @Query("days") days = "14") {
-    if (!tenantId) throw new BadRequestException("tenantId 必要");
+  @RequirePermission("completion-tracking:view")
+  async stats(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string, @Query("days") days = "14") {
+    const t = resolveTenantId(user, tenantId);
     const window = Math.min(Math.max(parseInt(days, 10) || 14, 1), 90);
 
-    return withTenant({ tenantId, role: "aiproot_admin", departmentId: null, userId: null }, async (tx) => {
+    return withTenant({ tenantId: t, role: "aiproot_admin", departmentId: null, userId: null }, async (tx) => {
       const sig = await tx.execute<{
         total: number; completion: number; caught: number; gap: number; pending: number;
       }>(sql`

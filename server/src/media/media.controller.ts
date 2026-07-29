@@ -3,13 +3,13 @@ import type { FastifyReply } from "fastify";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { Roles } from "../auth/roles.decorator.js";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { MediaService } from "./media.service.js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // 素材看板 · docs/modules/media-and-vision.md §2
 // employee 不開放：素材看板是跨群檢視，employee 只看自己的日報。
-const VIEWERS = ["aiproot_admin", "consultant", "tenant_admin", "group_owner"] as const;
 // 刪除／還原限總經理室以上（用戶 2026-07-28 裁定）· group_owner 只能看
 const DELETERS = ["aiproot_admin", "consultant", "tenant_admin"] as const;
 
@@ -18,7 +18,7 @@ export class MediaController {
   constructor(private readonly svc: MediaService) {}
 
   @Get()
-  @Roles(...VIEWERS)
+  @RequirePermission("media:view")
   async list(
     @Query("kind") kind?: string,
     @Query("page") page?: string,
@@ -31,7 +31,7 @@ export class MediaController {
 
   /** 檔案內容 · 經權限確認後由伺服器代理，R2 網址不外流（FMEA F-2） */
   @Get(":mediaId/content")
-  @Roles(...VIEWERS)
+  @RequirePermission("media:view")
   async content(@Param("mediaId") mediaId: string, @Res() res: FastifyReply) {
     if (!UUID_RE.test(mediaId)) throw new BadRequestException("mediaId 格式不正確");
     const file = await this.svc.content(mediaId);

@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Param, Post } from "@nestjs/common";
-import { Roles } from "../auth/roles.decorator.js";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { OnboardService } from "./onboard.service.js";
 import { OnboardTenantSchema, ResetPasswordSchema, UnlockSchema } from "./dto/onboard.dto.js";
 
@@ -8,7 +8,7 @@ export class OnboardController {
   constructor(private readonly svc: OnboardService) {}
 
   @Post("onboard")
-  @Roles("aiproot_admin")
+  @RequirePermission("tenants:onboard")
   async onboard(@Body() body: unknown) {
     const parsed = OnboardTenantSchema.safeParse(body);
     if (!parsed.success) {
@@ -21,7 +21,7 @@ export class OnboardController {
   }
 
   @Post("users/:userId/reset-password")
-  @Roles("aiproot_admin")
+  @RequirePermission("users:reset-password")
   async resetPassword(@Param("userId") userId: string, @Body() body: unknown) {
     const parsed = ResetPasswordSchema.safeParse(body);
     if (!parsed.success) {
@@ -34,7 +34,7 @@ export class OnboardController {
   }
 
   @Post("users/:userId/unlock")
-  @Roles("aiproot_admin")
+  @RequirePermission("users:unlock")
   async unlock(@Param("userId") userId: string, @Body() body: unknown) {
     const parsed = UnlockSchema.safeParse(body);
     if (!parsed.success) {

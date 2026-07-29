@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Get, Post } from "@nestjs/common";
-import { Roles } from "../auth/roles.decorator.js";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { currentTx } from "../db/client.js";
@@ -20,7 +20,7 @@ export class MapConfigController {
   ) {}
 
   @Get()
-  @Roles("aiproot_admin", "consultant")
+  @RequirePermission("map-config:view")
   async get() {
     const tx = currentTx();
     const [routing, tile, pendingBackfill] = await Promise.all([
@@ -33,13 +33,13 @@ export class MapConfigController {
 
   // 補算里程 · 把地圖服務中斷期間沒算出來的段落重跑（只填 null，不改原始打卡）
   @Post("backfill")
-  @Roles("aiproot_admin")
+  @RequirePermission("map-config:manage")
   async backfill(@Body() body: { limit?: number }) {
     return this.svc.backfillMileage(typeof body?.limit === "number" ? body.limit : 100);
   }
 
   @Post()
-  @Roles("aiproot_admin")
+  @RequirePermission("map-config:manage")
   async set(@CurrentUser() user: JwtUser, @Body() body: { provider?: string; apiKey?: string }) {
     if (!body?.provider || !(PROVIDERS as readonly string[]).includes(body.provider)) {
       throw new BadRequestException("provider 必要 · 需為 openrouteservice | google_routes");
@@ -55,13 +55,13 @@ export class MapConfigController {
 
   // 連線測試 · 用固定兩點實打一次 provider，把真實錯誤回給前端（診斷 Google/ORS 設定問題）
   @Post("test")
-  @Roles("aiproot_admin", "consultant")
+  @RequirePermission("map-config:view")
   async test() {
     return this.svc.testRouting();
   }
 
   @Post("tile")
-  @Roles("aiproot_admin")
+  @RequirePermission("map-config:manage")
   async setTile(@CurrentUser() user: JwtUser, @Body() body: { tileProvider?: string; tileApiKey?: string }) {
     if (!body?.tileProvider || !(TILE_PROVIDERS as readonly string[]).includes(body.tileProvider)) {
       throw new BadRequestException("tileProvider 必要 · 需為 osm | maptiler");

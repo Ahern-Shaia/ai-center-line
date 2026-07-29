@@ -37,3 +37,15 @@ export function resolveTenantId(user: JwtUser, requested?: string | null): strin
   }
   return user.tenant_id;
 }
+
+/**
+ * 列表端點用的變體：平台角色**不傳就是看全部**（回 undefined）。
+ *
+ * `resolveTenantId` 對平台角色不傳會丟「需指定 tenantId」，
+ * 但像「對話分析歷程」「LINE 機器人」這種跨租戶清單，不傳本來就等於全平台。
+ * 其他角色的規則完全相同 —— 一律鎖在自己家。
+ */
+export function resolveTenantFilter(user: JwtUser, requested?: string | null): string | undefined {
+  if (PLATFORM_ROLES.has(user.role)) return requested || undefined;
+  return resolveTenantId(user, requested);
+}

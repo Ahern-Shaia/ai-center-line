@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, Query } from "@nestjs/common";
-import { Roles } from "../auth/roles.decorator.js";
+import { resolveTenantFilter } from "../auth/resolve-tenant-id.js";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { withSystemTx } from "../db/client.js";
@@ -24,14 +25,15 @@ export class AnalysisBatchController {
   ) {}
 
   @Get()
-  @Roles("aiproot_admin", "consultant")
-  async list(@Query("tenantId") tenantId?: string) {
-    const rows = await withSystemTx((tx) => this.batchRepo.listByTenant(tx, { tenantId, limit: 200 }));
+  @RequirePermission("batch-history:view")
+  async list(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
+    const t = resolveTenantFilter(user, tenantId);
+    const rows = await withSystemTx((tx) => this.batchRepo.listByTenant(tx, { tenantId: t, limit: 200 }));
     return { batches: rows };
   }
 
   @Post("rerun")
-  @Roles("aiproot_admin")
+  @RequirePermission("batch-history:run")
   async rerun(
     @Body() body: { tenantId: string; groupId: string; batchDate: string },
     @CurrentUser() user: JwtUser,
@@ -47,7 +49,7 @@ export class AnalysisBatchController {
   }
 
   @Post("run-pending")
-  @Roles("aiproot_admin")
+  @RequirePermission("batch-history:run")
   async runPending(
     @Body() body: { lookbackDays?: number; tenantId?: string },
     @CurrentUser() user: JwtUser,

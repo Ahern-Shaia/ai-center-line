@@ -1,6 +1,8 @@
 import { BadRequestException, Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import { resolveTenantId } from "../auth/resolve-tenant-id.js";
 import { Public } from "../auth/public.decorator.js";
 import { Roles } from "../auth/roles.decorator.js";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { withTenant } from "../db/client.js";
@@ -113,10 +115,10 @@ export class EmployeeBindingController {
    * Aiproot audit 頁 · 列 tenant 底下 binding (active + revoked)
    */
   @Get("aiproot/list")
-  @Roles("aiproot_admin", "consultant")
-  async aiprootList(@Query("tenantId") tenantId?: string, @Query("status") status?: "active" | "revoked") {
-    if (!tenantId) throw new BadRequestException("tenantId 必要");
-    const rows = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.bindingRepo.listByTenant(tx, tenantId, { status, limit: 500 }));
+  @RequirePermission("binding:aiproot-view")
+  async aiprootList(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string, @Query("status") status?: "active" | "revoked") {
+    const t = resolveTenantId(user, tenantId);
+    const rows = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.bindingRepo.listByTenant(tx, t, { status, limit: 500 }));
     return { bindings: rows };
   }
 
@@ -124,7 +126,7 @@ export class EmployeeBindingController {
    * Aiproot revoke · 撤銷某 binding
    */
   @Post("aiproot/revoke/:bindingId")
-  @Roles("aiproot_admin")
+  @RequirePermission("binding:aiproot-manage")
   async aiprootRevoke(
     @Param("bindingId") bindingId: string,
     @CurrentUser() user: JwtUser,
@@ -140,7 +142,7 @@ export class EmployeeBindingController {
    * · 在 tenant_admin 上下文執行 · user_line_binding + users RLS 皆已 tenant-scope
    */
   @Get("tenant/list")
-  @Roles("tenant_admin")
+  @RequirePermission("binding:view")
   async tenantList(@CurrentUser() user: JwtUser, @Query("status") status?: "active" | "revoked") {
     const tenantId = user.tenant_id;
     if (!tenantId) throw new BadRequestException("缺租戶識別");
@@ -165,7 +167,7 @@ export class EmployeeBindingController {
    * Tenant 自治 · tenant_admin 看自租戶未綁定活躍者
    */
   @Get("tenant/unbound-stats")
-  @Roles("tenant_admin")
+  @RequirePermission("binding:view")
   async tenantUnboundStats(@CurrentUser() user: JwtUser) {
     if (!user.tenant_id) throw new BadRequestException("缺租戶識別");
     return { stats: await this.nudge.computeUnboundStatsForTenant(user.tenant_id) };
@@ -187,7 +189,7 @@ export class EmployeeBindingController {
    * Aiproot 手動觸發 nudge 掃描 · 顯每 tenant 未綁定活躍者
    */
   @Get("aiproot/unbound-stats")
-  @Roles("aiproot_admin", "consultant")
+  @RequirePermission("binding:aiproot-view")
   async unboundStats() {
     return { stats: await this.nudge.computeUnboundStats() };
   }

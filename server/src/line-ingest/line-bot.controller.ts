@@ -1,5 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
-import { Roles } from "../auth/roles.decorator.js";
+import { resolveTenantFilter } from "../auth/resolve-tenant-id.js";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { LineBotService } from "./line-bot.service.js";
@@ -16,14 +17,14 @@ export class LineBotController {
   // Refs 給 UI 下拉（tenants + departments）· 放最前避免被 :id 路由吃掉
   // tenantId 選填 · 傳了才 scope departments · aiproot 於 bot detail 頁必傳
   @Get("refs")
-  @Roles("aiproot_admin", "consultant")
-  async refs(@Query("tenantId") tenantId?: string) {
-    return this.botSvc.getRefs(tenantId);
+  @RequirePermission("line-bots:view")
+  async refs(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
+    return this.botSvc.getRefs(resolveTenantFilter(user, tenantId));
   }
 
   // 列表 · tenant_admin 看 own · aiproot_admin / consultant 看全（透過 RLS · 前者 tenant_id 過濾 · 後者 tenant 空看全）
   @Get()
-  @Roles("aiproot_admin", "consultant")
+  @RequirePermission("line-bots:view")
   async list() {
     const bots = await this.botSvc.listBots();
     return { bots };
@@ -31,7 +32,7 @@ export class LineBotController {
 
   // 詳情
   @Get(":id")
-  @Roles("aiproot_admin", "consultant")
+  @RequirePermission("line-bots:view")
   async get(@Param("id") id: string) {
     const bot = await this.botSvc.getBot(id);
     const groups = await this.groupSvc.listGroupsByBot(id);
@@ -40,7 +41,7 @@ export class LineBotController {
 
   // 新增 · 只 aiproot_admin
   @Post()
-  @Roles("aiproot_admin")
+  @RequirePermission("line-bots:create")
   async create(@CurrentUser() user: JwtUser, @Body() body: unknown) {
     const parsed = LineBotCreateSchema.safeParse(body);
     if (!parsed.success) {
@@ -58,7 +59,7 @@ export class LineBotController {
 
   // 編輯 · 只 aiproot_admin
   @Patch(":id")
-  @Roles("aiproot_admin")
+  @RequirePermission("line-bots:update")
   async update(@Param("id") id: string, @Body() body: unknown) {
     const parsed = LineBotUpdateSchema.safeParse(body);
     if (!parsed.success) {
@@ -73,7 +74,7 @@ export class LineBotController {
 
   // 停用 · 只 aiproot_admin · soft delete
   @Delete(":id")
-  @Roles("aiproot_admin")
+  @RequirePermission("line-bots:delete")
   async disable(@Param("id") id: string) {
     await this.botSvc.disableBot(id);
     return { status: "disabled" };
@@ -81,7 +82,7 @@ export class LineBotController {
 
   /** 永久刪除前先看會連帶刪掉什麼（群組／訊息／成員／員工綁定全是 CASCADE） */
   @Get(":id/delete-impact")
-  @Roles("aiproot_admin")
+  @RequirePermission("line-bots:delete")
   async deleteImpact(@Param("id") id: string) {
     return this.botSvc.deleteImpact(id);
   }
@@ -92,7 +93,7 @@ export class LineBotController {
    * （UNIQUE），同一個 LINE bot 想重新加入也加不了。
    */
   @Delete(":id/permanent")
-  @Roles("aiproot_admin")
+  @RequirePermission("line-bots:delete")
   async deletePermanently(@Param("id") id: string) {
     await this.botSvc.deleteBotPermanently(id);
     return { status: "deleted" };

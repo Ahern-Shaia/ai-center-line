@@ -1,5 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Put, Query } from "@nestjs/common";
-import { Roles } from "../auth/roles.decorator.js";
+import { resolveTenantId } from "../auth/resolve-tenant-id.js";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { LlmConfigUpsertSchema } from "./dto/llm-config.dto.js";
@@ -23,12 +24,9 @@ export class LlmConfigController {
 
   // GET /llm-config?tenantId=xxx
   @Get()
-  @Roles("aiproot_admin")
-  async get(@Query("tenantId") tenantId?: string) {
-    if (!tenantId) {
-      throw new BadRequestException("tenantId query param 必要");
-    }
-    const cfg = await this.svc.getMasked(tenantId);
+  @RequirePermission("llm-config:view")
+  async get(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
+    const cfg = await this.svc.getMasked(resolveTenantId(user, tenantId));
     return {
       config: cfg,
       providerModels: PROVIDER_DEFAULT_MODELS,
@@ -37,7 +35,7 @@ export class LlmConfigController {
 
   // PUT /llm-config  body: { tenantId, provider, model, apiKey, ... }
   @Put()
-  @Roles("aiproot_admin")
+  @RequirePermission("llm-config:manage")
   async put(@CurrentUser() user: JwtUser, @Body() body: unknown) {
     const b = body as { tenantId?: string; [k: string]: unknown };
     if (!b?.tenantId || typeof b.tenantId !== "string") {
@@ -56,7 +54,7 @@ export class LlmConfigController {
 
   // DELETE /llm-config/:tenantId · 清 tenant config · 讓 fallback env
   @Delete(":tenantId")
-  @Roles("aiproot_admin")
+  @RequirePermission("llm-config:manage")
   async remove(@Param("tenantId") tenantId: string) {
     return this.svc.deleteConfig(tenantId);
   }

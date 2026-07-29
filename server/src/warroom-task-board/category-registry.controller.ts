@@ -1,5 +1,8 @@
 import { BadRequestException, Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
-import { Roles } from "../auth/roles.decorator.js";
+import type { JwtUser } from "../auth/jwt-user.js";
+import { CurrentUser } from "../auth/current-user.decorator.js";
+import { resolveTenantId } from "../auth/resolve-tenant-id.js";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { withTenant } from "../db/client.js";
 import { CategoryRegistryRepository } from "./category-registry.repository.js";
 
@@ -20,18 +23,18 @@ export class CategoryRegistryController {
   constructor(private readonly repo: CategoryRegistryRepository) {}
 
   @Get()
-  @Roles("aiproot_admin", "consultant")
-  async list(@Query("tenantId") tenantId?: string, @Query("status") status?: "active" | "archived" | "all") {
-    if (!tenantId) throw new BadRequestException("tenantId 必要");
+  @RequirePermission("categories:view")
+  async list(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string, @Query("status") status?: "active" | "archived" | "all") {
+    const t = resolveTenantId(user, tenantId);
     const rows = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => {
-      if (status === "active") return this.repo.listActive(tx, tenantId);
-      return this.repo.listAll(tx, tenantId);
+      if (status === "active") return this.repo.listActive(tx, t);
+      return this.repo.listAll(tx, t);
     });
     return { categories: rows };
   }
 
   @Post(":categoryId/rename")
-  @Roles("aiproot_admin")
+  @RequirePermission("categories:manage")
   async rename(@Param("categoryId") categoryId: string, @Body() body: { name?: string }) {
     if (!body?.name || body.name.trim().length === 0) throw new BadRequestException("name 必要");
     await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.repo.rename(tx, categoryId, body.name!.trim()));
@@ -39,7 +42,7 @@ export class CategoryRegistryController {
   }
 
   @Post(":categoryId/archive")
-  @Roles("aiproot_admin")
+  @RequirePermission("categories:manage")
   async archive(@Param("categoryId") categoryId: string) {
     await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.repo.archive(tx, categoryId));
     return { success: true };

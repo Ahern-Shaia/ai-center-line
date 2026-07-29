@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, ForbiddenException, Get, NotFoundException, Post, Query } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import { Public } from "../auth/public.decorator.js";
-import { Roles } from "../auth/roles.decorator.js";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { sql as sql_import } from "drizzle-orm";
 import { currentTx, withTenant } from "../db/client.js";
@@ -154,7 +154,7 @@ export class PersonalDailyReportController {
   }
 
   @Get("mine")
-  @Roles("aiproot_admin", "consultant", "tenant_admin", "group_owner", "employee")
+  @RequirePermission("personal-report:mine")
   async getMine(@CurrentUser() user: JwtUser, @Query("date") dateStr?: string) {
     const date = dateStr ?? getTaipeiDate();
     if (!isValidDate(date)) throw new BadRequestException("date 格式錯 · 應為 YYYY-MM-DD");
@@ -230,7 +230,7 @@ export class PersonalDailyReportController {
   }
 
   @Post("mine/save")
-  @Roles("aiproot_admin", "consultant", "tenant_admin", "group_owner", "employee")
+  @RequirePermission("personal-report:mine")
   async saveMine(
     @CurrentUser() user: JwtUser,
     @Body() body: { date?: string; items?: PersonalDailyReportItem[]; action?: "save_draft" | "send" },
@@ -272,7 +272,7 @@ export class PersonalDailyReportController {
   }
 
   @Post("mine/regenerate")
-  @Roles("aiproot_admin", "consultant", "tenant_admin", "group_owner", "employee")
+  @RequirePermission("personal-report:mine")
   async regenerateMine(
     @CurrentUser() user: JwtUser,
     @Body() body: { date?: string } = {},
@@ -290,7 +290,7 @@ export class PersonalDailyReportController {
   }
 
   @Get("team")
-  @Roles("aiproot_admin", "consultant", "tenant_admin", "group_owner")
+  @RequirePermission("personal-report:team")
   async team(@Query("from") fromDate?: string, @Query("to") toDate?: string) {
     const to = toDate ?? getTaipeiDate();
     const from = fromDate ?? subtractDays(to, 7);
@@ -301,7 +301,7 @@ export class PersonalDailyReportController {
   }
 
   @Post("aiproot/run-scheduler")
-  @Roles("aiproot_admin")
+  @RequirePermission("personal-report:trigger")
   async runScheduler(@Body() body: { date?: string } = {}) {
     const date = body.date ?? getTaipeiDate();
     if (!isValidDate(date)) throw new BadRequestException("date 格式錯");

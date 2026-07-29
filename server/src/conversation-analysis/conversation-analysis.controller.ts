@@ -10,7 +10,7 @@ import {
   Post,
   Query,
 } from "@nestjs/common";
-import { Roles } from "../auth/roles.decorator.js";
+import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { UploadCreateSchema } from "./dto/upload.dto.js";
@@ -32,7 +32,6 @@ import { LabelService } from "./label.service.js";
  * 日後若某個客戶真的需要，走權限引擎開（roles 表支援 tenant 專屬角色），
  * 不要再把角色寫回這裡。
  */
-export const ANALYSIS_ROLES = ["aiproot_admin", "consultant"] as const;
 
 @Controller("conversation-analysis")
 export class ConversationAnalysisController {
@@ -42,7 +41,7 @@ export class ConversationAnalysisController {
   ) {}
 
   @Post("uploads")
-  @Roles(...ANALYSIS_ROLES)
+  @RequirePermission("convo:upload")
   async createUpload(@CurrentUser() user: JwtUser, @Body() body: unknown) {
     const parsed = UploadCreateSchema.safeParse(body);
     if (!parsed.success) {
@@ -55,13 +54,13 @@ export class ConversationAnalysisController {
   }
 
   @Get("uploads")
-  @Roles(...ANALYSIS_ROLES)
+  @RequirePermission("convo:view")
   async listUploads() {
     return { uploads: await this.analyze.listUploads() };
   }
 
   @Get("uploads/:id")
-  @Roles(...ANALYSIS_ROLES)
+  @RequirePermission("convo:view")
   async getUpload(@Param("id", ParseIntPipe) id: number) {
     const bundle = await this.analyze.getUploadWithResult(id);
     if (!bundle) throw new NotFoundException("upload 不存在或無權限");
@@ -70,7 +69,7 @@ export class ConversationAnalysisController {
   }
 
   @Post("labels")
-  @Roles(...ANALYSIS_ROLES)
+  @RequirePermission("convo:label")
   async createLabel(@CurrentUser() user: JwtUser, @Body() body: unknown) {
     const parsed = LabelCreateSchema.safeParse(body);
     if (!parsed.success) {
@@ -83,7 +82,7 @@ export class ConversationAnalysisController {
   }
 
   @Delete("labels")
-  @Roles(...ANALYSIS_ROLES)
+  @RequirePermission("convo:label")
   async deleteLabel(
     @CurrentUser() user: JwtUser,
     @Query("uploadId", ParseIntPipe) uploadId: number,
@@ -98,7 +97,7 @@ export class ConversationAnalysisController {
   }
 
   @Get("uploads/:id/metrics")
-  @Roles(...ANALYSIS_ROLES)
+  @RequirePermission("convo:view")
   async getMetrics(@Param("id", ParseIntPipe) id: number) {
     return this.label.getMetrics(id);
   }
