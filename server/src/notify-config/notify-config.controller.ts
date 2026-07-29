@@ -62,8 +62,14 @@ export class NotifyConfigController {
   // ===== 管道對象 =====
   /**
    * 目標群下拉的資料來源。
+   *
    * ⚠️ 不吃任何 client 傳的租戶參數 —— 範圍完全交給 line_group 的 RLS 決定，
    *    所以這裡沒有 IDOR 的面（同 pitfall_permission_code_is_not_tenant_boundary）。
+   *
+   * ⚠️ **這條必須留在 `@Get(":id")` 前面**（本檔第 130 行附近）。
+   *    Nest 依宣告順序註冊，搬到下面就會被 `:id` 吃掉，變成 id="line-groups"
+   *    去查規則 → 回 404「找不到規則」。而且**無權限時兩者都回 401**，
+   *    光看狀態碼分不出被吃掉了，要登入才會發現。
    */
   @Get("line-groups")
   @RequirePermission("notify-config:view")
