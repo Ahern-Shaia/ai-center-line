@@ -425,21 +425,25 @@ export const confirmSignoff = (ticket_ids: string[]) =>
 // === Warroom Task Board · WTB-M3 ===
 
 // 任務卡來源原文 · 簽核前對照 AI 抽取結果與原始訊息
-export interface TicketMedia {
-  mediaId: string;
-  /** image / video / file */
-  kind: string;
-  contentType: string | null;
+export interface SourceMessage {
+  id: number;
+  time: string;
   sender: string;
-  at: string;
+  text: string;
+  kind: string;
+  /** 這一則帶的照片／影片 · null = 這則不是媒體訊息 */
+  media: { mediaId: string; kind: string } | null;
 }
 
 export interface TicketSource {
   summary: string;
   extracted: Record<string, unknown> | null;
-  messages: Array<{ id: number; time: string; sender: string; text: string; kind: string }>;
-  /** 來源訊息裡的照片／影片 · 原文只寫「[照片]」，看不到內容就無法判斷該不該變成任務 */
-  media: TicketMedia[];
+  messages: SourceMessage[];
+  /**
+   * 有沒有留下「哪幾則訊息」的連結。
+   * ⚠️ false 與「這幾則訊息沒有照片」是兩件事：前者是我們不知道，後者是確定沒有。
+   */
+  hasSourceLink: boolean;
   unavailableReason: string | null;
 }
 export const getTicketSource = (ticketId: string) =>

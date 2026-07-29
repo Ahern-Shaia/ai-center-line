@@ -3,7 +3,7 @@ import Drawer from "../shared/Drawer";
 import { catLabel } from "../shared/categoryLabel";
 import { statusLabel } from "../shared/recordStatusLabel";
 import { ApiError, getTicketSource, type TicketSource } from "../api";
-import MediaStrip from "../shared/MediaThumb";
+import SourceMessageList from "./SourceMessageList";
 
 // 簽核前對照：AI 整理的內容 vs 當時的原始訊息。
 // 主管簽下去是要負責的 —— 看不到原文，簽核就只是幫 AI 背書。
@@ -72,22 +72,12 @@ export default function SourceDrawer({ open, onClose, ticketId, summary, confide
         <div className="tc-empty">{data.unavailableReason}</div>
       )}
 
-      {!loading && !err && data && data.messages.length > 0 && (
+
+      {!loading && !err && data && (
         <div className="tc-sec">
-          <span className="tc-sec-lbl">這是根據以下 {data.messages.length} 則訊息整理的</span>
-          <div className="tc-raw">
-            {data.messages.map((m) => (
-              <div key={m.id} className="ts-msg">
-                <span className="ts-msg-meta">{m.time} {m.sender}</span>
-                <span className="ts-msg-text">{m.text}</span>
-              </div>
-            ))}
-          </div>
+          <SourceMessageList data={data} />
         </div>
       )}
-
-      {/* 原文只寫「[照片]」，看不到內容就無法判斷這該不該變成任務 */}
-      {!loading && !err && data && <MediaStrip media={data.media} />}
 
       {!loading && !err && data?.extracted && (
         <div className="tc-sec">

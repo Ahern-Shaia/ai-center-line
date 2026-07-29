@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import SourceMessageList from "./SourceMessageList";
 import {
   ApiError,
   confirmSignoff,
@@ -351,17 +352,7 @@ function SourceMessages({ ticketId }: { ticketId: string }) {
           {loading && <div className="ts-note">載入中…</div>}
           {err && <div className="ts-note">{err}</div>}
           {data && data.unavailableReason && <div className="ts-note">{data.unavailableReason}</div>}
-          {data && data.messages.length > 0 && (
-            <>
-              <div className="ts-hd">AI 是根據這 {data.messages.length} 則訊息整理的</div>
-              {data.messages.map((m) => (
-                <div key={m.id} className="ts-msg">
-                  <span className="ts-msg-meta">{m.time} {m.sender}</span>
-                  <span className="ts-msg-text">{m.text}</span>
-                </div>
-              ))}
-            </>
-          )}
+          {data && <SourceMessageList data={data} />}
         </div>
       )}
     </div>
