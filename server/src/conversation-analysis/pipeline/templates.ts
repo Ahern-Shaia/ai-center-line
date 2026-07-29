@@ -123,9 +123,29 @@ export const TEMPLATE_REGISTRY: Record<ExtractionTemplate, TemplateDef> = {
 ## 抽取規則（服務工單）
 8. service_reports：服務工單回報（「今日工作內容回報」「今日進度回報」這類訊息）。
 9. 一則訊息常含**多個客戶／案場**，每個客戶拆成一筆；同一客戶的多個施作項目放進 items 陣列。
+   客戶下面若有站點（如「朴子站」「長庚站」「辦公室」「民雄站」），填 site；同一客戶不同站點拆成不同筆。
 10. 金額只抄不算 —— 原文寫多少就填多少，禁止加總、換算或推估（R11）。
-11. status 用原文語意（如「待領料安裝」「待討論」「完成」），不要自行歸類成代碼。`,
-    trackedFields: ["customer", "vehicle", "status"],
+11. **狀態分兩層，不要混**：
+    - \`items[].status\`：**該項目自己的**狀態，用原文語意（「待領料安裝」「待報價單同意後維修」「安排中」「待討論」「完成」）。
+      這是主要要填的 —— 同一客戶常常一項待料、另一項已完成。
+    - 最外層的 \`status\`：**只在整則有一個共同結論時才填**（例：整則都是「已完成」）。
+      各項目狀態不同時，最外層填 null，不要挑一個代表。
+12. \`items[].vehicle\`：車型或車號，**寫在項目上**（同一個客戶可能有多台不同車）。
+    例：「旅玩家查修一台」→ vehicle: "旅玩家"；「JS斜坡板止滑膠帶除膠」→ vehicle: "JS"。
+    項目沒提到車就填 null，不要從別的項目借。
+13. \`items[].warranty\`：**只在訊息裡明講時才填**，原文照抄（「保內」「保固內」「保外」）。
+    ⚠️ 我方沒有保固起訖資料，**禁止自行判斷**是否在保固期內。沒寫就是 null。
+14. 一則回報裡常有不屬於任何客戶的項目（「線上週會議」「部門週會」「公務車保養」「文件整理」「前往花蓮」）。
+    這些 customer 填 null，仍可各自成一筆或併入 issues —— 不要硬塞給前一個客戶。`,
+    // ⚠️ 只放**record 層**的欄位。抽取健康度的 fieldFill 是
+    //    `jsonb_array_elements(service_reports) item` → `item->>field`，只看得到 record 層。
+    //    v0.2 把 vehicle 移到 items[] 之後若還留在這裡，健康度會永遠顯示 0% ——
+    //    那是量錯地方，不是抽不到，會讓人去修一個沒壞的東西。
+    //    ⚠️ 也刻意不放 status：規則 11 要模型優先填 items[].status，
+    //    record 層的 status 本來就常是 null。
+    //    ⏳ 待補：item 層欄位（vehicle / status / warranty / amount）目前**沒有被健康度量到**，
+    //       需要 fieldFill 支援嵌套路徑 —— 見 docs/抽取健康度分析報告-2026-07-30.md M2。
+    trackedFields: ["customer", "site"],
     selectable: false,   // ⚠️ 待客戶欄位確認（OQ-ESO-1）
   },
 };

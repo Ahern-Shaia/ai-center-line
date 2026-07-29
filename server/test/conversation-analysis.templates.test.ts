@@ -9,7 +9,7 @@
 //    而且是永久防線（不需 API 費用、每次 CI 都跑）。
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildAnalysisSchema } from "../src/conversation-analysis/pipeline/schemas.js";
+import { buildAnalysisSchema, DEFAULT_CATEGORIES } from "../src/conversation-analysis/pipeline/schemas.js";
 import { TEMPLATE_REGISTRY, EXTRACTION_TEMPLATES, resolveTemplate, DEFAULT_TEMPLATE } from "../src/conversation-analysis/pipeline/templates.js";
 import { TWH_TENANT } from "../src/conversation-analysis/pipeline/tenant-twh.js";
 
@@ -144,4 +144,55 @@ test("resolveTemplate · 未知值/null 一律回 default（不因設定缺失�
   assert.equal(resolveTemplate("不存在的模板"), DEFAULT_TEMPLATE);
   assert.equal(DEFAULT_TEMPLATE, "factory_report", "default 必須＝現行行為");
   assert.equal(resolveTemplate("general"), "general");
+});
+
+// ── 2026-07-30 · 分類定義與 L2 欄位的同步紀律 ──────────────────────
+//
+// 這一組釘的是「改了 A 卻忘記改 B」那類錯，今天各踩過一次：
+//   ① schema 加了 items[].vehicle/status/warranty，但 prompt 沒說怎麼填
+//   ② vehicle 移到 items[] 之後 trackedFields 還留著它 → 健康度永遠 0%（量錯地方）
+//   ③ CategoryEnum 加了類別，但 prompt 的判別軸沒跟著寫
+
+test("⭐⭐ service_order 的 prompt 必須交代三個新項目欄位怎麼填", () => {
+  const f = TEMPLATE_REGISTRY.service_order.promptFragment;
+  for (const must of [
+    "items[].status",      // 項目層狀態
+    "items[].vehicle",     // 車型在項目層
+    "items[].warranty",    // 保內／保外
+    "禁止自行判斷",         // 保固不可推測（R11）
+  ]) {
+    assert.ok(f.includes(must), `promptFragment 少了「${must}」的說明 —— schema 有欄位但沒教模型怎麼填`);
+  }
+});
+
+test("⭐⭐ trackedFields 只能放 record 層欄位（健康度量不到 items 內層）", () => {
+  // fieldFill 是 jsonb_array_elements(service_reports) item → item->>field，
+  // 只看得到 record 層。放 item 層欄位進去會永遠顯示 0%，
+  // 而那是量錯地方不是抽不到 —— 會讓人去修一個沒壞的東西。
+  const ITEM_LEVEL = ["vehicle", "warranty", "amount", "qty", "name"];
+  for (const t of Object.values(TEMPLATE_REGISTRY)) {
+    for (const f of t.trackedFields) {
+      assert.ok(!ITEM_LEVEL.includes(f), `trackedFields 不可含 item 層欄位「${f}」`);
+    }
+  }
+});
+
+test("⭐⭐ 每個建議分類都要在 tenant prompt 裡有定義", () => {
+  // 只加 enum 不寫定義，模型不知道那一類是什麼，會空著或亂塞。
+  for (const c of DEFAULT_CATEGORIES) {
+    assert.ok(
+      TWH_TENANT.systemPrompt.includes(`- ${c} `),
+      `分類「${c}」在 CategoryEnum 裡但 tenant prompt 沒有定義它`,
+    );
+  }
+});
+
+test("⭐ 易混淆的分類對必須有明寫的判別軸", () => {
+  // 加類別最常見的失敗是「清單加了、邊界沒講」，模型就在邊界上亂猜。
+  const p = TWH_TENANT.systemPrompt;
+  assert.ok(p.includes("錢的方向"), "procurement / sales 需要判別軸（誰付錢給誰）");
+  assert.ok(
+    p.includes("辦公室系統") || p.includes("it_support。"),
+    "maintenance / it_support 需要判別軸（車輛設備 vs 辦公室系統）",
+  );
 });

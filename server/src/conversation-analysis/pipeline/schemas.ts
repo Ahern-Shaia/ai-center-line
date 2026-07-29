@@ -15,6 +15,15 @@ export const CategoryEnum = z.enum([
   "maintenance",
   "rnd",
   "procurement",
+  // 2026-07-30 新增兩類 · 依 prod 真實資料（docs/抽取健康度分析報告-2026-07-30.md §6.2）：
+  //   procurement 的定義原本含「詢價、報價」，客戶詢價因此被歸進採購 ——
+  //   模型是照著 prompt 做，但「我方付錢」與「客戶付錢」混在一類，
+  //   結果「這個月採購多少」與「接了多少詢價」兩個都算不出來。
+  //   maintenance 同理掃進了 NAS／ERP 帳號問題（定義含「設備／工具異常」）。
+  // ⚠️ 判別軸寫在 tenant prompt 的分類規則 5、6 —— 加類別時要一起維護那兩條，
+  //    只加清單不給判別軸，模型會在邊界上亂猜。
+  "sales",
+  "it_support",
   "chitchat",
 ]);
 export type Category = z.infer<typeof CategoryEnum>;
