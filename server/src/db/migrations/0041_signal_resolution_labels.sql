@@ -27,6 +27,11 @@ ALTER TABLE pending_completion_signal
 
 -- 回填：把標錯的進度回報改回來。
 -- 只動「意圖不是完成」的那些 —— 真的由完成訊號關掉的不可誤傷。
+--
+-- ⚠️ **這段是 no-op，實際回填在 0042。**
+--    本表是 FORCE RLS，用 psql 跑 migration 時沒有 app.actor_role，
+--    可見列數為 0，於是 `UPDATE 0` —— 而那看起來就像「沒有符合的資料」。
+--    留著不刪是為了讓這個錯誤本身有紀錄（0042 的註解說明成因）。
 UPDATE pending_completion_signal
    SET resolution = 'progress_logged'
  WHERE resolution = 'closed_ticket'

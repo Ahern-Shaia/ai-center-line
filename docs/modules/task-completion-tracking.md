@@ -677,12 +677,31 @@ if (!isDone) {
 **零筆真的關掉任務**。這個標籤當場就誤導了本次分析（第一眼以為進度回報把任務關掉了）。
 `completion-signal.controller.ts:90` 的「已接住」也吃這個值。
 
-**Bug B · 任務被刪掉後，resolution 還說接住了**
+**Bug A 的 prod 佐證（設好 RLS 變數之後重驗）**
+
+| 訊號 | resolution | 掛到的任務 | 任務的 work_status |
+|---|---|---|---|
+| 10:14 progress | `closed_ticket` | 拖車費9600報價確認 | **open** |
+| 10:17 progress | `closed_ticket` | LINE@後台客戶留言案件 | **open** |
+
+兩張任務都還開著，標籤卻說關掉了。**零筆真的關掉任務。**
+
+**Bug B · 任務被刪掉後 resolution 會過期 —— 但 prod 上還沒發生**
 
 `resolved_ticket_id` 是 `ON DELETE SET NULL`。分析結果被刪除／重跑時任務會消失，
-連結斷掉，但 `resolution` 仍留著 `closed_ticket`。
-prod 現況：**5 筆訊號的 `resolved_ticket_id` 全是 NULL**，其中 2 筆卻標著已接住 ——
-後台會說「接住了」，點進去沒有東西。
+連結斷掉，而 `resolution` 不會跟著改 —— 後台就會說「接住了」但點進去沒東西。
+
+> ⚠️ **這裡我一開始判斷錯了。** 第一版寫「prod 5 筆的 `resolved_ticket_id` 全是 NULL、
+> 2 筆卻標著已接住」。**那是錯的** —— 那個結論來自一個被 `tickets` RLS 擋掉的 JOIN
+> （`p_tickets` 是 AND-only，需要 `app.current_tenant`，而我只設了 `app.actor_role`），
+> 空的 join 被讀成「沒有掛任務」。設好變數重查，兩筆的 `resolved_ticket_id` 都有值、
+> 任務也都還在。
+>
+> **prod 目前沒有 Bug B。** 防護仍然值得做（`ON DELETE SET NULL` 讓它是必然會發生的，
+> 而 prod 確實有人手動刪分析結果 —— 見 task「刪除分析結果做成前端功能」），
+> 但它是**預防**不是**修現有災情**，兩者不可以混為一談。
+>
+> 這是本專案第 10 次踩「RLS 靜默回 0」，而且踩在**同一天寫下這個坑的紀錄之後**。
 
 > 兩個都是同一條紀律：**標籤講的事要跟系統實際知道的事相符**（同 F-26）。
 > 而且兩個都不需要更多資料就能修。
@@ -705,7 +724,7 @@ prod 現況：**5 筆訊號的 `resolved_ticket_id` 全是 NULL**，其中 2 筆
 | 「被引用訊息沒文字 → 不回」 | ❌ 撤回 —— prod 資料反證（10:17 引用圖片卻對到真任務）|
 | 措辭退一步（只宣稱知道的那一半）| ✅ 做 · 不受樣本量影響 |
 | Bug A · progress 標成 closed_ticket | ✅ 修 · 標籤與實際不符 |
-| Bug B · 任務刪掉後仍標已接住 | ✅ 修 · 同上 |
+| Bug B · 任務刪掉後仍標已接住 | ✅ 做防護 · ⚠️ 但 prod **還沒發生**（第一版說有是 RLS 擋住 JOIN 造成的誤判）|
 | 加新的過濾規則 | ⏸ **等資料** · 5 筆、一天，不足以改一條所有人都會走的路徑 |
 
 ⭐ 這一輪的價值不在做了什麼，在於**兩個看起來都對的提案各被推翻一次** ——
@@ -1137,7 +1156,7 @@ export interface PersonalDailyReportItem {
 | **OQ-TCT-32** | 「被引用訊息沒有文字內容 → 不視為完成回報」要做嗎？ | ❌ **不做** · prod 資料反證（10:17 引用圖片卻對到真任務，照片本來就可能是任務的來源訊息之一）|
 | **OQ-TCT-33** | 那要加什麼規則擋誤判？ | ⏸ **先不加** · 5 筆訊號、一天的資料不足以改一條所有人都會走的路徑 · 止血靠 per-群開關（0040），累積一兩週再回來看 |
 | **OQ-TCT-37** | Bug A：progress 被標成 `closed_ticket` 要修嗎？ | **要** · 改成 `progress_logged`，計數器分開 ·「已接住」的定義要重新確認（進度算不算接住）|
-| **OQ-TCT-38** | Bug B：任務被刪除後 resolution 還說接住了 | **要修** · `ON DELETE SET NULL` 之後 resolution 要一併改成 `ticket_gone`，否則後台說接住了卻點不到東西 |
+| **OQ-TCT-38** | Bug B：任務被刪除後 resolution 會過期 | **做防護**（讀取時推導 `ticket_gone`，不存 DB）· ⚠️ prod **尚未發生**，是預防不是救火 |
 | **OQ-TCT-34** | 回話措辭要從「✓ 已收到完成回報」改掉嗎？ | **要改** · 當下並不知道對應哪一件事，只宣稱知道的那一半（同 F-26 的紀律）· 具體文案待定 |
 | **OQ-TCT-35** | 已經誤判落地的訊號要清掉嗎？ | **不清** · 訊號是原始事實（R11 不可變），對應錯誤在 resolution 層修正 |
 | **OQ-TCT-36** | 群組回話開關（0040）做完了，還需要租戶級的總開關嗎？ | **暫不做** · per-群已經夠細；租戶級總開關等有客戶真的要求再說（同 channel-adapter 的觸發條件紀律）|
@@ -1244,3 +1263,4 @@ v2.3  風險是「鏈接上了但沒有任務可接」    → 解法：讓完成
 | 2026-07-28 | v0.1 | M0 首版 · 用戶提出「任務→日報→未完成每天追蹤／完成則結束」· 查驗後：tickets 已有三個狀態維度且擁有者各不相同（AI／主管／歸屬），完成度是第四個、擁有者是本人 · ⚠️ **不可複用 `tickets.status`** —— AI 讀到 resolved ≠ 本人回報完成，共用會被 materializer 重跑洗掉（同 `assigned_by` 的坑）· ⚠️ **「已簽核」不是「已完成」**（簽核＝主管確認 AI 抽對了），UI 必須分開 · 任務↔日報連結目前「有資料無模型」（`ticketId` 存在 jsonb 但型別沒有、`saveFinal` 無 schema 驗證）· ⭐ **核心主張：預設繼續、只有完成需要一次點擊** —— 照字面做成「每天更新」在 prod 現況（指派 0 次／簽核 0 次）下不會發生 · ⭐ **日報與任務分開**，未完成不每天複製進日報（做兩週的事會出現在 14 份日報裡）· `due_at` 全 null 所以 v1 不做逾期 · FMEA 10 條含 3 個 P0（沒人用／被重跑洗掉／AI 自動標完成）· §8 先講清楚這功能大概率一開始是 0，那不代表設計錯但代表不該為它加更多東西 | ahern + Claude Code |
 | 2026-07-29 | v2.7 | ⚠️ **實況誤判**：有人把截圖傳進群、引用那張圖回「好了」，bot 回了「✓ 已收到完成回報」——「好了」講的是截圖傳好了 · **診斷：分類器沒判錯**（那句話語意上就是完成），錯在**從來沒有人問「被引用的那則是不是一件任務」** · ⚠️ **自我修正**：第一時間想到的「對得到任務才回話」是錯的提案 —— §2.6 已經寫明訊號比任務早 21 小時，那規則會讓幾乎所有真實回報都不回話 · ✅ 改主張**結構性前置過濾**（被引用訊息沒有文字內容＝不可能是任務，一個 `text_content IS NULL` 就夠）＋ 措辭退一步（當下只宣稱知道的那一半）· ⚠️ **先不動工**：整節建立在一個案例上，先跑 §2.7 的三題 prod 查詢定規模，否則是拿一個案例改所有人都會走的路徑（本模組已因此猜錯三次瓶頸）· 止血已先上線：`line_group.reply_enabled` per-群開關（migration 0040）· 新增 OQ-TCT-32..36 | ahern + Claude Code |
 | 2026-07-29 | v2.7.1 | ⭐⭐ **查了 prod，兩個提案都被推翻** · ①「對得到任務才回話」—— §2.6 自己寫過訊號比任務早 21 小時，那規則等於關掉功能 · ②「被引用訊息沒文字就不是任務」—— **prod 反證**：10:17 那筆引用的是圖片卻確實對到一張真任務（`source_message_ids` 收的是該筆記錄的所有來源訊息，照片本來就可能是其中之一）· 全部樣本只有 5 筆、只有一天，不足以支撐任何新規則，**改為等資料**，止血靠 0040 的 per-群開關 · ⭐ 但查資料翻出兩個不需要更多資料就能修的 bug：**A** progress 回報被標成 `closed_ticket` 且計入 `closed`（任務根本沒關，prod 2 筆全是這種，當場誤導了本次分析）· **B** 任務被刪除後 `resolved_ticket_id` 因 `ON DELETE SET NULL` 變 NULL，但 resolution 仍留 `closed_ticket`（prod 5 筆的 resolved_ticket_id 全空，2 筆卻標著已接住）· 兩者都是「標籤講的事跟實際不符」，同 F-26 · OQ-TCT-32/33 改判、新增 OQ-TCT-37/38 | ahern + Claude Code |
+| 2026-07-29 | v2.7.2 | ⚠️ **更正 v2.7.1 的一個錯誤結論**：「prod 5 筆訊號的 resolved_ticket_id 全是 NULL、2 筆標著已接住卻點不到東西」**是錯的** —— 那來自一個被 `tickets` RLS 擋掉的 JOIN（`p_tickets` 是 AND-only 需要 `app.current_tenant`，而我只設了 `app.actor_role`），空 join 被讀成「沒有掛任務」· 設好變數重查：兩筆的 `resolved_ticket_id` 都有值、任務都還在且 `work_status = open` —— **Bug A 反而被更強地證實**（標成已關閉的任務全都還開著），**Bug B 在 prod 尚未發生**（防護仍做，但是預防不是救火）· ⚠️ 同一個成因還讓 **migration 0041 的回填變成 no-op**：`pending_completion_signal` 是 FORCE RLS，psql 跑 migration 時沒有 `app.actor_role` → `UPDATE 0`，而那看起來就像「沒有符合的資料」· 補 0042（`SET LOCAL app.actor_role='system'` 後再 UPDATE）· **本專案第 10 次踩 RLS 靜默回 0，且踩在同一天寫下這個坑之後** —— 新規則：**動到 FORCE RLS 表的 migration DML 一律先 SET LOCAL actor_role** | ahern + Claude Code |
