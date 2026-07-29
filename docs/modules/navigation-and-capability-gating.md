@@ -1,6 +1,6 @@
 # navigation-and-capability-gating · 側邊欄收攏與能力分配
 
-> 狀態：✅ **M0.9 完成 v1.2**（2026-07-29）· OQ-NAV-1..13 全採建議 · M0.5 mockup 已完成 · 守衛已改 fail-closed ＋ **實測到並修好一個真實跨租戶 IDOR** · **下一步 M1（補完 15 項權限碼）**
+> 狀態：✅ **M1 完成 v1.3**（2026-07-29）· OQ-NAV-1..13 全採建議 · 守衛已 fail-closed ＋ 修好一個真實跨租戶 IDOR ＋ 閘門收成一套 · **下一步 M2（tenant_task_config）**
 >
 > 觸發：用戶指出「每家公司對 task 的性質要求都不一樣，需要做成通用功能，請分析後收攏側邊欄」。
 >
@@ -223,7 +223,7 @@ ALTER TABLE tenants
 
 | # | 路徑 | 失效模式 | 影響 | 嚴重度 | 緩解 |
 |---|---|---|---|---|---|
-| **N-1** | 權限 | 15 項沒有權限碼，aiproot 以為能用權限管理調整，實際改不動 | **裁定 1 與 3 直接落空** | **P0** | M1 先補完權限碼 · 補完後把 `AIPROOT_ONLY_PAGES` 刪掉，避免兩套閘門並存 |
+| **N-1** | 權限 | 15 項沒有權限碼，aiproot 以為能用權限管理調整，實際改不動 | **裁定 1 與 3 直接落空** | **P0** | ✅ **已緩解**（M1 · 2026-07-29）· ⚠️ 實際盤下去比 doc 寫的還糟：15 項裡有 12 項**權限碼早就存在**（0019 建的）卻全庫零引用 —— 不是「沒有閘門」而是「閘門是死的」，勾了不會有事發生。`AIPROOT_ONLY_PAGES` 已刪，閘門只剩一套 |
 | **N-2** | 權限 | 補權限碼時漏掉後端 `@Roles`，只擋了側欄 | **前端隱藏、API 仍可打** —— 資安不是 UI 問題 | **P0** | ✅ **已緩解**（M0.9 · 2026-07-29）：守衛改 fail-closed ＋ 跨租戶形狀測試（§5.1）· ⚠️ 順帶抓到並修好一個**真實**的跨租戶 IDOR —— 這條當初評 P0 是對的 |
 | **N-3** | 遷移 | 導覽改版後既有使用者找不到原本的頁 | 客訴、支援成本 | **P1** | 改名的項目在側欄加一次性提示（「原『定時任務』」）· 或首次登入顯示變更說明 |
 | **N-4** | 合併 | 「系統健康」四合一之後，單頁載入 4 份資料變慢 | 進頁面卡住 | **P1** | tab 各自 lazy load，只載當前 tab |
@@ -233,6 +233,22 @@ ALTER TABLE tenants
 | **N-8** | 分組 | 「我的／營運／設定」對 employee 來說「營運」是空的 | 空群組 | **P1** | 群組內全部無權限時整群不顯示（現有 `roles` 機制已有雛形）|
 
 ### 5.1 ⭐ N-2 的具體緩解（2026-07-29 盤點後）
+
+#### ⚠️ M1 實作後的更正：不是「沒有權限碼」，是「權限碼是死的」
+
+§0 寫「15 項完全沒有閘門」。實際盤下去，其中 **12 項的權限碼 0019 就建好了** ——
+`convo:view`、`cost-dashboard:view`、`binding:view`、`categories:view`、
+`personal-report:*`、`batch-history:*`… 全庫 `grep` **零次引用**。
+
+aiproot 在權限管理頁上勾 `convo:view`，什麼也不會發生。
+**這比沒有權限碼更糟：它看起來有效。**
+所以 M1 主要的工作是接線，不是補碼（真正缺的只有 7 個）。
+
+還有一件事差點釀成事故：那些死碼在 0019 是照**理想矩陣**授權的
+（`categories:view` 給了 tenant_admin、`binding:view` 給了 aiproot），
+一接上線就會立刻生效 = 在沒人裁定的情況下把頁面開放給客戶。
+migration 0037 第 3 段把那幾筆從未生效的授權收回，讓接線是純粹的行為保持。
+要開放是之後用權限管理頁按客戶逐一開 —— 那才是本案的目的。
 
 #### 現況：135 個端點，9 個完全沒有守衛裝飾
 
@@ -359,7 +375,7 @@ DepartmentService    setTenantContext(tx, <client 傳的 B>)  ← 把它蓋掉
 | **M0** | 本文件 ＋ OQ 裁定 | ← 目前在這 |
 | **M0.5** ⭐ | **UI flow mockup**（裁定 4：視覺體驗要先看過）· 兩個視角 ＋ 任務設定頁 | M0 |
 | **M0.9** ✅ | **守衛改 fail-closed**（§5.1）· 9 個現存端點加 `@AllowAnyUser()` ＋ 跨租戶形狀測試<br>⚠️ **必須在 M1 之前** —— 先把網子架好再往上加東西，否則那 15 項是在沒有網的狀態下寫的 | M0.5 通過 |
-| **M1** ⭐ | **補完 15 項權限碼** ＋ 後端 guard · 刪 `AIPROOT_ONLY_PAGES` | **M0.9** |
+| **M1** ✅ | **補完 15 項權限碼** ＋ 後端 guard · 刪 `AIPROOT_ONLY_PAGES` | **M0.9** |
 | **M2** | `tenant_task_config` 表 ＋ 時間設定落地（寬限期／提醒階梯）· 收掉散落的硬編 7 | M1 |
 | **M3** | 導覽重整：改名（定時任務→自動化）· 任務看板升一級 · 分組改「我的／營運／設定」 | M1 |
 | **M4** | 合併頁：通訊管道（2 tab）· 系統健康（4 tab · lazy load）· 租戶管理含開通 | M3 |
@@ -380,3 +396,4 @@ DepartmentService    setTenantContext(tx, <client 傳的 B>)  ← 把它蓋掉
 | 2026-07-29 | v0.2 | 用戶澄清「客戶方自己控制」的意思：控制的是**內容**（幾點執行、幾天沒簽核算逾時），**權限仍由我司開放** —— 是**兩層**不是一件事，v0.1 把它壓成一層了 · 改寫 §1.4：⭐ 發現 `定時任務` 已經是正確範例（有權限碼、不被硬擋、`scheduler_config` 有 per-tenant override，prod 實例是台灣福祉自己改成 18:00）· ⚠️ 而**通知設定與資料來源的權限碼被 `AIPROOT_ONLY_PAGES` 蓋掉，等於死碼** —— 以為調權限就能開放，實際完全沒作用，是 N-1 的實證 · 新增 OQ-NAV-13 | ahern + Claude Code |
 | 2026-07-29 | v0.1 | M0 首版 · 起因是用戶要求「收攏側邊欄 ＋ task 通用化」· ⚠️ 查驗發現**26 項側欄只有 9 項有權限碼、15 項完全沒有**，是靠硬編 `AIPROOT_ONLY_PAGES` 擋的 —— 用戶裁定的「透過權限管理分配」目前**做不到**，故列為 M1 前置（N-1 P0）· 指出「定時任務」與「任務」撞名、任務看板藏在 tab 裡要點兩次、AIPROOT 管理是 12 項雜物櫃、4 項租戶級設定鎖在平台側（tenant self-governance 第 3 次）· ⭐ 主張**通用化的本體不在導覽而在寫死的流程假設**，並逐條列出哪些該開放（抽取模板／時間）哪些不該（信心度門檻／結束原因 —— Jira resolution chaos 教訓）· 分組改按「這是誰的東西」而非內部模組 · 租戶 9→10、aiproot 26→16 · FMEA 8 條含 2 個 P0（權限碼落空、只擋前端不擋 API）| ahern + Claude Code |
 | 2026-07-29 | v1.2 | **M0.9 落地**：`roles.guard.ts` 改 fail-closed（新增 `@AllowAnyUser()` 明示那 9 個刻意不限角色的端點）· 新增 `test/route-guard.test.ts` 兩條語意斷言 · ⚠️ **照形狀測試去驗，抓到一個真實的跨租戶 IDOR**：`GET /tenant-admin/departments?tenantId=<別家>` 讀得到別家部門 —— 根因是 service 用 client 傳的值 `setTenantContext` 覆蓋掉 interceptor 依 JWT 設好的上下文，`@RequirePermission` 擋不住（權限碼 ≠ 租戶邊界）· 修法：新增 `auth/resolve-tenant-id.ts` 在 controller 層決定 tenantId，並補 `test/cross-tenant-idor.test.ts` 4 條 · 同時修掉兩個假綠：`auth.test.ts` 的假 Reflector 對所有 key 回同值（守衛一多分支就穿幫）、`employee-binding.test.ts` 自 7bc5636「部門改後端 derive」起就沒跟上 · 全套 331/331 綠 | ahern + Claude Code |
+| 2026-07-29 | v1.3 | **M1 落地**（backend `455fae2` / web `7ae0c60`）· ⚠️ 盤點更正：15 項裡 12 項的權限碼早就存在但**全庫零引用**＝死碼，M1 主要是接線不是補碼；migration 0037 只補真正缺的 7 個，並**收回 3 筆從未生效的授權**避免接線當下無聲開放頁面給客戶 · M0.9 的形狀測試當場擋下 7 支端點（拿掉 `@Roles` 後變成任何有權限的人都能傳別家 tenantId），補 `resolveTenantId` / 新增 `resolveTenantFilter`（列表用 · 平台角色不傳＝看全部）· 形狀測試從只認 `@Query` 擴到 `@Param`（原本 4 支在網子外），並接受 platform scope 權限碼作為把關方式 · `analysis-access.test.ts` 斷言搬家而非放寬：改釘「掛 convo:*」＋「convo:* 不可授予客戶端角色」（讀授權表，比讀 decorator 更嚴）· web 端刪 `AIPROOT_ONLY_PAGES`，NAV 推導 `PAGE_PERM` 供側欄與路由守衛共用，並移除 group／item 層 roles 後門 · 已用瀏覽器驗 aiproot_admin／tenant_admin 側欄、對授權表核對 group_owner／employee，**五種角色所見與改版前一致** · 331/331 綠 | ahern + Claude Code |
