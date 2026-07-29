@@ -11,6 +11,7 @@ import {
 import { usePermissions } from "../../permission/PermissionContext";
 import { useToast } from "../../Toast";
 import StyledSelect from "../../shared/StyledSelect";
+import { useTenantPicker } from "../../shared/TenantPicker";
 
 // tenant_admin「LINE 群組」頁
 // 對照 docs/roles-permissions-matrix.md §3.4 · perm=line-groups:view / assign
@@ -26,14 +27,19 @@ export default function LineGroupsPage() {
   const [depts, setDepts] = useState<DepartmentDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  // 平台角色要先選看哪一家；客戶方只有自己一家，picker 回 null
+  const [pickedTenantId, picker, tenantReady] = useTenantPicker();
+  // aiproot 的 session.tenantId 是 null —— 原本用它當前提，整頁就永遠是空白，
+  // 而且連錯誤都沒有（前端根本沒發請求）。改用 picker 的結果。
+  const scopeTenantId = pickedTenantId ?? session?.tenantId ?? null;
 
   const refresh = useCallback(async () => {
-    if (!canView || !session?.tenantId) { setLoading(false); return; }
+    if (!canView || !tenantReady || !scopeTenantId) { setLoading(false); return; }
     setLoading(true);
     try {
       const [gRes, dRes] = await Promise.all([
-        listTenantLineGroups(),
-        listDepartments(session.tenantId),
+        listTenantLineGroups(pickedTenantId),
+        listDepartments(scopeTenantId),
       ]);
       setGroups(gRes.groups);
       setDepts(dRes.departments);
@@ -42,7 +48,7 @@ export default function LineGroupsPage() {
     } finally {
       setLoading(false);
     }
-  }, [canView, session?.tenantId, toast]);
+  }, [canView, tenantReady, scopeTenantId, pickedTenantId, toast]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -110,6 +116,7 @@ export default function LineGroupsPage() {
             {unassignedCount > 0 && <span style={{ color: "var(--warn)", marginLeft: 8 }}> · <b>{unassignedCount}</b> 群未分派部門</span>}
           </div>
         </div>
+        {picker}
       </div>
 
       {loading && <div className="dm-empty">載入中…</div>}

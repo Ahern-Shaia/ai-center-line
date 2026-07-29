@@ -1351,8 +1351,9 @@ export const getWarroomGroupMessages = (groupId: string, date: string) =>
 
 // LINE 群組 · tenant_admin 頁 (自 tenant 全群列表 + 分派部門)
 // (patchLineGroup 已定義在上方 · aiproot / tenant_admin 共用)
-export const listTenantLineGroups = () =>
-  req<{ groups: LineGroupRow[] }>("/line-groups");
+export const listTenantLineGroups = (tenantId?: string) =>
+  req<{ groups: LineGroupRow[] }>(
+    `/line-groups${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
 
 // 素材看板 · docs/modules/media-and-vision.md §2
 export type MediaKind = "image" | "video" | "audio" | "file";
