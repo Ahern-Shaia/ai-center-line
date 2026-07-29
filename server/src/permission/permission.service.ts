@@ -172,10 +172,14 @@ export class PermissionService {
 }
 
 // Fallback role → permissions map · 未有 DB 前的預設 (backup for @Roles delegation)
+//
+// ⚠️ 刻意用 `Record<Role, ...>` 而不是 `Partial<...>` —— 加內建角色時 tsc 會在這裡擋下來，
+//    不會靜默漏掉一個。（0049 加 assistant 時就是被這裡抓到的。）
 export const BUILTIN_ROLE_PERMISSIONS: Record<Role, string[]> = {
   aiproot_admin: [],  // 動態算 · 上面 service 讀 DB
   consultant: [],
   tenant_admin: [],
   group_owner: [],
   employee: [],
+  assistant: [],
 };

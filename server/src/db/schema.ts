@@ -4,7 +4,7 @@ import {
   pgTable, uuid, text, timestamp, boolean, integer, bigserial, bigint, jsonb, numeric, date,
 } from "drizzle-orm/pg-core";
 
-export type Role = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owner" | "employee";
+export type Role = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owner" | "employee" | "assistant";
 
 export const tenants = pgTable("tenants", {
   tenantId: uuid("tenant_id").primaryKey().defaultRandom(),
