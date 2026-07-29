@@ -237,3 +237,81 @@ test("消化過的訊號不會被重掃（跑兩次結果一樣）", async () =>
     assert.equal(second.created, 0);
   } finally { await s.cleanup(); }
 });
+
+// ── 0047 · 群組回報要檢查當責人 ─────────────────────────────────────
+//
+// 原本關票的條件只有 `WHERE ticket_id = ...`，完全不看是誰回報的 ——
+// 群裡任何人引用一則任務訊息說「已完成」，那張票就關了，即使它是別人的。
+// 私訊那條路有 assignee_user_id 把關，這條沒有。
+//
+// ⚠️ 但不可以一律要求「回報者＝當責人」：prod 45 張裡 38 張根本沒有當責人，
+//    目前 10 筆待處理訊號指到的票**全部**是這種。一律檢查等於讓它們永遠關不掉。
+
+/** 建一張指派給某人的票 · 回傳當責人的 user_id */
+async function addAssignedTicket(s: Seed): Promise<string> {
+  return asTenant(s.tenantId, async (tx) => {
+    const u = await tx.execute<{ id: string }>(sql`
+      SELECT user_id::text AS id FROM users WHERE tenant_id = ${s.tenantId}::uuid LIMIT 1`);
+    const owner = u.rows[0].id;
+    await tx.execute(sql`
+      INSERT INTO tickets (tenant_id, department_id, summary, confirm_status,
+                           source_message_ids, assignee_user_id, assign_status)
+      VALUES (${s.tenantId}::uuid, ${s.departmentId}::uuid, '有當責人的票', '待簽核',
+              ARRAY[${s.msgId}]::text[], ${owner}::uuid, 'assigned')`);
+    return owner;
+  });
+}
+
+test("⭐⭐ 票有當責人，別人在群裡說「已完成」→ 不關票，記成進度並標 not_assignee", async () => {
+  const s = await seed();
+  if (!s) return;
+  try {
+    await addAssignedTicket(s);
+    await addSignal(s, "completion", "他弄好了");    // 回報者 U_worker 沒有綁定，不是當責人
+    const r = await svc.resolvePending(s.tenantId, s.groupId);
+
+    assert.equal(r.notAssignee, 1);
+    assert.equal(r.closed, 0, "⚠️ 別人講的不足以代替當責人自己的回報");
+    const t = await ticketOf(s);
+    assert.equal(t.work_status, "open");
+    assert.equal(t.work_last_report_note, "他弄好了", "但那句話是有價值的，要記成進度");
+    assert.equal(await resolutionOf(s), "not_assignee", "後台要看得出為什麼沒關");
+  } finally { await s.cleanup(); }
+});
+
+test("⭐ 票有當責人，而且回報的就是他 → 照關", async () => {
+  const s = await seed();
+  if (!s) return;
+  let owner = "";
+  try {
+    owner = await addAssignedTicket(s);
+    // ⚠️ 這裡不可以用 withSystemTx：user_line_binding 的 policy 內含
+    //    `EXISTS (SELECT 1 FROM users ...)`，而 users 沒有 system 逃生門 → 寫入被 RLS 擋。
+    //    （production code 走 withTenant 所以沒事，是這支測試的 setup 自己踩到）
+    await asTenant(s.tenantId, (tx) => tx.execute(sql`
+      INSERT INTO user_line_binding (user_id, bot_id, line_user_id, binding_method, status)
+      VALUES (${owner}::uuid, ${s.botId}::uuid, 'U_worker', 'aiproot_manual', 'active')`));
+    await addSignal(s, "completion");
+    const r = await svc.resolvePending(s.tenantId, s.groupId);
+
+    assert.equal(r.closed, 1);
+    assert.equal(r.notAssignee, 0);
+    assert.equal((await ticketOf(s)).work_status, "closed");
+  } finally {
+    await asTenant(s.tenantId, (tx) => tx.execute(
+      sql`DELETE FROM user_line_binding WHERE line_user_id = 'U_worker' AND bot_id = ${s.botId}::uuid`));
+    await s.cleanup();
+  }
+});
+
+test("票沒有當責人 → 維持現狀，誰回報都算（38/45 是這種，一律檢查會全部關不掉）", async () => {
+  const s = await seed();
+  if (!s) return;
+  try {
+    await addTicket(s);                              // 不帶 assignee_user_id
+    await addSignal(s, "completion");
+    const r = await svc.resolvePending(s.tenantId, s.groupId);
+    assert.equal(r.closed, 1);
+    assert.equal(r.notAssignee, 0);
+  } finally { await s.cleanup(); }
+});

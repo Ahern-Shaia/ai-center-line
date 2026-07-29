@@ -96,14 +96,19 @@ export class PrivateCompletionService {
           return [buildPicker(open.rows, "missed")];
         }
 
-        if (open.rows.length === 1) {
-          await this.close(tx, open.rows[0].ticket_id, args);
-          return [{ type: "text", text: confirmText(open.rows[0].summary) }];
-        }
-
-        // 多張 → 問。**不可以**挑最新的那張湊合，那正是使用者擔心的誤判。
+        // ⚠️⚠️ 沒有引用 → **一律確認，即使他手上只有一張**。
+        //
+        // 舊版在只有一張時直接關掉（為了「判斷 0 次」）。但那條路關不掉的是這種：
+        // 他回「好了」指的其實是群裡的另一件事、或系統外的事，
+        // 而他手上剛好有一張 —— 當下**沒有任何訊號**能分辨，於是關錯。
+        //
+        // 這裡的取捨照 completion-intent.ts 開頭那條既有紀律：
+        //   判成進度而其實做完了 → 任務多開幾天，人再回一次就好
+        //   判成完成而其實沒做完 → 系統宣稱一件沒做完的事做完了，還把它從他手上拿走
+        // 兩邊不對等，所以往保守側靠。確認鈕是**一個點擊、零個選擇**，
+        // 而且他看得到摘要 —— 我們會錯意時他自己就會發現。
         this.logger.log(
-          `[private-completion] 多張待選 · user=${args.userId.slice(0, 8)} · n=${open.rows.length}`,
+          `[private-completion] 出確認 · user=${args.userId.slice(0, 8)} · n=${open.rows.length}`,
         );
         return [buildPicker(open.rows, "multi")];
       },
@@ -254,27 +259,38 @@ function buildPicker(
 ): unknown {
   const shown = rows.slice(0, 4);
   const rest = rows.length - shown.length;
-  const list = shown.map((r, i) => `${MARK[i]} ${truncate(r.summary ?? "（無摘要）", 24)}`).join("\n");
-  const tail = rest > 0 ? `\n（另有 ${rest} 件較早的，可到系統操作）` : "";
+  const single = rows.length === 1;
+
   // 對不到時要講出**為什麼**在問。只寫「是哪一件」的話，
   // 他會以為系統沒看到他的引用，而不會想到那件已經不是他的了。
-  const lead = reason === "missed"
-    ? `你回覆的那一件我對不到（可能已改由他人處理，或已經結案）。\n你手上還有 ${rows.length} 件在進行：`
-    : `你手上有 ${rows.length} 件在進行，是哪一件做完了？`;
+  const prefix = reason === "missed"
+    ? "你回覆的那一件我對不到（可能已改由他人處理，或已經結案）。\n\n"
+    : "";
 
-  return {
-    type: "template",
-    altText: "是哪一件做完了？",
-    template: {
-      type: "buttons",
-      text: truncate(`${lead}\n\n${list}${tail}`, 160),
-      actions: shown.map((r, i) => ({
+  // 只有一張時問「是這件嗎」而不是「是哪一件」——
+  // 後者聽起來像有得選，但只有一個選項，反而讓人以為漏了什麼。
+  const body = single
+    ? `你是說這件嗎？\n\n${truncate((shown[0].summary ?? "（無摘要）").trim(), 60)}`
+    : `你手上有 ${rows.length} 件在進行，是哪一件做完了？\n\n`
+      + shown.map((r, i) => `${MARK[i]} ${truncate((r.summary ?? "（無摘要）").trim(), 24)}`).join("\n")
+      + (rest > 0 ? `\n（另有 ${rest} 件較早的，可到系統操作）` : "");
+
+  const actions = single
+    ? [{
+        type: "postback", label: "是的，做完了",
+        data: `done:${shown[0].ticket_id}`, displayText: "是的，做完了",
+      }]
+    : shown.map((r, i) => ({
         type: "postback",
         label: truncate(`${MARK[i]} ${(r.summary ?? "無摘要").trim()}`, 20),
         data: `done:${r.ticket_id}`,
         displayText: `${MARK[i]} 這件做完了`,
-      })),
-    },
+      }));
+
+  return {
+    type: "template",
+    altText: single ? "是這件做完了嗎？" : "是哪一件做完了？",
+    template: { type: "buttons", text: truncate(`${prefix}${body}`, 160), actions },
   };
 }
 

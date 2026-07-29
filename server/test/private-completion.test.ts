@@ -79,15 +79,41 @@ const say = (text: string, quotedMessageId: string | null = null) => svc.handleT
   tenantId: T, userId: ME, lineUserId: MY_LINE, text, messageId: "msg-1", quotedMessageId,
 });
 
-test("⭐ 手上只有一張 → 直接關掉，不用問", async () => {
+/** 走完整的兩步：說「好了」→ 點確認鈕 */
+const closeViaConfirm = async (id: string) => {
+  await say("好了");
+  await svc.handlePostback({
+    tenantId: T, userId: ME, lineUserId: MY_LINE, messageId: "", data: `done:${id}`,
+  });
+};
+
+test("⭐⭐ 手上只有一張也不自動關 —— 出確認鈕，讓他看見我們理解成哪一件", async () => {
   await clearTickets();
   const id = await assignedTicket("三號機軸承要換");
 
   const reply = await say("好了");
   assert.ok(reply, "要接手（不可以掉回『✓ 已記錄』那條死路）");
+  // ⚠️ 舊版在這裡直接關掉。關不掉的是這種：他回「好了」指的其實是群裡另一件事、
+  //    或系統外的事，而他手上剛好有一張 —— 當下沒有任何訊號能分辨。
+  assert.equal(await workStatus(id), "open", "沒有引用就沒有明確指定，不可以替他決定");
+
+  const tpl = reply![0] as { template?: { text?: string; actions?: Array<{ data: string }> } };
+  assert.ok(tpl.template?.text?.includes("是說這件嗎"), "只有一張要問「是這件嗎」不是「是哪一件」");
+  assert.ok(tpl.template?.text?.includes("三號機軸承要換"), "要讓他看見摘要 —— 我們會錯意時他自己會發現");
+  assert.equal(tpl.template?.actions?.length, 1, "一個點擊、零個選擇");
+  assert.equal(tpl.template?.actions?.[0].data, `done:${id}`);
+});
+
+test("⭐ 點下確認鈕才真的關掉", async () => {
+  await clearTickets();
+  const id = await assignedTicket("三號機軸承要換");
+  await say("好了");
+  const reply = await svc.handlePostback({
+    tenantId: T, userId: ME, lineUserId: MY_LINE, messageId: "", data: `done:${id}`,
+  });
   assert.equal(await workStatus(id), "closed");
-  const text = (reply![0] as { text: string }).text;
-  assert.ok(text.includes("三號機軸承要換"), "要講出關掉的是哪一件 —— 不然他無從發現我們對錯了");
+  assert.ok((reply![0] as { text: string }).text.includes("三號機軸承要換"),
+    "要講出關掉的是哪一件 —— 不然他無從發現我們對錯了");
 });
 
 test("⭐⭐ 手上有多張 → 一張都不關，出按鈕問他是哪一件", async () => {
@@ -188,7 +214,7 @@ test("⭐⭐ 引用對不到時，不可以改去關他手上那張不相干的"
 test("⭐⭐ 回「更正」→ 把剛才關掉的那張改回進行中", async () => {
   await clearTickets();
   const id = await assignedTicket("其實還沒做完");
-  await say("好了");
+  await closeViaConfirm(id);
   assert.equal(await workStatus(id), "closed");
 
   const reply = await say("更正");
@@ -199,7 +225,7 @@ test("⭐⭐ 回「更正」→ 把剛才關掉的那張改回進行中", async 
 test("⭐ 更正要留痕 —— 不可以讓「被更正過」這件事消失", async () => {
   await clearTickets();
   const id = await assignedTicket("會被更正的");
-  await say("好了");
+  await closeViaConfirm(id);
   await say("更正");
   const note = await asTenant(async () => (await currentTx().execute<{ n: string | null }>(
     sql`SELECT work_last_report_note AS n FROM tickets WHERE ticket_id = ${id}::uuid`)).rows[0].n);
@@ -209,7 +235,7 @@ test("⭐ 更正要留痕 —— 不可以讓「被更正過」這件事消失",
 test("⭐⭐ 「客戶說地址弄錯了」不是更正指令 —— 整句錨定，不可用包含比對", async () => {
   await clearTickets();
   const id = await assignedTicket("某件事");
-  await say("好了");
+  await closeViaConfirm(id);
   assert.equal(await workStatus(id), "closed");
 
   await say("客戶說地址弄錯了");

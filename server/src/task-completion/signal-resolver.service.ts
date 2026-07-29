@@ -26,7 +26,7 @@ export class SignalResolverService {
    * @param groupId 限縮到剛跑完的那個群 · 不給則掃該租戶全部
    */
   async resolvePending(tenantId: string, groupId?: string): Promise<{
-    closed: number; created: number; noMatch: number; asked: number; ambiguous: number;
+    closed: number; created: number; noMatch: number; asked: number; ambiguous: number; notAssignee: number;
   }> {
     return withTenant({ tenantId, role: "tenant_admin", departmentId: null, userId: null }, async (tx) => {
       const pending = await tx.execute<{
@@ -41,7 +41,7 @@ export class SignalResolverService {
          ORDER BY received_at
       `);
 
-      let closed = 0, progressLogged = 0, created = 0, noMatch = 0, asked = 0, ambiguous = 0;
+      let closed = 0, progressLogged = 0, created = 0, noMatch = 0, asked = 0, ambiguous = 0, notAssignee = 0;
 
       for (const sig of pending.rows) {
         // 問過但還沒回答的先留著 —— 人可能等一下才按
@@ -53,8 +53,10 @@ export class SignalResolverService {
         // 同一段對話若被抽成兩筆記錄（source_message_ids 重疊），就會**靜默關掉比較新的那一張**，
         // 而它發生的樣子跟正常關閉一模一樣 —— 不會有人發現關錯了。
         // prod 查過現況是 1:1（71 則來源訊息無一對到兩張），但那是資料剛好，不是機制擋著。
-        const hit = await tx.execute<{ ticket_id: string; work_status: string }>(sql`
-          SELECT ticket_id::text, work_status FROM tickets
+        const hit = await tx.execute<{
+          ticket_id: string; work_status: string; assignee_user_id: string | null;
+        }>(sql`
+          SELECT ticket_id::text, work_status, assignee_user_id::text FROM tickets
            WHERE tenant_id = ${tenantId}::uuid
              AND source_message_ids @> ARRAY[${sig.quoted_message_id}]::text[]
            ORDER BY created_at DESC
@@ -92,6 +94,32 @@ export class SignalResolverService {
             await this.markResolved(tx, sig.signal_id, ticket.ticket_id, "superseded");
             continue;
           }
+
+          // ⚠️ 這張票有當責人的話，只有他能結掉它。
+          //
+          // 原本這裡的條件只有 ticket_id —— 群裡任何人引用一則任務訊息說「已完成」，
+          // 那張票就關了，即使它是別人的。私訊那條路有 assignee_user_id 把關，這條沒有。
+          //
+          // ⚠️ 但**不可以**一律要求「回報者＝當責人」：prod 45 張裡 38 張根本沒有當責人，
+          //    目前 10 筆待處理訊號指到的票全部是這種。一律檢查等於讓它們永遠關不掉。
+          //    沒有當責人時維持現狀（誰回報都算），那正是這個功能主要在接的東西。
+          if (ticket.assignee_user_id) {
+            const who = await tx.execute<{ user_id: string }>(sql`
+              SELECT user_id::text FROM user_line_binding
+               WHERE line_user_id = ${sig.replier_line_user_id} AND status = 'active' LIMIT 1`);
+            const replierUserId = who.rows[0]?.user_id ?? null;
+            if (replierUserId !== ticket.assignee_user_id) {
+              // 不關票，但把它記成一筆進度 —— 別人講的「他做完了」是有價值的資訊，
+              // 只是不足以代替當責人自己的回報。
+              await tx.execute(sql`
+                UPDATE tickets
+                   SET work_last_report_at = now(), work_last_report_note = ${sig.note}, updated_at = now()
+                 WHERE ticket_id = ${ticket.ticket_id}::uuid AND work_status = 'open'`);
+              await this.markResolved(tx, sig.signal_id, ticket.ticket_id, "not_assignee");
+              notAssignee++;
+              continue;
+            }
+          }
           await tx.execute(sql`
             UPDATE tickets
                SET work_status = 'closed', work_outcome = '完成', work_closed_at = now(),
@@ -128,10 +156,10 @@ export class SignalResolverService {
         this.logger.log(
           `resolvePending · tenant=${tenantId}${groupId ? ` group=${groupId}` : ""} · `
           + `closed=${closed} progress=${progressLogged} created=${created} `
-          + `noMatch=${noMatch} asked=${asked} ambiguous=${ambiguous}`,
+          + `noMatch=${noMatch} asked=${asked} ambiguous=${ambiguous} notAssignee=${notAssignee}`,
         );
       }
-      return { closed, progressLogged, created, noMatch, asked, ambiguous };
+      return { closed, progressLogged, created, noMatch, asked, ambiguous, notAssignee };
     });
   }
 
@@ -179,7 +207,7 @@ export class SignalResolverService {
     tx: Parameters<Parameters<typeof withTenant>[1]>[0],
     signalId: string,
     ticketId: string | null,
-    resolution: "closed_ticket" | "progress_logged" | "created_ticket" | "no_match" | "superseded" | "ambiguous",
+    resolution: "closed_ticket" | "progress_logged" | "created_ticket" | "no_match" | "superseded" | "ambiguous" | "not_assignee",
   ): Promise<void> {
     await tx.execute(sql`
       UPDATE pending_completion_signal
