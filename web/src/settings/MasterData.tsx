@@ -32,6 +32,9 @@ export default function MasterData() {
   const [tenants, setTenants] = useState<AiprootTenantOption[]>([]);
   const [tenantId, setTenantId] = useState("");
   const [loading, setLoading] = useState(true);
+  // ⚠️ 403 要跟「查到 0 筆」分開存。合在一起的話畫面會渲染出「0 筆客戶 /
+  //    尚未連線 Ragic」—— 那兩個數字是假的，我們是被拒絕、不是查到 0。
+  const [denied, setDenied] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const [accountId, setAccountId] = useState("");
@@ -51,7 +54,7 @@ export default function MasterData() {
 
   const load = useCallback(async () => {
     if (isPlatform && !tenantId) { setState(null); setLoading(false); return; }
-    setLoading(true);
+    setLoading(true); setDenied(false);
     try {
       const s = await getMasterDataSource(tenantId || undefined);
       setState(s);
@@ -64,6 +67,7 @@ export default function MasterData() {
         setAccountId(s.ragicAccounts[0].accountId);
       }
     } catch (e) {
+      if (e instanceof ApiError && e.status === 403) { setDenied(true); return; }
       toast.show(e instanceof ApiError ? e.message : "載入失敗", "danger");
     } finally { setLoading(false); }
   }, [toast, isPlatform, tenantId]);
@@ -136,6 +140,23 @@ export default function MasterData() {
     );
   }
   if (loading && !state) return <div className="pane"><div className="dm-empty">載入中…</div></div>;
+
+  // ⚠️ 被拒絕**不可以**掉到下面的正常渲染。
+  // 那樣會畫出「0 筆客戶 / 尚未連線 Ragic」，而那兩件事我們根本不知道 ——
+  // 使用者會以為系統是空的，然後去查「為什麼沒同步」，但真正的原因是他沒有權限。
+  // （0051 之後側邊欄已經不會給沒權限的人看到這頁，這裡擋的是直接輸入網址那條路。）
+  if (denied) {
+    return (
+      <div className="pane">
+        <div className="pane-hdr"><div><h1>資料來源</h1></div></div>
+        <div className="dm-empty">
+          你的角色沒有設定客戶名冊來源的權限
+          <div className="dm-empty-hint">這頁限 AIPROOT 管理員與顧問 · 需要開放請聯繫 AIPROOT</div>
+        </div>
+      </div>
+    );
+  }
+
   const src = state?.source ?? null;
   const acc = state?.ragicAccounts ?? [];
 

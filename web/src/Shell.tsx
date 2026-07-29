@@ -74,7 +74,9 @@ const NAV: Array<{
       { key: "line-bots", label: "LINE 機器人", ic: iconChat, done: true, perm: "line-bots:view" },
       { key: "map-config", label: "地圖里程設定", ic: iconCog, done: true, perm: "map-config:view" },
       { key: "notify-config", label: "通知設定", ic: iconChat, done: true, perm: "notify-config:view" },
-      { key: "master-data", label: "資料來源", ic: iconBook, done: true, perm: "notify-config:view" },
+      // ⚠️ 0051 起用自己的權限碼。原本借用 "notify-config:view" —— 助理有那個碼，
+      //    於是選單看得到、點進去被後端的角色白名單擋掉、畫面還渲染成「0 筆客戶」。
+      { key: "master-data", label: "資料來源", ic: iconBook, done: true, perm: "master-data:manage" },
       { key: "roles-mgmt", label: "權限管理", ic: iconShield, done: true, perm: "roles:view" },
       // ⚠️ 這兩頁跑的是**寫死的示範資料**（ragQA.ts 是 177 行預錄問答對）。
       //    2026-07-27 因為「不可在客戶畫面上放做不到的東西」下架，
