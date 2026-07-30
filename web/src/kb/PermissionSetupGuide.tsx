@@ -49,7 +49,7 @@ export default function PermissionSetupGuide({ onNavigate, onDone }: Props) {
               <td><b>全公司</b>所有部門</td>
             </tr>
             <tr>
-              <td><span className="psg-pill psg-pill-dept">群組負責人</span></td>
+              <td><span className="psg-pill psg-pill-dept">部門主管</span></td>
               <td>各部門主管</td>
               <td><b>只有他自己那一個部門</b></td>
             </tr>
@@ -95,10 +95,10 @@ export default function PermissionSetupGuide({ onNavigate, onDone }: Props) {
               <span className="ob-icon" aria-hidden>{svg(<>
                 <circle cx="12" cy="8" r="3.2" /><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" />
               </>)}</span>
-              <span className="ob-title">建立各部門主管（設成「群組負責人」）</span>
+              <span className="ob-title">建立各部門主管</span>
             </div>
             <div className="ob-desc">
-              切到<b>成員</b>分頁 → 「＋ 新增成員」。角色選「<b>群組負責人</b>」，
+              切到<b>成員</b>分頁 → 「＋ 新增成員」。角色選「<b>部門主管</b>」，
               並在「<b>所屬部門</b>」選他負責的那個部門。填 Email、顯示名稱、初始密碼即可。
             </div>
             <div className="psg-warn">
@@ -140,9 +140,9 @@ export default function PermissionSetupGuide({ onNavigate, onDone }: Props) {
         <div className="psg-concept-h">設錯時對照這裡</div>
         {[
           ["部門主管登入後什麼都看不到？", "最常見是忘了選「所屬部門」。回成員分頁編輯他，把所屬部門補上。"],
-          ["部門主管看得到別部門的資料？", "檢查他的角色是不是被設成「總經理室」了 —— 那個身分本來就看全公司。改成「群組負責人」。"],
+          ["部門主管看得到別部門的資料？", "檢查他的角色是不是被設成「總經理室」了 —— 那個身分本來就看全公司。改成「部門主管」。"],
           ["一位主管同時管兩個部門？", "目前一個人只能綁一個部門。要同時看兩個，只能給「總經理室」（但會看到全公司），或請 AIPROOT 評估。"],
-          ["現在好像每個人都看得到全部？", "因為多數帳號目前是「總經理室」。把該當主管的人逐一改成「群組負責人」並指定部門即可。"],
+          ["現在好像每個人都看得到全部？", "因為多數帳號目前是「總經理室」。把該當主管的人逐一改成「部門主管」並指定部門即可。"],
         ].map(([q, a]) => (
           <details key={q} className="psg-qa">
             <summary>{q}</summary>

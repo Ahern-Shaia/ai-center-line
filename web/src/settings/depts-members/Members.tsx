@@ -21,7 +21,7 @@ const ROLE_LABEL: Record<UserRole, string> = {
   aiproot_admin: "AIPROOT 管理員",
   consultant: "顧問",
   tenant_admin: "總經理室",
-  group_owner: "群組負責人",
+  group_owner: "部門主管",
   assistant: "助理",
 };
 
@@ -337,8 +337,8 @@ function MemberDrawer({
           />
           <div className="llm-hint">
             {session?.role === "tenant_admin"
-              ? "可新增「群組負責人」與「助理」· 總經理室級請聯繫 AIPROOT"
-              : "此頁可新增「總經理室」「群組負責人」「助理」· 平台管理帳號由 AIPROOT 另行建立"}
+              ? "可新增「部門主管」與「助理」· 總經理室級請聯繫 AIPROOT"
+              : "此頁可新增「總經理室」「部門主管」「助理」· 平台管理帳號由 AIPROOT 另行建立"}
           </div>
         </div>
 

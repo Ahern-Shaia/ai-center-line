@@ -153,7 +153,7 @@ const ROLE_LABEL: Record<string, string> = {
   aiproot_admin: "AIPROOT 管理員",
   consultant: "顧問",
   tenant_admin: "總經理室",
-  group_owner: "群組負責人",
+  group_owner: "部門主管",
   employee: "一般員工",
 };
 
