@@ -1777,7 +1777,9 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 
 /* Kanban card · overrides existing .kb-card CSS */
 /* V3 Signal 卡片（裁定 2026-07-27 · docs/modules/design-research-taskboard.md §5）*/
-.kb-card { position:relative; overflow:hidden; display:flex; flex-direction:column; gap:6px; padding:11px 12px 11px 15px; text-align:left; cursor:pointer; }
+/* ⚠️ flex-shrink:0 必要 —— kb-col-body 是 flex column + max-height，
+   卡片沒鎖 shrink 的話，任務一多會被壓縮成薄線塞進容器高度，而不是讓欄位捲動（2026-07-30 修） */
+.kb-card { position:relative; overflow:hidden; flex-shrink:0; display:flex; flex-direction:column; gap:6px; padding:11px 12px 11px 15px; text-align:left; cursor:pointer; }
 .kb-stripe { position:absolute; left:0; top:0; bottom:0; width:3px; }
 .kb-stripe-warn { background:var(--warn); } .kb-stripe-danger { background:var(--danger); } .kb-stripe-ok { background:var(--ok); }
 .kb-card:hover { border-color:var(--primary); }
