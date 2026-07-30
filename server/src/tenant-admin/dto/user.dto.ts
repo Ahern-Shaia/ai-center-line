@@ -29,5 +29,12 @@ export const UserDeleteSchema = z.object({
   tenantId: z.string().regex(uuidRegex),
 });
 
+// MDA · 只改部門（tenant_admin 可用）· 刻意**不含 role/password/delete** —— 那是提權/破壞性，仍 aiproot only
+export const AssignDepartmentSchema = z.object({
+  tenantId: z.string().regex(uuidRegex),
+  departmentId: z.string().regex(uuidRegex).nullable(),   // null = 清空（回未分派）
+});
+
 export type UserCreateDto = z.infer<typeof UserCreateSchema>;
 export type UserUpdateDto = z.infer<typeof UserUpdateSchema>;
+export type AssignDepartmentDto = z.infer<typeof AssignDepartmentSchema>;

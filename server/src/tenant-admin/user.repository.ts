@@ -9,6 +9,8 @@ export interface UserRow {
   role: Role;
   departmentId: string | null;
   departmentName: string | null;
+  /** MDA · 'auto'=系統推導 / 'manual'=有人手動指派 · 前端據此標來源 */
+  departmentSource: "auto" | "manual";
   email: string | null;
   displayName: string | null;
   lineUserId: string | null;
@@ -36,11 +38,13 @@ export class UserRepository {
     const res = await tx.execute<{
       user_id: string; tenant_id: string | null; role: Role;
       department_id: string | null; department_name: string | null;
+      department_source: "auto" | "manual";
       email: string | null; display_name: string | null;
       line_user_id: string | null; created_at: string;
       has_password: boolean;
     }>(sql`
       SELECT u.user_id, u.tenant_id, u.role, u.department_id, d.department_name,
+             u.department_source,
              u.email, u.display_name, u.line_user_id, u.created_at::text,
              (u.password_hash IS NOT NULL) AS has_password
       FROM users u
@@ -55,10 +59,12 @@ export class UserRepository {
     const res = await tx.execute<{
       user_id: string; tenant_id: string | null; role: Role;
       department_id: string | null; department_name: string | null;
+      department_source: "auto" | "manual";
       email: string | null; display_name: string | null;
       line_user_id: string | null; created_at: string; has_password: boolean;
     }>(sql`
       SELECT u.user_id, u.tenant_id, u.role, u.department_id, d.department_name,
+             u.department_source,
              u.email, u.display_name, u.line_user_id, u.created_at::text,
              (u.password_hash IS NOT NULL) AS has_password
       FROM users u
@@ -105,9 +111,40 @@ export class UserRepository {
     await tx.execute(sql`DELETE FROM users WHERE user_id = ${userId}`);
   }
 
+  /**
+   * MDA · 手動指派部門 —— 只改部門 + 標記來源，**不碰 role/password**。
+   * ⚠️ 目標部門必須屬同一租戶（防跨租戶 IDOR）· 由呼叫端在 RLS 上下文內先驗（service）。
+   * ⚠️ 標 department_source='manual' → 自動推導日後不得覆寫（Okta/Azure 手動優先）。
+   */
+  async assignDepartment(tx: Db, args: {
+    userId: string;
+    departmentId: string | null;
+    actorUserId: string;
+  }): Promise<void> {
+    await tx.execute(sql`
+      UPDATE users SET
+        department_id = ${args.departmentId},
+        department_source = 'manual',
+        department_assigned_by = ${args.actorUserId}::uuid,
+        department_assigned_at = now()
+      WHERE user_id = ${args.userId}
+    `);
+  }
+
+  /** 該部門是否屬這個租戶（RLS 之外再明擋一層 · 防 IDOR）*/
+  async departmentBelongsToTenant(tx: Db, departmentId: string, tenantId: string): Promise<boolean> {
+    const res = await tx.execute<{ ok: boolean }>(sql`
+      SELECT EXISTS (
+        SELECT 1 FROM departments WHERE department_id = ${departmentId}::uuid AND tenant_id = ${tenantId}::uuid
+      ) AS ok
+    `);
+    return res.rows[0]?.ok ?? false;
+  }
+
   private rowToDto(r: {
     user_id: string; tenant_id: string | null; role: Role;
     department_id: string | null; department_name: string | null;
+    department_source: "auto" | "manual";
     email: string | null; display_name: string | null;
     line_user_id: string | null; created_at: string; has_password: boolean;
   }): UserRow {
@@ -117,6 +154,7 @@ export class UserRepository {
       role: r.role,
       departmentId: r.department_id,
       departmentName: r.department_name,
+      departmentSource: r.department_source,
       email: r.email,
       displayName: r.display_name,
       lineUserId: r.line_user_id,

@@ -32,6 +32,10 @@ export const users = pgTable("users", {
   tenantId: uuid("tenant_id").references(() => tenants.tenantId, { onDelete: "cascade" }), // aiproot/consultant 為 NULL
   role: text("role").notNull().$type<Role>(),
   departmentId: uuid("department_id").references(() => departments.departmentId, { onDelete: "set null" }),
+  // MDA · migration 0052 · 部門來源（auto=系統推導 / manual=手動指派，手動不被自動覆寫）
+  departmentSource: text("department_source").notNull().default("auto").$type<"auto" | "manual">(),
+  departmentAssignedBy: uuid("department_assigned_by"),
+  departmentAssignedAt: timestamp("department_assigned_at", { withTimezone: true }),
   lineUserId: text("line_user_id"),
   email: text("email"),
   displayName: text("display_name"), // 戰情室 UI 顯示用；為 null 時 fallback email prefix

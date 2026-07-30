@@ -10,6 +10,7 @@ export interface UserDto {
   role: Role;
   departmentId: string | null;
   departmentName: string | null;
+  departmentSource: "auto" | "manual";
   email: string | null;
   displayName: string | null;
   lineUserId: string | null;
@@ -75,6 +76,27 @@ export class UserService {
       patchDb.passwordHash = await bcrypt.hash(patch.password, 10);
     }
     await this.repo.update(tx, userId, patchDb);
+    const updated = await this.repo.getById(tx, userId);
+    if (!updated) throw new Error("剛更新的使用者找不到");
+    return this.toDto(updated);
+  }
+
+  /**
+   * MDA · 手動指派成員部門（tenant_admin 可用）· 只改部門，不碰角色/密碼。
+   * 兩道防 IDOR：① setTenantContext + RLS 讓改不到別租戶的成員
+   *            ② 明驗目標部門屬同租戶（departmentBelongsToTenant）
+   */
+  async assignDepartment(userId: string, tenantId: string, departmentId: string | null, actorUserId: string): Promise<UserDto> {
+    const tx = currentTx();
+    await this.repo.setTenantContext(tx, tenantId);
+    const existing = await this.repo.getById(tx, userId);
+    // RLS 之下看不到＝不在這個租戶（或不存在）· 都回 404，不洩漏「存在但跨租戶」
+    if (!existing || existing.tenantId !== tenantId) throw new NotFoundException("找不到該成員");
+    if (departmentId) {
+      const ok = await this.repo.departmentBelongsToTenant(tx, departmentId, tenantId);
+      if (!ok) throw new BadRequestException("該部門不屬於這個公司");
+    }
+    await this.repo.assignDepartment(tx, { userId, departmentId, actorUserId });
     const updated = await this.repo.getById(tx, userId);
     if (!updated) throw new Error("剛更新的使用者找不到");
     return this.toDto(updated);

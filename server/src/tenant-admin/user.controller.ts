@@ -3,7 +3,7 @@ import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { UserService } from "./user.service.js";
-import { UserCreateSchema, UserDeleteSchema, UserUpdateSchema } from "./dto/user.dto.js";
+import { AssignDepartmentSchema, UserCreateSchema, UserDeleteSchema, UserUpdateSchema } from "./dto/user.dto.js";
 import { resolveTenantId } from "../auth/resolve-tenant-id.js";
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -70,6 +70,30 @@ export class UserController {
     }
     const { tenantId, ...rest } = parsed.data;
     const user = await this.svc.update(id, tenantId, rest);
+    return { user };
+  }
+
+  // MDA · 分配成員部門 · tenant_admin 可用（`users:assign-department`）
+  // ⚠️ 刻意獨立於 update：只收 departmentId、只改部門。改角色/刪除仍走上面的 users:manage（aiproot only）。
+  //    這是「屬性可下放、權限不可」的落地 —— 不要把這個併回 update 端點。
+  @Patch(":id/department")
+  @RequirePermission("users:assign-department")
+  async assignDepartment(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @CurrentUser() caller: JwtUser,
+  ) {
+    if (!uuidRegex.test(id)) throw new BadRequestException("成員 id 格式不正確");
+    const parsed = AssignDepartmentSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        status: "invalid_body",
+        errors: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+      });
+    }
+    // ⚠️ 用 resolveTenantId：tenant_admin 被鎖自租戶、擋跨租戶（防 IDOR）· aiproot 才可指定
+    const tenantId = resolveTenantId(caller, parsed.data.tenantId);
+    const user = await this.svc.assignDepartment(id, tenantId, parsed.data.departmentId, caller.user_id);
     return { user };
   }
 
