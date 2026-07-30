@@ -9,6 +9,7 @@ import TaskConfigPage from "./settings/task-config/Page";
 import PageTabs from "./shared/PageTabs";
 import Rag from "./kb/Rag";
 import Onboarding from "./kb/Onboarding";
+import PermissionSetupGuide from "./kb/PermissionSetupGuide";
 import MediaLibrary from "./kb/MediaLibrary";
 import MasterData from "./settings/MasterData";
 import KnowledgeBase from "./kb/KnowledgeBase";
@@ -53,7 +54,7 @@ type Route =
   | { page: "media" }
   | { page: "km" }
   | { page: "map" }
-  | { page: "depts" }
+  | { page: "depts"; tab?: "dept" | "member" }
   | { page: "audit" }
   | { page: "scheduler-config" }
   | { page: "master-data" }
@@ -68,6 +69,7 @@ type Route =
   | { page: "my-daily-report" }
   | { page: "team-report" }
   | { page: "my-trips" }
+  | { page: "permission-guide" }
   | { page: "roles-mgmt" };
 
 // crumb 顯示上層分類（非當前頁名），避免與 pane h1 重複。
@@ -82,6 +84,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   channels: "通訊管道",
   rag: "智慧檢索",
   onboarding: "運作原理",
+  "permission-guide": "權限設定教學",
   media: "素材",
   km: "知識庫",
   map: "客戶地圖",
@@ -245,11 +248,17 @@ export default function App() {
           {route.page === "task-config" && <TaskConfigPage />}
           {route.page === "rag" && <Rag />}
           {route.page === "onboarding" && <Onboarding onDone={() => setRoute({ page: "warroom" })} />}
+          {route.page === "permission-guide" && (
+            <PermissionSetupGuide
+              onNavigate={(t) => setRoute(t.page === "depts" ? { page: "depts", tab: t.tab } : { page: "channels" })}
+              onDone={() => setRoute({ page: "depts", tab: "dept" })}
+            />
+          )}
           {route.page === "media" && <MediaLibrary />}
           {route.page === "master-data" && <MasterData />}
           {route.page === "km" && <KnowledgeBase />}
           {route.page === "map" && <CustomerMap />}
-          {route.page === "depts" && <DepartmentsMembers />}
+          {route.page === "depts" && <DepartmentsMembers initialTab={route.tab} onOpenGuide={() => setRoute({ page: "permission-guide" })} />}
           {route.page === "audit" && <AuditLog />}
           {route.page === "scheduler-config" && <SchedulerConfigPage />}
           {/* 通訊管道 · 兩頁合一（M4）。群組與員工綁定都是「誰在哪個管道上」，

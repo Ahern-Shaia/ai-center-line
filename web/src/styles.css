@@ -666,6 +666,29 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .ob-cta-h { font-size:15px; font-weight:700; color:var(--ink); }
 .ob-cta-sub { font-size:12.5px; color:var(--ink-2); margin-top:2px; }
 
+/* 權限設定教學（PermissionSetupGuide）· 沿用 .ob-* 之外的專屬件 */
+.psg-concept { margin:20px 0 8px; padding:18px 20px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); }
+.psg-concept-h { font-size:14px; font-weight:700; color:var(--ink); margin-bottom:12px; }
+.psg-tbl { width:100%; border-collapse:collapse; font-size:13.5px; }
+.psg-tbl th { text-align:left; font-weight:600; color:var(--ink-3); padding:6px 10px; border-bottom:1px solid var(--line); font-size:12.5px; }
+.psg-tbl td { padding:9px 10px; border-bottom:1px solid var(--line-2); color:var(--ink-2); vertical-align:middle; }
+.psg-tbl tr:last-child td { border-bottom:none; }
+.psg-pill { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+.psg-pill-all { background:var(--primary-tint); color:var(--primary-2); }
+.psg-pill-dept { background:var(--ok-tint); color:var(--ok); }
+.psg-pill-emp { background:var(--well, #F5F6F8); color:var(--ink-3); }
+.psg-note { margin-top:12px; font-size:12.5px; color:var(--ink-3); }
+.psg-warn { margin:10px 0; padding:9px 12px; background:var(--warn-tint); border:1px solid var(--warn); border-radius:8px; font-size:12.5px; color:var(--ink-2); line-height:1.6; }
+.psg-go { margin-top:12px; }
+.psg-faq { margin:24px 0 8px; padding:18px 20px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); }
+.psg-qa { border-bottom:1px solid var(--line-2); padding:4px 0; }
+.psg-qa:last-child { border-bottom:none; }
+.psg-qa summary { cursor:pointer; padding:8px 0; font-size:13.5px; font-weight:600; color:var(--ink); list-style:none; }
+.psg-qa summary::-webkit-details-marker { display:none; }
+.psg-qa summary::before { content:"＋"; color:var(--ink-3); margin-right:8px; font-weight:400; }
+.psg-qa[open] summary::before { content:"−"; }
+.psg-qa > div { padding:0 0 10px 22px; font-size:13px; color:var(--ink-2); line-height:1.7; }
+
 /* small responsive adjustments */
 @media (max-width:960px) {
   .drawer { width:100vw !important; }

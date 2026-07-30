@@ -21,7 +21,8 @@ type Tab = "dept" | "member";
 
 // 部門 / 成員管理 · v2 分權 · tenant_admin 可管自 tenant
 // 對照 docs/roles-permissions-matrix.md §3.5
-export default function DepartmentsMembers() {
+// initialTab：讓「權限設定教學」的「帶我去新增成員」能直接落在成員分頁
+export default function DepartmentsMembers({ initialTab, onOpenGuide }: { initialTab?: Tab; onOpenGuide?: () => void } = {}) {
   const session = getSession();
   const toast = useToast();
   const perms = usePermissions();
@@ -38,7 +39,7 @@ export default function DepartmentsMembers() {
 
   const [tenants, setTenants] = useState<Array<{ tenantId: string; tenantName: string }>>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
-  const [tab, setTab] = useState<Tab>("dept");
+  const [tab, setTab] = useState<Tab>(initialTab ?? "dept");
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -94,6 +95,11 @@ export default function DepartmentsMembers() {
               : "管理本公司部門與部門主管 · 部門建立後，到左側「LINE 群組」頁把各群組分派到對應部門（一個部門可含多個群）"}
           </div>
         </div>
+        {onOpenGuide && !canSwitchTenant && (
+          <div className="actions">
+            <button className="btn" onClick={onOpenGuide}>📖 第一次設定？看教學</button>
+          </div>
+        )}
       </div>
 
       {/* Tenant selector (只 aiproot / consultant 顯示) */}
