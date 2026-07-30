@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import type { Db } from "../db/client.js";
+import { deriveAnalysisState, type AnalysisState } from "./analysis-state.js";
 
 export interface AnalysisBatchRow {
   batchId: string;
@@ -14,6 +15,15 @@ export interface AnalysisBatchRow {
   startedAt: string | null;
   completedAt: string | null;
   errorMessage: string | null;
+  /**
+   * ⚠️ 顯示狀態一律看這個，不要看 `status`。
+   * `status` 是「訊息收齊、分析已排入」，不是分析結果（見 analysis-state.ts）。
+   */
+  analysisState: AnalysisState;
+  /** `analysis_upload.status` 原始值 · stuck 時要顯示給人判斷（pending＝沒開始 / running＝跑一半） */
+  uploadStatus: string | null;
+  /** 分析階段的錯誤訊息 · 與 `errorMessage`（收訊息階段）分開 */
+  analysisError: string | null;
 }
 
 @Injectable()
@@ -109,18 +119,26 @@ export class AnalysisBatchRepository {
     tenantId?: string;
     limit?: number;
   }): Promise<AnalysisBatchRow[]> {
+    // LEFT JOIN analysis_upload · batch.status 不是分析結果（見 analysis-state.ts）。
+    // `stale` 用 DB 的時鐘算，不用 Node 的 —— 兩邊時區/時鐘不一致時
+    // 「超過 30 分鐘了嗎」會給出兩種答案。
     const res = await tx.execute<{
       batch_id: string; tenant_id: string; group_id: string; batch_date: string;
       upload_id: number | null; status: AnalysisBatchRow["status"]; message_count: number;
       triggered_by: string; started_at: string | null; completed_at: string | null;
-      error_message: string | null;
+      error_message: string | null; upload_status: string | null;
+      analysis_error: string | null; stale: boolean;
     }>(sql`
-      SELECT batch_id, tenant_id, group_id, batch_date::text, upload_id, status,
-             message_count, triggered_by,
-             started_at::text, completed_at::text, error_message
-      FROM analysis_batch
-      WHERE (${args.tenantId ?? null}::uuid IS NULL OR tenant_id = ${args.tenantId ?? null}::uuid)
-      ORDER BY batch_date DESC, tenant_id ASC
+      SELECT b.batch_id, b.tenant_id, b.group_id, b.batch_date::text, b.upload_id, b.status,
+             b.message_count, b.triggered_by,
+             b.started_at::text, b.completed_at::text, b.error_message,
+             u.status AS upload_status,
+             u.error_message AS analysis_error,
+             (coalesce(b.completed_at, b.started_at) < now() - interval '30 minutes') AS stale
+      FROM analysis_batch b
+      LEFT JOIN analysis_upload u ON u.id = b.upload_id
+      WHERE (${args.tenantId ?? null}::uuid IS NULL OR b.tenant_id = ${args.tenantId ?? null}::uuid)
+      ORDER BY b.batch_date DESC, b.tenant_id ASC
       LIMIT ${args.limit ?? 200}
     `);
     return res.rows.map((r) => ({
@@ -135,6 +153,16 @@ export class AnalysisBatchRepository {
       startedAt: r.started_at,
       completedAt: r.completed_at,
       errorMessage: r.error_message,
+      analysisState: deriveAnalysisState({
+        batchStatus: r.status,
+        uploadId: r.upload_id,
+        uploadStatus: r.upload_status,
+        // completed_at / started_at 都是 NULL 時當成「剛建立」而不是「卡住」——
+        // 寧可少報一次，不要把正在跑的報成失敗（狼來了會讓人開始忽略這個儀表）。
+        stale: r.stale ?? false,
+      }),
+      uploadStatus: r.upload_status,
+      analysisError: r.analysis_error,
     }));
   }
 }

@@ -94,9 +94,21 @@ export class AnalyzeService {
     return row;
   }
 
-  /** tx commit 之後才可呼叫 —— 在 tx 內排會讀不到剛寫入的那一筆 */
+  /**
+   * tx commit 之後才可呼叫 —— 在 tx 內排會讀不到剛寫入的那一筆。
+   *
+   * ⚠️ 這兩行 log 是刻意的（batch-status-reconciliation §6.4）。
+   * 最難查的失效形狀是「分析從來沒開始」：upload 永遠停在 pending、
+   * 沒有 exception、沒有 catch、任何地方都沒有錯誤訊息。
+   * 原因是「射出去」與「開始跑」之間沒有任何足跡 ——
+   * setImmediate 的 callback 若因 process 重啟（Render 每次部署都在滾實例，
+   * 而批次 18:00 跑）而沒執行，就是這個形狀。
+   * 有這兩行才分得出「沒排到」與「排了沒跑」。
+   */
   scheduleJob(uploadId: number): void {
+    this.logger.log(`runJob scheduled · upload=${uploadId}`);
     setImmediate(() => {
+      this.logger.log(`runJob entered · upload=${uploadId}`);
       void this.runJob(uploadId).catch((e) =>
         this.logger.error(`runJob(${uploadId}) uncaught: ${String((e as Error).message ?? e)}`),
       );
@@ -221,6 +233,39 @@ export class AnalyzeService {
         .update(analysisUpload)
         .set({ status: "failed", errorMessage })
         .where(eq(analysisUpload.id, uploadId));
+      await this.markBatchAnalysisFailed(uploadId, errorMessage);
+    }
+  }
+
+  /**
+   * 下游回寫 · docs/modules/batch-status-reconciliation.md §4.1（方案 A）
+   *
+   * 批次是「markCompleted → scheduleJob 射出去就 return」，所以分析失敗只寫
+   * `analysis_upload`，`analysis_batch` 永遠停在 `completed`。
+   * prod 50 筆 batch 全是 `completed`，其中 6 筆的分析其實沒完成。
+   *
+   * ⚠️ **必須走 withSystemTx**：`analysis_batch` 的 policy 是
+   * `tenant_id = current_tenant OR actor_role IN (aiproot_admin, consultant, system)`。
+   * runJob 用的 `db` 是裸連線、沒設 session 變數 —— 直接寫會**回 0 列而且不報錯**，
+   * 結果是「裝了儀表但它永遠顯示正常」，比沒裝更糟（RLS 靜默歸零已踩 11 次）。
+   *
+   * 回寫失敗不得影響主流程：upload 已標 failed，那是主要事實。
+   */
+  private async markBatchAnalysisFailed(uploadId: number, errorMessage: string): Promise<void> {
+    try {
+      const { withSystemTx } = await import("../db/client.js");
+      const res = await withSystemTx((tx) => tx.execute(sql`
+        UPDATE analysis_batch
+           SET status = 'failed',
+               error_message = ${`分析失敗：${errorMessage}`}
+         WHERE upload_id = ${uploadId}
+      `));
+      // 手動上傳沒有對應 batch（prod 有 11 筆），0 列是正常的不是錯。
+      // 但 rowCount 一定要 log —— 若某天每一次回寫都是 0 列，那就是 RLS 又擋住了，
+      // 而那種壞法不會有任何 exception。
+      this.logger.log(`batch writeback · upload=${uploadId} rows=${res.rowCount ?? 0}`);
+    } catch (err) {
+      this.logger.error(`batch writeback failed · upload=${uploadId} · ${String((err as Error).message ?? err)}`);
     }
   }
 
