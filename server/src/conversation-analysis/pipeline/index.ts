@@ -55,7 +55,7 @@ export async function runPipeline(
   tenantId?: string,                                   // WTB-M2 · 若給 · pipeline 讀 category_registry
 ): Promise<PipelineResult> {
   const tenant = resolveTenant(tenantSlug);
-  // AAL · L2 業種模板 · 讀不到一律 fallback DEFAULT_TEMPLATE（＝現行行為，不因設定缺失而改變抽取）
+  // AAL · L2 業種模板 · 讀不到就讓這批失敗，不猜（理由見 loadTemplate）
   const template = await loadTemplate(tenantId);
   const resultKey = TEMPLATE_REGISTRY[template].resultKey;
   const { groupName, messages } = parseLineExport(rawText);
@@ -116,17 +116,29 @@ export async function runPipeline(
   };
 }
 
-// AAL helper · 讀該租戶的 L2 模板 · 查不到用 DEFAULT_TEMPLATE（保持現行行為）
+/**
+ * AAL helper · 讀該租戶的 L2 模板。
+ *
+ * ⚠️ **查詢失敗不得 fallback**（2026-07-30 改為 fail-closed）。
+ * 原本是 `catch { return DEFAULT_TEMPLATE }`，理由寫「不因設定缺失改變抽取行為」——
+ * 那句話在 `factory_report` 還等於「大家實際在用的」的年代成立，現在不成立了：
+ * 抽取結果**不回溯重跑**（R11 原始不可變），所以一次 DB 抖動的代價不是「有 log 要看」，
+ * 而是那批對話用錯模板產出、且永遠不會被修正 —— 而畫面上跟正常長得一樣
+ * （07-28~29 那 9 筆機台／工單／工時全空的日報就是這個形狀）。
+ *
+ * 批次失敗是可回復的（手動重跑功能已存在），抽出錯結構不可回復。所以寧可炸。
+ */
 async function loadTemplate(tenantId?: string): Promise<ExtractionTemplate> {
+  // CLI／無租戶情境：本來就沒有設定可讀，不是失敗。
   if (!tenantId) return DEFAULT_TEMPLATE;
-  try {
-    const res = await withTenant({ tenantId, role: "tenant_admin" }, (tx) => tx.execute<{ t: string | null }>(sql`
-      SELECT extraction_template AS t FROM tenants WHERE tenant_id = ${tenantId}::uuid
-    `));
-    return resolveTemplate(res.rows[0]?.t);
-  } catch {
-    return DEFAULT_TEMPLATE;   // 0030 未跑或查詢失敗 → 不改變抽取行為
+  const res = await withTenant({ tenantId, role: "tenant_admin" }, (tx) => tx.execute<{ t: string | null }>(sql`
+    SELECT extraction_template AS t FROM tenants WHERE tenant_id = ${tenantId}::uuid
+  `));
+  if (res.rows.length === 0) {
+    // 不猜原因（租戶被刪？RLS？）—— 只講實際發生的事，讓看 log 的人自己判斷。
+    throw new Error(`讀不到租戶 ${tenantId} 的抽取模板設定（查詢回 0 列）· 為免用錯模板產出不可回溯的結果，本批次中止`);
   }
+  return resolveTemplate(res.rows[0]?.t);
 }
 
 // WTB-M2 helper · 讀 registry · 空則回 DEFAULT_CATEGORIES 提示

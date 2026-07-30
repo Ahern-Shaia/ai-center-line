@@ -9,6 +9,7 @@
 //    而且是永久防線（不需 API 費用、每次 CI 都跑）。
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { buildAnalysisSchema, DEFAULT_CATEGORIES } from "../src/conversation-analysis/pipeline/schemas.js";
 import { TEMPLATE_REGISTRY, EXTRACTION_TEMPLATES, resolveTemplate, DEFAULT_TEMPLATE } from "../src/conversation-analysis/pipeline/templates.js";
 import { TWH_TENANT } from "../src/conversation-analysis/pipeline/tenant-twh.js";
@@ -202,4 +203,24 @@ test("⭐ 易混淆的分類對必須有明寫的判別軸", () => {
     p.includes("辦公室系統") || p.includes("it_support。"),
     "maintenance / it_support 需要判別軸（車輛設備 vs 辦公室系統）",
   );
+});
+
+// ── 模板讀取必須 fail-closed（2026-07-30）────────────────────────
+// 原本是 `catch { return DEFAULT_TEMPLATE }`，理由寫「不因設定缺失改變抽取行為」。
+// 那在 factory_report 等於「大家實際在用的」的年代成立，切到 service_order 後不成立：
+// 抽取不回溯重跑（R11），一次 DB 抖動＝那批對話永久用錯模板產出，而畫面上跟正常一樣。
+//
+// 這裡驗原始碼而不是行為，因為 loadTemplate 是 private helper，
+// 要測行為得為此把它 export 出去 —— 為了測試鑽洞比這條斷言更糟。
+// 它擋的是「有人覺得批次不該因為讀不到設定就失敗，把 try/catch 加回去」。
+test("⭐⭐ loadTemplate 不得把查詢失敗吞掉改用 DEFAULT_TEMPLATE", () => {
+  const src = readFileSync(
+    new URL("../src/conversation-analysis/pipeline/index.ts", import.meta.url), "utf8",
+  );
+  const fn = src.slice(src.indexOf("async function loadTemplate"));
+  const body = fn.slice(0, fn.indexOf("\n}"));
+  assert.ok(!/catch/.test(body),
+    "loadTemplate 內不得有 catch —— 讀不到模板要讓這批失敗（可手動重跑），不是猜一個模板抽出不可回溯的結果");
+  assert.ok(/throw new Error/.test(body),
+    "查詢回 0 列必須 throw，否則 resolveTemplate(undefined) 會靜默回 DEFAULT_TEMPLATE");
 });
