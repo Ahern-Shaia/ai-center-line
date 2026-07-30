@@ -169,3 +169,14 @@ test("⭐ stuck 時要一起帶原始 uploadStatus（pending＝沒開始 / runni
   const rows = await withSystemTx((tx) => repo.listByTenant(tx, { tenantId: T, limit: 50 }));
   assert.equal(rows.find((r) => r.groupId === "Gstuck")?.uploadStatus, "pending");
 });
+
+test("⭐ needsAttention 由後端算並回給前端（避免前後端各存一份狀態集合而漂移）", async () => {
+  const repo = new AnalysisBatchRepository();
+  const rows = await withSystemTx((tx) => repo.listByTenant(tx, { tenantId: T, limit: 50 }));
+  const byGroup = new Map(rows.map((r) => [r.groupId, r]));
+  assert.equal(byGroup.get("Gdone")?.needsAttention, false);
+  assert.equal(byGroup.get("Gfresh")?.needsAttention, false, "還在跑的不該進需檢查");
+  for (const g of ["Gfailed", "Gstuck", "Gnoup"]) {
+    assert.equal(byGroup.get(g)?.needsAttention, true, `${g} 應該進「需檢查」`);
+  }
+});

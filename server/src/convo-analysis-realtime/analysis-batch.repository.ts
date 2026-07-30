@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import type { Db } from "../db/client.js";
-import { deriveAnalysisState, type AnalysisState } from "./analysis-state.js";
+import { deriveAnalysisState, needsAttention, type AnalysisState } from "./analysis-state.js";
 
 export interface AnalysisBatchRow {
   batchId: string;
@@ -24,6 +24,11 @@ export interface AnalysisBatchRow {
   uploadStatus: string | null;
   /** 分析階段的錯誤訊息 · 與 `errorMessage`（收訊息階段）分開 */
   analysisError: string | null;
+  /**
+   * 要人看一眼嗎。**由後端算**，前端不要自己維護一份狀態集合 ——
+   * 兩邊各存一份的話，新增狀態時漏改前端會讓它安靜地不進「需檢查」。
+   */
+  needsAttention: boolean;
 }
 
 @Injectable()
@@ -141,28 +146,32 @@ export class AnalysisBatchRepository {
       ORDER BY b.batch_date DESC, b.tenant_id ASC
       LIMIT ${args.limit ?? 200}
     `);
-    return res.rows.map((r) => ({
-      batchId: r.batch_id,
-      tenantId: r.tenant_id,
-      groupId: r.group_id,
-      batchDate: r.batch_date,
-      uploadId: r.upload_id,
-      status: r.status,
-      messageCount: r.message_count,
-      triggeredBy: r.triggered_by,
-      startedAt: r.started_at,
-      completedAt: r.completed_at,
-      errorMessage: r.error_message,
-      analysisState: deriveAnalysisState({
+    return res.rows.map((r) => {
+      const state = deriveAnalysisState({
         batchStatus: r.status,
         uploadId: r.upload_id,
         uploadStatus: r.upload_status,
         // completed_at / started_at 都是 NULL 時當成「剛建立」而不是「卡住」——
         // 寧可少報一次，不要把正在跑的報成失敗（狼來了會讓人開始忽略這個儀表）。
         stale: r.stale ?? false,
-      }),
-      uploadStatus: r.upload_status,
-      analysisError: r.analysis_error,
-    }));
+      });
+      return {
+        batchId: r.batch_id,
+        tenantId: r.tenant_id,
+        groupId: r.group_id,
+        batchDate: r.batch_date,
+        uploadId: r.upload_id,
+        status: r.status,
+        messageCount: r.message_count,
+        triggeredBy: r.triggered_by,
+        startedAt: r.started_at,
+        completedAt: r.completed_at,
+        errorMessage: r.error_message,
+        analysisState: state,
+        uploadStatus: r.upload_status,
+        analysisError: r.analysis_error,
+        needsAttention: needsAttention(state),
+      };
+    });
   }
 }

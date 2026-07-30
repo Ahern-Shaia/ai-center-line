@@ -1162,6 +1162,15 @@ export const getCostSummary = () =>
   req<CostSummaryDto>("/aiproot-console/cost/summary");
 
 // convo-analysis-realtime batch history
+/**
+ * ⚠️ 顯示狀態一律用 `analysisState`，**不要用 `status`**。
+ * `status` 是「訊息收齊、分析已排入」不是分析結果 —— prod 50 筆全是 `completed`，
+ * 其中 6 筆分析其實沒完成（docs/modules/batch-status-reconciliation.md）。
+ */
+export type AnalysisState =
+  | "analyzed" | "analysis_failed" | "analyzing" | "stuck"
+  | "no_result" | "collect_failed" | "empty" | "queued";
+
 export interface AnalysisBatchRow {
   batchId: string;
   tenantId: string;
@@ -1174,6 +1183,11 @@ export interface AnalysisBatchRow {
   startedAt: string | null;
   completedAt: string | null;
   errorMessage: string | null;
+  analysisState: AnalysisState;
+  uploadStatus: string | null;
+  analysisError: string | null;
+  /** 要人看一眼嗎 · **後端算的**（前端不維護第二份狀態集合，避免新增狀態時漂移）*/
+  needsAttention: boolean;
 }
 
 export const listAnalysisBatches = (tenantId?: string) => {

@@ -19,25 +19,24 @@ import {
 } from "../api";
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
+import { AnalysisStateCell, AnalysisSummary } from "./AnalysisStateCell";
 
 // AIPROOT 管理 → 對話分析歷程 · 只 aiproot_admin / consultant 可見
 // 依 feedback_reuse_project_ui_conventions.md 走 6 大慣例：
 //   Dialog=ConfirmDialog · table=.dm-table · empty=.dm-empty
 //   date=.toLocaleString("zh-TW") · number=.toLocaleString() · 下拉=react-aria Select
 
-const STATUS_LABEL: Record<AnalysisBatchRow["status"], string> = {
+// ⚠️ 原本這裡有 STATUS_LABEL / STATUS_TONE 把 batch.status 直接印出來，
+//    其中 `completed: "已完成"` 配綠色 —— 那是整個系統裡最誤導的一處：
+//    後端的 completed 是「訊息收齊、分析已排入」，不是分析成功。
+//    prod 50 筆全綠、其中 6 筆的分析根本沒完成，而沒有任何人知道。
+//    現在狀態一律由 analysisState 推導顯示（見 AnalysisStateCell.tsx）。
+const RAW_STATUS_LABEL: Record<AnalysisBatchRow["status"], string> = {
   pending: "待跑",
   running: "執行中",
-  completed: "已完成",
-  failed: "失敗",
+  completed: "已排入分析",
+  failed: "收訊息失敗",
   empty: "當日無訊息",
-};
-const STATUS_TONE: Record<AnalysisBatchRow["status"], string> = {
-  pending: "var(--ink-3)",
-  running: "var(--primary)",
-  completed: "var(--ok-600)",
-  failed: "var(--rose-600)",
-  empty: "var(--ink-3)",
 };
 
 type PendingConfirm =
@@ -57,6 +56,7 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<PendingConfirm>(null);
+  const [onlyAttention, setOnlyAttention] = useState(false);
 
   async function refresh(tenantId: string = selectedTenantId) {
     setLoading(true);
@@ -278,7 +278,9 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
           <div className="dm-empty-hint">排程時間：每日 08:00（台北）</div>
         </div>
       ) : (
-        <div className="dm-table-wrap">
+        <div>
+          <AnalysisSummary rows={rows} onlyAttention={onlyAttention} onToggle={setOnlyAttention} />
+          <div className="dm-table-wrap">
           <table className="dm-table">
             <thead>
               <tr>
@@ -286,29 +288,24 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
                 <th>租戶</th>
                 <th>Group</th>
                 <th className="num">訊息數</th>
-                <th>狀態</th>
+                <th>分析結果</th>
                 <th>觸發</th>
-                <th>完成時間</th>
+                <th>排入時間</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {(onlyAttention ? rows.filter((r) => r.needsAttention) : rows).map((r) => (
                 <tr key={r.batchId}>
                   <td className="mono">{r.batchDate}</td>
                   <td className="dm-td-name">{tenantName(r.tenantId)}</td>
                   <td className="mono" title={r.groupId}>{r.groupId.slice(0, 12)}…</td>
                   <td className="num">{r.messageCount.toLocaleString()}</td>
-                  <td style={{ color: STATUS_TONE[r.status], fontWeight: 500 }}>
-                    {STATUS_LABEL[r.status]}
-                    {r.errorMessage && (
-                      <div style={{ fontSize: 11, color: "var(--rose-600)", marginTop: 2 }} title={r.errorMessage}>
-                        {r.errorMessage.slice(0, 40)}…
-                      </div>
-                    )}
-                  </td>
+                  <td><AnalysisStateCell row={r} /></td>
                   <td className="mono">{r.triggeredBy}</td>
-                  <td className="mono">{dateFmt(r.completedAt)}</td>
+                  {/* ⚠️ 這一欄是 batch 的 completed_at＝「訊息收齊、排入分析」的時間，
+                      不是分析完成時間。表頭原本寫「完成時間」，同一個誤導。 */}
+                  <td className="mono" title={`批次狀態：${RAW_STATUS_LABEL[r.status]}`}>{dateFmt(r.completedAt)}</td>
                   <td style={{ display: "flex", gap: 6 }}>
                     {r.uploadId != null && onOpenAnalysis && (
                       <button
@@ -323,6 +320,7 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
