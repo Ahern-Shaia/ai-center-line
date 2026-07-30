@@ -25,6 +25,8 @@ const DEPT = "d1d1d1d1-0000-4000-8000-00000000dep0".replace("p", "0");
 const BOT = "d1d1d1d1-0000-4000-8000-0000000b0700";
 const G_OK = "Cdl_with_dept_0000000000000001";
 const G_NODEPT = "Cdl_no_dept_00000000000000001";
+const G_FAIL = "Cdl_analysis_failed_00000000001";
+const G_RERUN = "Cdl_rerun_failed_000000000001";
 const TODAY = new Date().toISOString().slice(0, 10);
 
 const admin = () => new pg.Client({ connectionString: process.env.MIGRATION_DATABASE_URL });
@@ -47,8 +49,9 @@ before(async () => {
      VALUES ($1,$2,'dl-bot','U_dl_bot', pgp_sym_encrypt('s',$3), pgp_sym_encrypt('t',$3))`, [BOT, T, key]);
   await c.query(
     `INSERT INTO line_group (bot_id, group_id, department_id, analyze_enabled, display_name)
-     VALUES ($1,$2,$3,true,'有部門的群'), ($1,$4,NULL,true,'測試群 · 沒分派部門')`,
-    [BOT, G_OK, DEPT, G_NODEPT]);
+     VALUES ($1,$2,$3,true,'有部門的群'), ($1,$4,NULL,true,'測試群 · 沒分派部門'),
+            ($1,$5,$3,true,'分析失敗的群'), ($1,$6,$3,true,'重跑失敗的群')`,
+    [BOT, G_OK, DEPT, G_NODEPT, G_FAIL, G_RERUN]);
   await c.end();
 });
 
@@ -61,12 +64,12 @@ after(async () => {
   await closeDb();
 });
 
-/** 建一次「分析完成」的紀錄。同一組 (group, date) 呼叫兩次＝排程跑完又有人手動重跑 */
-async function addAnalysis(groupId: string, note: string) {
+/** 建一次分析紀錄。同一組 (group, date) 呼叫兩次＝排程跑完又有人手動重跑 */
+async function addAnalysis(groupId: string, note: string, status = "done") {
   const r = await withTenant({ tenantId: null, role: "system", departmentId: null, userId: null },
     (tx) => tx.execute<{ id: number }>(sql`
       INSERT INTO analysis_upload (tenant_id, tenant_slug, filename, raw_content, status, source, group_id, batch_date)
-      VALUES (${T}::uuid, 'batch', ${note}, '', 'done', 'webhook', ${groupId}, ${TODAY}::date)
+      VALUES (${T}::uuid, 'batch', ${note}, '', ${status}, 'webhook', ${groupId}, ${TODAY}::date)
       RETURNING id`));
   const id = r.rows[0].id;
   await withTenant({ tenantId: null, role: "system", departmentId: null, userId: null },
@@ -182,4 +185,48 @@ test("沒有來源訊息 id 的舊任務不會炸，只是沒有照片", async (
     "沒有連結要講出來 —— 跟「這幾則訊息確定沒有照片」是兩件事，都留白的話分不出來",
   );
   assert.deepEqual(src.messages.filter((m) => m.media), [], "沒有連結就沒有照片可掛");
+});
+
+// ── 分析未完成不可長得像「當日無資料」（batch-status-reconciliation M1.5）──
+//
+// 原本查詢有 `AND au.status = 'done'`，失敗的那一列**整列被過濾掉**，
+// 畫面於是顯示「當日無資料」——跟「那天真的很閒」完全分不出來。
+// 客戶看到的是後者，所以不會來問，我們也就不知道漏了一天。
+
+test("⭐⭐ 分析失敗的群仍要出現在日誌，並標成未完成", async () => {
+  await addAnalysis(G_FAIL, "分析失敗", "failed");
+
+  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }));
+  const card = (r.days[0]?.uploads ?? []).find((u) => u.groupId === G_FAIL);
+  assert.ok(card, "⚠️ 失敗的群整列消失＝畫面顯示「當日無資料」，跟那天真的很閒分不出來");
+  assert.equal(card!.analysisIncomplete, true, "要標出來，前端才能說「尚未完成」而不是「無資料」");
+});
+
+test("⭐ 排了沒跑（pending）也算未完成 —— 那是最難查的形狀，完全沒有錯誤訊息", async () => {
+  await addAnalysis(G_FAIL, "排了沒跑", "pending");
+  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }));
+  const card = (r.days[0]?.uploads ?? []).find((u) => u.groupId === G_FAIL);
+  assert.equal(card!.analysisIncomplete, true);
+});
+
+test("⭐⭐ 重跑失敗**不可以**蓋掉同一天先前成功的分析", async () => {
+  // 把失敗的列一起撈進來之後，若只按 uploaded_at 取最新，一次重跑失敗
+  // 就會把有內容的卡片變成一句警語 —— 那是退步。成功優先。
+  await addAnalysis(G_RERUN, "第一次 · 成功", "done");
+  await addAnalysis(G_RERUN, "第二次 · 重跑失敗", "failed");
+
+  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }));
+  const mine = (r.days[0]?.uploads ?? []).filter((u) => u.groupId === G_RERUN);
+  assert.equal(mine.length, 1, "仍然只留一張");
+  assert.equal(
+    mine[0].analysisIncomplete, false,
+    "⚠️ 客戶要看得到那天已經抽出來的內容 —— 重跑失敗是營運問題，走 aiproot 的對帳表",
+  );
+});
+
+test("分析成功的群 analysisIncomplete 必須是 false（不要反過來到處長警語）", async () => {
+  await addAnalysis(G_OK, "成功");
+  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }));
+  const card = (r.days[0]?.uploads ?? []).find((u) => u.groupId === G_OK);
+  assert.equal(card!.analysisIncomplete, false);
 });

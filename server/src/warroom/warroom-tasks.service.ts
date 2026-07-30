@@ -81,6 +81,14 @@ export interface WarroomDaily {
   records: Array<Record<string, unknown>>;    // AI 抽的分類記錄 · 業務對話 (無工廠報工) 情境當 fallback 顯示
   status: string;
   uploadedAt: string;
+  /**
+   * 這一天這個群的分析**沒有完成**（失敗，或排了沒跑）。
+   *
+   * ⚠️ 原本查詢有 `AND au.status = 'done'`，失敗的那一列**整列被過濾掉** ——
+   * 畫面於是顯示「當日無資料」，跟「那天真的很閒」完全分不出來。
+   * 客戶看到的是後者，所以不會來問（batch-status-reconciliation §4-bis.5）。
+   */
+  analysisIncomplete: boolean;
 }
 
 @Injectable()
@@ -327,10 +335,19 @@ export class WarroomTasksService {
       LEFT JOIN departments d ON d.department_id = lg.department_id
       WHERE au.batch_date IS NOT NULL
         AND au.batch_date::date BETWEEN ${fromDate}::date AND ${toDate}::date
-        AND au.status = 'done'
+        -- ⚠️ 原本是 AND au.status = 'done'，於是分析失敗的那一列整列消失，
+        --    畫面顯示「當日無資料」——跟「那天真的很閒」分不出來，客戶不會來問。
+        --    現在把未完成的也撈出來，由前端顯示「這一天的分析未完成」。
+        --    仍排除 running：那是**正在跑**，幾十秒後就會變 done，
+        --    顯示警語會在每天批次時段閃一下警告，是雜訊不是資訊。
+        AND au.status IN ('done', 'failed', 'pending')
         -- Bug fix · 私訊佔位 group 不進群組日誌
         AND au.group_id NOT LIKE '\\_\\_personal\\_\\_%' ESCAPE '\\'
-      ORDER BY au.group_id, au.batch_date DESC, au.uploaded_at DESC
+      -- ⚠️ (au.status = 'done') DESC 必須排在 uploaded_at 之前：
+      --    把失敗的列一起撈進來之後，若只按時間取最新，一次**重跑失敗**就會
+      --    蓋掉同一天先前已經成功的分析 —— 有內容的卡片變成一句警語，那是退步。
+      --    成功優先，代表客戶看得到內容；重跑失敗屬營運問題，走對帳表（aiproot 面）。
+      ORDER BY au.group_id, au.batch_date DESC, (au.status = 'done') DESC, au.uploaded_at DESC
       LIMIT 200
     `);
 
@@ -349,6 +366,7 @@ export class WarroomTasksService {
         records: (r.records as Array<Record<string, unknown>>) ?? [],
         status: r.status,
         uploadedAt: r.uploaded_at,
+        analysisIncomplete: r.status !== "done",
       });
       byDay.set(r.batch_date, list);
     }
