@@ -76,7 +76,12 @@ export class AiprootTenantsController {
     };
   }
 
-  /** 可選的 L2 業種模板 · service_order 未開放（欄位待客戶確認）*/
+  /**
+   * 可選的 L2 業種模板。
+   * ⚠️ `selectable: false` 的模板不會出現在下拉裡，而畫面上看不出「有一個被藏起來」——
+   *    2026-07-30 就因此把台灣福祉切成了 `factory_report`（以為那是唯一的 L2 選項）。
+   *    要藏模板時記得：它就只剩手動下 prod SQL 一條路，而那條路有 RLS 靜默失敗。
+   */
   @Get("extraction-templates")
   @RequirePermission("tenants:view")
   templates() {
