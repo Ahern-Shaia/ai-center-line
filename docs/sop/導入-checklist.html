@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>導入 Checklist · 日誌與日報全員上線</title>
+<style>
+  :root{--bg:#f6f7f9;--surface:#fff;--line:#e4e7eb;--line-2:#f0f2f5;--ink:#171a1d;--ink-2:#4b5563;--ink-3:#6b7280;--faint:#9aa1ab;
+    --brand:#4f46e5;--brand-bg:#eef2ff;--ok:#047857;--ok-bg:#ecfdf5;--warn:#b45309;--warn-bg:#fffbeb;--warn-bd:#fde68a;--mono:ui-monospace,Menlo,monospace;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-size:14.5px;line-height:1.65;}
+  .wrap{max-width:820px;margin:0 auto;padding:34px 26px 60px;}
+  h1{font-size:23px;font-weight:680;margin:0 0 4px;}
+  .lede{color:var(--ink-2);font-size:14px;}
+  .meta{margin:12px 0 22px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--faint);}
+  h2{font-size:16px;font-weight:660;margin:26px 0 4px;display:flex;align-items:center;gap:9px;}
+  h2 .p{background:var(--brand);color:#fff;font-size:12px;border-radius:6px;padding:2px 9px;font-weight:700;}
+  h2 .when{margin-left:auto;font-size:12px;font-weight:500;color:var(--ink-3);}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:10px 0;}
+  ul{list-style:none;margin:0;padding:0;}
+  li{padding:7px 0 7px 30px;position:relative;border-bottom:1px solid var(--line-2);font-size:14px;}
+  li:last-child{border-bottom:none;}
+  li::before{content:"";position:absolute;left:0;top:9px;width:16px;height:16px;border:1.5px solid var(--line);border-radius:4px;background:#fff;}
+  li b{font-weight:650;}
+  .who{display:inline-block;font-size:11px;font-weight:600;border-radius:4px;padding:1px 7px;margin-right:6px;}
+  .who.win{background:var(--brand-bg);color:var(--brand);}
+  .who.gm{background:#f3e8ff;color:#7c3aed;}
+  .who.emp{background:var(--ok-bg);color:var(--ok);}
+  .note{background:var(--warn-bg);border:1px solid var(--warn-bd);border-radius:8px;padding:10px 13px;margin:12px 0;font-size:13px;color:#78350f;}
+  .note b{color:#78350f;}
+  .skip{background:var(--ok-bg);border:1px solid #a7f3d0;border-radius:8px;padding:10px 13px;font-size:13px;color:#065f46;}
+  code{font-family:var(--mono);font-size:12.5px;background:#f1f3f5;padding:1px 6px;border-radius:4px;}
+  .foot{margin-top:26px;font-size:12px;color:var(--faint);border-top:1px solid var(--line);padding-top:12px;}
+  @media print{body{background:#fff}.wrap{padding:0}h2{page-break-after:avoid}.card{page-break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>導入 Checklist · 日誌與日報全員上線</h1>
+  <div class="lede">目標：讓公司所有人開始使用「群組日誌」與「個人日報」。先小範圍測試，通了再全員推。</div>
+  <div class="meta">對象：客戶窗口 / 總經理室 ｜ 標示：<span class="who win">窗口</span> 資訊窗口　<span class="who gm">總經理</span> 管理層　<span class="who emp">員工</span> 全體</div>
+
+  <div class="note">
+    <b>一句話：</b>功能都準備好了。這次要做的<b>不是設定系統，是讓大家把 LINE 綁上</b> —— 綁定＝橋樑，沒綁的人發言歸不到他、也沒有個人日報。
+  </div>
+
+  <!-- 階段 A -->
+  <h2><span class="p">階段 A</span>先小範圍測試<span class="when">明天</span></h2>
+  <div class="card">
+    <ul>
+      <li><span class="who win">窗口</span>挑 <b>2–3 位業務</b>當試點（其他人先別動）</li>
+      <li><span class="who emp">試點員工</span>用自己的 LINE <b>加公司 Bot 好友</b> → Bot 傳「開始綁定」→ 點一下完成（約 1 分鐘）</li>
+      <li><span class="who emp">試點員工</span>私訊 Bot 幾則今天的工作內容（例：「今天跑了 A 客戶、B 客戶報價」）</li>
+      <li><span class="who emp">試點員工</span>打開個人日報 → 看 AI 有沒有整理出來 → <b>一鍵送出</b>給主管</li>
+      <li><span class="who gm">總經理/主管</span>確認有收到「○○ 已送出日報」的 LINE 通知、並在戰情室「部門日報」看得到</li>
+      <li><span class="who win">窗口</span>這條龍走通 → 進階段 B；卡住哪一步 → 回報我們（附截圖）</li>
+    </ul>
+  </div>
+
+  <!-- 階段 B -->
+  <h2><span class="p">階段 B</span>全員導入<span class="when">下週</span></h2>
+  <div class="card">
+    <ul>
+      <li><span class="who win">窗口</span>把 <b>Bot 的 ID 或 QR code</b> 發到各部門群（pin 公告最省事）</li>
+      <li><span class="who emp">全體員工</span>照階段 A 的方式各自綁定（加好友 → 點綁定）</li>
+      <li><span class="who win">窗口</span>過幾天回報我們<b>綁定人數</b>，我們一起看還有誰沒綁</li>
+    </ul>
+  </div>
+
+  <!-- 權限設定 -->
+  <h2><span class="p">同步</span>權限設定（總經理看全公司、主管看自己部門）</h2>
+  <div class="card">
+    <ul>
+      <li><span class="who gm">總經理</span><b>建部門</b>（設定 → 部門/成員 → 部門分頁 → 新增部門）</li>
+      <li><span class="who gm">總經理</span><b>建部門主管</b>：成員分頁 → 新增成員 → 角色選「<b>部門主管</b>」+ 選「所屬部門」</li>
+      <li><span class="who gm">總經理</span><b>把 LINE 群組分派到部門</b>（設定 → 通訊管道 → LINE 群組，每群選部門）</li>
+      <li><span class="who gm">總經理</span>員工綁定後系統會<b>自動歸部門</b>；推不出來的，在成員頁自己調整所屬部門（新功能）</li>
+    </ul>
+    <div class="note" style="margin:12px 0 0"><b>最容易忘：</b>部門主管的「所屬部門」一定要選，不選＝他幾乎看不到東西。完整步驟見《權限設定手冊》。</div>
+  </div>
+
+  <!-- 窗口要準備的 -->
+  <h2><span class="p">準備</span>窗口 / 總經理要準備的</h2>
+  <div class="card">
+    <ul>
+      <li><span class="who win">窗口</span><b>公司 Bot 的 ID / QR code</b>（發給員工加好友用）—— 不確定就問我們</li>
+      <li><span class="who gm">總經理</span>（選配）一份「<b>員工 → 部門</b>」名單，用來核對系統自動歸的部門對不對</li>
+    </ul>
+    <div style="font-size:12.5px;color:var(--ink-3);margin-top:8px">員工端<b>不需要</b>提供帳號密碼、不用填任何資料 —— 只要用自己的 LINE 加好友、點綁定。</div>
+  </div>
+
+  <!-- 不用管的 -->
+  <h2><span class="p">這次不用</span>Ragic 整合可以先放著</h2>
+  <div class="skip">
+    日誌與日報是「LINE → AI → 報告」，<b>完全不需要先整合 Ragic</b>。Ragic 是之後的加分項（讓分析更準），不是這次上線的前提。之後要接時，總經理可在「資料來源」頁自己設定。
+  </div>
+
+  <div class="foot">
+    相關手冊：《權限設定手冊》《員工 LINE 綁定教學》· 有任何一步卡住，附截圖回報我們。
+  </div>
+</div>
+</body>
+</html>
