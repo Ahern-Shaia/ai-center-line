@@ -26,7 +26,9 @@ export function UnconfirmedQueue({
 }) {
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
-  const [open, setOpen] = useState(true);
+  // V4 · 預設收合 —— 待確認是次要 triage，進頁時看板才是主角。
+  // 原本 useState(true) 讓它進頁就全展開成一道牆，把看板擠到下面（2026-07-30 雜亂根因）。
+  const [open, setOpen] = useState(false);
 
   if (tickets.length === 0) return null;
 
@@ -44,7 +46,7 @@ export function UnconfirmedQueue({
   }
 
   return (
-    <section className="tri-box">
+    <section className="tri-box tri-box-warn">
       <button className="tri-hdr" onClick={() => setOpen(!open)} aria-expanded={open}>
         <span className="kb-dot kb-dot-mid" aria-hidden />
         <span className="tri-title">請您確認</span>
@@ -52,11 +54,11 @@ export function UnconfirmedQueue({
         <span className="tri-hint">
           AI 整理出這些事，但沒有十足把握。請看一下要不要追蹤。
         </span>
-        <span className="tri-caret" aria-hidden>{open ? "▾" : "▸"}</span>
+        <span className="tri-caret" aria-hidden>{open ? "收合 ▴" : "展開檢視 ▾"}</span>
       </button>
 
       {open && (
-        <div className="tri-body">
+        <div className="tri-body tri-body-cap">
           {tickets.map((t) => (
             <div key={t.ticketId} className="tri-row">
               <button className="tri-sum" onClick={() => onOpen(t)} title="點開看原始對話">
@@ -96,10 +98,9 @@ export function ArchivedList({
   onOpen: (t: WarroomKanbanTicket) => void;
   onDecided: () => void;
 }) {
+  // V4 · 存查改成獨立次頁（由 TaskBoard 的「存查」按鈕進來）· 不再收合、不再壓在看板底部。
   const toast = useToast();
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  if (total === 0) return null;
 
   async function restore(t: WarroomKanbanTicket) {
     setBusy(t.ticketId);
@@ -114,17 +115,12 @@ export function ArchivedList({
     }
   }
 
+  if (total === 0) {
+    return <div className="dm-empty">目前沒有存查紀錄</div>;
+  }
+
   return (
     <section className="tri-box tri-box-quiet">
-      <button className="tri-hdr" onClick={() => setOpen(!open)} aria-expanded={open}>
-        <span className="kb-dot" aria-hidden />
-        <span className="tri-title">未列入待辦</span>
-        <span className="kb-col-count">{total}</span>
-        <span className="tri-hint">公告、已完成、以及您標記不用追的事 · 留著可以查</span>
-        <span className="tri-caret" aria-hidden>{open ? "▾" : "▸"}</span>
-      </button>
-
-      {open && (
         <div className="tri-body">
           {tickets.map((t) => (
             <div key={t.ticketId} className="tri-row">
@@ -149,7 +145,6 @@ export function ArchivedList({
             <div className="kb-col-foot">顯示最近 {tickets.length} 筆 · 共 {total} 筆</div>
           )}
         </div>
-      )}
     </section>
   );
 }

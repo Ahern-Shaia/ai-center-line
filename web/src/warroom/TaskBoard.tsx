@@ -20,6 +20,8 @@ export default function TaskBoard() {
   const [board, setBoard] = useState<WarroomTaskBoard | null>(null);
   // 「只看卡住的」· Linear 的 display options —— 要聚焦用篩選，不用另開一個容器
   const [onlyStuck, setOnlyStuck] = useState(false);
+  // V4 · 存查改成獨立次頁（不再壓在看板底部）· 由 toolbar「存查」按鈕切換
+  const [showArchive, setShowArchive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [drawer, setDrawer] = useState<WarroomKanbanTicket | null>(null);
   const [signing, setSigning] = useState<Set<string>>(new Set());
@@ -60,6 +62,31 @@ export default function TaskBoard() {
   if (loading && !board) return <div className="dm-empty">載入任務看板中…</div>;
   if (!board) return null;
 
+  // V4 · 存查次頁：偶爾瀏覽、大量紀錄 → 獨立去處，不塞回主看板（判準見 mockup taskboard-v4-focus）
+  if (showArchive) {
+    return (
+      <>
+        <div className="pane-hdr">
+          <div>
+            <h1>
+              <button className="btn btn-sm" onClick={() => setShowArchive(false)}>← 任務看板</button>
+              <span style={{ marginLeft: 10 }}>存查</span>
+            </h1>
+            <div className="sub">公告 / 已完成 / 已忽略 · 不需簽核的紀錄 · 偶爾查閱</div>
+          </div>
+          <button className="btn" onClick={() => void refresh()} disabled={loading}>重新整理</button>
+        </div>
+        <ArchivedList
+          tickets={board.kanban.archived}
+          total={board.counts.archived}
+          onOpen={setDrawer}
+          onDecided={() => void refresh()}
+        />
+        <TicketDrawer ticket={drawer} onClose={() => setDrawer(null)} onSignoff={doSignoff} signing={drawer ? signing.has(drawer.ticketId) : false} onAssigned={() => { setDrawer(null); void refresh(); }} />
+      </>
+    );
+  }
+
   // 篩選只影響「顯示什麼」，不影響欄頭計數 —— 計數要一直是真實總數，
   // 否則開了篩選之後數字跟著變，人會分不清是篩掉了還是真的少了
   const pick = (list: typeof board.kanban.pending) =>
@@ -79,6 +106,12 @@ export default function TaskBoard() {
               onClick={() => setOnlyStuck((v) => !v)}
             >
               {onlyStuck ? "顯示全部" : `只看卡住的（${board.counts.stuck}）`}
+            </button>
+          )}
+          {/* V4 · 存查入口在 toolbar（穩定位置，不隨看板變長往下跑）· 點開進獨立次頁 */}
+          {board.counts.archived > 0 && (
+            <button className="btn" onClick={() => setShowArchive(true)}>
+              存查 <span className="mono" style={{ color: "var(--ink-3)" }}>{board.counts.archived}</span>
             </button>
           )}
           <button className="btn" onClick={() => void refresh()} disabled={loading}>重新整理</button>
@@ -116,12 +149,7 @@ export default function TaskBoard() {
         />
       </div>
 
-      <ArchivedList
-        tickets={board.kanban.archived}
-        total={board.counts.archived}
-        onOpen={setDrawer}
-        onDecided={() => void refresh()}
-      />
+      {/* V4 · 存查已移到 toolbar「存查」按鈕 → 獨立次頁（見上方 showArchive 分支），不再壓在看板底部 */}
 
       <TicketDrawer
         ticket={drawer}

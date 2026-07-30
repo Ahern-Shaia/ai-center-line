@@ -1752,6 +1752,12 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 /* ===== 任務分區 · 待確認 / 存查（task-materialization-gate） ===== */
 .tri-box { background:var(--surface); border:1px solid var(--primary); border-radius:3px; margin-bottom:14px; overflow:hidden; }
 .tri-box-quiet { border-color:var(--line); margin-top:14px; margin-bottom:0; }
+/* V4 · 待確認＝琥珀橫幅（次要 triage，醒目但不搶看板） */
+.tri-box-warn { border-color:var(--warn); }
+.tri-box-warn .tri-hdr { background:var(--warn-tint); }
+.tri-box-warn .tri-title { color:#78350F; }
+/* V4 · 展開有高度上限、自己捲動 —— 最多把看板推下移一點點，看板始終在同一頁看得到 */
+.tri-body-cap { max-height:230px; overflow-y:auto; }
 .tri-hdr { display:flex; align-items:center; gap:8px; width:100%; padding:10px 14px; background:var(--primary-tint); border:0; border-bottom:1px solid var(--line-2); font-family:inherit; cursor:pointer; text-align:left; }
 .tri-box-quiet .tri-hdr { background:var(--well); }
 .tri-title { font-size:13.5px; font-weight:700; color:var(--ink); }
