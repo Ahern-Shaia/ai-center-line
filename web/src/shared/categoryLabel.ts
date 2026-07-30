@@ -6,6 +6,8 @@ export const CATEGORY_LABEL: Record<string, string> = {
   attendance: "出勤異動",
   rnd: "研發討論",
   procurement: "採購",
+  sales: "業務",             // 對客戶／我方收錢方向（tenant-twh 分類軸「錢的方向」）
+  it_support: "資訊支援",     // 帳號權限／電腦設備／系統操作（NAS／ERP／Ragic）
   chitchat: "閒聊",
 };
 

@@ -1704,7 +1704,9 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 
 /* ==================== CONFIRM DIALOG（React Aria Modal · 中央置中 · 取代 window.confirm）==================== */
 .cd-scrim {
-  position:fixed; inset:0; background:rgba(17,24,39,.35); z-index:120;
+  /* ⚠️ 必須高於 drawer（201）· ConfirmDialog 常從 drawer 內觸發（例：任務詳情裡「補登結束」），
+     z-index 低於 drawer 的話對話框會被 drawer 蓋住右半、看起來「被遮住」（2026-07-30 修）。 */
+  position:fixed; inset:0; background:rgba(17,24,39,.35); z-index:300;
   display:flex; align-items:center; justify-content:center; padding:16px;
   animation:scrim-in .12s var(--ease);
 }
