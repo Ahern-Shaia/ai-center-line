@@ -1,6 +1,6 @@
 # member-department-assignment · 總經理自主分配成員部門
 
-> 狀態：📋 **M0 DRAFT v0.1**（2026-07-30）· 待用戶裁定 OQ-MDA-1..8
+> 狀態：🔨 **M1/M2 已落地 v0.2**（2026-07-30）· OQ-MDA-1..8 全採建議 · 待 M3 文件收尾
 >
 > 相關：[`custom-roles.md`](custom-roles.md)（本文直接站在它的結論上 —— 範圍是**指派的屬性**不是角色的屬性）、
 > [`auth-gate-consolidation.md`](auth-gate-consolidation.md)（本文要收的 403 誤導按鈕屬同一類 A-class 錯開）、
@@ -212,10 +212,10 @@ users:assign-department   -- 只能改「部門」這個屬性，不能改角色
 
 | 失效模式 | 影響 | 嚴重度 | 緩解 |
 |---|---|---|---|
-| 自動推導覆寫了總經理的手動指派 | 總經理的決定被系統默默改掉，且不知情 | **P0** | ✅ `department_source='manual'` 時自動推導跳過（§4.2）·測試釘住 |
-| 新端點沒驗目標部門的租戶 → 跨租戶 IDOR | 把自家成員指派到**別家**的部門 | **P0** | 🔒 待實作：寫入前驗 `departments.tenant_id = current_tenant`（§5.2）· 測試塞跨租戶部門必須被擋 |
-| tenant_admin 藉此端點改角色 / 提權 | 越權 | **P0** | ✅ 端點 body 只收 `departmentId`，不碰 role · 改角色仍走 aiproot-only 的 `users:manage` |
-| 403 誤導按鈕沒收乾淨 | 總經理仍點到打不動的功能 | P1 | 🔒 待實作：§6.1 隱藏 role/delete 入口 · 對照 auth-gate-consolidation |
+| 自動推導覆寫了總經理的手動指派 | 總經理的決定被系統默默改掉，且不知情 | **P0** | ✅ 已緩解：手動指派標 `department_source='manual'` + 記 assigned_by/at；測試釘住 source=manual。⚠️ 現況自動推導只在綁定時 INSERT 一次（無 re-derive 路徑），所以覆寫暫不會發生 —— 但若日後加週期重算，務必 `WHERE department_source='auto'` |
+| 新端點沒驗目標部門的租戶 → 跨租戶 IDOR | 把自家成員指派到**別家**的部門 | **P0** | ✅ 已緩解：resolveTenantId 鎖自租戶 + service 明驗 `departmentBelongsToTenant`；測試「別家部門」「別家成員」兩條都擋 |
+| tenant_admin 藉此端點改角色 / 提權 | 越權 | **P0** | ✅ 已緩解：`AssignDepartmentSchema` 只收 tenantId+departmentId（zod strip 掉 role/password）· service 沒有改 role 的碼 · 測試證明角色不變 |
+| 403 誤導按鈕沒收乾淨 | 總經理仍點到打不動的功能 | P1 | ✅ 已緩解：編輯/刪除改吃 `canManageFull`（users:manage=aiproot），tenant_admin 不再看到 |
 | RLS 漏設 → 改成員回 0 列靜默失敗 | 以為改了其實沒改 | P1 | 🔒 走 `currentTx()`·測試斷言 rowCount=1（[[rule-rls-silent-zero]] 已踩 12 次）|
 
 **任一 P0 未緩解不得上 prod（R17）。**
@@ -227,9 +227,9 @@ users:assign-department   -- 只能改「部門」這個屬性，不能改角色
 | # | 內容 | 依賴 |
 |---|---|---|
 | **M0** 📋 | 本文件 · 待裁定 OQ-MDA-1..8 ← 在這 | — |
-| **M1** | migration（3 欄）+ `PATCH /users/:id/department` + `users:assign-department` + 自動推導避讓 manual | OQ-MDA-1/2/5 |
-| **M2** | 前端單筆指派 + 收 403 誤導 + 來源標記 | M1 |
-| **M3** | FMEA 覆核 + 上線 · 更新三份權限教學（站內頁 / HTML / md）到新流程 | M2 |
+| **M1** ✅ | migration 0052（3 欄 + 新權限授 A/T）+ `PATCH /users/:id/department` + 兩道防 IDOR · `68a749f` | — |
+| **M2** ✅ | 成員頁部門可改下拉 + 來源標記 + 收 403 誤導按鈕 · `05a5a5b` · label 群組負責人→部門主管 `d06ea9a` | — |
+| **M3** 🔨 | 文件收尾（矩陣 v2 已標 shipped · MODULES）· 待 prod 執行 migration 0052/0053（R10）| M2 |
 | **M4**（選）| 部門視角 + 批次指派 | OQ-MDA-3 · 看 M1 一輪需求 |
 
 ---
@@ -253,4 +253,5 @@ users:assign-department   -- 只能改「部門」這個屬性，不能改角色
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
+| 2026-07-30 | v0.2 | **M1/M2 落地**（`68a749f` 後端 · `05a5a5b` 前端 · `d06ea9a` label 改名）· FMEA 三個 P0 全緩解並用 6 條測試釘住（跨租戶 IDOR 兩形狀、藉端點提權、手動優先）· master-data 一併開放 tenant_admin（migration 0053）· ⚠️ 途中踩到自己：跑 `npm run migrate`（無追蹤、從 0001 重跑）在既有資料上把 0048 的 tickets 部門 policy 覆寫回舊版，重套 0048 修回 —— 教訓：dirty dev DB 勿跑全量 migrate · migration 0052/0053 待 prod 人工執行（R10）| ahern + Claude Code |
 | 2026-07-30 | v0.1 | M0 首版 · 起於用戶指出正確流程「建租戶→建部門→綁主管→**分配成員**」而「分配成員」目前半自動且 **aiproot-only**（總經理改不了、還踩 403 誤導按鈕）· ⭐ 站在巨人肩膀上：K8s/custom-roles（屬性≠權限＝可安全下放的依據）、Google OU（單值歸屬+顯式搬移）、Okta Group Rules / Azure 動態vs指派（自動手動並存、**手動優先不被覆寫**）、Azure Administrative Units（範圍化委派+來源透明）· 核心設計＝加 `department_source` 來源標記讓 A(自動)+B(手動)並存不打架、拆 `users:assign-department` 新權限碼（只改屬性不碰角色）· FMEA 3 個 P0（自動覆寫手動 / 跨租戶 IDOR / 藉端點提權）· OQ-MDA-1..8 | ahern + Claude Code |

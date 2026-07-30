@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>MDA 預期成果 · 部門/成員（成員分頁）</title>
+<style>
+  /* 產品設計色票（對齊 web/src/styles.css） */
+  :root{
+    --bg:#F6F7F9; --surface:#fff; --line:#E5E7EB; --line-2:#F0F2F5; --well:#F5F6F8;
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+    --primary:#4F46E5; --primary-2:#4338CA; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5; --warn:#D97706; --warn-tint:#FFFBEB;
+    --rose:#E11D48; --rose-tint:#FFF1F2;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:Inter,-apple-system,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .page{max-width:1080px;margin:0 auto;padding:28px 24px 80px}
+  .doc-h{font-size:22px;font-weight:680;margin:0 0 4px;letter-spacing:-.01em}
+  .doc-sub{color:var(--ink-2);font-size:14px;margin-bottom:6px}
+  .legend{font-size:12.5px;color:var(--ink-3);margin:10px 0 22px;padding:10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+  .legend b{color:var(--primary-2)}
+
+  /* 產品外殼縮影 */
+  .app{display:grid;grid-template-columns:180px 1fr;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface);box-shadow:0 2px 12px rgba(0,0,0,.05)}
+  .sb{background:#fff;border-right:1px solid var(--line);padding:14px 10px;font-size:12.5px}
+  .sb-grp{color:var(--ink-3);font-size:10.5px;font-weight:700;letter-spacing:.04em;margin:12px 8px 4px}
+  .sb-item{padding:6px 10px;border-radius:7px;color:var(--ink-2);display:flex;align-items:center;gap:7px}
+  .sb-item.on{background:var(--primary-tint);color:var(--primary-2);font-weight:600}
+  .sb-dot{width:6px;height:6px;border-radius:50%;background:var(--ink-3);opacity:.4}
+  .main{padding:20px 22px;min-height:520px}
+  .pane-h{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+  .pane-h h1{font-size:18px;margin:0}
+  .pane-h .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 13px;font-size:12.5px;color:var(--ink-2);font-weight:600}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  .tab{padding:8px 18px;font-size:13px;color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--primary)}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:10px 12px;border-bottom:1px solid var(--line-2);text-align:left;vertical-align:middle}
+  th{color:var(--ink-3);font-size:11.5px;font-weight:600}
+  .muted{color:var(--ink-3)}
+  .mono{font-family:var(--mono)}
+  .role-pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--well);color:var(--ink-2)}
+  .role-go{background:var(--ok-tint);color:var(--ok)}
+
+  /* 可改的部門下拉（新） */
+  .dept-sel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--primary);background:#fff;border-radius:7px;
+    padding:5px 10px;font-size:12.5px;color:var(--ink);box-shadow:0 0 0 3px var(--primary-tint);min-width:120px;justify-content:space-between}
+  .dept-sel.unset{border-color:var(--warn);box-shadow:0 0 0 3px var(--warn-tint);color:var(--warn);font-weight:600}
+  .dept-sel .cv{color:var(--ink-3)}
+  .src{display:block;font-size:11px;margin-top:4px}
+  .src-auto{color:var(--ink-3)}
+  .src-manual{color:var(--ok)}
+  .src-unset{color:var(--warn);font-weight:600}
+
+  /* 標註氣泡 */
+  .mark{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;
+    background:var(--primary);color:#fff;font-size:11px;font-weight:700;flex:none}
+  .callouts{margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .co{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .co-h{display:flex;align-items:center;gap:9px;font-weight:680;font-size:13.5px;margin-bottom:6px}
+  .co p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.65}
+  .co .was{margin-top:8px;font-size:11.5px;color:var(--rose);background:var(--rose-tint);border-radius:6px;padding:5px 9px}
+  .co .now{margin-top:6px;font-size:11.5px;color:var(--ok);background:var(--ok-tint);border-radius:6px;padding:5px 9px}
+  .foot{margin-top:24px;font-size:12px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:14px;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="doc-h">MDA 完成後 · 部門/成員（成員分頁）</div>
+  <div class="doc-sub">總經理（總經理室）登入看到的畫面 —— 這是「預期成果」，尚未實作</div>
+  <div class="legend">
+    圈號 <b>①②③</b> 對應下方說明，標出跟現況不同的地方。這份是視覺示意，用產品真實色票畫的、不是實機截圖。
+  </div>
+
+  <div class="app">
+    <!-- 側欄縮影 -->
+    <div class="sb">
+      <div class="sb-grp">設定</div>
+      <div class="sb-item on"><span class="sb-dot" style="background:var(--primary);opacity:1"></span>部門 / 成員</div>
+      <div class="sb-item"><span class="sb-dot"></span>通訊管道</div>
+      <div class="sb-item"><span class="sb-dot"></span>任務設定</div>
+      <div class="sb-item"><span class="sb-dot"></span>自動化</div>
+      <div class="sb-item"><span class="sb-dot"></span>稽核記錄</div>
+    </div>
+
+    <!-- 主內容 -->
+    <div class="main">
+      <div class="pane-h">
+        <div>
+          <h1>部門 / 成員</h1>
+          <div class="sub">管理本公司部門與部門主管 · 部門建立後到「通訊管道」把群組分派到部門</div>
+        </div>
+        <button class="btn">📖 第一次設定？看教學</button>
+      </div>
+
+      <div class="tabs">
+        <span class="tab">部門</span>
+        <span class="tab on">成員</span>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>姓名</th><th>Email</th><th>角色</th>
+            <th>所屬部門 <span class="mark" style="width:16px;height:16px;font-size:9px">①</span></th>
+            <th>操作 <span class="mark" style="width:16px;height:16px;font-size:9px">③</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>王經理</td><td class="mono muted">wang@co.com</td>
+            <td><span class="role-pill role-go">群組負責人</span></td>
+            <td>
+              <span class="dept-sel">業務部 <span class="cv">▾</span></span>
+              <span class="src src-manual">· 王總 7/30 手動指派 <span class="mark" style="width:15px;height:15px;font-size:9px">②</span></span>
+            </td>
+            <td class="muted">—</td>
+          </tr>
+          <tr>
+            <td>李四</td><td class="muted">（LINE 綁定）</td>
+            <td><span class="role-pill">員工</span></td>
+            <td>
+              <span class="dept-sel">技術部 <span class="cv">▾</span></span>
+              <span class="src src-auto">· 系統自動判定</span>
+            </td>
+            <td class="muted">—</td>
+          </tr>
+          <tr>
+            <td>陳五</td><td class="muted">（LINE 綁定）</td>
+            <td><span class="role-pill">員工</span></td>
+            <td>
+              <span class="dept-sel unset">未分派 <span class="cv">▾</span></span>
+              <span class="src src-unset">· ⚠ 系統推不出，請指派</span>
+            </td>
+            <td class="muted">—</td>
+          </tr>
+          <tr>
+            <td>林曉風</td><td class="mono muted">patrick@co.com</td>
+            <td><span class="role-pill">總經理室</span></td>
+            <td><span class="muted">全公司（不分部門）</span></td>
+            <td class="muted">—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:14px;font-size:11.5px;color:var(--ink-3);background:var(--well);border-radius:7px;padding:10px 12px;line-height:1.7">
+        共 4 位成員 · 你可以調整每位成員的<b>所屬部門</b>；建立部門主管請按右上「新增成員」。
+        變更角色、刪除帳號由 aiproot 處理。
+      </div>
+    </div>
+  </div>
+
+  <!-- 三個變更說明 -->
+  <div class="callouts">
+    <div class="co">
+      <div class="co-h"><span class="mark">①</span>所屬部門變成可改的下拉</div>
+      <p>總經理直接點下拉就能把成員換部門，不用再找 aiproot。</p>
+      <div class="was">現況：這格是唯讀；點「編輯」想改 → 送出 403（改成員的端點是 aiproot 專屬）</div>
+      <div class="now">MDA 後：新權限 <span class="mono">users:assign-department</span> 開給總經理，只能改部門</div>
+    </div>
+
+    <div class="co">
+      <div class="co-h"><span class="mark">②</span>標出部門的來源</div>
+      <p>一眼看出哪些是<b>系統自動判定</b>（AI 依最活躍的群推的，可能要覆核）、哪些是<b>人手動指派</b>的。</p>
+      <div class="now">手動指派過的，之後員工重新綁定也不會被自動推導洗掉（department_source 保護）</div>
+    </div>
+
+    <div class="co">
+      <div class="co-h"><span class="mark">③</span>收掉「看得到卻按不動」的按鈕</div>
+      <p>改角色、刪除帳號仍是 aiproot 專屬，所以<b>總經理不會再看到那些會 403 的按鈕</b>。</p>
+      <div class="was">現況：總經理看得到「編輯／刪除」，點下去 403（誤導）</div>
+      <div class="now">MDA 後：這些入口對總經理隱藏，只留他真的能做的「改部門」</div>
+    </div>
+
+    <div class="co">
+      <div class="co-h"><span class="mark" style="background:var(--warn)">⚠</span>「未分派」會被標出來</div>
+      <p>系統推不出部門的成員（沒活動/信心低）用琥珀色標「待指派」，總經理一眼知道要補。</p>
+      <div class="now">避免「沒歸部門的員工，主管看不到他的日報」而沒人發現</div>
+    </div>
+  </div>
+
+  <div class="foot">
+    對照設計：<span class="mono">docs/modules/member-department-assignment.md</span> ·
+    權限矩陣：<span class="mono">docs/roles-permissions-matrix.md</span> §5<br>
+    ⚠️ 這是預期畫面示意，實作後以實機為準。角色「群組負責人」的顯示名待定（可能改「部門主管」）。
+  </div>
+</div>
+</body>
+</html>

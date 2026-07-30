@@ -1,311 +1,198 @@
-# 身份權限矩陣 · ai-center-line
+# 角色權限矩陣 · ai-center-line
 
-> 4 role × 全模組權限對照 · 這是實作權限 gate 的 source of truth。
-> 任何 backend `@Roles` / frontend `canView / canEdit` 決定 · 都對照本檔。
+> 更新：2026-07-30（v2 · 重寫成 6 角色 + prod 實況 + MDA 目標）
+> 資料來源：prod `role_permissions` 實查（61 條權限）· 非憑印象
 >
-> 版本：v1.3（2026-07-24）
-> 對應 memory：[feedback_only_aiproot_creates_tenant_accounts.md](../memory/) v2（本檔取代舊 v1）
+> ⚠️ v1（2026-07-24）寫「4 種角色」已過期 —— 漏了 `assistant` / `employee`，
+> 且宣稱「員工部門調整：只有 tenant_admin 可改」與實作不符（實際 aiproot-only，
+> 見 §5，這正是 [`modules/member-department-assignment.md`](modules/member-department-assignment.md) 要修的）。
 
 ---
 
-## 0. 為什麼需要這份矩陣
+## 0. 怎麼讀
 
-之前實作 depts/members 時 · 整個 stack（backend `@Roles` + frontend gate）都**只給 aiproot** · tenant_admin 進系統看不到部門/成員頁 · 只能請 aiproot 手動代辦。
-
-用戶在 2026-07-23 對話明確指出**這不合理** · 部門/成員屬客戶方自治範圍 · 應交還 tenant_admin。
-
-本矩陣是**權責重新分配後的 authoritative 版本** · 落地時對照。
+- 六個角色代號：**A**=aiproot_admin · **C**=consultant · **T**=tenant_admin（總經理室）· **G**=group_owner（部門主管）· **S**=assistant（助理）· **E**=employee（員工）
+- ✅🆕 = MDA（成員部門分配）**2026-07-30 已落地**（migration 0052/0053 · commit 68a749f/05a5a5b）
+- 表格內：有標代號＝該角色有此權限；空白＝沒有
 
 ---
 
-## 1. 4 種角色定義
+## 1. 六種角色
 
-| 角色 | 誰用 | scope | 主要職責 |
+| 角色 | 誰用 | 資料範圍 | 一句話 |
 |---|---|---|---|
-| **`aiproot_admin`** | aiproot 平台方員工 | 跨全部租戶 | 開通新客戶 / 管 LINE Bot 技術面 / 管 AI 成本 / 稽核 |
-| **`consultant`** | aiproot 派給客戶的顧問 | 跨全部租戶 | 只讀 · 給諮詢建議 · 不動系統 |
-| **`tenant_admin`** | 客戶公司總經理室 / 管理層 | 該租戶內 | 管自己公司部門 + 員工 + 看戰情室 · 建部門主管帳號 |
-| **`group_owner`** | 客戶公司部門主管 | 該部門內 | 看自己部門任務 · 簽核 · 看部門日報 |
-| **`employee`** | 一般員工（v2 加）| 自己 | 只看/送自己的日報 · 用 LIFF 或 web LINE 登入 |
+| **A · aiproot_admin** | 我司平台員工 | 跨全部租戶 | 平台全能：開通客戶、管 Bot/AI/成本、稽核 |
+| **C · consultant** | 我司派駐顧問 | 跨全部租戶（多為只讀）| 給建議、看資料，不動關鍵設定 |
+| **T · tenant_admin** | 客戶公司**總經理室** | 該租戶內全部 | 管自己公司的部門、成員、戰情室 |
+| **G · group_owner** | 客戶公司**部門主管** | **自己部門內** | 看/簽自己部門的任務、看部門日報 |
+| **S · assistant** | 客戶公司助理 | 該租戶內（限通知設定）| 只管通知規則 |
+| **E · employee** | 一般員工 | **只有自己** | 看/送自己的日報與行程 |
 
-**特殊路徑**：
-- **員工（Alice）自服務綁定**：透過 LIFF 綁定自動建 `users` 記錄 · role=`employee`（v2 · 舊 group_owner 已透過 migration 0020 遷移）· 部門由 server derive（不讓員工手選）
-- **員工 web 登入 · 2 條路**：
-  - **主路徑** · 「以 LINE 登入」（LINE OAuth · 對照 user_line_binding · 免密碼 · 推薦）
-  - **選配路徑** · 私訊「設密碼」→ LIFF setup 頁 → 填 email + 密碼 → 從此可 email 登入 (Option C · v1.2 加)
-- **員工部門調整**：只有 tenant_admin 可改（走「部門/成員」頁 · 有 audit）· 員工自己不可改
+**特殊路徑**
+- 員工一律 **LIFF 自綁**產生（role=employee）· 部門 server 自動推導（見 §5）· 沒有人「手動建員工帳號」
+- 員工 web 登入：主路徑「以 LINE 登入」（免密碼）· 選配「設密碼」後可 email 登入
 
 ---
 
-## 2. 帳號建立權限（誰可以建誰）
+## 2. 帳號建立（誰能建誰）
 
-| 建立者 → | `aiproot_admin` | `consultant` | `tenant_admin` | `group_owner` | 員工（LIFF）|
+| 建立者 ↓ | 建 A | 建 C | 建 T | 建 G | 建 員工 |
 |---|:-:|:-:|:-:|:-:|:-:|
-| **aiproot_admin** 可建 | ✅ | ✅ | ✅ | ✅ | — |
-| **consultant** 可建 | ❌ | ❌ | ❌ | ❌ | — |
-| **tenant_admin** 可建 | ❌ | ❌ | ❌ | ✅（限自 tenant）| — |
-| **group_owner** 可建 | ❌ | ❌ | ❌ | ❌ | — |
-| **LIFF 自服務** | — | — | — | ✅（限自己一位）| ✅ |
+| **A** | ✅ | ✅ | ✅ | ✅ | —（員工自綁）|
+| **C** | ❌ | ❌ | ❌ | ❌ | — |
+| **T** | ❌ | ❌ | ❌ | ✅（限自租戶）| — |
+| **G / S / E** | ❌ | ❌ | ❌ | ❌ | — |
 
-**規則說明**：
-- **aiproot_admin 全能**：因是平台方 · 開通新客戶要建 tenant_admin
-- **tenant_admin 只能建 group_owner**：部門主管是 tenant 內部人事 · 客戶自治
-- **tenant_admin 不能建 tenant_admin**：避免客戶內部政治鬥爭 · 統一由 aiproot 建才有客觀第三方紀錄
-- **員工 LIFF 綁定** = 自服務建自己一筆 users（role=group_owner v1）· 不佔上表「誰建誰」的空格
-
-**密碼 rotate**：一律走 aiproot（`aiproot_admin`）· 或 forgot-password self-service flow · **tenant_admin 不能替下屬重置密碼**（避免濫用）。
+- **T 只能建 G，不能建 T** —— 建 T 統一走 aiproot，留客觀第三方紀錄（避免客戶內部人事互建）
+- 密碼重設 / 解鎖：**aiproot only**（`users:reset-password` / `users:unlock`）· T 不能替下屬重設
 
 ---
 
-## 3. 模組權限矩陣
+## 3. 能力矩陣（依 prod 實況）
 
-### 3.1 戰情室（Warroom）
+### 3.1 戰情室 · 營運（客戶日常用）
 
-| 功能 | `aiproot_admin` | `consultant` | `tenant_admin` | `group_owner` |
-|---|:-:|:-:|:-:|:-:|
-| 總覽儀表（三環）| 👁 (選 tenant) | 👁 (選 tenant) | 👁 | 👁 (自部門) |
-| 每日簽核 · 部門聚合 | 👁 | 👁 | ✅ | ✅ (自部門) |
-| 任務看板 Kanban | 👁 | 👁 | ✅ | ✅ (自部門) |
-| 單筆簽核 | ❌ | ❌ | ✅ | ✅ (自部門) |
-| 今日日誌 | 👁 | 👁 | 👁 | 👁 (自部門) |
-| 我的日報（自己）| ❌ | ❌ | ✅ | ✅ |
+| 功能 | 權限碼 | A | C | T | G | S | E |
+|---|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| 總覽儀表 | `warroom:view` | | | T | G | | |
+| 任務看板 | `warroom-tasks:view` | | | T | G | | |
+| 群組日誌 | `warroom-daily:view` | | | T | G | | |
+| 簽核 · 檢視 | `signoff:view` | A | C | T | G | | |
+| 簽核 · 動作 | `signoff:action` | A | | T | G | | |
+| 素材 | `media:view` | | | T | G | | |
+| **部門日報**（看下屬）| `personal-report:team` | A | | T | G | | |
+| 我的日報 | `personal-report:mine` | | | T | G | | E |
+| 我的行程 | `trips:mine` | | | T | G | | E |
 
-**RLS scope**：
-- aiproot/consultant · 全 tenant · 前端加租戶選擇器
-- tenant_admin · 該 tenant 全部（`current_tenant` 匹配）
-- group_owner · 該部門（`p_tickets` 加 `current_department`）
+> A/C 看戰情室是靠「跨租戶選 tenant」機制，不吃 `warroom:view` 這顆（所以上表 A/C 多為空）。
 
-### 3.2 資料 · 知識
+### 3.2 設定 · 組織（總經理自治範圍）
 
-| 功能 | `aiproot_admin` | `consultant` | `tenant_admin` | `group_owner` |
-|---|:-:|:-:|:-:|:-:|
-| 智慧檢索 RAG | 👁 | 👁 | ✅ | ✅ (自部門) |
-| 素材看板 | 👁 | 👁 | ✅ | ✅ (自部門) |
-| 知識庫 | 👁 | 👁 | ✅ | 👁 (自部門) |
-| 客戶地圖 | 👁 | 👁 | ✅ | ✅ (自部門) |
+| 功能 | 權限碼 | A | C | T | G | S | E |
+|---|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| 部門 · 檢視 | `departments:view` | A | C | T | | | |
+| 部門 · 管理（自租戶）| `departments:manage-tenant` | A | | T | | | |
+| 成員 · 檢視 | `users:view` | A | C | T | | | |
+| 成員 · 建群組負責人 | `users:create-group-owner` | A | | T | | | |
+| **成員 · 分配部門** | ✅ `users:assign-department` | A | | **T** | | | |
+| 成員 · 改角色/刪除/重設密碼 | `users:manage` | A | | | | | |
+| LINE 群組 · 檢視 | `line-groups:view` | A | C | T | G | | |
+| LINE 群組 · 分派部門 | `line-groups:assign` | A | | T | | | |
+| 任務設定 · 檢視 | `task-config:view` | A | C | T | | | |
+| 任務設定 · 排程時點 | `task-config:timing` | A | | T | | | |
+| 自動化 · 檢視 | `scheduler-config:view` | A | C | T | | | |
+| 自動化 · 管理（自租戶）| `scheduler-config:manage-tenant` | A | | T | | | |
+| 稽核記錄 | `audit:view` | A | C | T | | | |
+| 員工綁定 · 檢視 | `binding:view` | | | T | | | |
 
-（v1 mock 階段 · 實作時對齊）
+### 3.3 通知設定（助理的地盤）
 
-### 3.3 AI 對話分析
+| 功能 | 權限碼 | A | C | T | G | S | E |
+|---|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| 通知設定 · 檢視 | `notify-config:view` | A | C | | | S | |
+| 通知設定 · 管理 | `notify-config:manage` | A | C | | | S | |
 
-**⚠️ 這組屬 aiproot 平台方維護 · 對 tenant 不可見**（Shell.tsx `roles: aiproot_admin, consultant`）
+> ⚠️ **assistant 的全部權限就這兩顆** —— 它是為「只管通知」設的窄角色。T 目前**沒有** notify-config（可議，見 §6）。
 
-| 功能 | `aiproot_admin` | `consultant` | `tenant_admin` | `group_owner` |
-|---|:-:|:-:|:-:|:-:|
-| 分析列表 | 👁 | 👁 | ❌ | ❌ |
-| 上傳新對話 | ✅ | ❌ | ❌ | ❌ |
-| 分析詳情 | 👁 | 👁 | ❌ | ❌ |
-| 語言模型設定 | ✅ | 👁 | ❌ | ❌ |
+### 3.4 資料 · 知識 · AI 分析（多為平台側）
 
-**原因**：tenant 只看戰情室的最終結果（分析後材料化的 tickets / 日報）· pipeline 內部細節屬 aiproot 平台責任。
+| 功能 | 權限碼 | A | C | T | G | S | E |
+|---|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| 資料來源 | `master-data:manage` | A | C | ✅T | | | |
+| 智慧檢索 / 知識庫 / 客戶地圖 | `rag:view` `km:view` `map:view` | A | C | | | | |
+| 分類 · 檢視 | `categories:view` | A | C | | | | |
+| 分類 · 管理 | `categories:manage` | A | | | | | |
+| 對話分析 · 檢視 | `convo:view` | A | C | | | | |
+| 對話分析 · 上傳 / 標註 | `convo:upload` `convo:label` | A | | | | | |
+| 抽取健康度 / 分析歷程 / 完成追蹤 / 成本 | `extraction-health:view` 等 | A | C | | | | |
 
-### 3.4 通訊接頭層
+### 3.5 AIPROOT 平台管理（幾乎全 A）
 
-**⚠️ aiproot 平台方管理 · tenant 不可見**（Shell.tsx `roles: aiproot_admin, consultant`）
+| 功能 | 權限碼 | A | C | 其他 |
+|---|---|:-:|:-:|---|
+| 租戶 · 檢視 / 開通 / 管理 | `tenants:view` / `:onboard` / `:manage` | A | C（僅 view）| |
+| LINE 機器人 · 檢視 / 增刪改 | `line-bots:*` | A | C（僅 view）| |
+| 語言模型設定 | `llm-config:view` / `:manage` | A | C（僅 view）| |
+| 地圖里程設定 | `map-config:view` / `:manage` | A | C（僅 view）| |
+| 權限管理 | `roles:view` / `:manage` | A | C（僅 view）| |
+| 員工綁定稽核（跨租戶）| `binding:aiproot-view` / `:aiproot-manage` | A | C（僅 view）| |
 
-| 功能 | `aiproot_admin` | `consultant` | `tenant_admin` | `group_owner` |
-|---|:-:|:-:|:-:|:-:|
-| LINE Bot 列表 | 👁 | 👁 | ❌ | ❌ |
-| Bot CRUD（channel_secret / access_token）| ✅ | ❌ | ❌ | ❌ |
-| Bot 遷移到別 tenant | ✅ | ❌ | ❌ | ❌ |
-| Bot 群組列表 | 👁 | 👁 | 👁 (自 tenant) | ❌ |
-| **群組分派到部門**（`line_group.department_id`）| ✅ | ❌ | **✅**（自 tenant）| ❌ |
+---
 
-**變更點**：**群組分派到部門** 從「僅 aiproot」開放給 `tenant_admin`。因分派是**業務決策**（哪個群屬哪部門）· 屬 tenant 自治。Bot 技術面（channel secret / token）保留 aiproot（涉及 LINE Developer Console）。
+## 4. 資料範圍（RLS）
 
-**實作**：`server/src/line-ingest/line-group.controller.ts` 的 `@Roles` 需加 `tenant_admin`（分派 endpoint）。列表 endpoint 保留現況（tenant_admin 已可看自 tenant 的）。
+權限碼決定「看得到哪個**功能**」，RLS 決定「看得到哪些**資料列**」。兩者是**兩道獨立的閘**。
 
-### 3.5 設定
-
-| 功能 | `aiproot_admin` | `consultant` | `tenant_admin` | `group_owner` |
-|---|:-:|:-:|:-:|:-:|
-| **部門 CRUD**（Departments）| ✅ | 👁 | **✅**（自 tenant · 新開）| ❌ |
-| **成員 CRUD**（Members）| ✅ | 👁 | **✅**（限建 group_owner · 新開）| ❌ |
-| **成員 role change** | ✅ | ❌ | ✅（限自 tenant 內 group_owner ↔ 停用 · **不可**升 tenant_admin）| ❌ |
-| **密碼 rotate** | ✅ | ❌ | ❌（走 aiproot or forgot-password）| ❌ |
-| 租戶設定 | 👁 | 👁 | ✅ (自 tenant) | ❌ |
-| 稽核記錄 | 👁 (跨) | 👁 (跨) | 👁 (自 tenant) | ❌ |
-| **員工 LINE 綁定**（檢視 + 撤銷 · **v1.3 新開**）| —（用 §3.6 跨租戶版）| — | **✅**（自 tenant） | ❌ |
-| **員工 LINE 綁定 · 未綁定活躍者提示** | —（§3.6）| — | **✅**（自 tenant） | ❌ |
-| 自己 profile（display_name 等非核心欄位）| ✅ | ✅ | ✅ | ✅ |
-
-**變更點**（本次修正 · 逆轉舊 rule）：
-- **部門 CRUD**：tenant_admin 開放
-- **成員 CRUD**：tenant_admin 開放 · **限建 group_owner**（不可建 aiproot_admin / consultant / tenant_admin）
-- **成員 role change**：tenant_admin 可停用 group_owner · 但**不可升為 tenant_admin**
-- **員工 LINE 綁定（v1.3 新開）**：tenant_admin 可檢視 + 撤銷自租戶員工綁定 + 看未綁定活躍者。跨租戶 IDOR 由 `user_line_binding` RLS（FOR ALL · USING）擋死 —— tenant 端 revoke 一律在自租戶上下文執行 · 別租戶 binding_id 命中 0 列。tenantId 一律取自 JWT · 端點 `GET/POST /binding/tenant/*`。aiproot 跨租戶版（§3.6）不變
-
-**Backend 需三重保障**：
-1. `@Roles` 加 tenant_admin
-2. Zod schema · POST body 中 `role` 欄位 · tenant_admin caller 只能傳 `group_owner`（backend 校驗）
-3. RLS 已限自 tenant（`users` policy）
-
-**Frontend `ASSIGNABLE_ROLES`**：
-- aiproot_admin caller：`[aiproot_admin, consultant, tenant_admin, group_owner]`
-- tenant_admin caller：`[group_owner]` 只 · 下拉不列其他
-
-### 3.6 AIPROOT 管理
-
-**⚠️ aiproot 平台方獨有 · tenant 完全不可見**
-
-| 功能 | `aiproot_admin` | `consultant` | `tenant_admin` | `group_owner` |
-|---|:-:|:-:|:-:|:-:|
-| 開通新租戶 wizard | ✅ | ❌ | ❌ | ❌ |
-| AI 成本管理 | 👁 | 👁 | ❌ | ❌ |
-| 對話分析歷程 | 👁 | 👁 | ❌ | ❌ |
-| **手動觸發 batch** | ✅ | ❌ | ❌ | ❌ |
-| LINE 綁定稽核（**跨租戶** · 選 tenant）| 👁 + 撤銷 | 👁 | ❌（改用 §3.5 自租戶版）| ❌ |
-| **撤銷 employee 綁定** | ✅（跨租戶）| ❌ | ✅（僅自租戶 · v1.3 · 見 §3.5）| ❌ |
-| 分類管理（rename / archive）| ✅ | 👁 | ❌ | ❌ |
-
-### 3.7 系統路徑（無 role · scheduled / webhook）
-
-| 功能 | 觸發者 | scope |
+| 角色 | 資料範圍 | 靠什麼 |
 |---|---|---|
-| LINE webhook 接收 | HMAC 驗證 · 無 role | 依 destination 找對應 bot |
-| Cron：每日 08:00 batch 掃描 | 系統 | tenant.batch_enabled=true |
-| Cron：每日 09:00 nudge 掃描（未綁員工）| 系統 | 全 tenant |
-| Cron：每日 17:30 個人日報生成 | 系統 | 全綁定 user |
-| Materialize records→tickets | 系統（analyze upload done 觸發）| upload 所屬 tenant |
-| Personal report notify 主管 | 系統（送出時 fire-and-forget）| 該員工部門主管 + tenant_admin |
+| A | 跨全部租戶 | policy 的 `aiproot_admin` 逃生門 |
+| C | 跨全部租戶（多只讀）| `consultant` 逃生門（部分表）|
+| T | 自己整個租戶 | `app.current_tenant` 比對 |
+| G | **自己部門** | `app.current_department`（`tickets`/`personal_daily_report` 的部門子句）|
+| E | 只有自己 | `app.current_user_id` |
+
+⚠️ **權限碼擋不住跨租戶 IDOR** —— 端點若讓 client 傳 tenantId 就危險（[[pitfall-permission-code-is-not-tenant-boundary]]）。一律用 `currentTx()` 繼承上下文。
 
 ---
 
-## 4. 資料存取 scope（RLS）
+## 5. ⭐ MDA 改了什麼（✅ 2026-07-30 已落地）
 
-### 4.1 每張表的 RLS 決策層
+### 5.1 現況的缺口
 
-| 表 | aiproot_admin | consultant | tenant_admin | group_owner | system |
-|---|:-:|:-:|:-:|:-:|:-:|
-| `tenants` | ✅ 全 | ✅ 全 | ✅ 自 | ❌ | ❌ |
-| `users` | ✅ 全 | ✅ 全 | ✅ 自 tenant | ❌ | ❌（❗需補）|
-| `departments` | ✅ 全 | ✅ 全 | ✅ 自 tenant | ✅ 自 tenant | ❌（❗需補）|
-| `tickets` | ✅ 全 | ✅ 全 | ✅ 自 tenant | ✅ 自部門 | ✅ |
-| `line_bot` | ✅ 全 | ✅ 全 | ❌ | ❌ | ✅ |
-| `line_group` | ✅ 全 | ✅ 全 | ✅ 自 tenant | ✅ 自部門 | ✅ |
-| `line_message` | ✅ 全 | ✅ 全 | ✅ 自 tenant | ✅ 自部門 | ✅ |
-| `line_member` | ✅ 全 | ✅ 全 | ❌ | ❌ | ✅ |
-| `user_line_binding` | ✅ 全 | ✅ 全 | ✅ 自 tenant (v1.3) | ✅ 自己 | ✅ |
-| `analysis_upload` | ✅ 全 | ✅ 全 | ❌ | ❌ | ✅ |
-| `analysis_result` | ✅ 全 | ✅ 全 | ❌ | ❌ | ✅ |
-| `category_registry` | ✅ 全 | ✅ 全 | ✅ 自 tenant | ❌ | ✅ |
-| `personal_daily_report` | ✅ 全 | ✅ 全 | ✅ 自 tenant | ✅ 自部門 + 自己 | ✅ |
+| 事實 | 出處 |
+|---|---|
+| 改成員部門的端點 `PATCH /users/:id` 要 `users:manage` | user.controller.ts:61 |
+| `users:manage` **只給 A**（prod 查證）| §3.2 |
+| 所以 **T（總經理）現在完全不能分配成員部門** | — |
+| 但前端 `canEdit` 吃 `users:create-group-owner`（T 有）→ **T 看得到編輯/刪除按鈕、點下去 403** | Members.tsx:119 |
+| v1 這份 doc 卻寫「員工部門調整：只有 tenant_admin 可改」 | ← **一直是「應該」，從沒實作** |
 
-### 4.2 待補的 RLS 差距
+### 5.2 MDA 後的目標（全採建議）
 
-**❗ 標記處**（`system` 讀寫 users / departments 有 gap）：
-- **p_users 不允 system role**：webhook 觸發的 INSERT users（LIFF 綁定 completeLiffBinding）走 `withTenant + tenant_admin` 兩階段 workaround（已於 employee-binding.service.ts 處理）
-- **p_departments 不允 aiproot_admin / system**：跨租戶讀部門需走 line_bot lookup → tenant_admin 上下文（materializer 已用相同 pattern）
+| 動作 | 現在 | MDA 後 | 為什麼可以下放 |
+|---|---|---|---|
+| 改成員的**部門** | A only | ✅ **T 可**（新 `users:assign-department`）| 部門是**資料範圍屬性**，不是權限 → 不構成提權 |
+| 改成員的**角色** | A only | **維持 A only** | 角色是**授予能力** → 提權邊界，不下放 |
+| 刪除成員 / 重設密碼 | A only | **維持 A only** | 破壞性 / 敏感 |
 
-**未來 migration 建議**：把 `system` / `aiproot_admin` 加進 p_users / p_departments（對齊 0011+ 遷移 pattern）· 現階段 workaround OK。
+**核心原則（站在巨人肩膀上 · K8s + custom-roles）**：
+> **屬性可下放、權限不可。** 改「他的資料落在哪個部門」不改變「他能做什麼」，所以安全。
+> 這是拆出 `users:assign-department`、而不是整包開放 `users:manage` 的理由。
+
+### 5.3 自動 + 手動並存（Okta / Azure 的做法）
+
+員工部門有兩個來源，加 `department_source{auto,manual}` 讓它們不打架：
+- **auto**：LIFF 綁定時系統依「最活躍的群 → 該群部門」自動推導（員工端零摩擦）
+- **manual**：T 手動指派 → 標 manual → **自動推導永不覆寫它**
 
 ---
 
-## 5. UI 呈現規則
+## 6. 待你裁定 / 可議
 
-### 5.1 Sidebar 過濾（Shell.tsx `NAV`）
-
-| Section | 誰看得到 | 備註 |
+| 項 | 問題 | 我的傾向 |
 |---|---|---|
-| 戰情室 | 全 | 戰情室 tab / 簽核 / 我的日報 · role-based scope 內容 |
-| 資料 · 知識 | 全 | 已 role-based |
-| AI 對話分析 | **僅 aiproot_admin + consultant** | 已 `roles:` gate |
-| 通訊接頭層 | **僅 aiproot_admin + consultant** | 已 `roles:` gate |
-| 設定 | 全 · **變更後 tenant_admin 可用 depts/members**（本次修正）· **「員工 LINE 綁定」item 僅 tenant_admin**（item 級 `roles: [tenant_admin]` gate · v1.3）| 現況 gate 未擋 · 但 `depts` 頁內部 canView 擋掉 tenant_admin · **需改** |
-| AIPROOT 管理 | 僅 aiproot_admin + consultant | 已 `roles:` gate |
-
-### 5.2 頁面內 canEdit（e.g. 部門/成員頁）
-
-```typescript
-// 修正後的 canEdit 邏輯
-const canView = session.role === "aiproot_admin"
-             || session.role === "consultant"
-             || session.role === "tenant_admin";     // ← 新開
-
-const canEdit = session.role === "aiproot_admin"
-             || session.role === "tenant_admin";     // ← 新開 · consultant 只讀
-
-// Tenant selector
-const canSwitchTenant = session.role === "aiproot_admin"
-                     || session.role === "consultant";
-// tenant_admin 自動用 session.tenant_id · 不顯下拉
-
-// ASSIGNABLE_ROLES (成員 role 下拉)
-const ASSIGNABLE_ROLES = session.role === "aiproot_admin"
-  ? ["aiproot_admin", "consultant", "tenant_admin", "group_owner"]
-  : session.role === "tenant_admin"
-    ? ["group_owner"]                                // ← 新開 · 僅限
-    : [];
-```
+| notify-config 給 T？ | 🔴 **不能直接開** —— `notify_rule` 無 tenant_id/RLS，開了會跨租戶洩漏 · 另開 M0（notify 租戶化）見 `modules/notify-tenant-scoping.md` |
+| master-data 給 T？ | ✅ **已開放**（migration 0053）· resolveTenantId 鎖自租戶無 IDOR | — |
+| UI label「群組負責人」→「部門主管」 | ✅ **已改**（commit d06ea9a · role key group_owner 不變）| — |
 
 ---
 
-## 6. 實作 checklist（本次修正）
+## 附錄 · 常見情境
 
-### 6.1 Backend
-
-- [ ] `server/src/tenant-admin/department.controller.ts` · `@Roles("aiproot_admin")` 加 `tenant_admin`（POST / PATCH / DELETE）
-- [ ] `server/src/tenant-admin/user.controller.ts` · `@Roles` 加 `tenant_admin`（POST / PATCH · 限制 role 只可傳 group_owner）
-- [ ] `server/src/tenant-admin/user.service.ts` · 建帳號時檢查 caller.role · 若 tenant_admin · body.role 必須為 `group_owner`
-- [ ] `server/src/tenant-admin/dto/user.dto.ts` · Zod schema 加 role 校驗（可用 discriminated union 或 refine）
-- [ ] `server/src/line-ingest/line-group.controller.ts` · 分派 group→dept 的 endpoint · `@Roles` 加 `tenant_admin`
-
-### 6.2 Frontend
-
-- [ ] `web/src/settings/depts-members/Page.tsx` · `canView` / `canEdit` 邏輯改 · tenant_admin 通過
-- [ ] `web/src/settings/depts-members/Members.tsx` · ASSIGNABLE_ROLES 依 caller role 動態
-- [ ] `web/src/settings/depts-members/Page.tsx` · Tenant selector 對 tenant_admin 隱藏（自動用 own tenant）
-- [ ] `web/src/line-bots/Detail.tsx`（若有 group→dept 分派 UI）· canEdit 加 tenant_admin
-
-### 6.3 測試
-
-- [ ] tenant_admin 登入 · 部門/成員頁可打開 + 建部門 OK
-- [ ] tenant_admin 建 member · role 只能選 group_owner · 傳 aiproot_admin 應 400
-- [ ] tenant_admin 不能建 tenant_admin（backend 擋 + frontend 下拉不列）
-- [ ] tenant_admin 不能改別 tenant 的部門（RLS 已擋）
-- [ ] group_owner 登入 · 部門/成員頁看不到（僅 admin 級）
-- [ ] aiproot_admin flow 不受影響 · 仍可跨 tenant 管
+| 情境 | 誰做 | 步驟 |
+|---|---|---|
+| 開通新客戶 | A | 開租戶 → 建該公司第一個 T（總經理）|
+| 加部門主管 | T | 部門/成員 → 成員 → 新增（角色=群組負責人 + 所屬部門）|
+| 加副總（也要看全公司）| **A**（T 不能建 T）| aiproot 建一個 T 級帳號 |
+| 員工歸錯部門要改 | ✅ **T**（總經理成員頁改所屬部門下拉）| 成員頁改所屬部門 |
+| 員工自綁 | E 自己 | LIFF 綁定 → 系統自動歸部門 |
 
 ---
 
-## 7. 附錄 · 常見情境對照
-
-### 情境 A · 新客戶 onboard
-
-1. **aiproot** 建 tenant「台灣福祉」
-2. **aiproot** 建首位 **tenant_admin** 帳號「陳總經理」+ email 通知
-3. **陳總（tenant_admin）**登入
-4. **陳總** 進「部門/成員」建部門（品保部 / 業務部）+ 建 **group_owner**「王主管」
-5. **aiproot** 建 LINE Bot（channel_secret / access_token）
-6. **陳總 or aiproot** 進「LINE 機器人」分派群組到部門
-7. AI 分析啟動 · 員工開始使用
-
-### 情境 B · 加新部門主管
-
-1. **陳總（tenant_admin）**登入 · 部門/成員頁
-2. 建 group_owner「李主管」→ 分派到業務部
-3. 系統寄 email 給李主管（含臨時密碼）· 李主管首登改密
-
-### 情境 C · 陳總想加副總（也是 tenant_admin 級）
-
-1. 陳總不能自建 · 需請 aiproot
-2. aiproot 進「開通新租戶 → 這家客戶」加 tenant_admin
-3. 建帳號後通知副總
-
-### 情境 D · 員工 Alice 自服務綁定
-
-1. Alice 加 bot 好友
-2. 點 LIFF · 綁定
-3. 系統自動建 users（role=group_owner v1）
-4. Alice 不需管理員審核 · 立即可用
-
----
-
-## 附錄：本文件變更紀錄
+## 變更紀錄
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
-| 2026-07-23 | v1.0 | 首版 · 逆轉舊 rule「aiproot 統包所有帳號建立」· 開放 tenant_admin 建 group_owner + 管自 tenant depts | ahern + Claude · 對話裁定 |
-| 2026-07-23 | **v1.1** | **加 employee role**（migration 0020）· 修 v1 tech debt (LIFF 綁定用 group_owner 卻登不了 web 的邏輯洞)<br>· employee 只能看/送自己日報 · sidebar 只顯「我的日報」<br>· LIFF 綁定 default role 改 employee<br>· 加 LINE Login OAuth 到 web 登入頁 · 員工可用 LINE 一鍵登入 web（免密碼）<br>· 舊 @line.local email users 自動遷 group_owner → employee | ahern + Claude · 對話裁定 |
-| 2026-07-23 | **v1.2** | **Option C · LIFF 綁定加選配設密碼路徑**（employee 也可用 email + 密碼登入）<br>· 部門完全 server derive · 不讓員工手選（避免藍領選錯 · 只有 tenant_admin 可改）<br>· 綁定成功頁增強 · 3 條後續路徑指引（手機/電腦/設密碼）<br>· 私訊「設密碼」關鍵字 → LIFF setup 頁（email + 密碼 · 走 PasswordPolicy）<br>· 帳號建立矩陣新增「LIFF 自服務設密碼」路徑 · 同 tenant email 唯一 · 自設不 force-change<br>· 管理層帳號 (tenant_admin) 建立 flow 不變 · aiproot wizard + email + 密碼 + first-login-change | ahern + Claude · 對話裁定 |
-| 2026-07-24 | **v1.3** | **LINE 綁定稽核開放給客戶方自治**（逆轉 v1「僅 aiproot」）· tenant_admin 可檢視 + 撤銷自租戶員工綁定 + 看未綁定活躍者<br>· 新端點 `GET /binding/tenant/list`、`POST /binding/tenant/revoke/:bindingId`、`GET /binding/tenant/unbound-stats`（皆 `@Roles(tenant_admin)` · tenantId 取自 JWT）<br>· 跨租戶 IDOR 由 `user_line_binding` RLS（FOR ALL · USING）擋死 · revoke 在自租戶上下文執行<br>· 新增 reason `tenant_admin_revoke`<br>· 前端 `settings/TenantBindingAudit.tsx`（無租戶下拉）· sidebar 設定群加 item 級 `roles:[tenant_admin]` gate<br>· aiproot 跨租戶版（§3.6）維持不變 | ahern + Claude · 對話裁定 |
+| 2026-07-30 | v2.1 | MDA 落地：`users:assign-department`（A/T）、master-data 開放 T（0053）、label 群組負責人→部門主管 —— §3/§5/§6 標為 ✅ 已實作 · notify-config 開放 T 判定為不可直接開（需 notify 租戶化 M0）| ahern + Claude Code |
+| 2026-07-30 | v2 | **重寫成 6 角色 + prod 實查 61 條權限**（v1 只有 4 角色、且與實作不符）· ⭐ 標出 MDA 目標：新增 `users:assign-department` 讓 T 能分配成員部門（現況 aiproot-only + 403 誤導按鈕）· 記錄核心原則「屬性可下放、權限不可」· 揭露 v1「員工部門 tenant_admin 可改」一直是未實作的意圖 · 附可議項（notify-config / master-data 是否開放 T）| ahern + Claude Code |
+| 2026-07-24 | v1 | 首版（4 角色）· depts/members 交還 tenant_admin | ahern + Claude |
