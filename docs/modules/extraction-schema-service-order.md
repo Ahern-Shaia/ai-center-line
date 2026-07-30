@@ -1,6 +1,7 @@
 # extraction-schema-service-order · 抽取 schema 改為服務工單格式
 
-> 狀態：🚧 **M0 DRAFT v0.2**（2026-07-30）· 待用戶裁定 OQ-ESO-2..10
+> 狀態：🚧 **M1 進行中**（2026-07-30）· schema／prompt 已上線並**開放選用**（`774de68`）、台灣福祉已切過去
+> · 待用戶裁定 OQ-ESO-2..10（那些是「抽出來之後怎麼用」，不阻擋開始抽）
 > ⭐ **OQ-ESO-1（欄位確認）已由真實資料回答** —— 見 §3.4／§3.5 與
 > [`../抽取健康度分析報告-2026-07-30.md`](../抽取健康度分析報告-2026-07-30.md)
 >
@@ -302,8 +303,8 @@ service_reports: z.array(z.object({
 
 | 里程碑 | 內容 |
 |---|---|
-| **M0** | 本文件 + **客戶欄位確認**（OQ-ESO-1）+ OQ 裁定 ← 目前在這 |
-| **M1** | `schemas.ts` 新增 `service_reports` + system prompt 調整 + per-tenant 類別開關 |
+| **M0** ✅ | 本文件 + 欄位確認（OQ-ESO-1 已由 prod 真實資料回答，§3.4／§3.5）|
+| **M1** 🚧 | `service_reports` schema + prompt fragment + per-tenant 模板 ✅ 已上線並開放選用（`774de68`）、台灣福祉已切過去 ← **目前在這，觀察一週** |
 | **M2** | 真實訊息去識別化入 `samples/` + R12 回歸（新舊都要過） |
 | **M3** | 前端顯示（今日日誌／任務看板）+ 材料化規則（依 OQ-ESO-5） |
 | **M4** | 台灣福祉實跑一週、量測命中率與欄位填充率，對照本文 §0 的基準數字 |
@@ -317,4 +318,6 @@ service_reports: z.array(z.object({
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
+| 2026-07-30 | v0.3 | **M1 落地** · `selectable: false` → `true`（`774de68`）、台灣福祉 `extraction_template` 切到 `service_order` · 開放的第二個理由（原本只寫「欄位已確認」）：**關著會逼人繞去手動改 prod**，而 `tenants` 的 RLS 是 `tenant_id = current_tenant OR actor_role = 'aiproot_admin'`，漏設 session 變數的 `UPDATE` 靜默回 0 列 · 途中踩到一次「UI 下拉不列 `selectable: false` 的模板 → 用戶切成了 `factory_report`」，也就是報告裡說「二選一都錯」的那一個 · 測試把「斷言 `selectable === false`」（釘暫時狀態，沒價值）換成不變式：可選用且有 `resultKey` 的模板必須有 `trackedFields`，否則健康度算不出 fieldFill、畫面跟正常一樣 | ahern + Claude Code |
+| 2026-07-30 | v0.2 | **OQ-ESO-1 用 prod 真實資料回答，不必等客戶** · 8 天內 9 則「今日進度回報」固定格式，量出**三個要加**（`items[].vehicle`／`status`／`warranty`）與**三個不加**（聯絡人／電話只出現 2 則且屬 PII、業務分區屬主檔、車牌併入 vehicle）· §3.5 刻意保留那次差點加錯的紀錄：憑「一則格式完美的訊息」就要加四個欄位，數過次數才發現只有 2 則 · 狀態拆兩層（`items[].status` 為主、record 層只在整則有共同結論時填）· 保固**原文照抄禁自行判斷**（R11）· `trackedFields` 收為 `customer` `site`（vehicle/status 移進 items[] 後健康度量不到內層，留著會永遠 0%）| ahern + Claude Code |
 | 2026-07-27 | v0.1 | M0 首版 · 以正式環境 6 天真實資料量出落差（daily_report 實質 0 筆、機台 7%、工單 8%）· 主張新增 `service_reports` 並存而非改既有 · per-tenant 類別開關 · 欄位由客戶定不由我方猜 · FMEA 8 條含 3 個 P0 · OQ-ESO-1..10 | ahern + Claude Code |
