@@ -1557,6 +1557,12 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .dm-table td.mono { font-family:var(--mono); font-size:11.5px; }
 .dm-table th.num { text-align:right; }
 .dm-cell-muted { color:var(--ink-3); }
+/* MDA · 成員部門格的來源標記 */
+.dm-dept-src { font-size:11px; color:var(--ink-3); }
+.dm-dept-src.ok { color:var(--ok); }
+.dm-dept-src.warn { color:var(--warn); font-weight:600; }
+.dm-dept-unset { color:var(--warn); font-weight:600; }
+.dm-dept-edit { display:flex; flex-direction:column; gap:2px; }
 .dm-cell-actions { text-align:right; white-space:nowrap; }
 .dm-cell-actions .btn { margin-left:6px; }
 

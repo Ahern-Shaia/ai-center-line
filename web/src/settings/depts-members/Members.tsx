@@ -5,6 +5,7 @@ import {
   createTenantUser,
   updateTenantUser,
   deleteTenantUser,
+  assignUserDepartment,
   getSession,
   ApiError,
   type DepartmentDto,
@@ -12,6 +13,7 @@ import {
   type UserRole,
 } from "../../api";
 import { useToast } from "../../Toast";
+import { usePermissions } from "../../permission/PermissionContext";
 import Drawer from "../../shared/Drawer";
 import StyledSelect from "../../shared/StyledSelect";
 
@@ -58,9 +60,16 @@ export function Members({
   onChanged: () => void;
 }) {
   const toast = useToast();
+  const perms = usePermissions();
+  // MDA · 分配部門與「改角色/刪除」是兩件事，權限不同：
+  //   canAssignDept（tenant_admin 有）→ 只能改部門的下拉
+  //   canManageFull（aiproot only）  → 才顯示「編輯／刪除」，否則就是 auth-gate 那類「看得到卻 403」
+  const canAssignDept = perms.has("users:assign-department");
+  const canManageFull = perms.has("users:manage");
   const [users, setUsers] = useState<TenantUserDto[]>([]);
   const [depts, setDepts] = useState<DepartmentDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [savingDept, setSavingDept] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<null | { kind: "new" } | { kind: "edit"; user: TenantUserDto }>(null);
   const [confirmDelete, setConfirmDelete] = useState<TenantUserDto | null>(null);
 
@@ -78,6 +87,21 @@ export function Members({
   }, [tenantId, toast]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  // MDA · 直接在列上改部門（不進編輯抽屜）· 只有 canAssignDept 的人看得到這個下拉
+  async function changeDept(u: TenantUserDto, departmentId: string | null) {
+    setSavingDept(u.userId);
+    try {
+      await assignUserDepartment(u.userId, { tenantId, departmentId });
+      toast.show(departmentId ? "已調整所屬部門" : "已移出部門", "ok");
+      await refresh();
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof ApiError ? err.message : "調整失敗", "danger");
+    } finally {
+      setSavingDept(null);
+    }
+  }
 
   return (
     <div>
@@ -113,10 +137,20 @@ export function Members({
                   <td>{u.displayName ?? <span className="dm-cell-muted">—</span>}</td>
                   <td className="mono dm-cell-muted">{u.email ?? "—"}</td>
                   <td>{ROLE_LABEL[u.role] ?? u.role}</td>
-                  <td className="dm-cell-muted">{u.departmentName ?? "—"}</td>
+                  <td>
+                    <DeptCell
+                      user={u}
+                      depts={depts}
+                      editable={canAssignDept && u.role !== "tenant_admin"}
+                      saving={savingDept === u.userId}
+                      onChange={(d) => void changeDept(u, d)}
+                    />
+                  </td>
                   <td>{u.hasPassword ? <span className="dm-tag-set">已設</span> : <span className="dm-tag-unset">未設</span>}</td>
                   <td className="dm-cell-actions">
-                    {canEdit && (
+                    {/* ⚠️ 編輯/刪除走 users:manage（aiproot only）· 只給真的能用的人看，
+                        否則就是 auth-gate 那類「看得到卻 403」。tenant_admin 改部門走上面的下拉。*/}
+                    {canManageFull && (
                       <>
                         <button className="btn btn-sm btn-ghost" onClick={() => setDrawer({ kind: "edit", user: u })}>編輯</button>
                         <button className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(u)}>刪除</button>
@@ -174,6 +208,50 @@ export function Members({
           </div>
         </Drawer>
       )}
+    </div>
+  );
+}
+
+// MDA · 一列的「所屬部門」格 · 可改的下拉 + 來源標記（系統自動 / 手動 / 未分派）
+function DeptCell({ user, depts, editable, saving, onChange }: {
+  user: TenantUserDto;
+  depts: DepartmentDto[];
+  editable: boolean;
+  saving: boolean;
+  onChange: (departmentId: string | null) => void;
+}) {
+  // 總經理室＝全公司，不屬單一部門，不給下拉
+  if (user.role === "tenant_admin") {
+    return <span className="dm-cell-muted">全公司（不分部門）</span>;
+  }
+  const unassigned = !user.departmentId;
+  const source =
+    unassigned ? <span className="dm-dept-src warn">⚠ 系統推不出，請指派</span>
+    : user.departmentSource === "manual" ? <span className="dm-dept-src ok">· 手動指派</span>
+    : <span className="dm-dept-src">· 系統自動判定</span>;
+
+  if (!editable) {
+    return (
+      <div>
+        <span className={unassigned ? "dm-dept-unset" : ""}>{user.departmentName ?? "未分派"}</span>
+        <div>{source}</div>
+      </div>
+    );
+  }
+  return (
+    <div className="dm-dept-edit">
+      <StyledSelect
+        ariaLabel="所屬部門"
+        value={user.departmentId ?? ""}
+        disabled={saving}
+        allowEmpty
+        emptyLabel="未分派"
+        placeholder="未分派"
+        width={140}
+        items={depts.map((d) => ({ id: d.departmentId, label: d.departmentName }))}
+        onChange={(v) => onChange(v || null)}
+      />
+      <div>{source}</div>
     </div>
   );
 }

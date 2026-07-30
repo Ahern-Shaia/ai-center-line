@@ -948,6 +948,8 @@ export interface TenantUserDto {
   role: UserRole;
   departmentId: string | null;
   departmentName: string | null;
+  /** MDA · 'auto'=系統推導 / 'manual'=有人手動指派 · 前端據此標來源 */
+  departmentSource: "auto" | "manual";
   email: string | null;
   displayName: string | null;
   lineUserId: string | null;
@@ -1004,6 +1006,13 @@ export const updateTenantUser = (userId: string, payload: {
   password?: string;
 }) =>
   req<{ user: TenantUserDto }>(`/tenant-admin/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+
+// MDA · 分配成員部門（tenant_admin 可用）· 只改部門，不碰角色/密碼
+export const assignUserDepartment = (userId: string, payload: { tenantId: string; departmentId: string | null }) =>
+  req<{ user: TenantUserDto }>(`/tenant-admin/users/${userId}/department`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
