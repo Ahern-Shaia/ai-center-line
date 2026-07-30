@@ -47,6 +47,9 @@ const NAV: Array<{
       { key: "warroom", label: "總覽儀表", ic: iconGauge, done: true, perm: "warroom:view" },
       // 客戶驗證「AI 到底有沒有看到我的訊息」的地方（OQ-NAV-4）
       { key: "daily-log", label: "群組日誌", ic: iconChat, done: true, perm: "warroom-daily:view", renamedFrom: "今日日誌" },
+      // 主管看下屬送出的個人日報 · LINE 通知「進戰情室 → 部門日報查看」的落點
+      // scope 由後端 RLS 處理：group_owner 限自己部門、tenant_admin 看全租戶
+      { key: "team-report", label: "部門日報", ic: iconBook, done: true, perm: "personal-report:team" },
       { key: "media", label: "素材", ic: iconMedia, done: true, perm: "media:view", renamedFrom: "素材看板" },
     ],
   },

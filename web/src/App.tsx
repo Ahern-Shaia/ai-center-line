@@ -33,6 +33,7 @@ import BindingAudit from "./aiproot-console/BindingAudit";
 import MapConfig from "./aiproot-console/MapConfig";
 import NotifyConfigPage from "./notify-config/Page";
 import MyDailyReport from "./personal-report/MyDailyReport";
+import TeamDailyReport from "./personal-report/TeamDailyReport";
 import MyTrips from "./personal-report/MyTrips";
 import RolesManagement from "./aiproot-console/RolesManagement";
 import FirstLoginChangePassword from "./auth/FirstLoginChangePassword";
@@ -65,6 +66,7 @@ type Route =
   | { page: "map-config" }
   | { page: "notify-config" }
   | { page: "my-daily-report" }
+  | { page: "team-report" }
   | { page: "my-trips" }
   | { page: "roles-mgmt" };
 
@@ -96,6 +98,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "map-config": "地圖里程設定",
   "notify-config": "通知設定",
   "my-daily-report": "我的日報",
+  "team-report": "部門日報",
   "my-trips": "我的行程",
   "roles-mgmt": "權限管理",
 };
@@ -296,6 +299,7 @@ export default function App() {
           {route.page === "map-config" && <MapConfig />}
           {route.page === "notify-config" && <NotifyConfigPage />}
           {route.page === "my-daily-report" && <MyDailyReport />}
+          {route.page === "team-report" && <TeamDailyReport />}
           {route.page === "my-trips" && <MyTrips />}
           {route.page === "roles-mgmt" && <RolesManagement />}
         </div>
