@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>aiproot 戰情室 · 操作手冊</title>
+<!-- ⚠️ 生成檔，勿手改。改內容改兩份來源後重跑 docs/sop/build-手冊.py -->
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#fff; --line:#e4e7eb; --line-2:#f0f2f5; --line-strong:#cbd2d9;
+    --ink:#171a1d; --ink-2:#4b5563; --ink-3:#6b7280; --faint:#9aa1ab;
+    --brand:#4f46e5; --brand-2:#4338ca; --brand-bg:#eef2ff;
+    --ok:#047857; --ok-bg:#ecfdf5; --ok-bd:#a7f3d0;
+    --warn:#b45309; --warn-bg:#fffbeb; --warn-bd:#fde68a;
+    --bad:#be123c; --bad-bg:#fff1f2; --bad-bd:#fecdd3;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:Inter,-apple-system,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;}
+  .hub{position:sticky;top:0;z-index:10;background:rgba(246,247,249,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line)}
+  .hub-in{max-width:820px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .hub-brand{font-weight:700;font-size:14px;color:var(--ink);margin-right:6px}
+  .hub-tab{border:1px solid var(--line-strong);background:#fff;color:var(--ink-2);border-radius:8px;
+    padding:7px 14px;font-size:13.5px;cursor:pointer;font-weight:600}
+  .hub-tab.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .doc{display:none} .doc.on{display:block}
+  #g-ragic .wrap, #g-perm .wrap{max-width:820px;margin:0 auto;padding:32px 24px 80px}
+:root{
+    --bg:#f6f7f9; --surface:#fff; --line:#e4e7eb; --line-strong:#cbd2d9;
+    --ink:#171a1d; --ink-2:#4b5563; --ink-3:#6b7280; --faint:#9aa1ab;
+    --brand:#4f46e5; --brand-bg:#eef2ff;
+    --ok:#047857; --ok-bg:#ecfdf5; --ok-bd:#a7f3d0;
+    --warn:#b45309; --warn-bg:#fffbeb; --warn-bd:#fde68a;
+    --bad:#be123c; --bad-bg:#fff1f2; --bad-bd:#fecdd3;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+*{box-sizing:border-box}
+body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:Inter,-apple-system,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;
+  }
+#g-ragic .wrap{max-width:820px;margin:0 auto;padding:40px 24px 80px}
+#g-ragic header{margin-bottom:8px}
+#g-ragic h1{font-size:26px;font-weight:680;margin:0 0 8px;letter-spacing:-.02em;line-height:1.35}
+#g-ragic .lede{color:var(--ink-2);font-size:15.5px}
+#g-ragic .meta{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;color:var(--faint)}
+#g-ragic /* 目錄 */
+  nav.toc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin:28px 0 8px}
+#g-ragic nav.toc b{font-size:13px;color:var(--ink-3);display:block;margin-bottom:8px;font-weight:600}
+#g-ragic nav.toc ol{margin:0;padding-left:20px}
+#g-ragic nav.toc li{margin:3px 0}
+#g-ragic nav.toc a{color:var(--ink);text-decoration:none;border-bottom:1px solid transparent}
+#g-ragic nav.toc a:hover{border-bottom-color:var(--brand)}
+#g-ragic h2{font-size:20px;font-weight:660;margin:52px 0 4px;letter-spacing:-.01em;scroll-margin-top:20px}
+#g-ragic h2 .n{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;
+        background:var(--brand);color:#fff;border-radius:8px;font-size:14px;margin-right:10px;vertical-align:2px}
+#g-ragic h2 + .sub{color:var(--ink-3);font-size:14px;margin:0 0 20px 38px}
+#g-ragic h3{font-size:16px;font-weight:640;margin:30px 0 10px}
+#g-ragic /* 步驟 */
+  .step{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:14px 0}
+#g-ragic .step-h{font-weight:640;font-size:15.5px;margin-bottom:4px;display:flex;gap:9px;align-items:baseline}
+#g-ragic .step-h .i{flex:none;width:22px;height:22px;background:var(--brand-bg);color:var(--brand);
+             border-radius:6px;font-size:12.5px;font-weight:700;display:inline-flex;
+             align-items:center;justify-content:center;line-height:1}
+#g-ragic .step p{margin:6px 0 0 31px;color:var(--ink-2);font-size:14.5px}
+#g-ragic .step p:first-of-type{margin-top:8px}
+#g-ragic /* 畫面示意 */
+  .screen{margin:12px 0 0 31px;background:#fbfcfd;border:1px solid var(--line-strong);border-radius:8px;
+          padding:14px 16px;font-size:13.5px;color:var(--ink-2)}
+#g-ragic .screen-cap{font-size:11.5px;color:var(--faint);margin-bottom:9px;letter-spacing:.02em}
+#g-ragic .fld{background:#fff;border:1px solid var(--line-strong);border-radius:5px;padding:7px 11px;margin:5px 0;
+       display:flex;justify-content:space-between;align-items:center;gap:10px}
+#g-ragic .fld .ph{color:var(--faint)}
+#g-ragic .fld .cv{color:var(--faint);font-size:11px}
+#g-ragic .btn{display:inline-block;background:var(--brand);color:#fff;border-radius:5px;padding:5px 13px;
+       font-size:12.5px;font-weight:600}
+#g-ragic .btn.g{background:#fff;color:var(--ink-2);border:1px solid var(--line-strong)}
+#g-ragic .chk{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line-strong);
+       border-radius:5px;padding:6px 11px;margin:4px 0;font-size:13px}
+#g-ragic .chk .bx{width:15px;height:15px;border:1.5px solid var(--line-strong);border-radius:3px;flex:none}
+#g-ragic .chk.on .bx{background:var(--brand);border-color:var(--brand);position:relative}
+#g-ragic .chk.on .bx::after{content:"✓";color:#fff;font-size:11px;position:absolute;left:2px;top:-2px}
+#g-ragic .chk .ord{margin-left:auto;color:var(--faint);font-size:11px}
+#g-ragic /* 提示塊 */
+  .note{border-radius:8px;padding:13px 16px;margin:14px 0;font-size:14px;line-height:1.7;border:1px solid}
+#g-ragic .note b{font-weight:650}
+#g-ragic .note.warn{background:var(--warn-bg);border-color:var(--warn-bd);color:#78350f}
+#g-ragic .note.bad{background:var(--bad-bg);border-color:var(--bad-bd);color:#881337}
+#g-ragic .note.ok{background:var(--ok-bg);border-color:var(--ok-bd);color:#065f46}
+#g-ragic .note .t{font-weight:680;display:block;margin-bottom:3px}
+#g-ragic /* 排查 */
+  .tree{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 20px 16px;margin:16px 0}
+#g-ragic .branch{border-left:2px solid var(--line-strong);padding:12px 0 12px 18px;margin:12px 0 0}
+#g-ragic .branch .see{font-weight:640;font-size:14.5px}
+#g-ragic .branch .means{color:var(--ink-3);font-size:13.5px;margin:2px 0 8px}
+#g-ragic .branch .do{font-size:14px;color:var(--ink-2)}
+#g-ragic .branch.ok{border-left-color:var(--ok)}
+#g-ragic .branch.warn{border-left-color:var(--warn)}
+#g-ragic .branch.bad{border-left-color:var(--bad)}
+#g-ragic table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);
+        border-radius:10px;overflow:hidden;font-size:14px;margin:14px 0}
+#g-ragic th{text-align:left;font-weight:600;font-size:12.5px;color:var(--ink-3);background:#fafbfc;
+     padding:9px 14px;border-bottom:1px solid var(--line)}
+#g-ragic td{padding:11px 14px;border-bottom:1px solid #f0f2f4;vertical-align:top}
+#g-ragic tr:last-child td{border-bottom:none}
+#g-ragic code{font-family:var(--mono);font-size:13px;background:#f1f3f5;padding:1.5px 6px;border-radius:4px}
+#g-ragic .path{font-weight:640;color:var(--brand)}
+#g-ragic ul{padding-left:22px}
+#g-ragic li{margin:5px 0}
+#g-ragic footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--faint);line-height:1.8}
+@media print{body{background:#fff}
+#g-ragic .wrap{padding:0}
+#g-ragic h2{page-break-after:avoid}
+#g-ragic .step, #g-ragic .tree{page-break-inside:avoid}}
+:root{
+    --bg:#f6f7f9; --surface:#fff; --line:#e4e7eb; --line-2:#f0f2f5; --line-strong:#cbd2d9;
+    --ink:#171a1d; --ink-2:#4b5563; --ink-3:#6b7280; --faint:#9aa1ab;
+    --brand:#4f46e5; --brand-2:#4338ca; --brand-bg:#eef2ff;
+    --ok:#047857; --ok-bg:#ecfdf5; --ok-bd:#a7f3d0;
+    --warn:#b45309; --warn-bg:#fffbeb; --warn-bd:#fde68a;
+    --bad:#be123c; --bad-bg:#fff1f2; --bad-bd:#fecdd3;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:Inter,-apple-system,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;}
+#g-perm .wrap{max-width:800px;margin:0 auto;padding:40px 24px 80px}
+#g-perm header{margin-bottom:8px}
+#g-perm h1{font-size:26px;font-weight:680;margin:0 0 8px;letter-spacing:-.02em;line-height:1.35}
+#g-perm .lede{color:var(--ink-2);font-size:15.5px}
+#g-perm .meta{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;color:var(--faint)}
+#g-perm h2{font-size:20px;font-weight:660;margin:48px 0 6px;letter-spacing:-.01em}
+#g-perm h2 .n{display:inline-block;min-width:30px;height:30px;line-height:30px;text-align:center;
+    background:var(--brand);color:#fff;border-radius:8px;font-size:15px;margin-right:10px;font-weight:700}
+#g-perm p{margin:10px 0}
+#g-perm b{font-weight:650}
+#g-perm .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:18px 0}
+#g-perm table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+#g-perm th{text-align:left;font-weight:600;color:var(--ink-3);padding:8px 10px;border-bottom:1px solid var(--line);font-size:12.5px}
+#g-perm td{padding:10px;border-bottom:1px solid var(--line-2);color:var(--ink-2);vertical-align:middle}
+#g-perm tr:last-child td{border-bottom:none}
+#g-perm .pill{display:inline-block;padding:3px 11px;border-radius:999px;font-size:12.5px;font-weight:600}
+#g-perm .pill-all{background:var(--brand-bg);color:var(--brand-2)}
+#g-perm .pill-dept{background:var(--ok-bg);color:var(--ok)}
+#g-perm .pill-emp{background:#f1f3f5;color:var(--ink-3)}
+#g-perm .note{font-size:13px;color:var(--ink-3);margin-top:12px}
+#g-perm .warn{background:var(--warn-bg);border:1px solid var(--warn-bd);border-radius:9px;padding:11px 14px;
+    margin:12px 0;font-size:13.5px;color:#78350f;line-height:1.65}
+#g-perm .warn b{color:#78350f}
+#g-perm /* 模擬產品畫面 */
+  .mock{background:var(--surface);border:1px solid var(--line-strong);border-radius:10px;overflow:hidden;margin:14px 0;
+    box-shadow:0 1px 3px rgba(0,0,0,.05)}
+#g-perm .mock-bar{background:#fafbfc;border-bottom:1px solid var(--line);padding:8px 14px;font-size:12.5px;color:var(--ink-3);
+    display:flex;align-items:center;gap:8px}
+#g-perm .mock-bar .dot{width:9px;height:9px;border-radius:50%;background:#e4e7eb}
+#g-perm .mock-body{padding:16px 18px}
+#g-perm .mock-tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+#g-perm .mock-tab{padding:7px 14px;font-size:13px;color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px}
+#g-perm .mock-tab.on{color:var(--brand);border-bottom-color:var(--brand);font-weight:600}
+#g-perm .fld{margin:12px 0}
+#g-perm .fld label{display:block;font-size:12.5px;color:var(--ink-3);margin-bottom:5px}
+#g-perm .fld .inp{border:1px solid var(--line-strong);border-radius:7px;padding:8px 11px;font-size:13.5px;color:var(--ink);background:#fff}
+#g-perm .fld .inp.hl{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+#g-perm .fld .inp.sel::after{content:"▾";float:right;color:var(--ink-3)}
+#g-perm .btn-demo{display:inline-block;background:var(--brand);color:#fff;padding:8px 16px;border-radius:7px;font-size:13.5px;font-weight:600}
+#g-perm .arrow-lbl{color:var(--brand);font-size:12px;font-weight:600;margin-left:8px}
+#g-perm details{border:1px solid var(--line);border-radius:9px;padding:2px 14px;margin:8px 0;background:var(--surface)}
+#g-perm summary{cursor:pointer;padding:11px 0;font-weight:600;font-size:14px;list-style:none}
+#g-perm summary::-webkit-details-marker{display:none}
+#g-perm summary::before{content:"＋ ";color:var(--ink-3);font-weight:400}
+#g-perm details[open] summary::before{content:"− "}
+#g-perm details > p{padding:0 0 12px;margin:0;color:var(--ink-2);font-size:13.5px}
+#g-perm .sum{background:#0f172a;color:#e2e8f0;border-radius:12px;padding:20px 24px;margin:24px 0;
+    font-family:var(--mono);font-size:13px;line-height:1.9;white-space:pre-wrap}
+#g-perm .sum b{color:#fff}
+  @media print{ .hub{display:none} .doc{display:block !important} }
+</style>
+</head>
+<body>
+<div class="hub"><div class="hub-in">
+  <span class="hub-brand">📘 操作手冊</span>
+  <button class="hub-tab on" data-doc="g-ragic">Ragic → LINE 通知設定</button>
+  <button class="hub-tab" data-doc="g-perm">權限設定（總經理 / 部門主管）</button>
+</div></div>
+
+<section class="doc on" id="g-ragic"><div class="wrap">
+
+
+<header>
+  <h1>Ragic 改一筆資料 → LINE 群組自動收到通知</h1>
+  <div class="lede">
+    這份手冊帶你從零設定一條通知規則。<b>不需要寫程式</b>，全部在畫面上點選完成。
+    照著做大約 10 分鐘。
+  </div>
+  <div class="meta">
+    適用對象：AIPROOT 內部同仁（需具「通知設定」權限）· 最後更新 2026-07-29
+  </div>
+</header>
+
+<nav class="toc">
+  <b>這份手冊的順序</b>
+  <ol>
+    <li><a href="#s0">先搞懂：一條規則在做什麼</a></li>
+    <li><a href="#s1">開始前要準備的三樣東西</a></li>
+    <li><a href="#s2">在系統裡建立規則（四個步驟）</a></li>
+    <li><a href="#s3">回到 Ragic 貼上網址 ← 最常出錯的一步</a></li>
+    <li><a href="#s4">測試看看通不通</a></li>
+    <li><a href="#s5">沒收到通知？照這個順序查</a></li>
+    <li><a href="#s6">之後要修改規則</a></li>
+  </ol>
+</nav>
+
+<!-- ═══ 0 ═══ -->
+<h2 id="s0"><span class="n">0</span>先搞懂：一條規則在做什麼</h2>
+<div class="sub">花一分鐘看懂這個，後面每一步都會知道自己在幹嘛</div>
+
+<p>一條規則就是一句話：</p>
+
+<div class="note ok" style="font-size:15.5px">
+  <b>「當 Ragic 的某張表單有人改資料時，把其中幾個欄位的內容，發到某個 LINE 群。」</b>
+</div>
+
+<p>所以設定時你只要回答三個問題：</p>
+
+<table>
+  <thead><tr><th style="width:30%">問題</th><th>你要決定的</th></tr></thead>
+  <tbody>
+    <tr><td><b>什麼時候要通知？</b></td><td>哪一張 Ragic 表單 · 新增資料時？改資料時？還是刪除時？</td></tr>
+    <tr><td><b>通知內容要有什麼？</b></td><td>那張表單裡的哪幾個欄位（例：客戶名稱、機台編號、狀態）</td></tr>
+    <tr><td><b>要通知誰？</b></td><td>哪一個 LINE 群，或哪一位同仁的私訊</td></tr>
+  </tbody>
+</table>
+
+<div class="note warn">
+  <span class="t">為什麼還要回到 Ragic 貼一段網址？</span>
+  因為 Ragic 不會主動告訴任何人「我這裡有人改資料了」。
+  我們要在 Ragic 裡留一個<b>通報用的網址</b>，Ragic 才知道要把消息送到哪。
+  這件事只要做一次，之後就一直有效。
+</div>
+
+<!-- ═══ 1 ═══ -->
+<h2 id="s1"><span class="n">1</span>開始前要準備的三樣東西</h2>
+<div class="sub">缺一樣就會卡住，先確認齊全再開始</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">1</span>你的帳號要有「通知設定」權限</div>
+  <p>登入戰情室後，左側選單看得到 <span class="path">通知設定</span> 就代表有。
+     看不到就找 AIPROOT 管理員開通。</p>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">2</span>那家公司要先接好 LINE 機器人</div>
+  <p>沒有機器人就沒有可以選的群組，訊息也發不出去。
+     這通常在導入時就做好了，不確定就先問一下。</p>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">3</span>那家公司的 Ragic「API 金鑰」</div>
+  <p>系統要用它去讀那張表單有哪些欄位，你才不用自己去背欄位編號。</p>
+  <p><b>去哪拿：</b>Ragic 右上角 → <b>個人設定</b> → <b>基本資料</b> 分頁 →
+     捲到最下面找到 <b>API Key</b> 那一列 → 點<b>「產生新的 API Key」</b>。</p>
+  <div class="screen">
+    <div class="screen-cap">「個人設定 → 基本資料」最下方會看到</div>
+    <div class="fld"><span>兩步驟驗證</span><span class="cv">切換開關</span></div>
+    <div class="fld" style="border-color:var(--bad);border-width:2px">
+      <span><b>API Key</b></span><span style="color:var(--brand)">產生新的 API Key</span>
+    </div>
+    <div class="fld"><span>LINE 通知設定</span><span class="cv">切換開關</span></div>
+  </div>
+  <div class="note bad">
+    <span class="t">務必用「帳號管理者」帳號去產生</span>
+    讀取表單欄位這件事 Ragic 只開放給帳號管理者。用一般使用者的金鑰會失敗，
+    而且錯誤訊息<b>不會告訴你是權限問題</b>——你會以為是路徑打錯，然後在那裡卡很久。
+  </div>
+</div>
+
+<div class="note">
+  只有「Ragic 表單」這種來源需要第 3 樣。
+  如果你要設的是<b>系統內部事件</b>（例：外勤打卡異常），跳過金鑰，也不用做第 3 節。
+</div>
+
+<!-- ═══ 2 ═══ -->
+<h2 id="s2"><span class="n">2</span>在系統裡建立規則</h2>
+<div class="sub">左側選單 → 通知設定 → 右上角「＋ 新增通知規則」</div>
+
+<h3>步驟 1 · 選擇觸發來源</h3>
+<p style="color:var(--ink-3);font-size:13.5px;margin:-4px 0 10px">以下四個標題就是<b>畫面上卡片的標題</b>，照著對就不會迷路。</p>
+<div class="step">
+  <div class="step-h"><span class="i">1</span>選「Ragic 表單異動」</div>
+  <p>另一個選項「系統內部事件」是我們系統自己偵測到的狀況，這份手冊先講 Ragic。</p>
+  <div class="screen">
+    <div class="screen-cap">畫面上會看到</div>
+    <span class="btn">● Ragic 表單異動</span>　<span class="btn g">○ 系統內部事件</span>
+  </div>
+</div>
+
+<h3>步驟 2 · 選擇 Ragic 帳號與表單</h3>
+
+<div class="step">
+  <div class="step-h"><span class="i">2</span>選 Ragic 帳號</div>
+  <p>下拉裡已經有那家公司就直接選，然後跳到步驟 3。<b>第一次設定某家公司</b>才需要按「＋ 新增帳號」。</p>
+</div>
+
+<div class="note ok">
+  <span class="t">一個網址就能填完新增帳號的三格</span>
+  在 Ragic 隨便打開那家公司的<b>任何一張表單</b>，看網址列，它天生就分成三段：
+</div>
+
+<div class="screen" style="margin-left:0">
+  <div class="screen-cap">Ragic 的網址一定長這樣</div>
+  <div style="font-family:var(--mono);font-size:14px;line-height:2.1;word-break:break-all">
+    https://<b style="background:#ede9fe;padding:2px 5px;border-radius:4px">ap16</b>.ragic.com/<b style="background:#dcfce7;padding:2px 5px;border-radius:4px">taiwanhomecare</b><b style="background:#fef3c7;padding:2px 5px;border-radius:4px">/service-tickets/10</b>
+  </div>
+</div>
+
+<table>
+  <thead><tr><th style="width:20%">網址的哪一段</th><th style="width:22%">填進哪一格</th><th>說明</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><span style="background:#ede9fe;padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:12.5px">ap16</span></td>
+      <td><b>伺服器</b></td>
+      <td>從下拉選同名的那個。<b>不要用猜的</b>——每家公司在哪台機器是 Ragic 決定的，
+          選錯的話「抓取欄位」會失敗，而錯誤訊息看起來像路徑錯。</td>
+    </tr>
+    <tr>
+      <td><span style="background:#dcfce7;padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:12.5px">taiwanhomecare</span></td>
+      <td><b>帳號名</b></td>
+      <td>網域後面、下一個斜線前面那一段。這是 Ragic 給那家公司的代號，
+          <b>不是中文公司名</b>，原字照抄（含大小寫）。</td>
+    </tr>
+    <tr>
+      <td><span style="background:#fef3c7;padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:12.5px">/service-tickets/10</span></td>
+      <td>（步驟 3 的<b>表單路徑</b>）</td>
+      <td>剩下的那一整段，含開頭的斜線。這格<b>不在新增帳號裡填</b>，
+          是下一步「抓取欄位」時才用。</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="step">
+  <div class="step-h"><span class="i">2b</span>另外兩格</div>
+  <p><b>顯示名</b>：只給我們自己看的名字，取你認得出來的即可（例：「台灣福祉」）。
+     這格不影響任何功能，打錯了隨時可以改。</p>
+  <p><b>API 金鑰</b>：把前一節產生的那串貼上。</p>
+  <div class="note warn">
+    <span class="t">存好之後金鑰不會再顯示出來</span>
+    這是刻意的（加密保存），<b>不是沒存到</b>。所以產生金鑰時就先貼到記事本備份，
+    不然要重新產生一次——而重新產生會讓舊的立刻失效。
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">3</span>貼上表單路徑，按「抓取欄位」</div>
+  <p>就是上面網址拆解裡<b style="background:#fef3c7;padding:1px 6px;border-radius:4px">黃色</b>那一段
+     ——在 Ragic 打開<b>你要通知的那張表單</b>，複製網址第二個斜線之後的全部。</p>
+  <div class="screen">
+    <div class="screen-cap">要填的是這一段（含開頭的斜線）</div>
+    <code>/service-tickets/10</code>
+    <div style="margin-top:8px;font-size:12.5px;color:var(--faint)">
+      網址如果還有 <code>?</code> 之後的東西，那些<b>不要</b>複製進來。
+    </div>
+  </div>
+  <div class="screen">
+    <div class="screen-cap">按下「抓取欄位」後，成功會看到</div>
+    <span style="color:var(--ok);font-weight:600">✓ 已讀取「維修保養單」· 23 個欄位</span>
+  </div>
+</div>
+
+<div class="note bad">
+  <span class="t">「抓取欄位」失敗的三個原因，依可能性排序</span>
+  ① 金鑰不是帳號管理者的　② 表單路徑打錯（少了斜線、多了問號後面那段）　③ 伺服器選錯（<code>ap16</code> / <code>www</code> 那格）
+</div>
+
+<h3 style="font-size:14px;color:var(--ink-3);font-weight:600;margin:22px 0 8px">（仍在步驟 2 的卡片裡）勾選要通知的異動</h3>
+<div class="step">
+  <div class="step-h"><span class="i">4</span>勾選要通知的異動類型</div>
+  <div class="screen">
+    <div class="chk on"><span class="bx"></span>新增資料</div>
+    <div class="chk on"><span class="bx"></span>更新資料</div>
+    <div class="chk"><span class="bx"></span>刪除資料</div>
+  </div>
+  <p>多數情況只要「新增」和「更新」。刪除通常不用通知，除非那張表刪掉代表某件重要的事。</p>
+</div>
+
+<h3>步驟 3 · 選擇要通知的欄位</h3>
+<div class="step">
+  <div class="step-h"><span class="i">5</span>點選要出現在通知裡的欄位</div>
+  <p><b>右上角有「全選」</b>，欄位很多時先全選再取消不要的，比一個一個點快。</p>
+  <div class="screen">
+    <div class="screen-cap">畫面上會看到</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <b style="font-size:13px">選擇要通知的欄位</b><span class="btn g">全選 23 個</span>
+    </div>
+    <div class="chk on"><span class="bx"></span>客戶名稱<span class="ord">1</span></div>
+    <div class="chk on"><span class="bx"></span>機台編號<span class="ord">2</span></div>
+    <div class="chk"><span class="bx"></span>建立時間<span class="ord">–</span></div>
+  </div>
+  <div class="note">
+    右邊那個數字是<b>訊息裡的排列順序</b>，依你點選的先後決定。
+    想調順序就把它取消再重點一次。
+  </div>
+</div>
+
+<h3>步驟 4 · 通知對象</h3>
+
+<div class="step">
+  <div class="step-h"><span class="i">6</span>先選「管道」——要發到群組還是私訊</div>
+  <p>卡片最上面是「管道」，兩個開關，<b>預設是「LINE 群組」</b>（會亮起紫色）。
+     點哪一個，下面出現的欄位就不一樣。</p>
+  <div class="screen">
+    <div class="screen-cap">畫面上會看到</div>
+    <div style="font-size:11.5px;color:var(--faint);margin-bottom:6px">管道</div>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1;border:1.5px solid var(--brand);background:var(--brand-bg);border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:9px">
+        <span style="width:26px;height:15px;background:var(--brand);border-radius:99px;position:relative;flex:none">
+          <span style="position:absolute;right:2px;top:2px;width:11px;height:11px;background:#fff;border-radius:50%"></span></span>
+        <b style="color:var(--brand)">LINE 群組</b>
+      </div>
+      <div style="flex:1;border:1px solid var(--line-strong);background:#fff;border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:9px">
+        <span style="width:26px;height:15px;background:#e5e7eb;border-radius:99px;position:relative;flex:none">
+          <span style="position:absolute;left:2px;top:2px;width:11px;height:11px;background:#fff;border-radius:50%"></span></span>
+        <span>LINE 私訊</span>
+      </div>
+    </div>
+  </div>
+  <p><b>選「LINE 私訊」的話</b>，下面會變成挑一位同仁——而且<b>那個人必須已經綁定 LINE</b>，
+     沒綁的不會出現在清單裡。</p>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">7</span>填「LINE 目標群」</div>
+  <p>這一格<b>會依你的帳號權限長成兩種樣子其中一種</b>。看到哪一種就照哪一種做，
+     兩種都能完成設定。</p>
+
+  <div class="screen">
+    <div class="screen-cap">情況 A · 你看到一個輸入框（多數帳號是這種）</div>
+    <div style="font-size:11.5px;color:var(--faint);margin-bottom:4px">LINE 目標群</div>
+    <div class="fld"><span class="ph">貼上 LINE 群組 ID（Cxxxx...）</span></div>
+    <div style="font-size:11.5px;color:var(--faint);margin-top:6px;line-height:1.6">
+      看不到群組清單有兩個可能：這個帳號沒有檢視 LINE 群組的權限，
+      或該 bot 還沒在任何群裡收過訊息（群組是收到訊息才會登錄）。
+    </div>
+  </div>
+  <p><b>怎麼做：</b>去下面那段拿到群組 ID，貼進去即可。</p>
+
+  <div class="screen" style="margin-top:14px">
+    <div class="screen-cap">情況 B · 你看到一個下拉選單</div>
+    <div style="font-size:11.5px;color:var(--faint);margin-bottom:4px">LINE 目標群</div>
+    <div class="fld"><span>台灣福祉 · 技術工程群</span><span class="cv">▾</span></div>
+    <div style="font-size:11.5px;color:var(--faint);margin-top:6px">
+      清單裡找不到？<span style="color:var(--brand)">改成手動輸入群組 ID</span>
+    </div>
+  </div>
+  <p><b>怎麼做：</b>直接選。格式是「<b>公司名 · 群組名</b>」，一個人管好幾家時靠前面那段分辨。
+     要的群不在清單裡就點下面那行切成手動輸入。</p>
+</div>
+
+<div class="note ok">
+  <span class="t">群組 ID 去哪裡拿？</span>
+  <b>LINE App 裡看不到群組 ID</b>——它不是給使用者看的東西。
+  唯一的取得處是我們自己的 <span class="path">通訊管道</span> 頁：
+  找到那個群，<b>點一下群名下面那行灰色小字</b>，就會複製完整的 ID。
+</div>
+
+<div class="note warn">
+  <span class="t">為什麼有些帳號看得到清單、有些看不到？</span>
+  清單只列出<b>機器人已經收過訊息的群</b>（群組要收到訊息才會被登錄），
+  而且需要「檢視 LINE 群組」的權限。兩者缺一就會變成情況 A。
+  <b>這不影響設定結果</b>——手動貼 ID 跟從清單選，存進去是一樣的東西。
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">8</span>按「儲存規則」</div>
+  <p>存好之後畫面會給你一段<b>網址</b>，下一節要用。</p>
+</div>
+
+<!-- ═══ 3 ═══ -->
+<h2 id="s3"><span class="n">3</span>回到 Ragic 貼上網址</h2>
+<div class="sub">整個流程最常出錯就在這一步，慢一點做</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">1</span>複製剛才那段網址</div>
+  <p>存檔後畫面上就有。之後也可以在規則列表按「<b>複製網址</b>」重新拿，<b>不用刪掉重建</b>。</p>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">2</span>在 Ragic 打開<b>同一張</b>表單</div>
+  <p>就是剛才填路徑的那一張。貼到別張表單是常見錯誤，而且不會有任何錯誤訊息。</p>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">3</span>點上方的「工具」，在展開的選單裡找 Webhook</div>
+  <p>「工具」在表單上方那排（新增 / 工具 / 重新整理）。點下去會展開一整片選單，
+     <b>分成六個區塊</b>。Webhook 在<b>右下角</b>那一區「同步與通知」裡面。</p>
+
+  <div class="screen" style="margin-left:31px">
+    <div class="screen-cap">點「工具」後展開的選單（六個區塊）</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:12px">
+      <div style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#fff">
+        <b style="color:var(--ink-3);font-size:11px">編輯</b>
+        <div style="color:var(--faint);margin-top:3px">大量修改／複製／刪除…</div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#fff">
+        <b style="color:var(--ink-3);font-size:11px">匯出</b>
+        <div style="color:var(--faint);margin-top:3px">Excel／PDF／附件…</div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#fff">
+        <b style="color:var(--ink-3);font-size:11px">匯入</b>
+        <div style="color:var(--faint);margin-top:3px">從檔案匯入…</div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#fff">
+        <b style="color:var(--ink-3);font-size:11px">分享</b>
+        <div style="color:var(--faint);margin-top:3px">分享連結／嵌入…</div>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#fff">
+        <b style="color:var(--ink-3);font-size:11px">報表</b>
+        <div style="color:var(--faint);margin-top:3px">產生報表／合併列印…</div>
+      </div>
+      <div style="border:2px solid var(--bad);border-radius:6px;padding:8px 10px;background:var(--bad-bg)">
+        <b style="color:var(--bad);font-size:11px">同步與通知</b>
+        <div style="margin-top:3px;color:var(--ink-3)">行事曆同步<br>SQL 資料同步<br>與其他系統整合<br>
+          <b style="color:var(--bad)">▸ Webhook</b> ← 點這個<br>通知設定<br>表單填寫捷徑</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note bad">
+    <span class="t">⚠️ 不要找「工具 → 同步」這種下一層選單</span>
+    Ragic <b>沒有</b>叫「同步」的子選單。「<b>同步與通知</b>」是展開後<b>右下角那一區的標題</b>，
+    Webhook 就直接列在它下面。<br>
+    找不到的人多半是在找一個不存在的子選單——這是「明明設定了卻沒通知」的頭號原因。
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">4</span>把網址貼上去，儲存</div>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">5</span>登出 Ragic，再重新登入</div>
+  <div class="note warn">
+    <span class="t">這步不能跳過</span>
+    Ragic 會把設定暫存起來，不重新登入的話<b>剛貼的網址不會真的生效</b>。
+    我們踩過這個坑：設定完全正確，就是沒通知，登出重進之後立刻就通了。
+  </div>
+</div>
+
+<!-- ═══ 4 ═══ -->
+<h2 id="s4"><span class="n">4</span>測試看看通不通</h2>
+<div class="sub">不要用「等真的有人改資料」來驗證，自己動手測一次</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">1</span>在 Ragic 那張表隨便改一筆資料，按儲存</div>
+  <p>改一個不影響業務的欄位就好，例如備註加一個字。</p>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">2</span>看那個 LINE 群有沒有收到</div>
+  <p>正常是<b>幾秒內</b>就到。超過半分鐘沒來，直接看下一節。</p>
+</div>
+
+<div class="note">
+  <span class="t">連續測兩次卻只收到一則？</span>
+  這是正常的。<b>30 秒內同一筆資料重複觸發只會發一次</b>，避免有人連按儲存就洗版。
+  等 30 秒再測即可。
+</div>
+
+<!-- ═══ 5 ═══ -->
+<h2 id="s5"><span class="n">5</span>沒收到通知？照這個順序查</h2>
+<div class="sub">不要憑猜的，先看「通知紀錄」——它會直接告訴你事情卡在哪一段</div>
+
+<p><b>第一站永遠是：</b><span class="path">通知設定 → 通知紀錄</span> 分頁。看到什麼，就往下對照。</p>
+
+<div class="tree">
+  <div class="branch bad">
+    <div class="see">完全沒有任何紀錄</div>
+    <div class="means">代表 Ragic 那邊<b>根本沒把消息送出來</b>，事情還沒到我們這裡。</div>
+    <div class="do">
+      回第 3 節，依序確認：<br>
+      ① 網址有貼進<b>那一張</b>表單嗎（不是別張）<br>
+      ② 有找對地方嗎——Webhook 在「工具」展開後<b>右下角「同步與通知」</b>那一區<br>
+      ③ 貼完有<b>登出 Ragic 再登入</b>嗎
+    </div>
+  </div>
+
+  <div class="branch warn">
+    <div class="see">有紀錄，寫著「未訂閱此異動」</div>
+    <div class="means">消息有進來，但這條規則沒勾這種異動類型。</div>
+    <div class="do">按規則的「編輯」，把「更新資料」（或你需要的那種）勾起來。</div>
+  </div>
+
+  <div class="branch">
+    <div class="see">有紀錄，寫著「重複略過」</div>
+    <div class="means">30 秒內同一筆資料重複觸發，只送第一次。</div>
+    <div class="do">正常行為，不用處理。等 30 秒再測。</div>
+  </div>
+
+  <div class="branch bad">
+    <div class="see">有紀錄，寫著「推送失敗」</div>
+    <div class="means">我們收到了，但 LINE 那邊拒絕了。</div>
+    <div class="do">看那一列的「說明」欄。最常見的是<b>機器人已經被移出那個群組</b>，把它重新加回去即可。</div>
+  </div>
+
+  <div class="branch ok">
+    <div class="see">有紀錄，寫著「已送出」，但群組還是沒訊息</div>
+    <div class="means">我們這端完成了推送。</div>
+    <div class="do">檢查機器人是不是還在那個群裡；也確認你看的是不是同一個群。</div>
+  </div>
+
+  <div class="branch warn">
+    <div class="see">收到了，但內容都是「（未填）」</div>
+    <div class="means">通知有發，但欄位抓不到值。</div>
+    <div class="do">
+      點開那一列會展開診斷說明，它會直接告訴你是哪一種：<br>
+      ① 那些欄位在 Ragic 本來就是空的 → 正常<br>
+      ② 勾的欄位跟這張表單對不上 → 表單改過了，重新「抓取欄位」再存一次
+    </div>
+  </div>
+</div>
+
+<div class="note ok">
+  <span class="t">「抓取欄位」失敗時，畫面會直接告訴你哪裡錯</span>
+  訊息會明確指出是<b>帳號名</b>、<b>表單路徑</b>、<b>表單索引</b>還是<b>金鑰</b>的問題，
+  照它說的那一格去改就好。<b>不要看到失敗就先去換金鑰</b> —— 多數情況不是金鑰的問題。
+</div>
+
+<div class="note">
+  <span class="t">紀錄裡「規則」那欄寫著「—（舊版記錄 · 未留規則）」</span>
+  那是舊版系統留下來的資料，當時沒有記錄是哪條規則觸發的。<b>不是規則被刪掉</b>，不用去找。
+</div>
+
+<!-- ═══ 6 ═══ -->
+<h2 id="s6"><span class="n">6</span>之後要修改規則</h2>
+<div class="sub">直接改就好，不要刪掉重建</div>
+
+<div class="note ok">
+  <span class="t">規則列表上有「編輯」按鈕</span>
+  要換欄位、改通知對象、加勾一種異動類型，<b>都用編輯</b>。
+  改完網址不變，<b>不用回 Ragic 重貼</b>。
+</div>
+
+<div class="note bad">
+  <span class="t">不要用「刪掉重建」來修改</span>
+  重建會產生<b>一段新的網址</b>，舊的立刻失效。
+  你會得到一條看起來正常、實際上收不到任何消息的規則——除非你記得回 Ragic 把新網址再貼一次。
+</div>
+
+<table>
+  <thead><tr><th style="width:34%">你想做的</th><th>怎麼做</th></tr></thead>
+  <tbody>
+    <tr><td>換掉幾個顯示欄位</td><td>編輯 → 步驟三重新勾選 → 儲存</td></tr>
+    <tr><td>改成通知另一個群</td><td>編輯 → 步驟四換下拉 → 儲存</td></tr>
+    <tr><td>暫時不要收通知</td><td>規則列表把它<b>停用</b>（不要刪，之後還要用）</td></tr>
+    <tr><td>換成另一張 Ragic 表單</td><td>這個要<b>新增一條規則</b>——網址是綁表單的，換表單等於換一條線</td></tr>
+  </tbody>
+</table>
+
+<footer>
+  這份手冊對應的是畫面上的實際操作。若畫面與此處描述不符，以畫面為準並回報給開發。<br>
+  內部技術文件：<code>docs/sop/notify-selfserve-使用指南.md</code>（含工程師用的分段驗證指令）
+</footer>
+
+
+</div></section>
+
+<section class="doc" id="g-perm"><div class="wrap">
+
+  <header>
+    <h1>權限設定手冊</h1>
+    <div class="lede">設定成「<b>總經理看全公司、各部門主管只看自己部門</b>」。不用寫程式，照著點就好，約 10 分鐘。</div>
+    <div class="meta">給誰看：客戶公司的總經理室管理者 ｜ v1.0（2026-07-30）</div>
+  </header>
+
+  <h2>先搞懂：身分決定看得到多少</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>畫面上的身分</th><th>這是誰</th><th>看得到</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill pill-all">總經理室</span></td><td>老闆、管理層</td><td><b>全公司</b>所有部門</td></tr>
+        <tr><td><span class="pill pill-dept">群組負責人</span></td><td>各部門主管</td><td><b>只有他自己那一個部門</b></td></tr>
+        <tr><td><span class="pill pill-emp">員工</span></td><td>一般同仁</td><td>只有他自己的日報</td></tr>
+      </tbody>
+    </table>
+    <div class="note">📌 範圍限制由系統自動處理，主管<b>不可能</b>點到別部門的資料 —— 設錯也不會外洩，放心。</div>
+  </div>
+
+  <h2><span class="n">1</span>先把「部門」建好</h2>
+  <p>主管要綁到部門，所以部門要先存在。到左邊選單 <b>設定 → 部門 / 成員</b>，停在上方的「<b>部門</b>」分頁，按「＋ 新增部門」，把業務部、技術部、售後服務部等一個個建起來。</p>
+  <div class="mock">
+    <div class="mock-bar"><span class="dot"></span><span class="dot"></span> 戰情室 · 部門 / 成員</div>
+    <div class="mock-body">
+      <div class="mock-tabs"><span class="mock-tab on">部門</span><span class="mock-tab">成員</span></div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><span class="btn-demo">＋ 新增部門</span></div>
+      <table>
+        <tbody>
+          <tr><td>業務部</td><td style="text-align:right;color:var(--ink-3)">編輯</td></tr>
+          <tr><td>技術部</td><td style="text-align:right;color:var(--ink-3)">編輯</td></tr>
+          <tr><td>售後服務部</td><td style="text-align:right;color:var(--ink-3)">編輯</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2><span class="n">2</span>建立各部門主管（設成「群組負責人」）</h2>
+  <p>切到「<b>成員</b>」分頁 →「＋ 新增成員」。填 Email、顯示名稱、初始密碼；<b>角色</b>選「群組負責人」，<b>所屬部門</b>選他負責的那個。</p>
+  <div class="mock">
+    <div class="mock-bar"><span class="dot"></span><span class="dot"></span> 新增成員</div>
+    <div class="mock-body">
+      <div class="fld"><label>Email *</label><div class="inp">wang@company.com</div></div>
+      <div class="fld"><label>顯示名稱</label><div class="inp">王經理</div></div>
+      <div class="fld"><label>角色 *</label><div class="inp sel hl">群組負責人 <span class="arrow-lbl">← 選這個</span></div></div>
+      <div class="fld"><label>所屬部門</label><div class="inp sel hl">業務部 <span class="arrow-lbl">← 一定要選</span></div></div>
+      <div class="fld"><label>初始密碼 *</label><div class="inp">••••••</div></div>
+      <div style="text-align:right;margin-top:6px"><span class="btn-demo">新增成員</span></div>
+    </div>
+  </div>
+  <div class="warn">⚠️ <b>「所屬部門」一定要選。</b>沒選的主管，系統會保守處理成「幾乎看不到東西」（不是看全部）—— 這是最常見的設定錯誤。</div>
+
+  <h2><span class="n">3</span>把 LINE 群組分派到部門</h2>
+  <p>這一步決定「哪個 LINE 群的對話，算哪個部門的任務」。到 <b>設定 → 通訊管道</b> 的「<b>LINE 群組</b>」分頁，每個群右邊的「部門」下拉選好。</p>
+  <div class="mock">
+    <div class="mock-bar"><span class="dot"></span><span class="dot"></span> 通訊管道 · LINE 群組　<span style="color:var(--warn);margin-left:auto">2 群未分派部門</span></div>
+    <div class="mock-body">
+      <table>
+        <thead><tr><th>群組</th><th style="width:150px">部門</th></tr></thead>
+        <tbody>
+          <tr><td>業務一部回報群</td><td><span class="inp sel" style="display:inline-block;padding:5px 10px;font-size:12.5px">業務部</span></td></tr>
+          <tr><td>維修派工群</td><td><span class="inp sel hl" style="display:inline-block;padding:5px 10px;font-size:12.5px">請選擇 <span class="arrow-lbl">← 還沒選</span></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="warn">⚠️ 沒做這步，主管的部門會是<b>空的</b> —— 對話進不到他的部門。上方若顯示「N 群未分派部門」，就是還沒選完。</div>
+
+  <h2>設錯時對照這裡</h2>
+  <details><summary>部門主管登入後什麼都看不到？</summary><p>最常見是忘了選「所屬部門」。回成員分頁編輯他，把所屬部門補上。</p></details>
+  <details><summary>部門主管看得到別部門的資料？</summary><p>檢查他的角色是不是被設成「總經理室」了 —— 那個身分本來就看全公司。改成「群組負責人」。</p></details>
+  <details><summary>一位主管同時管兩個部門？</summary><p>目前一個人只能綁一個部門。要同時看兩個，只能給「總經理室」（但會看到全公司），或請 AIPROOT 評估。</p></details>
+  <details><summary>主管看得到部門，但裡面沒有任何任務／日報？</summary><p>兩個可能：① 步驟 3 沒做，LINE 群組還沒分派到這個部門；② 員工還沒在 LINE 上送出日報。</p></details>
+  <details><summary>現在好像每個人都看得到全部？</summary><p>因為多數帳號目前是「總經理室」。把該當主管的人逐一改成「群組負責人」並指定部門即可。</p></details>
+
+  <h2>一頁總結</h2>
+  <div class="sum"><b>目標：總經理看全部、部門主管看自己部門</b>
+
+  總經理  →  角色設「總經理室」（要請 AIPROOT 建）
+  部門主管 →  角色設「群組負責人」＋ 指定「所屬部門」
+
+<b>三步驟（都在「設定」選單裡）：</b>
+  1. 部門/成員 → 部門分頁 → 建好所有部門
+  2. 部門/成員 → 成員分頁 → 建主管（群組負責人 + 所屬部門）
+  3. 通訊管道 → LINE 群組 → 每個群選它屬於哪個部門
+
+<b>最容易忘：</b>主管的「所屬部門」一定要選，不選＝他看不到東西。</div>
+
+  <div class="meta">總經理（總經理室帳號）由 AIPROOT 建立；部門主管（群組負責人）總經理自己就能建。</div>
+
+</div></section>
+
+<script>
+  document.querySelectorAll('.hub-tab').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('.hub-tab').forEach(function(x){x.classList.remove('on')});
+      document.querySelectorAll('.doc').forEach(function(x){x.classList.remove('on')});
+      b.classList.add('on');
+      document.getElementById(b.dataset.doc).classList.add('on');
+      window.scrollTo(0, 0);
+    });
+  });
+</script>
+</body>
+</html>
