@@ -84,7 +84,7 @@
       <thead><tr><th>畫面上的身分</th><th>這是誰</th><th>看得到</th></tr></thead>
       <tbody>
         <tr><td><span class="pill pill-all">總經理室</span></td><td>老闆、管理層</td><td><b>全公司</b>所有部門</td></tr>
-        <tr><td><span class="pill pill-dept">群組負責人</span></td><td>各部門主管</td><td><b>只有他自己那一個部門</b></td></tr>
+        <tr><td><span class="pill pill-dept">部門主管</span></td><td>各部門主管</td><td><b>只有他自己那一個部門</b></td></tr>
         <tr><td><span class="pill pill-emp">員工</span></td><td>一般同仁</td><td>只有他自己的日報</td></tr>
       </tbody>
     </table>
@@ -108,14 +108,14 @@
     </div>
   </div>
 
-  <h2><span class="n">2</span>建立各部門主管（設成「群組負責人」）</h2>
-  <p>切到「<b>成員</b>」分頁 →「＋ 新增成員」。填 Email、顯示名稱、初始密碼；<b>角色</b>選「群組負責人」，<b>所屬部門</b>選他負責的那個。</p>
+  <h2><span class="n">2</span>建立各部門主管（設成「部門主管」）</h2>
+  <p>切到「<b>成員</b>」分頁 →「＋ 新增成員」。填 Email、顯示名稱、初始密碼；<b>角色</b>選「部門主管」，<b>所屬部門</b>選他負責的那個。</p>
   <div class="mock">
     <div class="mock-bar"><span class="dot"></span><span class="dot"></span> 新增成員</div>
     <div class="mock-body">
       <div class="fld"><label>Email *</label><div class="inp">wang@company.com</div></div>
       <div class="fld"><label>顯示名稱</label><div class="inp">王經理</div></div>
-      <div class="fld"><label>角色 *</label><div class="inp sel hl">群組負責人 <span class="arrow-lbl">← 選這個</span></div></div>
+      <div class="fld"><label>角色 *</label><div class="inp sel hl">部門主管 <span class="arrow-lbl">← 選這個</span></div></div>
       <div class="fld"><label>所屬部門</label><div class="inp sel hl">業務部 <span class="arrow-lbl">← 一定要選</span></div></div>
       <div class="fld"><label>初始密碼 *</label><div class="inp">••••••</div></div>
       <div style="text-align:right;margin-top:6px"><span class="btn-demo">新增成員</span></div>
@@ -141,25 +141,25 @@
 
   <h2>設錯時對照這裡</h2>
   <details><summary>部門主管登入後什麼都看不到？</summary><p>最常見是忘了選「所屬部門」。回成員分頁編輯他，把所屬部門補上。</p></details>
-  <details><summary>部門主管看得到別部門的資料？</summary><p>檢查他的角色是不是被設成「總經理室」了 —— 那個身分本來就看全公司。改成「群組負責人」。</p></details>
+  <details><summary>部門主管看得到別部門的資料？</summary><p>檢查他的角色是不是被設成「總經理室」了 —— 那個身分本來就看全公司。改成「部門主管」。</p></details>
   <details><summary>一位主管同時管兩個部門？</summary><p>目前一個人只能綁一個部門。要同時看兩個，只能給「總經理室」（但會看到全公司），或請 AIPROOT 評估。</p></details>
   <details><summary>主管看得到部門，但裡面沒有任何任務／日報？</summary><p>兩個可能：① 步驟 3 沒做，LINE 群組還沒分派到這個部門；② 員工還沒在 LINE 上送出日報。</p></details>
-  <details><summary>現在好像每個人都看得到全部？</summary><p>因為多數帳號目前是「總經理室」。把該當主管的人逐一改成「群組負責人」並指定部門即可。</p></details>
+  <details><summary>現在好像每個人都看得到全部？</summary><p>因為多數帳號目前是「總經理室」。把該當主管的人逐一改成「部門主管」並指定部門即可。</p></details>
 
   <h2>一頁總結</h2>
   <div class="sum"><b>目標：總經理看全部、部門主管看自己部門</b>
 
   總經理  →  角色設「總經理室」（要請 AIPROOT 建）
-  部門主管 →  角色設「群組負責人」＋ 指定「所屬部門」
+  部門主管 →  角色設「部門主管」＋ 指定「所屬部門」
 
 <b>三步驟（都在「設定」選單裡）：</b>
   1. 部門/成員 → 部門分頁 → 建好所有部門
-  2. 部門/成員 → 成員分頁 → 建主管（群組負責人 + 所屬部門）
+  2. 部門/成員 → 成員分頁 → 建主管（部門主管 + 所屬部門）
   3. 通訊管道 → LINE 群組 → 每個群選它屬於哪個部門
 
 <b>最容易忘：</b>主管的「所屬部門」一定要選，不選＝他看不到東西。</div>
 
-  <div class="meta">總經理（總經理室帳號）由 AIPROOT 建立；部門主管（群組負責人）總經理自己就能建。</div>
+  <div class="meta">總經理（總經理室帳號）由 AIPROOT 建立；部門主管（部門主管）總經理自己就能建。</div>
 </div>
 </body>
 </html>
