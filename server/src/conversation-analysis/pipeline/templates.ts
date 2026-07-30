@@ -35,12 +35,12 @@ const factoryReportSchema = z.object({
 });
 
 // ── L2 · 服務工單型（客戶/車輛/施作項目/金額）──────────────────────
-// ⚠️ 尚未啟用（selectable: false）。
-//    v0.2（2026-07-30）：欄位已**用 prod 真實資料量出來**，不再是憑想像的草案 ——
-//    8 天內 9 則「今日進度回報」固定格式，量出三個要加（items 的 vehicle/status/warranty）
-//    與三個不加（聯絡人/電話 只 2 則且是 PII、業務分區屬主檔、車牌併入 vehicle）。
-//    詳見 docs/modules/extraction-schema-service-order.md §3.4／§3.5。
-//    要開放前仍需裁定 OQ-ESO-2..10。
+// v0.2（2026-07-30）：欄位已**用 prod 真實資料量出來**，不再是憑想像的草案 ——
+// 8 天內 9 則「今日進度回報」固定格式，量出三個要加（items 的 vehicle/status/warranty）
+// 與三個不加（聯絡人/電話 只 2 則且是 PII、業務分區屬主檔、車牌併入 vehicle）。
+// 詳見 docs/modules/extraction-schema-service-order.md §3.4／§3.5。
+// OQ-ESO-2..10 仍開放，但那些是「抽出來之後怎麼用」（下游消費、Ragic 欄位對應），
+// 不阻擋開始抽 —— 現在不抽，這幾天的客戶／金額／項目結構就永久沒有。
 const serviceOrderSchema = z.object({
   date: z.string().nullable(),
   reporter: z.string().nullable(),
@@ -146,7 +146,10 @@ export const TEMPLATE_REGISTRY: Record<ExtractionTemplate, TemplateDef> = {
     //    ⏳ 待補：item 層欄位（vehicle / status / warranty / amount）目前**沒有被健康度量到**，
     //       需要 fieldFill 支援嵌套路徑 —— 見 docs/抽取健康度分析報告-2026-07-30.md M2。
     trackedFields: ["customer", "site"],
-    selectable: false,   // ⚠️ 待客戶欄位確認（OQ-ESO-1）
+    // OQ-ESO-1（欄位是否對）已用 prod 真實資料回答 —— 見 §3.4／§3.5。
+    // 開放的另一個理由：關著的時候切換端點會擋，改模板得繞去 prod 手動下 SQL，
+    // 而 tenants 的 RLS 會讓漏設 session 變數的 UPDATE 靜默回 0 列（2026-07-30 實際踩到）。
+    selectable: true,
   },
 };
 

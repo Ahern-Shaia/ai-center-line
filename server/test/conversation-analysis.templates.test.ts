@@ -135,8 +135,15 @@ test("模板數量不得超過 5（OQ-AAL-3 · 防止退化成接案）", () => 
   assert.ok(EXTRACTION_TEMPLATES.length <= 5, "模板要能開垂直市場才做，見 doc §3");
 });
 
-test("service_order 尚未開放選用（欄位待客戶確認 · OQ-ESO-1）", () => {
-  assert.equal(TEMPLATE_REGISTRY.service_order.selectable, false);
+test("⭐ 可選用的 L2 模板必須有 trackedFields（否則健康度頁一片空白而非示警）", () => {
+  // 2026-07-30 · service_order 開放選用（OQ-ESO-1 已用 prod 真實資料回答）時立的紀律：
+  // 有 resultKey 卻沒 trackedFields 的模板，抽取健康度算不出任何 fieldFill，
+  // 畫面看起來跟「一切正常」一樣 —— 模板選錯不會被抓到。
+  // （general 沒有 resultKey，本來就不該有 trackedFields，不在此列。）
+  for (const [name, t] of Object.entries(TEMPLATE_REGISTRY)) {
+    if (!t.selectable || !t.resultKey) continue;
+    assert.ok(t.trackedFields.length > 0, `模板「${name}」開放選用但沒有 trackedFields`);
+  }
 });
 
 test("resolveTemplate · 未知值/null 一律回 default（不因設定缺失改變抽取行為）", () => {
