@@ -1,6 +1,9 @@
 # org-overview · 組織關係視覺化（總覽 + 簡報圖）
 
-> 🚧 **狀態：M0 DRAFT v0.1（2026-08-01）· 待用戶裁定 OQ-ORG-1..4**
+> 🚧 **狀態：M0 v0.2（2026-08-01）· OQ 裁定：輕量版暫留、走簡報版漂亮節點圖**
+>
+> 用戶裁定：輕量分組樹「太扁平，先暫留」；先做**簡報版節點連線圖**且「既然要做就要做漂亮的」。
+> → 漂亮版 mockup 已產：`docs/mockup/org-graph-presentation.html`（待 review）。互動產品版是否做見 OQ-ORG-2。
 >
 > 相關：[`member-department-assignment.md`](member-department-assignment.md)（部門↔成員）、
 > `docs/mockup/org-overview.html`（輕量版 mockup · 待 review）、[`roles-permissions-matrix.md`](../roles-permissions-matrix.md)
@@ -83,10 +86,10 @@
 
 | # | 問題 | 選項 | 建議 |
 |---|---|---|---|
-| **OQ-ORG-1** | 輕量組織總覽做不做？ | A. 做（照 mockup）/ B. 不做 | **A**（成本低、露設定漏洞、總經理自用）|
-| **OQ-ORG-2** | 委員簡報的漂亮節點圖？ | A. 先用總覽截圖/靜態圖 / B. 直接做互動 react-flow | **A**（扁平結構互動圖不划算，先靜態）|
-| **OQ-ORG-3** | 總覽放哪？ | A. 部門/成員加「總覽」tab / B. 獨立側欄頁 | **A**（就在相關頁，少一個側欄項）|
-| **OQ-ORG-4** | 資料即時性？ | A. 進頁拉一次 / B. 即時同步 | **A**（唯讀彙整，進頁拉一次夠）|
+| ~~OQ-ORG-1~~ | 輕量組織總覽做不做？ | A. 做 / B. 暫留 | ⏸️ **用戶裁定 B**：「太扁平，先暫留」（mockup `org-overview.html` 保留備用）|
+| **OQ-ORG-2** | 委員簡報的漂亮節點圖？ | A. 靜態 mockup/截圖簡報 / B. 產品內互動 react-flow | ✅ **先 A**：漂亮**靜態** mockup 已做（`org-graph-presentation.html`）· 互動產品版待 review 後再定 |
+| ~~OQ-ORG-3~~ | 總覽放哪？ | A. tab / B. 獨立頁 | 隨 OQ-ORG-1 暫留 |
+| ~~OQ-ORG-4~~ | 資料即時性？ | A. 進頁拉 / B. 即時 | **A**（若日後做產品版）|
 
 ---
 
@@ -105,4 +108,5 @@
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
+| 2026-08-01 | v0.2 | 用戶裁定：輕量分組樹「太扁平，先暫留」（OQ-ORG-1→B）；改做**簡報版漂亮節點連線圖**（OQ-ORG-2→先靜態 mockup）· 產出 `docs/mockup/org-graph-presentation.html`（公司→部門→成員 節點+曲線連線、分支配色、含「未綁 LINE / 未分派」信號與資料流動 band）· 互動產品版待 review 再定 | ahern + Claude Code |
 | 2026-08-01 | v0.1 | M0 首版 · 起於「要不要動態組織關係圖」· ⭐ 拆兩需求（A 總經理自用確認 / B 委員簡報）· 站在巨人肩膀上：扁平兩層+小租戶 → **節點圖是反模式、分組樹才對** · 主線＝輕量唯讀組織總覽（mockup `docs/mockup/org-overview.html`，露三個設定漏洞信號）· 簡報版先用截圖/靜態圖，互動 react-flow 等層級變深或成賣點再說 · 4 OQ · FMEA 含跨租戶 P0 | ahern + Claude Code |
