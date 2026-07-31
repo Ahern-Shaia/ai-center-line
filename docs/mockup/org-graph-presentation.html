@@ -5,6 +5,7 @@
 <style>
   :root{
     --ink:#0F172A; --ink-2:#475569; --ink-3:#94A3B8;
+    --gm:#7C3AED; --gm-2:#8B5CF6; --gm-t:#F5F3FF;
     --biz:#4F46E5; --biz-2:#6366F1; --biz-t:#EEF2FF;
     --tech:#0D9488; --tech-2:#14B8A6; --tech-t:#ECFDF5;
     --svc:#D97706; --svc-2:#F59E0B; --svc-t:#FFFBEB;
@@ -12,7 +13,7 @@
   }
   *{box-sizing:border-box}
   body{margin:0;background:
-      radial-gradient(1200px 600px at 50% -10%, #EEF2FF 0%, rgba(238,242,255,0) 60%),
+      radial-gradient(1200px 620px at 50% -10%, #EEF2FF 0%, rgba(238,242,255,0) 60%),
       linear-gradient(180deg,#FBFCFE 0%, #F5F7FB 100%);
     color:var(--ink);min-height:100vh;
     font-family:Inter,-apple-system,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
@@ -21,23 +22,31 @@
   .hd{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px;}
   h1{font-size:22px;font-weight:720;margin:0;letter-spacing:-.01em;}
   .sub{color:var(--ink-3);font-size:12.5px;margin:0;}
-  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0 6px;font-size:12px;color:var(--ink-2);}
+  .legend{display:flex;gap:15px;flex-wrap:wrap;margin:10px 0 6px;font-size:12px;color:var(--ink-2);}
   .legend i{display:inline-block;width:20px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px;}
   .legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block;vertical-align:middle;margin-right:6px;border:2px solid var(--ink-3);}
 
-  /* 舞台 */
-  .stage{position:relative;width:1072px;max-width:100%;height:660px;margin:8px auto 0;}
+  .stage{position:relative;width:1072px;max-width:100%;height:720px;margin:8px auto 0;}
   svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
   .node{position:absolute;transform:translate(-50%,-50%);}
 
   /* 公司 */
-  .company{padding:16px 30px;border-radius:16px;color:#fff;text-align:center;
+  .company{padding:14px 30px;border-radius:16px;color:#fff;text-align:center;
     background:linear-gradient(135deg,#1E293B,#0F172A);box-shadow:0 14px 34px rgba(15,23,42,.28);}
   .company .t{font-size:11px;letter-spacing:2px;color:#93A5C4;font-weight:600;}
   .company .n{font-size:19px;font-weight:720;margin-top:2px;}
 
+  /* 總經理室 */
+  .gm{display:flex;align-items:center;gap:10px;padding:9px 20px 9px 10px;border-radius:14px;background:#fff;
+    border:1.5px solid var(--gm-2);box-shadow:0 12px 30px rgba(124,58,237,.18);}
+  .gm .av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--gm),var(--gm-2));
+    color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex:none;}
+  .gm .n{font-size:15px;font-weight:720;}
+  .gm .r{font-size:11px;color:var(--gm);font-weight:600;}
+  .gm .crown{font-size:12px;color:var(--gm);}
+
   /* 部門卡 */
-  .dept{width:210px;border-radius:14px;background:#fff;border:1px solid var(--line);
+  .dept{width:208px;border-radius:14px;background:#fff;border:1px solid var(--line);
     box-shadow:0 10px 26px rgba(15,23,42,.10);overflow:hidden;}
   .dept .bar{height:5px;}
   .dept .body{padding:11px 15px 12px;}
@@ -54,9 +63,7 @@
   .mem .av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
     font-size:12px;font-weight:700;color:#fff;flex:none;}
   .mem .nm{font-size:13.5px;font-weight:600;}
-  .mem .rl{font-size:10.5px;color:var(--ink-3);margin-top:-1px;}
-  .mem.lead{padding-right:15px;}
-  .mem.lead .nm{font-weight:720;}
+  .mem.lead{padding-right:14px;} .mem.lead .nm{font-weight:720;}
   .biz .av{background:linear-gradient(135deg,var(--biz),var(--biz-2))}
   .tech .av{background:linear-gradient(135deg,var(--tech),var(--tech-2))}
   .svc .av{background:linear-gradient(135deg,var(--svc),var(--svc-2))}
@@ -66,14 +73,13 @@
   .biz .badge-lead{background:var(--biz)} .tech .badge-lead{background:var(--tech)} .svc .badge-lead{background:var(--svc)}
   .nolink{font-size:10px;color:#B45309;background:#FEF3C7;border-radius:5px;padding:1px 6px;margin-left:2px;}
 
-  /* 未分派 */
   .orphan{border:1.5px dashed #FCD34D;background:#FFFBEB;border-radius:12px;padding:10px 16px;text-align:center;box-shadow:0 8px 20px rgba(217,119,6,.12);}
   .orphan .t{font-size:12px;font-weight:700;color:#B45309;}
   .orphan .s{font-size:11px;color:#A16207;margin-top:2px;}
 
-  .foot{max-width:1072px;margin:18px auto 0;font-size:12px;color:var(--ink-3);line-height:1.85;border-top:1px solid var(--line);padding-top:14px;}
+  .foot{max-width:1072px;margin:16px auto 0;font-size:12px;color:var(--ink-3);line-height:1.85;border-top:1px solid var(--line);padding-top:14px;}
   .foot b{color:var(--ink-2);}
-  .flowline{margin-top:14px;text-align:center;font-size:12.5px;color:var(--ink-2);}
+  .flowline{margin-top:12px;text-align:center;font-size:12.5px;color:var(--ink-2);}
   .flowline .k{background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 13px;margin:0 3px;box-shadow:0 3px 8px rgba(15,23,42,.05);}
   .flowline .ar{color:var(--ink-3);margin:0 2px;}
 </style></head><body>
@@ -81,79 +87,86 @@
   <div class="hd">
     <div>
       <h1>組織關係圖 · 簡報版</h1>
-      <p class="sub">示範公司 · 節點＝公司／部門／成員 · 連線＝隸屬關係 · 顏色＝部門分支（客戶／委員簡報用 mockup）</p>
+      <p class="sub">示範公司 · 公司 → 總經理室 → 部門 → 成員 · 連線＝隸屬 · 顏色＝部門分支（客戶／委員簡報用 mockup）</p>
     </div>
     <div class="legend">
-      <span><i style="background:linear-gradient(90deg,#4F46E5,#6366F1)"></i>業務分支</span>
-      <span><i style="background:linear-gradient(90deg,#0D9488,#14B8A6)"></i>技術分支</span>
-      <span><i style="background:linear-gradient(90deg,#D97706,#F59E0B)"></i>售後分支</span>
-      <span><span class="dot" style="border-color:#FCD34D;background:#FEF3C7"></span>未分派 / 待處理</span>
+      <span><span class="dot" style="border-color:#8B5CF6;background:#F5F3FF"></span>總經理室（看全公司）</span>
+      <span><i style="background:linear-gradient(90deg,#4F46E5,#6366F1)"></i>業務</span>
+      <span><i style="background:linear-gradient(90deg,#0D9488,#14B8A6)"></i>技術</span>
+      <span><i style="background:linear-gradient(90deg,#D97706,#F59E0B)"></i>售後</span>
+      <span><span class="dot" style="border-color:#FCD34D;background:#FEF3C7"></span>未分派</span>
     </div>
   </div>
 
   <div class="stage">
-    <svg class="edges" viewBox="0 0 1072 660" preserveAspectRatio="xMidYMid meet">
+    <svg class="edges" viewBox="0 0 1072 720" preserveAspectRatio="xMidYMid meet">
       <defs>
-        <linearGradient id="gBiz" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#334155"/><stop offset="1" stop-color="#4F46E5"/></linearGradient>
-        <linearGradient id="gTech" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#334155"/><stop offset="1" stop-color="#0D9488"/></linearGradient>
-        <linearGradient id="gSvc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#334155"/><stop offset="1" stop-color="#D97706"/></linearGradient>
+        <linearGradient id="gGm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#334155"/><stop offset="1" stop-color="#7C3AED"/></linearGradient>
       </defs>
-      <!-- 公司(536,74) → 部門 -->
-      <path d="M536 100 C 536 175, 210 150, 210 214" stroke="url(#gBiz)" stroke-width="2.5" fill="none" opacity=".55"/>
-      <path d="M536 100 C 536 175, 536 160, 536 214" stroke="url(#gTech)" stroke-width="2.5" fill="none" opacity=".55"/>
-      <path d="M536 100 C 536 175, 862 150, 862 214" stroke="url(#gSvc)" stroke-width="2.5" fill="none" opacity=".55"/>
-      <!-- 業務(210,250) → 成員 -->
-      <path d="M210 290 C 210 345, 210 360, 210 404" stroke="#4F46E5" stroke-width="2" fill="none" opacity=".45"/>
-      <path d="M210 290 C 210 340, 120 350, 120 452" stroke="#4F46E5" stroke-width="2" fill="none" opacity=".45"/>
-      <path d="M210 290 C 210 340, 300 350, 300 452" stroke="#4F46E5" stroke-width="2" fill="none" opacity=".45"/>
-      <!-- 技術(536,250) → 成員 -->
-      <path d="M536 290 C 536 345, 536 360, 536 404" stroke="#0D9488" stroke-width="2" fill="none" opacity=".45"/>
-      <path d="M536 290 C 536 340, 446 350, 446 452" stroke="#0D9488" stroke-width="2" fill="none" opacity=".45"/>
-      <path d="M536 290 C 536 340, 626 350, 626 452" stroke="#0D9488" stroke-width="2" fill="none" opacity=".45"/>
-      <!-- 售後(862,250) → 成員 -->
-      <path d="M862 290 C 862 345, 862 360, 862 404" stroke="#D97706" stroke-width="2" fill="none" opacity=".45"/>
-      <path d="M862 290 C 862 340, 772 350, 772 452" stroke="#D97706" stroke-width="2" fill="none" opacity=".45"/>
-      <path d="M862 290 C 862 340, 952 350, 952 452" stroke="#D97706" stroke-width="2" fill="none" opacity=".45"/>
-      <!-- 公司 → 未分派(536,588) 虛線 -->
-      <path d="M536 100 C 536 400, 536 470, 536 556" stroke="#FCD34D" stroke-width="2" fill="none" stroke-dasharray="5 6" opacity=".8"/>
+      <!-- 公司(536,58) → 總經理室(536,158) -->
+      <path d="M536 86 C 536 118, 536 122, 536 138" stroke="url(#gGm)" stroke-width="2.5" fill="none" opacity=".6"/>
+      <!-- 總經理室(536,158) → 部門(y=300) · 紫色（管理） -->
+      <path d="M536 182 C 536 250, 214 240, 214 262" stroke="#7C3AED" stroke-width="2.2" fill="none" opacity=".42"/>
+      <path d="M536 182 C 536 230, 536 240, 536 262" stroke="#7C3AED" stroke-width="2.2" fill="none" opacity=".42"/>
+      <path d="M536 182 C 536 250, 858 240, 858 262" stroke="#7C3AED" stroke-width="2.2" fill="none" opacity=".42"/>
+      <!-- 業務(214,300) → 成員 -->
+      <path d="M214 338 C 214 388, 214 400, 214 430" stroke="#4F46E5" stroke-width="2" fill="none" opacity=".45"/>
+      <path d="M214 338 C 214 386, 122 400, 122 480" stroke="#4F46E5" stroke-width="2" fill="none" opacity=".45"/>
+      <path d="M214 338 C 214 386, 306 400, 306 480" stroke="#4F46E5" stroke-width="2" fill="none" opacity=".45"/>
+      <!-- 技術(536,300) → 成員 -->
+      <path d="M536 338 C 536 388, 536 400, 536 430" stroke="#0D9488" stroke-width="2" fill="none" opacity=".45"/>
+      <path d="M536 338 C 536 386, 446 400, 446 480" stroke="#0D9488" stroke-width="2" fill="none" opacity=".45"/>
+      <path d="M536 338 C 536 386, 634 400, 634 480" stroke="#0D9488" stroke-width="2" fill="none" opacity=".45"/>
+      <!-- 售後(858,300) → 成員 -->
+      <path d="M858 338 C 858 388, 858 400, 858 430" stroke="#D97706" stroke-width="2" fill="none" opacity=".45"/>
+      <path d="M858 338 C 858 386, 766 400, 766 480" stroke="#D97706" stroke-width="2" fill="none" opacity=".45"/>
+      <path d="M858 338 C 858 386, 950 400, 950 480" stroke="#D97706" stroke-width="2" fill="none" opacity=".45"/>
+      <!-- 總經理室 → 未分派(536,648) 虛線（GM 待指派）· 右繞避開技術欄 -->
+      <path d="M556 165 C 760 300, 760 560, 560 626" stroke="#FCD34D" stroke-width="2.2" fill="none" stroke-dasharray="5 6" opacity=".85"/>
     </svg>
 
     <!-- 公司 -->
-    <div class="node company" style="left:536px;top:74px">
+    <div class="node company" style="left:536px;top:58px">
       <div class="t">公司 · COMPANY</div><div class="n">示範公司</div>
     </div>
 
+    <!-- 總經理室 -->
+    <div class="node gm" style="left:536px;top:158px">
+      <span class="av">郭</span>
+      <span><span class="n">郭○○</span> <span class="crown">♛</span><br><span class="r">總經理室 · 看全公司</span></span>
+    </div>
+
     <!-- 部門 -->
-    <div class="node dept biz" style="left:210px;top:250px">
+    <div class="node dept biz" style="left:214px;top:300px">
       <div class="bar"></div><div class="body"><span class="cnt">3 位</span><div class="n">業務一部</div>
       <span class="grp">◍ LINE：業務一部回報群</span></div>
     </div>
-    <div class="node dept tech" style="left:536px;top:250px">
+    <div class="node dept tech" style="left:536px;top:300px">
       <div class="bar"></div><div class="body"><span class="cnt">4 位</span><div class="n">技術研發</div>
       <span class="grp">◍ LINE：技術工程群</span></div>
     </div>
-    <div class="node dept svc" style="left:862px;top:250px">
+    <div class="node dept svc" style="left:858px;top:300px">
       <div class="bar"></div><div class="body"><span class="cnt">3 位</span><div class="n">售後服務</div>
       <span class="grp">◍ LINE：售後服務群</span></div>
     </div>
 
     <!-- 業務成員 -->
-    <div class="node mem biz lead" style="left:210px;top:428px"><span class="av">王</span><span><span class="nm">王經理</span><span class="badge-lead">部門主管</span></span></div>
-    <div class="node mem biz" style="left:120px;top:476px"><span class="av">志</span><span class="nm">志○○</span></div>
-    <div class="node mem biz" style="left:300px;top:476px"><span class="av">汪</span><span class="nm">汪○○</span></div>
+    <div class="node mem biz lead" style="left:214px;top:452px"><span class="av">王</span><span><span class="nm">王經理</span><span class="badge-lead">部門主管</span></span></div>
+    <div class="node mem biz" style="left:122px;top:502px"><span class="av">志</span><span class="nm">志○○</span></div>
+    <div class="node mem biz" style="left:306px;top:502px"><span class="av">汪</span><span class="nm">汪○○</span></div>
 
     <!-- 技術成員 -->
-    <div class="node mem tech lead" style="left:536px;top:428px"><span class="av">陳</span><span><span class="nm">陳○○</span><span class="badge-lead">部門主管</span></span></div>
-    <div class="node mem tech" style="left:446px;top:476px"><span class="av">林</span><span class="nm">林○○</span></div>
-    <div class="node mem tech warn" style="left:632px;top:476px"><span class="av">吳</span><span class="nm">吳○○</span><span class="nolink">未綁 LINE</span></div>
+    <div class="node mem tech lead" style="left:536px;top:452px"><span class="av">陳</span><span><span class="nm">陳○○</span><span class="badge-lead">部門主管</span></span></div>
+    <div class="node mem tech" style="left:446px;top:502px"><span class="av">林</span><span class="nm">林○○</span></div>
+    <div class="node mem tech warn" style="left:634px;top:502px"><span class="av">吳</span><span class="nm">吳○○</span><span class="nolink">未綁 LINE</span></div>
 
     <!-- 售後成員 -->
-    <div class="node mem svc lead" style="left:862px;top:428px"><span class="av">阿</span><span><span class="nm">阿○</span><span class="badge-lead">部門主管</span></span></div>
-    <div class="node mem svc" style="left:772px;top:476px"><span class="av">黃</span><span class="nm">黃○○</span></div>
-    <div class="node mem svc" style="left:952px;top:476px"><span class="av">蔡</span><span class="nm">蔡○○</span></div>
+    <div class="node mem svc lead" style="left:858px;top:452px"><span class="av">阿</span><span><span class="nm">阿○</span><span class="badge-lead">部門主管</span></span></div>
+    <div class="node mem svc" style="left:766px;top:502px"><span class="av">黃</span><span class="nm">黃○○</span></div>
+    <div class="node mem svc" style="left:950px;top:502px"><span class="av">蔡</span><span class="nm">蔡○○</span></div>
 
     <!-- 未分派 -->
-    <div class="node orphan" style="left:536px;top:588px">
+    <div class="node orphan" style="left:536px;top:648px">
       <div class="t">⚠ 維修派工群 · 尚未分派部門</div>
       <div class="s">2 位成員系統推不出部門 · 對話不會進任何部門</div>
     </div>
@@ -167,10 +180,10 @@
   </div>
 
   <div class="foot">
-    <b>這張圖給誰看：</b>客戶／委員簡報 —— 一眼看懂「這家公司怎麼被組織起來、對話怎麼流動」。<br>
-    <b>顏色 = 分支：</b>每個部門一個色系，連線同色，成員頭像同色 → 視覺上「一族」一目了然。<br>
-    <b>刻意保留的信號：</b>沒綁 LINE 的成員標「未綁 LINE」（發言歸不到他）、未分派的群與成員用琥珀虛線掛在一旁（設定待補）。簡報時正好帶到「導入完成度」。<br>
-    <b>備註：</b>這是 <b>mockup（靜態、假名資料）</b>。若要做成產品內即時互動版（縮放/拖拉/hover），成本較高，建議先用此靜態圖或截圖簡報；互動版等真有需求再評估（見 <code>docs/modules/org-overview.md</code> §4.2 / OQ-ORG-2）。
+    <b>層級：</b>公司 → <b style="color:#7C3AED">總經理室（看全公司）</b> → 部門（各看自己）→ 成員。總經理室這一層由 AIPROOT 建立與管理。<br>
+    <b>顏色 = 分支：</b>每個部門一色系，連線／頭像同色 → 視覺上「一族」一目了然；總經理室用紫色，連到所有部門代表「管全部」。<br>
+    <b>刻意保留的信號：</b>沒綁 LINE 的成員標「未綁 LINE」、未分派的群與成員用琥珀虛線掛在一旁 —— 簡報時正好帶「導入完成度」。<br>
+    <b>備註：</b>這是 <b>靜態 mockup（假名資料）</b>，不是即時抓真實部門/成員。動態版需另做（見下方說明與 <code>docs/modules/org-overview.md</code> OQ-ORG-2）。
   </div>
 </div>
 </body></html>
