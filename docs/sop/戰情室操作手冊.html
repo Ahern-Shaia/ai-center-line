@@ -483,19 +483,21 @@ body{margin:0;background:var(--bg);color:var(--ink);
 </div>
 
 <div class="step">
-  <div class="step-h"><span class="i">4</span>記下三樣，用登錄腳本寫進系統</div>
-  <p>從 channel 取得 <b>Bot user ID（Uxxxx…）</b>、<b>Channel secret</b>、<b>Channel access token（長期）</b>，
-     跑登錄腳本（<b>不必手貼加密 SQL</b>）。它會<b>先拿既有 bot 交叉驗證你的 key 對不對</b>，
-     key 不對當場報錯，不會讓 webhook 事後靜默解不開：</p>
-  <pre><span class="c"># prod（R10 由人執行）：DB 與 key 都指向 prod</span>
+  <div class="step-h"><span class="i">4</span>在後台新增（推薦 · 免碰指令）</div>
+  <p>戰情室左側 <span class="path">LINE 機器人管理</span> → 右上「<b>新增機器人</b>」→
+     <b>類型選「群組 ID 小幫手」</b>（選了就不用選租戶）→ 填名稱、Channel secret、Access token → 送出。
+     系統會<b>即時呼叫 LINE 驗 token、自動抓 Bot user ID</b>，成功就建好了。</p>
+  <div class="note ok">
+    <span class="t">用後台就不會踩 enc key 的坑</span>
+    後台用 server 自己的 <code>LINE_CONFIG_ENC_KEY</code> 加密，天生一致，不會有「key 打錯→webhook 靜默解不開」的問題。
+  </div>
+  <details style="margin-top:10px">
+    <summary style="cursor:pointer;font-size:13px;color:var(--ink-3)">替代方案：用 CLI 腳本（自動化／無後台權限時）</summary>
+    <pre style="margin-left:0"><span class="c"># prod（R10 由人執行）：DB 與 key 都指向 prod · 腳本會拿既有 bot 交叉驗證 key</span>
 REGISTER_DB_URL="$PROD_DATABASE_URL" LINE_CONFIG_ENC_KEY="&lt;Render 上那把&gt;" \
   node --import tsx server/scripts/register-utility-bot.ts \
   --botUserId U... --secret &lt;channel secret&gt; --token &lt;access token&gt;</pre>
-  <div class="note bad">
-    <span class="t">enc key 一定要用「目標環境 server 那一把」</span>
-    prod 的 <code>LINE_CONFIG_ENC_KEY</code> 是 <b>Render 上</b>那一個，不是本機 <code>.env</code> 的。
-    用錯的話 webhook 解不開、bot 靜默沒反應 —— 腳本的交叉驗證就是專門擋這個。
-  </div>
+  </details>
 </div>
 
 <div class="step">
