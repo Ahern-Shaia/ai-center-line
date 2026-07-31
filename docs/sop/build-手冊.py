@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""把 docs/sop 的三份 HTML 手冊合併成單一可部署檔 戰情室操作手冊.html
+"""把 docs/sop 的四份 HTML 手冊合併成單一可部署檔 戰情室操作手冊.html
 
   python3 docs/sop/build-手冊.py
 
-⚠️ 合併檔是**生成的**，不要手改它 —— 改內容請改三份來源後重跑本腳本：
-   導入-checklist.html / 權限設定-手冊.html / ragic-line-通知設定-手冊.html
+⚠️ 合併檔是**生成的**，不要手改它 —— 改內容請改四份來源後重跑本腳本：
+   導入-checklist.html / 權限設定-手冊.html / 群組ID小幫手-手冊.html / ragic-line-通知設定-手冊.html
 
 三份來源的 CSS 有同名 class 衝突（.card/.note/.fld/table 定義不同），
 本腳本把各自的選擇器加上 #g-chk / #g-perm / #g-ragic 前綴（:root/*/body 保留全域），
@@ -51,6 +51,7 @@ def prefix_css(css, ns):
 chk_css, chk_body = extract("導入-checklist.html")
 rag_css, rag_body = extract("ragic-line-通知設定-手冊.html")
 perm_css, perm_body = extract("權限設定-手冊.html")
+gid_css, gid_body = extract("群組ID小幫手-手冊.html")
 shared_root = re.search(r':root\{[^}]*\}', perm_css).group(0)
 
 html = f"""<!doctype html>
@@ -60,7 +61,7 @@ html = f"""<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>aiproot 戰情室 · 操作手冊</title>
-<!-- ⚠️ 生成檔，勿手改。改內容改兩份來源後重跑 docs/sop/build-手冊.py -->
+<!-- ⚠️ 生成檔，勿手改。改內容改四份來源後重跑 docs/sop/build-手冊.py -->
 <style>
   {shared_root}
   *{{box-sizing:border-box}}
@@ -75,10 +76,11 @@ html = f"""<!doctype html>
     padding:7px 14px;font-size:13.5px;cursor:pointer;font-weight:600}}
   .hub-tab.on{{background:var(--brand);border-color:var(--brand);color:#fff}}
   .doc{{display:none}} .doc.on{{display:block}}
-  #g-chk .wrap, #g-ragic .wrap, #g-perm .wrap{{max-width:820px;margin:0 auto;padding:32px 24px 80px}}
+  #g-chk .wrap, #g-ragic .wrap, #g-perm .wrap, #g-gid .wrap{{max-width:820px;margin:0 auto;padding:32px 24px 80px}}
 {prefix_css(chk_css, "#g-chk")}
 {prefix_css(rag_css, "#g-ragic")}
 {prefix_css(perm_css, "#g-perm")}
+{prefix_css(gid_css, "#g-gid")}
   @media print{{ .hub{{display:none}} .doc{{display:block !important}} }}
 </style>
 </head>
@@ -87,6 +89,7 @@ html = f"""<!doctype html>
   <span class="hub-brand">📘 操作手冊</span>
   <button class="hub-tab on" data-doc="g-chk">導入 Checklist</button>
   <button class="hub-tab" data-doc="g-perm">權限設定（總經理 / 部門主管）</button>
+  <button class="hub-tab" data-doc="g-gid">群組 ID 小幫手</button>
   <button class="hub-tab" data-doc="g-ragic">Ragic → LINE 通知設定</button>
 </div></div>
 
@@ -96,6 +99,10 @@ html = f"""<!doctype html>
 
 <section class="doc" id="g-perm"><div class="wrap">
 {perm_body}
+</div></section>
+
+<section class="doc" id="g-gid"><div class="wrap">
+{gid_body}
 </div></section>
 
 <section class="doc" id="g-ragic"><div class="wrap">

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>aiproot 戰情室 · 操作手冊</title>
-<!-- ⚠️ 生成檔，勿手改。改內容改兩份來源後重跑 docs/sop/build-手冊.py -->
+<!-- ⚠️ 生成檔，勿手改。改內容改四份來源後重跑 docs/sop/build-手冊.py -->
 <style>
   :root{
     --bg:#f6f7f9; --surface:#fff; --line:#e4e7eb; --line-2:#f0f2f5; --line-strong:#cbd2d9;
@@ -28,7 +28,7 @@
     padding:7px 14px;font-size:13.5px;cursor:pointer;font-weight:600}
   .hub-tab.on{background:var(--brand);border-color:var(--brand);color:#fff}
   .doc{display:none} .doc.on{display:block}
-  #g-chk .wrap, #g-ragic .wrap, #g-perm .wrap{max-width:820px;margin:0 auto;padding:32px 24px 80px}
+  #g-chk .wrap, #g-ragic .wrap, #g-perm .wrap, #g-gid .wrap{max-width:820px;margin:0 auto;padding:32px 24px 80px}
 :root{--bg:#f6f7f9;--surface:#fff;--line:#e4e7eb;--line-2:#f0f2f5;--ink:#171a1d;--ink-2:#4b5563;--ink-3:#6b7280;--faint:#9aa1ab;
     --brand:#4f46e5;--brand-bg:#eef2ff;--ok:#047857;--ok-bg:#ecfdf5;--warn:#b45309;--warn-bg:#fffbeb;--warn-bd:#fde68a;--mono:ui-monospace,Menlo,monospace;}
 *{box-sizing:border-box}
@@ -209,6 +209,65 @@ body{margin:0;background:var(--bg);color:var(--ink);
 #g-perm .sum{background:#0f172a;color:#e2e8f0;border-radius:12px;padding:20px 24px;margin:24px 0;
     font-family:var(--mono);font-size:13px;line-height:1.9;white-space:pre-wrap}
 #g-perm .sum b{color:#fff}
+:root{
+    --bg:#f6f7f9; --surface:#fff; --line:#e4e7eb; --line-2:#f0f2f5; --line-strong:#cbd2d9;
+    --ink:#171a1d; --ink-2:#4b5563; --ink-3:#6b7280; --faint:#9aa1ab;
+    --brand:#4f46e5; --brand-2:#4338ca; --brand-bg:#eef2ff;
+    --ok:#047857; --ok-bg:#ecfdf5; --ok-bd:#a7f3d0;
+    --warn:#b45309; --warn-bg:#fffbeb; --warn-bd:#fde68a;
+    --bad:#be123c; --bad-bg:#fff1f2; --bad-bd:#fecdd3;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:Inter,-apple-system,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;}
+#g-gid .wrap{max-width:820px;margin:0 auto;padding:40px 24px 80px}
+#g-gid header{margin-bottom:8px}
+#g-gid h1{font-size:26px;font-weight:680;margin:0 0 8px;letter-spacing:-.02em;line-height:1.35}
+#g-gid .lede{color:var(--ink-2);font-size:15.5px}
+#g-gid .meta{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;color:var(--faint)}
+#g-gid h2{font-size:20px;font-weight:660;margin:50px 0 4px;letter-spacing:-.01em}
+#g-gid h2 .n{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;
+    background:var(--brand);color:#fff;border-radius:8px;font-size:14px;margin-right:10px;vertical-align:2px}
+#g-gid h2 + .sub{color:var(--ink-3);font-size:14px;margin:0 0 18px 38px}
+#g-gid .step{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin:14px 0}
+#g-gid .step-h{font-weight:640;font-size:15.5px;margin-bottom:4px;display:flex;gap:9px;align-items:baseline}
+#g-gid .step-h .i{flex:none;width:22px;height:22px;background:var(--brand-bg);color:var(--brand);
+    border-radius:6px;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+#g-gid .step p{margin:6px 0 0 31px;color:var(--ink-2);font-size:14.5px}
+#g-gid .step p:first-of-type{margin-top:8px}
+#g-gid .screen{margin:12px 0 0 31px;background:#fbfcfd;border:1px solid var(--line-strong);border-radius:8px;
+    padding:14px 16px;font-size:13.5px;color:var(--ink-2)}
+#g-gid .screen-cap{font-size:11.5px;color:var(--faint);margin-bottom:9px;letter-spacing:.02em}
+#g-gid .note{border-radius:8px;padding:13px 16px;margin:14px 0;font-size:14px;line-height:1.7;border:1px solid var(--line)}
+#g-gid .note b{font-weight:650}
+#g-gid .note.warn{background:var(--warn-bg);border-color:var(--warn-bd);color:#78350f}
+#g-gid .note.bad{background:var(--bad-bg);border-color:var(--bad-bd);color:#881337}
+#g-gid .note.ok{background:var(--ok-bg);border-color:var(--ok-bd);color:#065f46}
+#g-gid .note .t{font-weight:680;display:block;margin-bottom:3px}
+#g-gid .path{font-weight:640;color:var(--brand)}
+#g-gid code{font-family:var(--mono);font-size:13px;background:#f1f3f5;padding:1.5px 6px;border-radius:4px}
+#g-gid pre{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:16px 18px;margin:12px 0 0 31px;
+    font-family:var(--mono);font-size:12.5px;line-height:1.7;overflow-x:auto;white-space:pre}
+#g-gid pre .c{color:#7c8aa5}
+#g-gid table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);
+    border-radius:10px;overflow:hidden;font-size:14px;margin:14px 0}
+#g-gid th{text-align:left;font-weight:600;font-size:12.5px;color:var(--ink-3);background:#fafbfc;padding:9px 14px;border-bottom:1px solid var(--line)}
+#g-gid td{padding:11px 14px;border-bottom:1px solid #f0f2f4;vertical-align:top}
+#g-gid tr:last-child td{border-bottom:none}
+#g-gid /* LINE 對話氣泡示意 */
+  .chat{margin:12px 0 0 31px;background:#8aabd4;border-radius:12px;padding:16px;max-width:420px}
+#g-gid .bub{background:#fff;border-radius:4px 14px 14px 14px;padding:11px 13px;font-size:13.5px;color:var(--ink);
+    line-height:1.7;box-shadow:0 1px 2px rgba(0,0,0,.12);white-space:pre-wrap}
+#g-gid .bub .gid{font-family:var(--mono);font-size:12.5px;background:#eef2ff;color:var(--brand-2);
+    padding:2px 6px;border-radius:4px;display:inline-block;margin:2px 0;word-break:break-all}
+#g-gid .who-bot{font-size:11.5px;color:#e8eef7;margin-bottom:6px}
+#g-gid footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--faint);line-height:1.8}
+@media print{body{background:#fff}
+#g-gid .wrap{padding:0}
+#g-gid h2{page-break-after:avoid}
+#g-gid .step{page-break-inside:avoid}}
   @media print{ .hub{display:none} .doc{display:block !important} }
 </style>
 </head>
@@ -217,6 +276,7 @@ body{margin:0;background:var(--bg);color:var(--ink);
   <span class="hub-brand">📘 操作手冊</span>
   <button class="hub-tab on" data-doc="g-chk">導入 Checklist</button>
   <button class="hub-tab" data-doc="g-perm">權限設定（總經理 / 部門主管）</button>
+  <button class="hub-tab" data-doc="g-gid">群組 ID 小幫手</button>
   <button class="hub-tab" data-doc="g-ragic">Ragic → LINE 通知設定</button>
 </div></div>
 
@@ -377,6 +437,147 @@ body{margin:0;background:var(--bg);color:var(--ink);
 <b>最容易忘：</b>主管的「所屬部門」一定要選，不選＝他看不到東西。</div>
 
   <div class="meta">總經理（總經理室帳號）由 AIPROOT 建立；部門主管（部門主管）總經理自己就能建。</div>
+
+</div></section>
+
+<section class="doc" id="g-gid"><div class="wrap">
+
+
+<header>
+  <h1>用「群組 ID 小幫手」快速取得 LINE 群組 ID</h1>
+  <div class="lede">
+    LINE App 裡<b>看不到</b>群組 ID。這支專用小幫手 bot 幫你拿到它：<b>把它加進群，它就把群組 ID 回給你</b>。
+    加進去 → 抄下來 → 貼到要用的地方 → 拿到就可以把它移除。
+  </div>
+  <div class="meta">給誰看：AIPROOT 內部同仁（A 節一次性設定）／客戶窗口（B 節取 ID）· v1.0（2026-07-31）</div>
+</header>
+
+<h2>先搞懂：這支 bot 只做一件事</h2>
+<div class="note ok">
+  <b>它只回「這個群的 ID」。</b>不看對話、不分析、不記錄任何訊息 —— 跟每天幫你整理日誌的那支<b>分析 bot 是兩支不同的 bot</b>。
+</div>
+<p style="color:var(--ink-2);font-size:14.5px">
+  為什麼要另外一支？因為分析 bot <b>每家公司一支、設定較重</b>；這支「群組 ID 小幫手」是<b>全體共用的通用工具</b>，
+  純粹幫你把群組 ID 讀出來，用完即可移除。因為它不碰任何對話資料，也就沒有把資料混到別家公司的風險。
+</p>
+
+<!-- ═══ A ═══ -->
+<h2><span class="n">A</span>一次性設定（AIPROOT · 只做一次，之後所有客戶共用）</h2>
+<div class="sub">建立一支「群組 ID 小幫手」bot 並登錄到系統。做過一次就跳到 B 節。</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">1</span>在 LINE Developers 建一個新的 Messaging API channel</div>
+  <p>名稱取「<b>群組 ID 小幫手</b>」之類好認的。這支是 <b>AIPROOT 平台自己的</b>，不屬於任何一家客戶。</p>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">2</span>Webhook 設成跟分析 bot <b>同一個網址</b></div>
+  <p>Messaging API 分頁 → <b>Webhook URL</b> 填 <code>https://&lt;你們的網域&gt;/line/webhook</code>（與分析 bot 相同），
+     打開「<b>Use webhook</b>」。系統靠 bot 身分自動分流，不必另開端點。</p>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">3</span>打開「允許加入群組」</div>
+  <p>Messaging API 分頁 → <b>Allow bot to join group chats</b> 設為 <b>Enabled</b>。
+     沒開的話它根本進不了群，也就無從回 ID。</p>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">4</span>記下三樣，登錄到系統</div>
+  <p>從 channel 取得 <b>Bot user ID（Uxxxx…）</b>、<b>Channel secret</b>、<b>Channel access token（長期）</b>，
+     跑下面這段 SQL 登錄成 <code>utility</code> bot（<b>tenant 留空</b>）：</p>
+  <pre><span class="c">-- 用與 server 相同的 LINE_CONFIG_ENC_KEY 加密，否則之後解不開</span>
+INSERT INTO line_bot
+  (tenant_id, name, bot_user_id, kind,
+   channel_secret_enc, channel_access_token_enc, status)
+VALUES
+  (NULL, '群組 ID 小幫手', '&lt;Bot user ID · Uxxxx&gt;', 'utility',
+   pgp_sym_encrypt('&lt;channel secret&gt;',        '&lt;LINE_CONFIG_ENC_KEY&gt;'),
+   pgp_sym_encrypt('&lt;channel access token&gt;',  '&lt;LINE_CONFIG_ENC_KEY&gt;'),
+   'active');</pre>
+  <div class="note bad">
+    <span class="t">enc key 一定要跟 server 那把一模一樣</span>
+    加密用的 <code>LINE_CONFIG_ENC_KEY</code> 若跟 server 環境變數不同，webhook 解密會失敗、bot 不會反應，
+    而且不會有明顯錯誤 —— 會像「設定都對卻沒反應」。
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">5</span>冒煙測試</div>
+  <p>把這支 bot 加進一個<b>測試群</b> → 應該<b>立刻</b>收到一則含群組 ID 的歡迎訊息。收到就代表設定成功。</p>
+</div>
+
+<!-- ═══ B ═══ -->
+<h2><span class="n">B</span>取得群組 ID（誰都能做 · 可重複）</h2>
+<div class="sub">下面五步，一分鐘拿到一個群的 ID。</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">1</span>把「群組 ID 小幫手」加進目標 LINE 群</div>
+  <p>用這支 bot 的 QR code 或 ID 邀請它進群（跟平常拉人進群一樣）。</p>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">2</span>它會<b>立刻</b>回一則訊息，裡面就是群組 ID</div>
+  <div class="chat">
+    <div class="who-bot">群組 ID 小幫手</div>
+    <div class="bub">你好，我是 aiproot 的群組 ID 小幫手。
+本群組 ID：
+<span class="gid">Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</span>
+（複製上面這串，貼到 aiproot 後台的「LINE 群組」欄位即可）
+需要再看一次，在群裡打「群組ID」我就再回你。取得後可將我移除。</div>
+  </div>
+  <p style="margin-top:12px">沒看到？在群裡打「<b>群組ID</b>」三個字，它會再回一次。</p>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">3</span>長按那串 ID 複製</div>
+  <p><code>C</code> 開頭那一長串就是。長按 → 複製。</p>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">4</span>貼到要用的地方</div>
+  <p>貼到<b>通知設定</b>的「LINE 目標群」，或直接回報給 AIPROOT。這串 ID 貼哪、給誰用，就對到哪個群。</p>
+</div>
+
+<div class="step">
+  <div class="step-h"><span class="i">5</span>拿到就好，可以把小幫手移出群組</div>
+  <p>它的任務就是回 ID，拿到後移除即可；留著也不會做任何事（不看對話、不記錄）。</p>
+  <div class="note">
+    <b>連打兩次「群組ID」只回一次？</b>正常。同一個群 <b>30 秒內重複只回一次</b>，避免洗版。等一下再打即可。
+  </div>
+</div>
+
+<!-- ═══ 排查 ═══ -->
+<h2>加進去沒反應？照這裡對</h2>
+<table>
+  <thead><tr><th style="width:38%">現象</th><th>怎麼處理</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>加進群後<b>完全沒回</b></td>
+      <td>① 確認你加的是「<b>群組 ID 小幫手</b>」——<b>分析 bot 加進群不會回 ID</b>，那是另一支<br>
+          ② 這支 bot 的 <b>Webhook 沒設或沒開</b>（A 節步驟 2）<br>
+          ③ <b>沒開「允許加入群組」</b>（A 節步驟 3）</td>
+    </tr>
+    <tr>
+      <td>打「群組ID」<b>沒反應</b></td>
+      <td>要<b>完整打「群組ID」三個字</b>（前後可有空白、英文大小寫不拘）；貼圖、其他字句不會觸發。</td>
+    </tr>
+    <tr>
+      <td>它會<b>看到我們群裡的對話</b>嗎？</td>
+      <td>不會。它只在「被加入」和「有人打群組ID」時回一句，<b>其餘一律忽略、不儲存任何訊息</b>。</td>
+    </tr>
+    <tr>
+      <td>剛設好卻沒反應（AIPROOT）</td>
+      <td>多半是 <b>enc key 不一致</b>（A 節步驟 4）或 <b>0054 migration 沒套到那個環境</b>。</td>
+    </tr>
+  </tbody>
+</table>
+
+<footer>
+  這支小幫手是「拿 ID」的捷徑；連結群組給分析／分派部門仍在<span class="path">通訊管道</span>頁按群名選，不必碰這串 ID。<br>
+  對應技術文件：<code>docs/modules/group-id-onboarding.md</code>
+</footer>
+
 
 </div></section>
 
