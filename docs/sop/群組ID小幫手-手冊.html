@@ -101,9 +101,14 @@
 </div>
 
 <div class="step">
-  <div class="step-h"><span class="i">3</span>打開「允許加入群組」</div>
-  <p>Messaging API 分頁 → <b>Allow bot to join group chats</b> 設為 <b>Enabled</b>。
-     沒開的話它根本進不了群，也就無從回 ID。</p>
+  <div class="step-h"><span class="i">3</span>打開「允許加入群組」（在<b>官方帳號管理後台</b>，不是 Developers Console）</div>
+  <p><b>LINE Official Account Manager</b>（manager.line.biz）→ 右上 <b>設定</b> → <b>帳號設定</b> →
+     找「<b>加入群組聊天及多人聊天室</b>（Allow bot to join group chats）」→ 改成「<b>允許</b>」。</p>
+  <div class="note bad">
+    <span class="t">沒開＝一加進群就被自動踢出</span>
+    這個開關預設常是關的。關著時，把 bot 拉進群，LINE 會<b>立刻讓它退出</b>
+    （群裡會看到「○○已退出群組」）—— 看到這個現象就是這裡沒開，不是程式壞掉。
+  </div>
 </div>
 
 <div class="step">
@@ -175,10 +180,14 @@ REGISTER_DB_URL="$PROD_DATABASE_URL" LINE_CONFIG_ENC_KEY="&lt;Render 上那把&g
   <thead><tr><th style="width:38%">現象</th><th>怎麼處理</th></tr></thead>
   <tbody>
     <tr>
-      <td>加進群後<b>完全沒回</b></td>
+      <td>加進群後 bot <b>立刻自己退出</b>（「○○已退出群組」）</td>
+      <td><b>「允許加入群組」沒開</b> —— 在 <b>官方帳號管理後台</b>（manager.line.biz）→ 設定 → 帳號設定 →
+          「加入群組聊天及多人聊天室」改成「允許」（A 節步驟 3）。改完立即生效，回群再加一次即可。</td>
+    </tr>
+    <tr>
+      <td>留在群裡但<b>完全沒回</b></td>
       <td>① 確認你加的是「<b>群組 ID 小幫手</b>」——<b>分析 bot 加進群不會回 ID</b>，那是另一支<br>
-          ② 這支 bot 的 <b>Webhook 沒設或沒開</b>（A 節步驟 2）<br>
-          ③ <b>沒開「允許加入群組」</b>（A 節步驟 3）</td>
+          ② 這支 bot 的 <b>Webhook 沒設或沒開</b>（A 節步驟 2）</td>
     </tr>
     <tr>
       <td>打「群組ID」<b>沒反應</b></td>
