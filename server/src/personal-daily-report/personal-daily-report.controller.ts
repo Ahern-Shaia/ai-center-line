@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Get, NotFoundException, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, ForbiddenException, Get, NotFoundException, Param, Post, Query } from "@nestjs/common";
 import { friendlyAiError } from "../llm/ai-error-message.js";
 import { schedulerTimeLabel } from "../scheduler-config/scheduler-time.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
@@ -182,11 +182,12 @@ export class PersonalDailyReportController {
     // ⚠️ 只帶 summary 不帶原始對話：任務可能來自本人不在的群組（doc §6 F-3）。
     const assigned = await tx.execute<{
       ticket_id: string; summary: string; category: string | null; created_at: string;
-      open_days: number; last_report_note: string | null;
+      open_days: number; last_report_note: string | null; department_id: string | null;
     }>(sql_import`
       SELECT ticket_id::text, summary, category, created_at::text,
              (now()::date - created_at::date)::int AS open_days,
-             work_last_report_note AS last_report_note
+             work_last_report_note AS last_report_note,
+             department_id::text AS department_id
       FROM tickets
       WHERE assignee_user_id = ${user.user_id}::uuid
         -- 只帶「已經確認是任務」的。待確認的還沒被主管認可為任務，
@@ -231,10 +232,32 @@ export class PersonalDailyReportController {
         // 開了幾天 · 讓人一眼看出哪些拖著（我們沒有 due_at，用天數代替）
         openDays: t.open_days,
         lastReportNote: t.last_report_note,
+        // ⭐ 部門制 gate（F-3 修訂）：任務屬本人部門才給看原始對話。跨部門仍只給 summary
+        //    （否則等於看到自己沒參與的部門群內容）。判斷在此，實際來源走 assigned-tasks/:id/source。
+        canSeeSource: user.department_id != null && t.department_id === user.department_id,
       })),
       userDisplayName: meta?.display_name ?? "",
       tenantName: meta?.tenant_name ?? "",
     };
+  }
+
+  /**
+   * 指派任務的原始對話 · 部門制 gate（F-3 修訂 · docs/modules/task-to-personal-report.md §6）
+   *
+   * F-3 原本一律只給 summary（怕任務來自本人不在的群 → 洩漏）。改成：**任務屬本人部門才給看**，
+   * 跨部門仍擋。判斷沿用系統既有的部門隱私邊界（tickets RLS 也是按部門），一致而非另立一套。
+   *
+   * 三道護欄（全在 app 層，不靠 RLS 靜默）：
+   *   ① 走本人 currentTx 讀 ticket（RLS 已限本租戶/部門）· 讀不到就是無權 → 404
+   *   ② 明驗 assignee == 本人（不是自己的任務不給）
+   *   ③ 明驗 ticket.department_id == 本人 department_id（跨部門 → 403）
+   * 通過才用 withSystemTx 讀 analysis_result（無 RLS）組來源訊息。
+   */
+  @Get("assigned-tasks/:ticketId/source")
+  @RequirePermission("personal-report:mine")
+  async assignedTaskSource(@CurrentUser() user: JwtUser, @Param("ticketId") ticketId: string) {
+    if (!uuidRegex.test(ticketId)) throw new BadRequestException("ticketId 格式錯");
+    return this.svc.assignedTaskSource(user.user_id, user.department_id, ticketId);
   }
 
   @Post("mine/save")

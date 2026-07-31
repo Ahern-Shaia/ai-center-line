@@ -1,7 +1,7 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
-import { withTenant } from "../db/client.js";
+import { currentTx, withSystemTx, withTenant } from "../db/client.js";
 import { LlmConfigService } from "../llm/llm-config.service.js";
 import { createLLMProvider } from "../llm/provider.factory.js";
 import { defaultAnthropicProvider } from "../conversation-analysis/pipeline/index.js";
@@ -149,6 +149,84 @@ export class PersonalDailyReportService {
       } catch { /* 若連 markFailed 都掛 · 靜默 */ }
       return { reportId: null, status: "failed", itemCount: 0, errorMessage: errMsg };
     }
+  }
+
+  /**
+   * 指派任務的原始對話 · 部門制 gate（F-3 修訂 · docs/modules/task-to-personal-report.md §6）
+   *
+   * F-3 原本一律只給 summary（怕任務來自本人不在的群 → 洩漏）。改成：**任務屬本人部門才給**，
+   * 跨部門仍擋。沿用系統既有的部門隱私邊界（tickets RLS 也按部門），一致而非另立一套。
+   *
+   * 三道護欄（app 層明驗，不靠 RLS 靜默）：讀不到 ticket → 404；assignee≠本人 → 403；
+   * ticket 部門≠本人部門 → 403。通過才 withSystemTx 讀 analysis_result（無 RLS）組來源。
+   */
+  async assignedTaskSource(userId: string, departmentId: string | null, ticketId: string): Promise<{
+    summary: string;
+    extracted: Record<string, unknown> | null;
+    messages: Array<{ id: number; time: string; sender: string; text: string; kind: string; media: { mediaId: string; kind: string } | null }>;
+    hasSourceLink: boolean;
+    unavailableReason: string | null;
+  }> {
+    const tx = currentTx();
+    const t = await tx.execute<{
+      summary: string; department_id: string | null; assignee_user_id: string | null;
+      source_upload_id: number | null; source_record_index: number | null; source_message_ids: string[] | null;
+    }>(sql`
+      SELECT summary, department_id::text, assignee_user_id::text,
+             source_upload_id, source_record_index, source_message_ids
+      FROM tickets WHERE ticket_id = ${ticketId}::uuid LIMIT 1
+    `);
+    const ticket = t.rows[0];
+    if (!ticket) throw new NotFoundException("找不到這張任務，或你沒有權限查看");
+    if (ticket.assignee_user_id !== userId) throw new ForbiddenException("這不是指派給你的任務");
+    if (!departmentId || ticket.department_id !== departmentId) {
+      throw new ForbiddenException("這項任務來自其他部門 · 為保護隱私不提供原始對話 · 需要時請洽主管");
+    }
+
+    const hasSourceLink = (ticket.source_message_ids?.length ?? 0) > 0;
+    const empty = (reason: string | null) => ({
+      summary: ticket.summary, extracted: null, messages: [], hasSourceLink, unavailableReason: reason,
+    });
+    if (ticket.source_upload_id == null || ticket.source_record_index == null) {
+      return empty("這張任務沒有對應的來源分析（可能是手動建立，或來源分析已被刪除）");
+    }
+    const uploadId = ticket.source_upload_id;
+    const recordIndex = ticket.source_record_index;
+
+    // analysis_result 無 RLS · 前面已用部門 gate 授權過
+    const r = await withSystemTx((stx) => stx.execute<{ messages: unknown; records: unknown }>(sql`
+      SELECT messages, records FROM analysis_result WHERE upload_id = ${uploadId}
+    `));
+    const arow = r.rows[0];
+    if (!arow) return empty("來源分析結果已不存在");
+    const records = (arow.records as Array<Record<string, unknown>> | null) ?? [];
+    const rec = records[recordIndex];
+    if (!rec) return empty("來源分析結果的內容已變動，對不到原本那一筆");
+
+    const sourceIds = new Set((rec.source_ids as number[] | undefined) ?? []);
+    const all = (arow.messages as Array<{ id: number; time: string; sender: string; text: string; kind: string }> | null) ?? [];
+    const picked = all.filter((m) => sourceIds.has(m.id));
+
+    // 照片掛回它自己那一則（比照任務看板 attachMedia）
+    const media = await withSystemTx((stx) => stx.execute<{ idx: number; media_id: string; media_type: string }>(sql`
+      WITH idmap AS (
+        SELECT generate_subscripts(source_message_ids, 1) - 1 AS idx, unnest(source_message_ids) AS message_id
+          FROM analysis_upload WHERE id = ${uploadId}
+      )
+      SELECT idmap.idx, md.media_id::text, md.media_type
+        FROM idmap JOIN line_media md ON md.message_id = idmap.message_id AND md.deleted_at IS NULL
+    `));
+    const byIdx = new Map(media.rows.map((x) => [Number(x.idx), { mediaId: x.media_id, kind: x.media_type }]));
+    const messages = picked.map((m) => ({ ...m, media: byIdx.get(m.id) ?? null }));
+
+    return {
+      summary: ticket.summary,
+      extracted: rec,
+      messages,
+      hasSourceLink,
+      unavailableReason: sourceIds.size > 0 && messages.length === 0
+        ? "這筆抽取有標記來源訊息，但在分析結果中找不到對應內容" : null,
+    };
   }
 
   private async resolveProvider(tenantId: string): Promise<LLMProvider> {
