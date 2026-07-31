@@ -4,10 +4,16 @@ const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 
 export const LineBotCreateSchema = z.object({
   name: z.string().trim().min(1).max(100),
-  tenantId: z.string().regex(uuidRegex),
+  // utility（群組 ID 小幫手）＝平台層工具 bot · 不屬租戶；analysis＝租戶分析 bot
+  kind: z.enum(["analysis", "utility"]).default("analysis"),
+  tenantId: z.string().regex(uuidRegex).optional(),
   channelId: z.string().trim().max(50).optional(),
   channelSecret: z.string().trim().min(1).max(200),
   channelAccessToken: z.string().trim().min(10).max(500),
+}).superRefine((v, ctx) => {
+  if (v.kind === "analysis" && !v.tenantId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["tenantId"], message: "分析 bot 必須選租戶" });
+  }
 });
 
 export const LineBotUpdateSchema = z.object({

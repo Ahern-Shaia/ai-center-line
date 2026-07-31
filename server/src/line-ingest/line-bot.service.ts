@@ -7,7 +7,8 @@ import { LineApiClient } from "./line-api.client.js";
 
 export interface LineBotDto {
   botId: string;
-  tenantId: string;
+  tenantId: string | null;             // utility bot 無租戶
+  kind: "analysis" | "utility";
   name: string;
   botUserId: string;
   channelId: string | null;
@@ -22,7 +23,8 @@ export interface LineBotDto {
 }
 
 export interface LineBotCreateInput {
-  tenantId: string;
+  tenantId?: string;                   // utility 免填
+  kind?: "analysis" | "utility";       // 預設 analysis
   name: string;
   channelId?: string;
   channelSecret: string;
@@ -64,8 +66,13 @@ export class LineBotService {
       });
     }
 
+    const kind = input.kind ?? "analysis";
+    // utility（群組 ID 小幫手）＝平台層工具 bot · tenant 一律留空（DTO 已擋 analysis 缺 tenant）
+    const tenantId = kind === "utility" ? null : (input.tenantId ?? null);
+
     const botId = await this.botRepo.insert(tx, {
-      tenantId: input.tenantId,
+      tenantId,
+      kind,
       name: input.name,
       botUserId: botInfo.userId,
       channelId: input.channelId ?? null,
@@ -122,6 +129,9 @@ export class LineBotService {
     if (patch.tenantId) {
       const existing = await this.botRepo.getById(tx, botId);
       if (!existing) throw new NotFoundException("找不到 bot");
+      if (existing.kind === "utility") {
+        throw new BadRequestException("群組 ID 小幫手是平台層 bot，沒有租戶、不可遷移");
+      }
       if (existing.tenantId !== patch.tenantId) {
         movedTenant = true;
       }
@@ -228,6 +238,7 @@ export class LineBotService {
     return {
       botId: row.botId,
       tenantId: row.tenantId,
+      kind: row.kind,
       name: row.name,
       botUserId: row.botUserId,
       channelId: row.channelId,

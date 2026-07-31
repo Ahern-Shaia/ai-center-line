@@ -8,7 +8,8 @@ import type { Db } from "../db/client.js";
 
 export interface LineBotRow {
   botId: string;
-  tenantId: string;
+  tenantId: string | null;         // utility bot 無租戶
+  kind: "analysis" | "utility";
   name: string;
   botUserId: string;
   channelId: string | null;
@@ -23,7 +24,8 @@ export interface LineBotRow {
 
 export interface LineBotListRow {
   botId: string;
-  tenantId: string;
+  tenantId: string | null;         // utility bot 無租戶
+  kind: "analysis" | "utility";
   name: string;
   botUserId: string;
   channelId: string | null;
@@ -36,7 +38,8 @@ export interface LineBotListRow {
 }
 
 export interface LineBotInsertInput {
-  tenantId: string;
+  tenantId: string | null;         // utility bot 傳 null
+  kind: "analysis" | "utility";
   name: string;
   botUserId: string;
   channelId: string | null;
@@ -62,9 +65,9 @@ export class LineBotRepository {
     const key = this.encKey();
     const res = await tx.execute<{ bot_id: string }>(sql`
       INSERT INTO line_bot
-        (tenant_id, name, bot_user_id, channel_id, channel_secret_enc, channel_access_token_enc, created_by)
+        (tenant_id, kind, name, bot_user_id, channel_id, channel_secret_enc, channel_access_token_enc, created_by)
       VALUES
-        (${input.tenantId}, ${input.name}, ${input.botUserId}, ${input.channelId},
+        (${input.tenantId}, ${input.kind}, ${input.name}, ${input.botUserId}, ${input.channelId},
          pgp_sym_encrypt(${input.channelSecret}, ${key}),
          pgp_sym_encrypt(${input.channelAccessToken}, ${key}),
          ${input.createdBy})
@@ -120,12 +123,12 @@ export class LineBotRepository {
   async getByIdWithSecrets(tx: Db, botId: string): Promise<LineBotRow | null> {
     const key = this.encKey();
     const res = await tx.execute<{
-      bot_id: string; tenant_id: string; name: string; bot_user_id: string;
+      bot_id: string; tenant_id: string | null; kind: "analysis" | "utility"; name: string; bot_user_id: string;
       channel_id: string | null; channel_secret: string; channel_access_token: string;
       status: "active" | "disabled"; webhook_verified_at: string | null;
       created_by: string | null; created_at: string; updated_at: string;
     }>(sql`
-      SELECT bot_id, tenant_id, name, bot_user_id, channel_id,
+      SELECT bot_id, tenant_id, kind, name, bot_user_id, channel_id,
              pgp_sym_decrypt(channel_secret_enc, ${key})::text AS channel_secret,
              pgp_sym_decrypt(channel_access_token_enc, ${key})::text AS channel_access_token,
              status, webhook_verified_at::text, created_by,
@@ -139,6 +142,7 @@ export class LineBotRepository {
     return {
       botId: r.bot_id,
       tenantId: r.tenant_id,
+      kind: r.kind,
       name: r.name,
       botUserId: r.bot_user_id,
       channelId: r.channel_id,
@@ -194,12 +198,12 @@ export class LineBotRepository {
   // 列表 · 走 tenant RLS · 不 return secret
   async listByTenant(tx: Db): Promise<LineBotListRow[]> {
     const res = await tx.execute<{
-      bot_id: string; tenant_id: string; name: string; bot_user_id: string;
+      bot_id: string; tenant_id: string | null; kind: "analysis" | "utility"; name: string; bot_user_id: string;
       channel_id: string | null; status: "active" | "disabled";
       webhook_verified_at: string | null; created_by: string | null;
       created_at: string; updated_at: string; group_count: string;
     }>(sql`
-      SELECT b.bot_id, b.tenant_id, b.name, b.bot_user_id, b.channel_id, b.status,
+      SELECT b.bot_id, b.tenant_id, b.kind, b.name, b.bot_user_id, b.channel_id, b.status,
              b.webhook_verified_at::text, b.created_by,
              b.created_at::text, b.updated_at::text,
              (SELECT COUNT(*) FROM line_group WHERE bot_id = b.bot_id AND status = 'active')::text AS group_count
@@ -209,6 +213,7 @@ export class LineBotRepository {
     return res.rows.map((r) => ({
       botId: r.bot_id,
       tenantId: r.tenant_id,
+      kind: r.kind,
       name: r.name,
       botUserId: r.bot_user_id,
       channelId: r.channel_id,
@@ -224,12 +229,12 @@ export class LineBotRepository {
   // Get single (no secrets) · UI 用
   async getById(tx: Db, botId: string): Promise<LineBotListRow | null> {
     const res = await tx.execute<{
-      bot_id: string; tenant_id: string; name: string; bot_user_id: string;
+      bot_id: string; tenant_id: string | null; kind: "analysis" | "utility"; name: string; bot_user_id: string;
       channel_id: string | null; status: "active" | "disabled";
       webhook_verified_at: string | null; created_by: string | null;
       created_at: string; updated_at: string; group_count: string;
     }>(sql`
-      SELECT b.bot_id, b.tenant_id, b.name, b.bot_user_id, b.channel_id, b.status,
+      SELECT b.bot_id, b.tenant_id, b.kind, b.name, b.bot_user_id, b.channel_id, b.status,
              b.webhook_verified_at::text, b.created_by,
              b.created_at::text, b.updated_at::text,
              (SELECT COUNT(*) FROM line_group WHERE bot_id = b.bot_id AND status = 'active')::text AS group_count
@@ -242,6 +247,7 @@ export class LineBotRepository {
     return {
       botId: r.bot_id,
       tenantId: r.tenant_id,
+      kind: r.kind,
       name: r.name,
       botUserId: r.bot_user_id,
       channelId: r.channel_id,
