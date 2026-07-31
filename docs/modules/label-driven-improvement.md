@@ -1,6 +1,11 @@
 # label-driven-improvement · 用「標對錯」回饋改進 AI 抽取
 
-> 🚧 **狀態：M0 DRAFT v0.1（2026-07-31）· 待用戶裁定 OQ-LFB-1..5**
+> ✅ **狀態：M1+M2 SHIPPED（本地）v0.2（2026-08-01）· OQ 全採建議 · M3（LLM 重跑 eval）延後**
+>
+> 用戶「全採建議、一氣呵成」→ OQ-LFB-1..5 全採 A（OQ-3 取「最後標的贏」＝現況 upsert）。
+> ⚠️ 現實檢查：**prod 僅 7 筆標記**（5 分類 / 1 日報 / 1 記錄，2 筆標錯）→ 替它建 LLM 重跑
+> eval harness 是過度建設，M3 延後。M1（跨批準確率）+ M2（錯誤分群入口）＝低量也成立、
+> 且讓標記有回饋（鼓勵累積），已落地：`getInsights` + `/label-insights` + 抽取準確率頁。
 >
 > 相關：[`conversation-analysis-pilot.md`](conversation-analysis-pilot.md) §6（label 機制既有）、
 > [`extraction-schema-service-order.md`](extraction-schema-service-order.md)、`src/conversation-analysis/label.service.ts`
@@ -94,11 +99,13 @@
 
 | # | 內容 | 依賴 |
 |---|---|---|
-| **M0** 🚧 | 本 doc · 待裁定 OQ-LFB-1..5 ← 在這 | — |
-| **M1** | 評測集彙總（跨批凍題庫）+ `npm run eval`（正確率 + delta）· 接進 R12 | OQ-LFB-1/2/4 |
-| **M2** | 錯誤分群 view（aiproot console）· 「這種錯 N 次 / 集中在哪」 | M1 |
-| **M3**（選配）| 靜態精選 few-shot（只在 §6 caching 取捨談清後）· 針對頑固錯誤 | OQ-LFB-5 |
-| **M4** | FMEA 收尾（R17）· 一週觀察準確率是否真的可被驅動 | M2 |
+| **M0** ✅ | 本 doc · OQ 全採建議 | — |
+| **M1** ✅ | 跨批準確率彙總（`getInsights` · correct/total per type）· 抽取準確率頁 | — |
+| **M2** ✅ | 錯誤分群入口（標「錯誤」案例對回原文 + AI 分類 + 租戶 + 連回詳情）| M1 |
+| **M3** ⏸️ | ~~評測集 `npm run eval`（LLM 重跑 + 模糊比對 + delta）~~ · **延後**：prod 僅 7 筆，重跑 harness 過度建設；等標記量起來（OQ-LFB-2 內部標一批）再做 | 標記量 |
+| **M4** ⏸️ | 靜態精選 few-shot（§6 caching 取捨談清後）· 針對頑固錯誤 | OQ-LFB-5 |
+
+> **落地檔案**：`label.service.ts::getInsights`（withSystemTx + tenant filter）、`GET /conversation-analysis/label-insights`（convo:view · aiproot 看全/租戶看自家）、`web/src/convo-analysis/Insights.tsx`（抽取準確率頁）、`test/label-insights.test.ts`（4 測試：平台看全/租戶看自家/內容對回/無 result 不炸）。無 migration。
 
 ---
 
@@ -106,11 +113,11 @@
 
 | # | Impact | 問題 | 選項 | 建議 |
 |---|---|---|---|---|
-| **OQ-LFB-1** | ② | 投不投入這個迴圈？ | A. 先做 M1 評測集地基（低成本高槓桿）<br>B. 先不做，標記功能維持現狀或藏起來 | **A** — 地基便宜、且同時服務量測（pilot 要證準確率）|
-| **OQ-LFB-2** | ① | 冷啟動誰標、標多少才有 signal？ | A. aiproot 內部先標一批（每模板 ≥30 筆）<br>B. 等客戶標（慢、但貼近真實） | **A** — 內部先標拿到 signal，客戶標當增量 |
-| **OQ-LFB-3** | ② | 多人標同一筆不一致時，評測集以誰為準？ | A. 最後標的贏（現況 upsert）<br>B. 指定「裁決者」角色<br>C. 多數決 | 待裁定（影響評測集可信度）|
-| **OQ-LFB-4** | ① | 題庫要不要綁 schema 版本？ | A. 綁（改 schema 舊題庫標失效需重標）<br>B. 不綁（簡單但會有假紅/假綠） | **A** — 不綁會讓回歸數字失真 |
-| **OQ-LFB-5** | ② | few-shot 要不要碰、以及和 caching 的取捨？ | A. 本期不做（M3 延後）<br>B. 只做靜態精選塞 system block<br>C. 做動態（接受快取失效成本） | **A** — 先靠①②，few-shot 之後針對性再說 |
+| ~~OQ-LFB-1~~ | ② | 投不投入這個迴圈？ | A. 先做 M1 地基 / B. 不做 | ✅ **A**（已做 M1+M2）|
+| ~~OQ-LFB-2~~ | ① | 冷啟動誰標、標多少？ | A. aiproot 內部先標 ≥30/模板 / B. 等客戶 | ✅ **A** — ⚠️ **尚未執行**：prod 僅 7 筆，M3/評測集要等這批標完才有意義 |
+| ~~OQ-LFB-3~~ | ② | 多人標不一致以誰為準？ | A. 最後標的贏（upsert）/ B. 裁決者 / C. 多數決 | ✅ **A** — 維持現況 upsert（最簡單；日後量大再升級 B）|
+| ~~OQ-LFB-4~~ | ① | 題庫綁 schema 版本？ | A. 綁 / B. 不綁 | ✅ **A** — 但 M3（評測集）延後，實際綁定待 M3 落地 |
+| ~~OQ-LFB-5~~ | ② | few-shot 碰不碰 caching？ | A. 本期不做 / B. 靜態精選 / C. 動態 | ✅ **A** — 本期不做，先靠 ①②（M4 延後）|
 
 ---
 
@@ -130,4 +137,5 @@
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
+| 2026-08-01 | v0.2 | OQ 全採建議（1A/2A/3A/4A/5A）· **M1+M2 落地**：`getInsights`（跨批準確率 + 錯誤對回原文）+ `/label-insights`（aiproot 看全/租戶看自家）+ 抽取準確率頁 + 4 測試 · ⚠️ 現實檢查 prod 僅 7 筆標記 → **M3 LLM 重跑 eval 延後**（過度建設，等內部標一批）· OQ-LFB-2 內部標一批**尚未執行** | ahern + Claude Code |
 | 2026-07-31 | v0.1 | M0 首版 · 起於「點標正確有什麼效益」· ⭐ 破迷思（API LLM 無自動學習迴圈）· 站在巨人肩膀上五法 ROI 表 · 誠實結論：效益在①評測集+②失敗挖掘（人在迴圈），few-shot 有 caching 成本、fine-tune 現階段負 ROI · 建議先做評測集+錯誤分群地基（同時服務量測與改進）· 5 OQ 待裁定 · FMEA 含評測集偏誤 P0 | ahern + Claude Code |
