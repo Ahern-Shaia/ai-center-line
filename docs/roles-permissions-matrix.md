@@ -75,7 +75,9 @@
 | 成員 · 檢視 | `users:view` | A | C | T | | | |
 | 成員 · 建群組負責人 | `users:create-group-owner` | A | | T | | | |
 | **成員 · 分配部門** | ✅ `users:assign-department` | A | | **T** | | | |
-| 成員 · 改角色/刪除/重設密碼 | `users:manage` | A | | | | | |
+| **成員 · 改角色（限 員工↔部門主管）** | ✅ `users:assign-role` | A | | **T** | | | |
+| **成員 · 刪除（限 員工/部門主管）** | ✅ `users:delete-member` | A | | **T** | | | |
+| 成員 · 改高階角色/改 email/重設密碼 | `users:manage` | A | | | | | |
 | LINE 群組 · 檢視 | `line-groups:view` | A | C | T | G | | |
 | LINE 群組 · 分派部門 | `line-groups:assign` | A | | T | | | |
 | 任務設定 · 檢視 | `task-config:view` | A | C | T | | | |
@@ -159,6 +161,17 @@
 > **屬性可下放、權限不可。** 改「他的資料落在哪個部門」不改變「他能做什麼」，所以安全。
 > 這是拆出 `users:assign-department`、而不是整包開放 `users:manage` 的理由。
 
+### 5.4 ⭐ 0055：改角色 / 刪除也下放給 T（✅ 2026-07-31）
+
+延續 5.2 的「屬性可下放、權限不可」，把兩件事再下放給 tenant_admin，但用**伺服器護欄**把範圍鎖死在「不構成提權」：
+
+| 動作 | 權限碼 | 護欄（全在 server，不信前端）|
+|---|---|---|
+| 改角色 | `users:assign-role` · `PATCH /users/:id/role` | 只能 **員工↔部門主管**（DTO enum 鎖）· 目標現角色須 ∈ 員工/部門主管（碰不到 總經理室/助理/A）· 不能改自己 · 限自租戶（RLS+明驗）|
+| 刪除成員 | `users:delete-member` · `DELETE /users/:id`（非 A 走護欄版）| 只能刪 員工/部門主管 · 不能刪自己 · 限自租戶 |
+
+> 守住 v2「租戶不能自建/自升同級」：T **永遠碰不到「總經理室」這一級**。改高階角色、改 email、重設密碼仍是 `users:manage`（A only）。10 支 P0 測試（`test/tenant-admin-manage-members.test.ts`）釘住每一條護欄。
+
 ### 5.3 自動 + 手動並存（Okta / Azure 的做法）
 
 員工部門有兩個來源，加 `department_source{auto,manual}` 讓它們不打架：
@@ -193,6 +206,7 @@
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
+| 2026-07-31 | v2.2 | 0055：改角色 `users:assign-role`（限員工↔部門主管）+ 刪除 `users:delete-member`（限員工/部門主管）下放 T · 伺服器三道護欄 + 10 P0 測試 · §3/§5.4 標 ✅ · 順修 UserRole 補 employee（「員工」不再顯示英文）| ahern + Claude Code |
 | 2026-07-30 | v2.1 | MDA 落地：`users:assign-department`（A/T）、master-data 開放 T（0053）、label 群組負責人→部門主管 —— §3/§5/§6 標為 ✅ 已實作 · notify-config 開放 T 判定為不可直接開（需 notify 租戶化 M0）| ahern + Claude Code |
 | 2026-07-30 | v2 | **重寫成 6 角色 + prod 實查 61 條權限**（v1 只有 4 角色、且與實作不符）· ⭐ 標出 MDA 目標：新增 `users:assign-department` 讓 T 能分配成員部門（現況 aiproot-only + 403 誤導按鈕）· 記錄核心原則「屬性可下放、權限不可」· 揭露 v1「員工部門 tenant_admin 可改」一直是未實作的意圖 · 附可議項（notify-config / master-data 是否開放 T）| ahern + Claude Code |
 | 2026-07-24 | v1 | 首版（4 角色）· depts/members 交還 tenant_admin | ahern + Claude |
