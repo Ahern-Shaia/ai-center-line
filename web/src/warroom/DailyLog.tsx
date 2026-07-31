@@ -102,46 +102,68 @@ export default function DailyLog() {
       {loading && !data && <div className="dm-empty">載入中…</div>}
       {data && data.days.length === 0 && <div className="dm-empty">此期間內無日誌</div>}
 
-      {/* 只有最近一天預設展開 —— 7 天 × 6-9 群 ≈ 60 張卡全攤開，
-          使用者要找「今天怎麼樣」得先滑過前六天。往前查是偶發需求，不該是預設。*/}
-      {data && data.days.map((day, i) => (
-        <DaySection key={day.batchDate} day={day} defaultOpen={i === 0} />
-      ))}
+      {/* V4 · 摘要條：一眼知道今天要不要細看（掃描型摘要的入口）*/}
+      {data && data.days.length > 0 && <SummaryBar day={data.days[0]} />}
+
+      {/* V4 · 時間軸脊：今日這一「頁」攤開、往前的日期收合成脊上節點（logbook by structure）*/}
+      {data && data.days.length > 0 && (
+        <div className="dl-timeline">
+          {data.days.map((day, i) => (
+            <TimelineDay key={day.batchDate} day={day} today={i === 0} />
+          ))}
+        </div>
+      )}
     </>
   );
 }
 
-// 一天一段。當日沒有任何內容的群不佔一整格 —— 6 群裡 4 群沒日報時，
-// 版面 2/3 會是「當日無工作日報」的空卡片，把真正有內容的那 2 張擠掉。
-// 收成一行，需要時再展開（原始訊息仍看得到，只是不預設佔版面）。
-function DaySection({ day, defaultOpen }: { day: WarroomDailyDays["days"][number]; defaultOpen: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
+// 今日概況 —— 需注意（未分派/未完成）優先，其餘一句話帶過
+function daySummary(day: WarroomDailyDays["days"][number]) {
+  const attn = day.uploads.filter((u) => u.analysisIncomplete || !u.departmentId);
+  const active = day.uploads.filter((u) => !u.analysisIncomplete && u.departmentId && (u.dailyReports.length > 0 || u.records.length > 0));
+  const reports = active.reduce((n, u) => n + u.dailyReports.length, 0);
+  const records = active.reduce((n, u) => n + u.records.length, 0);
+  return { attn: attn.length, active: active.length, reports, records };
+}
+
+function SummaryBar({ day }: { day: WarroomDailyDays["days"][number] }) {
+  const { attn, active, reports, records } = daySummary(day);
+  return (
+    <div className="dl-sumbar">
+      今日 <b>{active}</b> 群有活動
+      {attn > 0 && <> · <b className="warn">{attn} 群需注意</b></>}
+      {(reports > 0 || records > 0) && <> · 共 <b>{reports}</b> 筆日報、<b>{records}</b> 項記錄</>}
+    </div>
+  );
+}
+
+// 時間軸的一個「日期節點」。今日＝攤開的一頁（實心節點）；往前＝收合的節點（空心，點開翻頁）。
+function TimelineDay({ day, today }: { day: WarroomDailyDays["days"][number]; today: boolean }) {
+  const [open, setOpen] = useState(today);
   const [showQuiet, setShowQuiet] = useState(false);
-  // ⚠️ 分析未完成的卡片**不可以**落進 quiet 桶 —— 那個桶會被收合成
-  //    「另 N 群當日無日報」，正是要修掉的那句誤導。它沒有內容不是因為沒事發生。
-  const incomplete = day.uploads.filter((u) => u.analysisIncomplete);
-  const finished = day.uploads.filter((u) => !u.analysisIncomplete);
+
+  // 需注意（未分派/未完成）置頂 → 有內容 → 無活動收成一行。掃描時眼睛只在琥珀燈點停。
+  const attn = day.uploads.filter((u) => u.analysisIncomplete || !u.departmentId);
+  const finished = day.uploads.filter((u) => !u.analysisIncomplete && u.departmentId);
   const hasContent = finished.filter((u) => u.dailyReports.length > 0 || u.records.length > 0);
   const quiet = finished.filter((u) => u.dailyReports.length === 0 && u.records.length === 0);
-  const shown = [...incomplete, ...(showQuiet ? finished : hasContent)];
+  const shown = [...attn, ...(showQuiet ? [...hasContent, ...quiet] : hasContent)];
   const itemCount = hasContent.reduce((n, u) => n + u.dailyReports.length + u.records.length, 0);
 
   return (
-    <div className="dl-day">
-      <button className={`dl-day-hdr dl-day-btn${open ? "" : " collapsed"}`} onClick={() => setOpen(!open)} aria-expanded={open}>
-        <svg className="dl-day-chev" width="12" height="12" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M6 9l6 6 6-6" />
-        </svg>
-        <span className="dl-day-date">{formatDay(day.batchDate)}</span>
-        <span className="dl-day-count">
-          {hasContent.length} 群有日報 · {itemCount} 筆{quiet.length > 0 && ` · ${quiet.length} 群無`}
-          {incomplete.length > 0 && <b style={{ color: "var(--warn)" }}> · {incomplete.length} 群未完成</b>}
-        </span>
-      </button>
-      {!open ? null : (<>
-      {shown.length > 0 && (
-        <div className="dl-day-cards">
+    <div className={`dl-tl-node${today ? " today" : " past"}`}>
+      {today ? (
+        <div className="dl-tl-date">{formatDay(day.batchDate)}</div>
+      ) : (
+        <button className="dl-tl-date dl-tl-btn" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+          <span className="dl-tl-chev" aria-hidden>{open ? "▾" : "▸"}</span>
+          {formatDay(day.batchDate)}
+          <span className="dl-tl-c">{hasContent.length} 群 · {itemCount} 筆{attn.length > 0 && <b className="warn"> · {attn.length} 需注意</b>}</span>
+        </button>
+      )}
+
+      {open && (
+        <div className="dl-tl-entries">
           {shown.map((u) => (
             <GroupCard
               key={u.uploadId}
@@ -156,24 +178,21 @@ function DaySection({ day, defaultOpen }: { day: WarroomDailyDays["days"][number
               analysisIncomplete={u.analysisIncomplete}
             />
           ))}
+          {quiet.length > 0 && !showQuiet && (
+            <div className="dl-quiet">
+              <span className="dlr-dot dlr-dot-mute" aria-hidden /> 另 <b>{quiet.length} 群今日無活動</b>：
+              {quiet.map((u) => u.groupName ?? `未命名 · ${u.groupId.slice(-6)}`).join("、")}
+              <button className="dl-quiet-toggle" onClick={() => setShowQuiet(true)}>展開</button>
+            </div>
+          )}
+          {quiet.length > 0 && showQuiet && (
+            <div className="dl-quiet"><button className="dl-quiet-toggle" onClick={() => setShowQuiet(false)}>收合無活動的 {quiet.length} 群</button></div>
+          )}
+          {shown.length === 0 && quiet.length === 0 && (
+            <div className="dm-empty" style={{ padding: "10px 0" }}>當日無資料</div>
+          )}
         </div>
       )}
-      {quiet.length > 0 && !showQuiet && (
-        <div className="dl-quiet">
-          <span>另 {quiet.length} 群當日無日報：</span>
-          <span className="dl-quiet-names">{quiet.map((u) => u.groupName ?? `未命名群組 · ${u.groupId.slice(-6)}`).join("、")}</span>
-          <button className="dl-quiet-toggle" onClick={() => setShowQuiet(true)}>展開查看原始訊息</button>
-        </div>
-      )}
-      {quiet.length > 0 && showQuiet && (
-        <div className="dl-quiet">
-          <button className="dl-quiet-toggle" onClick={() => setShowQuiet(false)}>收合無日報的 {quiet.length} 群</button>
-        </div>
-      )}
-      {hasContent.length === 0 && !showQuiet && quiet.length === 0 && (
-        <div className="dm-empty" style={{ padding: "12px 0" }}>當日無資料</div>
-      )}
-      </>)}
     </div>
   );
 }

@@ -1837,6 +1837,42 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .drawer-note { font-size:12.5px; color:var(--ink-3); }
 
 /* Daily log */
+/* ══ 群組日誌 V4 · 時間軸脊 feed（logbook by structure）══ */
+.dl-sumbar { display:flex; align-items:center; gap:6px; padding:10px 14px; background:var(--well, #F1F3F6); border-radius:8px; margin-bottom:16px; font-size:13px; color:var(--ink-2); }
+.dl-sumbar b { color:var(--ink); font-variant-numeric:tabular-nums; }
+.dl-sumbar b.warn { color:var(--warn); }
+/* 時間脊 */
+.dl-timeline { position:relative; padding-left:26px; }
+.dl-timeline::before { content:""; position:absolute; left:6px; top:8px; bottom:8px; width:2px; background:var(--line); }
+.dl-tl-node { position:relative; }
+.dl-tl-node::before { content:""; position:absolute; width:14px; height:14px; border-radius:50%; background:var(--surface); border:2px solid var(--line-2); left:-26px; top:5px; }
+.dl-tl-node.today::before { background:var(--primary); border-color:var(--primary); box-shadow:0 0 0 4px var(--primary-tint); }
+.dl-tl-node.today { margin-bottom:22px; }
+.dl-tl-node.past::before { width:10px; height:10px; left:-24px; top:12px; border-color:#CBD5E1; }
+.dl-tl-node.past { padding:6px 0; }
+.dl-tl-date { font-size:13.5px; font-weight:700; color:var(--ink); margin-bottom:2px; }
+.dl-tl-btn { width:100%; background:none; border:0; font-family:inherit; text-align:left; cursor:pointer; display:flex; align-items:center; gap:8px; font-weight:600; color:var(--ink-2); padding:6px 0; }
+.dl-tl-btn:hover { color:var(--ink); }
+.dl-tl-chev { color:var(--ink-3); font-size:11px; }
+.dl-tl-c { margin-left:auto; font-family:var(--mono); font-size:11.5px; color:var(--ink-3); font-weight:500; }
+.dl-tl-c b.warn { color:var(--warn); font-weight:600; }
+.dl-tl-entries { margin-top:10px; display:flex; flex-direction:column; gap:8px; }
+
+/* 群組列（收合＝一行摘要，展開＝細節）*/
+.dlr { border:1px solid var(--line); border-radius:8px; background:var(--surface); overflow:hidden; }
+.dlr-attn { border-color:#FDE68A; }
+.dlr-hd { display:flex; align-items:center; gap:10px; width:100%; padding:10px 13px; background:none; border:0; font-family:inherit; text-align:left; cursor:pointer; }
+.dlr-hd:hover { background:#FAFBFC; }
+.dlr-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.dlr-dot-ok { background:var(--ok); } .dlr-dot-warn { background:var(--warn); } .dlr-dot-mute { background:#CBD5E1; }
+.dlr-name { font-size:13.5px; font-weight:600; color:var(--ink); flex-shrink:0; }
+.dlr-dept { font-size:11px; color:var(--ink-3); background:var(--well, #F1F3F6); border-radius:3px; padding:1px 7px; flex-shrink:0; }
+.dlr-sum { font-size:12.5px; color:var(--ink-3); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dlr-pill { font-size:10.5px; font-weight:600; border-radius:3px; padding:1px 7px; flex-shrink:0; background:var(--warn-tint); color:var(--warn); }
+.dlr-count { font-size:11.5px; color:var(--ink-3); flex-shrink:0; font-variant-numeric:tabular-nums; }
+.dlr-chev { color:var(--ink-3); font-size:11px; flex-shrink:0; }
+.dlr-body { border-top:1px solid var(--line-2); padding:10px 13px 12px; background:#FCFCFD; }
+
 .dl-day { margin-bottom:24px; }
 .dl-day-hdr { display:flex; align-items:baseline; gap:12px; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
 .dl-day-btn { width:100%; background:none; border:0; border-bottom:1px solid var(--line); font-family:inherit; text-align:left; cursor:pointer; align-items:center; }
