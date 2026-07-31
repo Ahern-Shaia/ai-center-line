@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>群組日誌 · B 日誌本（系統配色）</title>
+<style>
+/* 日誌本「結構」，但配色照系統現況（observability-light）：白/灰/靛藍/語意色 */
+:root{
+  --canvas:#F7F8FA; --paper:#FFFFFF; --well:#F1F3F6; --line:#E5E7EB; --line-2:#F0F2F5;
+  --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280;
+  --primary:#4F46E5; --primary-2:#4338CA; --primary-tint:#EEF2FF;
+  --ok:#059669; --warn:#D97706; --warn-tint:#FFFBEB; --danger:#E11D48;
+  --serif:'Noto Serif TC','Songti TC','STSong',serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--serif);font-size:14px;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:900px;margin:0 auto;padding:26px 24px 70px;}
+.doc-h{font-size:20px;font-weight:700;margin:0 0 3px;color:var(--ink);font-family:'Inter','Noto Sans TC',sans-serif;}
+.doc-sub{color:var(--ink-3);font-size:12.5px;margin:0 0 6px;font-family:'Inter','Noto Sans TC',sans-serif;}
+.legend{font-size:12px;color:var(--ink-3);margin:8px 0 18px;padding:9px 13px;background:var(--paper);border:1px solid var(--line);border-radius:7px;font-family:'Inter','Noto Sans TC',sans-serif;}
+.legend b{color:var(--primary-2);}
+
+/* ── 一本攤開的日誌（結構）── */
+.book{background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:0 2px 14px rgba(17,24,39,.05);
+  position:relative;overflow:hidden;
+  /* 淡灰橫線紙（系統色）*/
+  background-image:repeating-linear-gradient(var(--paper), var(--paper) 33px, var(--line-2) 34px);
+  background-position:0 58px;}
+/* 左裝訂邊線（淡灰，保留筆記本結構、不用暖色）*/
+.book::before{content:"";position:absolute;left:52px;top:0;bottom:0;width:1px;background:var(--line);}
+.page{padding:24px 32px 40px 66px;}
+
+.head{display:flex;align-items:baseline;justify-content:space-between;border-bottom:2px solid var(--line);padding-bottom:10px;margin-bottom:8px;}
+.head .title{font-size:22px;font-weight:700;letter-spacing:2px;color:var(--ink);}
+.head .tools{font-size:12px;color:var(--ink-3);display:flex;gap:12px;align-items:center;}
+.head .stamp{border:1.5px solid var(--primary);color:var(--primary);border-radius:4px;padding:3px 10px;font-size:12px;}
+.date-line{font-size:17px;color:var(--ink);margin:14px 0 4px;letter-spacing:1px;}
+.date-line .dow{color:var(--ink-3);font-size:13px;margin-left:8px;}
+.brief{font-size:13.5px;color:var(--ink-2);margin:0 0 14px;}
+.brief .warn{color:var(--warn);font-weight:700;}
+
+/* 日誌條目 */
+.entry{position:relative;padding:9px 0 9px 4px;line-height:34px;}
+.entry .mark{position:absolute;left:-28px;top:9px;font-size:14px;line-height:34px;}
+.mark.attn{color:var(--warn);}
+.mark.ok{color:var(--ok);}
+.g{font-size:15px;font-weight:700;color:var(--ink);}
+.dept{font-size:11.5px;color:var(--ink-3);background:var(--well);border-radius:3px;padding:1px 7px;margin-left:8px;font-family:'Inter','Noto Sans TC',sans-serif;}
+.note{font-size:13.5px;color:var(--ink-2);margin-left:6px;}
+.tag{font-size:11px;color:var(--warn);background:var(--warn-tint);border-radius:3px;padding:1px 7px;margin-left:8px;font-family:'Inter','Noto Sans TC',sans-serif;font-weight:600;}
+.tag.new{color:var(--primary-2);background:var(--primary-tint);}
+.sub-line{font-size:12.5px;color:var(--ink-3);margin:0 0 4px 4px;line-height:30px;}
+.sub-line .i{margin-right:14px;}
+.quiet{font-size:12.5px;color:var(--ink-3);margin-top:8px;line-height:34px;}
+
+/* 翻過的頁：書側標籤（系統色）*/
+.tabs{margin-top:24px;border-top:1px dashed var(--line);padding-top:12px;}
+.tab{display:flex;align-items:center;font-size:13px;color:var(--ink-2);padding:8px 0;border-bottom:1px dotted var(--line);cursor:pointer;}
+.tab .corner{width:0;height:0;border-style:solid;border-width:0 11px 11px 0;border-color:transparent var(--line) transparent transparent;margin-right:12px;}
+.tab .c{margin-left:auto;color:var(--ink-3);font-size:12px;font-family:'Inter','Noto Sans TC',sans-serif;}
+
+.foot-note{margin-top:22px;font-size:12px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:14px;line-height:1.8;font-family:'Inter',sans-serif;}
+.foot-note b{color:var(--ink);}
+</style></head><body>
+<div class="wrap">
+  <div class="doc-h">群組日誌 · 方案 B — 日誌本（系統配色）</div>
+  <div class="doc-sub">保留日誌本結構（宋體日期・橫線・裝訂邊・書側標籤），配色改為系統現況 observability-light（白/灰/靛藍/語意色）· 示意</div>
+  <div class="legend">與前一版 B 的差別：<b>不再暖色貼皮</b> —— 紙變白、橫線變淡灰、紅邊變灰、印章與標籤改靛藍/琥珀語意色。需注意仍用 <b style="color:var(--warn)">✦</b>（琥珀）。</div>
+
+  <div class="book"><div class="page">
+    <div class="head">
+      <span class="title">群組日誌</span>
+      <span class="tools"><span>今日 ・ 近7天 ・ 近30天</span><span class="stamp">立即分析 ✎</span></span>
+    </div>
+
+    <div class="date-line">七月三十日<span class="dow">星期三 · 資料截止 18:01</span></div>
+    <p class="brief">今日 8 群有活動，<span class="warn">2 群需注意</span>，共 12 筆日報、9 項記錄。</p>
+
+    <div class="entry"><span class="mark attn">✦</span><span class="g">維修派工群</span><span class="dept">未分派</span><span class="note">此群尚未分派部門，分析結果不會變成任務。</span><span class="tag">未分派部門</span></div>
+    <div class="entry"><span class="mark attn">✦</span><span class="g">業助群</span><span class="dept">業務二部</span><span class="note">這一天的分析尚未完成，內容還沒整理出來。</span><span class="tag">分析未完成</span></div>
+
+    <div class="entry"><span class="mark ok">・</span><span class="g">報工生產群</span><span class="dept">報工生產</span><span class="note">八則報工，最新：側踏完工回報、升降椅異音待料。</span><span class="tag new">2 新任務</span></div>
+    <div class="sub-line"><span class="i">— 側踏焊點檢驗完工回報（志○・已完成）</span><span class="i">— 升降椅異音待料（汪○）</span></div>
+    <div class="entry"><span class="mark ok">・</span><span class="g">業務一部回報群</span><span class="dept">業務一部</span><span class="note">三項記錄：客戶詢價二、報價已送一。</span></div>
+    <div class="entry"><span class="mark ok">・</span><span class="g">技術研發群</span><span class="dept">技術研發</span><span class="note">改裝圖面 v2 已核，法規檢驗討論一則。</span></div>
+    <div class="entry"><span class="mark ok">・</span><span class="g">售後服務群</span><span class="dept">售後服務</span><span class="note">到府保養二件，皆已完成。</span></div>
+
+    <div class="quiet">・ 另三群今日無活動：人資總務群、公務車群、閒聊群。</div>
+
+    <div class="tabs">
+      <div class="tab"><span class="corner"></span>七月廿九日（昨日）<span class="c">7 群 · 15 筆</span></div>
+      <div class="tab"><span class="corner"></span>七月廿八日<span class="c">6 群 · 11 筆</span></div>
+      <div class="tab"><span class="corner"></span>七月廿七日<span class="c">8 群 · 18 筆</span></div>
+    </div>
+  </div></div>
+
+  <div class="foot-note">
+    <b>這版把「皮」拿掉、留「結構」：</b>日誌本的敘事（宋體日期、橫線紙、裝訂邊、書側翻頁標籤）還在，但配色回到系統現況 —— 所以它<b>更接近 profile 相容</b>：距離 A（時間軸脊）只差「日期用宋體 + 橫線紙 + 書側標籤」這幾個結構裝飾，語意色與密度都跟系統一致。<br>
+    可討論：宋體日期與橫線紙要不要保留（帶一點手帳氣質但仍克制），還是完全收斂成 A。
+  </div>
+</div>
+</body></html>

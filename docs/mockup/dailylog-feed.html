@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>群組日誌 · Feed（快速掃過確認沒漏事）</title>
+<style>
+:root{--canvas:#F7F8FA;--surface:#FFFFFF;--well:#F1F3F6;--line:#E5E7EB;--line-2:#F0F2F5;--ink:#111827;--ink-2:#4B5563;--ink-3:#6B7280;--primary:#4F46E5;--primary-2:#4338CA;--primary-tint:#EEF2FF;--ok:#059669;--ok-tint:#ECFDF5;--warn:#D97706;--warn-tint:#FFFBEB;--danger:#E11D48;--danger-tint:#FFF1F2;--sans:'Inter','Noto Sans TC',system-ui,-apple-system,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:960px;margin:0 auto;padding:26px 24px 70px;}
+.doc-h{font-size:20px;font-weight:700;margin:0 0 3px;}
+.doc-sub{color:var(--ink-3);font-size:12.5px;margin:0 0 6px;}
+.legend{font-size:12px;color:var(--ink-3);margin:8px 0 18px;padding:9px 13px;background:var(--surface);border:1px solid var(--line);border-radius:7px;}
+.legend b{color:var(--primary-2);}
+.app{border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:0 2px 14px rgba(17,24,39,.05);overflow:hidden;}
+.pane{padding:20px 22px 26px;}
+.pane-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;}
+.pane-hdr h1{font-size:18px;font-weight:700;margin:0 0 3px;}
+.pane-hdr .sub{color:var(--ink-3);font-size:12px;margin:0;}
+.viewbar{display:flex;gap:7px;align-items:flex-start;}
+.analyze-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.analyze-hint{font-size:11px;color:var(--ink-3);}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;}
+.seg span{padding:6px 12px;font-size:12px;color:var(--ink-3);cursor:pointer;border-right:1px solid var(--line);}
+.seg span:last-child{border-right:0;}
+.seg span.on{background:var(--primary);color:#fff;}
+.btn{font-size:12px;color:#fff;background:var(--primary);border:1px solid var(--primary);border-radius:7px;padding:6px 12px;cursor:pointer;}
+/* 摘要條 */
+.sumbar{display:flex;align-items:center;gap:14px;padding:10px 14px;background:var(--well);border-radius:8px;margin-bottom:14px;font-size:13px;color:var(--ink-2);}
+.sumbar b{color:var(--ink);font-variant-numeric:tabular-nums;}
+.sumbar .warn{color:var(--warn);font-weight:600;}
+.sumbar .cta{margin-left:auto;font-size:12px;color:var(--primary);font-weight:600;cursor:pointer;}
+/* 日期段 */
+.day{margin-bottom:6px;}
+.day-hd{display:flex;align-items:center;gap:8px;padding:10px 2px 8px;font-size:12.5px;color:var(--ink-3);font-weight:600;cursor:pointer;}
+.day-hd .chev{color:var(--ink-3);font-size:11px;}
+.day-hd .c{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--ink-3);}
+/* feed 列 —— 單軸、一致、可展開 */
+.row{border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:var(--surface);overflow:hidden;}
+.row.attn{border-color:#FDE68A;}
+.row-hd{display:flex;align-items:center;gap:11px;padding:11px 14px;cursor:pointer;}
+.row-hd:hover{background:#FAFBFC;}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot.ok{background:var(--ok);}.dot.warn{background:var(--warn);}.dot.mute{background:#CBD5E1;}
+.g-name{font-size:13.5px;font-weight:600;color:var(--ink);flex-shrink:0;}
+.g-dept{font-size:11px;color:var(--ink-3);background:var(--well);border-radius:3px;padding:1px 7px;flex-shrink:0;}
+.g-sum{font-size:12.5px;color:var(--ink-3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.g-count{font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;flex-shrink:0;}
+.pill{font-size:10.5px;font-weight:600;border-radius:3px;padding:1px 7px;flex-shrink:0;}
+.pill.warn{background:var(--warn-tint);color:var(--warn);}
+.pill.new{background:var(--primary-tint);color:var(--primary-2);}
+.chev{color:var(--ink-3);font-size:11px;flex-shrink:0;}
+/* 展開內容 */
+.row-body{border-top:1px solid var(--line-2);padding:10px 14px 12px;background:#FCFCFD;}
+.item{padding:7px 0;border-bottom:1px dashed var(--line-2);font-size:13px;}
+.item:last-child{border-bottom:none;}
+.item .t{color:var(--ink);}
+.item .m{font-size:11.5px;color:var(--ink-3);margin-top:2px;}
+.row-body .more{font-size:11.5px;color:var(--primary);cursor:pointer;margin-top:6px;display:inline-block;}
+.warn-note{font-size:12px;color:#78350f;background:var(--warn-tint);border:1px solid #FDE68A;border-radius:6px;padding:7px 10px;margin-bottom:8px;}
+/* 安靜群收合 */
+.quiet{padding:9px 14px;font-size:12px;color:var(--ink-3);background:var(--well);border-radius:8px;margin-bottom:8px;}
+.quiet b{color:var(--ink-2);}
+/* 標註 */
+.co-wrap{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px;}
+.co{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+.co-h{font-weight:700;font-size:13.5px;margin-bottom:6px;display:flex;gap:8px;align-items:center;}
+.co-h .m{width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.co p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.65;}
+.co .was{margin-top:8px;font-size:11.5px;color:var(--danger);background:var(--danger-tint);border-radius:6px;padding:5px 9px;}
+.co .now{margin-top:6px;font-size:11.5px;color:var(--ok);background:var(--ok-tint);border-radius:6px;padding:5px 9px;}
+.foot-note{margin-top:22px;font-size:12px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:14px;line-height:1.8;}
+</style></head><body>
+<div class="wrap">
+  <div class="doc-h">群組日誌 · Feed（快速掃過確認沒漏事）</div>
+  <div class="doc-sub">用途：主管每天一路往下掃，只在「需注意」的地方停。多欄卡片格 → 單軸 feed。示意，尚未實作。</div>
+  <div class="legend">燈點：<b style="color:var(--warn)">●</b> 需注意（未完成/未分派）·<b style="color:var(--ok)">●</b> 正常有內容 ·<b style="color:#94A3B8">●</b> 無活動 · 預設收合，點列展開細節。</div>
+
+  <div class="app"><div class="pane">
+    <div class="pane-hdr">
+      <div><h1>群組日誌</h1><div class="sub">各 LINE 群每日活動摘要 · 由 AI 從當日對話抽取</div></div>
+      <div class="viewbar"><div class="seg"><span class="on">今日</span><span>近 7 天</span><span>近 30 天</span></div>
+        <div class="analyze-wrap"><button class="btn">立即分析</button><span class="analyze-hint">AI 掃當日訊息並整理</span></div></div>
+    </div>
+
+    <!-- 摘要條：一眼知道今天要不要細看 -->
+    <div class="sumbar">
+      今日 <b>8</b> 群有活動 · <span class="warn">2 群需注意</span> · 共 <b>12</b> 筆日報、<b>9</b> 項記錄
+      <span class="cta">只看需注意 →</span>
+    </div>
+
+    <!-- 需注意的置頂 -->
+    <div class="row attn">
+      <div class="row-hd"><span class="dot warn"></span><span class="g-name">維修派工群</span><span class="g-dept">未分派</span>
+        <span class="g-sum">此群尚未分派部門 · 分析結果不會變成任務</span><span class="pill warn">未分派部門</span><span class="chev">▸</span></div>
+    </div>
+    <div class="row attn">
+      <div class="row-hd"><span class="dot warn"></span><span class="g-name">業助群</span><span class="g-dept">業務二部</span>
+        <span class="g-sum">這一天的分析尚未完成 · 內容還沒整理出來</span><span class="pill warn">分析未完成</span><span class="chev">▸</span></div>
+    </div>
+
+    <!-- 正常有內容（一列展開示意）-->
+    <div class="row">
+      <div class="row-hd"><span class="dot ok"></span><span class="g-name">報工生產群</span><span class="g-dept">報工生產</span>
+        <span class="g-sum">8 則報工 · 最新：側踏完工回報、升降椅異音待料</span><span class="g-count">8 則</span><span class="pill new">2 新任務</span><span class="chev">▾</span></div>
+      <div class="row-body">
+        <div class="item"><div class="t">側踏焊點檢驗完工回報</div><div class="m">維保異常 · 志○ · 已完成</div></div>
+        <div class="item"><div class="t">升降椅異音，待料回覆</div><div class="m">維保異常 · 汪○ · 待料</div></div>
+        <div class="item"><div class="t">主機馬達查修，待報價單同意後維修</div><div class="m">維保異常 · 志○ · 待報價</div></div>
+        <span class="more">+ 5 則 · 查完整對話 →</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-hd"><span class="dot ok"></span><span class="g-name">業務一部回報群</span><span class="g-dept">業務一部</span>
+        <span class="g-sum">3 項記錄 · 客戶詢價 2、報價已送 1</span><span class="g-count">3 項</span><span class="chev">▸</span></div>
+    </div>
+    <div class="row">
+      <div class="row-hd"><span class="dot ok"></span><span class="g-name">技術研發群</span><span class="g-dept">技術研發</span>
+        <span class="g-sum">改裝圖面 v2 已核 · 法規檢驗討論 1 則</span><span class="g-count">4 項</span><span class="chev">▸</span></div>
+    </div>
+    <div class="row">
+      <div class="row-hd"><span class="dot ok"></span><span class="g-name">售後服務群</span><span class="g-dept">售後服務</span>
+        <span class="g-sum">到府保養 2 件 · 皆已完成</span><span class="g-count">2 項</span><span class="chev">▸</span></div>
+    </div>
+
+    <!-- 無活動的群收成一行 -->
+    <div class="quiet">另 <b>3 群今日無活動</b>：人資總務群、公務車群、閒聊群 <span style="color:var(--primary);cursor:pointer">展開</span></div>
+
+    <!-- 過去幾天：收合的日期段 -->
+    <div class="day"><div class="day-hd"><span class="chev">▸</span>昨日 · 7/29<span class="c">7 群 · 15 筆</span></div></div>
+    <div class="day"><div class="day-hd"><span class="chev">▸</span>7/28<span class="c">6 群 · 11 筆</span></div></div>
+    <div class="day"><div class="day-hd"><span class="chev">▸</span>7/27<span class="c">8 群 · 18 筆</span></div></div>
+  </div></div>
+
+  <!-- 說明 -->
+  <div class="co-wrap">
+    <div class="co">
+      <div class="co-h"><span class="m">1</span>單軸清單，取代多欄格</div>
+      <p>眼睛一路往下掃，順序明確。不再是「左右上下都要看」的參差卡片格。</p>
+      <div class="was">現況：3 欄 masonry-like，高度不齊、留白參差、閱讀順序不明</div>
+      <div class="now">改成：一欄 feed，每群一列、高度一致</div>
+    </div>
+    <div class="co">
+      <div class="co-h"><span class="m">2</span>訊號優先：需注意的置頂 + 燈點</div>
+      <p>「未分派部門 / 分析未完成 / 有新任務」用琥珀燈點與 pill 標出並置頂，掃描時眼睛只在這些地方停。</p>
+      <div class="now">摘要條「2 群需注意」+「只看需注意」一鍵過濾</div>
+    </div>
+    <div class="co">
+      <div class="co-h"><span class="m">3</span>漸進揭露：預設收合</div>
+      <p>每列預設只給一行摘要（幾則 / 最新一句），點開才看細節。不再一次攤開所有群的全文。</p>
+      <div class="now">「確認沒漏事」＝掃摘要行；要深入才展開那一群</div>
+    </div>
+    <div class="co">
+      <div class="co-h"><span class="m">4</span>無活動的群收成一行</div>
+      <p>今天沒事的群不各佔一格，收成「另 3 群今日無活動」一行，把版面讓給有事的群。</p>
+      <div class="now">今日與過去統一成一條時間軸（日期段可收合）</div>
+    </div>
+  </div>
+
+  <div class="foot-note">
+    對照現況：<span style="font-family:var(--mono)">web/src/warroom/DailyLog.tsx</span>（多欄卡片格）· 名字均假名化。<br>
+    設計判準：掃描+找訊號 → 單軸清單、漸進揭露、優先級訊號（同任務看板 V4 的邏輯，用在日誌）。確認後照此改 DailyLog。
+  </div>
+</div>
+</body></html>
