@@ -101,4 +101,12 @@ export class ConversationAnalysisController {
   async getMetrics(@Param("id", ParseIntPipe) id: number) {
     return this.label.getMetrics(id);
   }
+
+  // 跨批標記洞察（label-driven-improvement M1+M2）· aiproot/consultant 看全、租戶只看自家
+  @Get("label-insights")
+  @RequirePermission("convo:view")
+  async labelInsights(@CurrentUser() user: JwtUser) {
+    const platform = user.role === "aiproot_admin" || user.role === "consultant";
+    return this.label.getInsights(platform ? null : user.tenant_id);
+  }
 }
