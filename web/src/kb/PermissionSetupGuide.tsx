@@ -104,8 +104,13 @@ export default function PermissionSetupGuide({ onNavigate, onDone }: Props) {
             <div className="psg-warn">
               ⚠️ <b>「所屬部門」一定要選。</b>沒選的主管，系統會保守處理成「幾乎看不到東西」（不是看全部）。
             </div>
+            <div className="ob-desc" style={{ marginTop: 10 }}>
+              <b>既有成員也能直接改（不用找 AIPROOT）：</b>在成員列上，<b>角色</b>（員工 ↔ 部門主管）和<b>所屬部門</b>
+              都能直接用下拉調整；要移除某位成員，按該列的「<b>刪除</b>」。
+              （「總經理室」這一級由 AIPROOT 建立與調整，你這邊碰不到，屬正常保護。）
+            </div>
             <button className="btn btn-primary psg-go" onClick={() => onNavigate({ page: "depts", tab: "member" })}>
-              帶我去新增成員 →
+              帶我去成員頁 →
             </button>
           </div>
           <div className="ob-arrow" aria-hidden>↓</div>

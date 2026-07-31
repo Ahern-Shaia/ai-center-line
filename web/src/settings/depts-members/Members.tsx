@@ -159,7 +159,7 @@ export function Members({
               {users.map((u) => (
                 <tr key={u.userId}>
                   <td>{u.displayName ?? <span className="dm-cell-muted">—</span>}</td>
-                  <td className="mono dm-cell-muted">{u.email ?? "—"}</td>
+                  <td><MemberEmail email={u.email} /></td>
                   <td>
                     <RoleCell
                       user={u}
@@ -246,6 +246,14 @@ export function Members({
       )}
     </div>
   );
+}
+
+// LINE 綁定的成員 email 是自動產生的 U…@line.local（登入走 LINE，非真信箱）·
+// 那串 hash 對人沒意義、又佔滿整欄 → 收成一個小標籤，畫面立刻清爽。
+function MemberEmail({ email }: { email: string | null }) {
+  if (!email) return <span className="dm-cell-muted">—</span>;
+  if (email.endsWith("@line.local")) return <span className="dm-tag-unset">LINE 綁定</span>;
+  return <span className="mono dm-cell-muted">{email}</span>;
 }
 
 // 0055 · 一列的「角色」格 · tenant_admin 可內嵌改 員工↔部門主管；其餘（高階/aiproot 視角）顯示靜態標籤
