@@ -171,7 +171,7 @@ v0.1 曾把「一支共用 bot 無法判斷群屬於哪個租戶」列為決定�
 | # | 內容 | 依賴 |
 |---|---|---|
 | **M0** ✅ | 本文件 · OQ 全數裁定 | — |
-| **M1** 🔜 | 通用 bot channel 註冊 + 獨立極簡 handler · join 歡迎直接附 ID + 關鍵字`群組ID`回 ID · 不落庫 · 免費 reply token | — |
+| **M1** ✅ | 獨立極簡 handler 已實作（見 §10）· join 直接附 ID + 關鍵字`群組ID`回 ID · 不落庫 · 免費 reply token · 3 支測試守 P0（無落庫路徑）| — |
 | **M2** | 客戶手冊：加通用 bot → 取 ID → 貼後台 → 移除 · 通訊管道頁「新群待分派」標記 | M1 |
 
 ---
@@ -187,9 +187,40 @@ v0.1 曾把「一支共用 bot 無法判斷群屬於哪個租戶」列為決定�
 
 ---
 
+## 10. M1 落地紀錄（2026-07-31）
+
+**程式碼**（已實作、tsc 綠、3 測試綠）：
+- `line_bot` 加 `kind`（`analysis`｜`utility`），`tenant_id` 放寬為 nullable，
+  CHECK 保證 analysis bot 仍必有租戶（migration `0054_line_bot_utility_kind.sql`）。
+- `line-webhook.service.ts`：驗簽後、進 ingestion 主線**之前**，若 `bot.kind==='utility'`
+  走獨立分支：只在 `join` / 關鍵字`群組ID` 回覆該群 ID，其餘全忽略，早退。
+  同群 30 秒去重（依 LINE event timestamp）。回覆走既有 `replyTasks`（免費 reply token）。
+- `test/group-id-utility-bot.test.ts`：守 FMEA P0 —— utility bot 回 ID 但**不建 line_group**。
+
+**上線需人工執行（R10）**：
+1. **上 prod migration** `0054`（單獨 psql 套，勿跑整包 migrate —— 會覆寫 policy）。
+2. **在 LINE Developers 建一個新 channel**（aiproot 平台用，非某租戶）。
+3. **註冊為 utility bot**（tenant_id 為 NULL）· 用與 server 相同的 `LINE_CONFIG_ENC_KEY`：
+   ```sql
+   INSERT INTO line_bot (tenant_id, name, bot_user_id, kind,
+                         channel_secret_enc, channel_access_token_enc, status)
+   VALUES (NULL, '群組 ID 小幫手', '<bot 的 LINE user id · Uxxxx>', 'utility',
+           pgp_sym_encrypt('<channel secret>', current_setting('...')),  -- 用同一把 enc key
+           pgp_sym_encrypt('<channel access token>', '<enc key>'), 'active');
+   ```
+4. **LINE console 把 webhook URL 設成同一個** `POST /line/webhook`（destination 自動分流）。
+5. **smoke**：把它加進一個測試群 → 應立即收到含群 ID 的歡迎訊息；打「群組ID」→ 再收一次。
+   驗 `line_group` 沒有為該群新增列（P0）。
+
+**待辦**：M2 客戶手冊（加 bot→取 ID→貼後台→移除）＋通訊管道頁「新群待分派」標記。
+
+---
+
 ## 9. 變更紀錄
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
+| 2026-07-31 | v0.4 | **M1 落地**（§10）· line_bot 加 kind（analysis｜utility）+ tenant_id 放寬 nullable（migration 0054）· webhook 驗簽後、進 ingestion 前，utility bot 走獨立分支只回群組 ID（join 附 ID + 關鍵字`群組ID` + 30s 去重）· 3 支測試守 P0（回 ID 但不建 line_group）· tsc 綠、相關 line-bot 回歸綠 · 上 prod 需人工：套 0054 + 建 channel + 註冊 utility bot 列 + 設 webhook URL + smoke | ahern + Claude Code |
+| 2026-07-31 | v0.3 | OQ 全數裁定：關鍵字＝`群組ID`、加群直接附 ID · M0 CLOSED · M1 可開工 | ahern + Claude Code |
 | 2026-07-31 | v0.2 | ⭐ 用戶裁定：**另建 aiproot 獨立「通用 bot」專職回群組 ID，與租戶分析 bot 分開** · 化解 v0.1 標為決定性 P0 的租戶歸屬問題（通用 bot 不落庫/不分析/不查租戶＝沒有錯置可能）· §4 改為通用 bot 設計（join 附 ID + 關鍵字回 ID + 其餘全忽略、獨立極簡 handler、不進 ingestion 主線）· §5 改為「P0 已由架構化解」· FMEA 重寫（落庫污染改 ✅ 設計上無此路徑；新增「貼錯後台」P1 殘留）· OQ-GID-1 標為已答 · 里程碑收斂為 M0/M1/M2 | ahern + Claude Code |
 | 2026-07-31 | v0.1 | M0 首版 · 起於「怎麼讓客戶快速取得群組 ID」· 查證現況：群組已自動註冊+抓群名（後台按名字選、不碰 ID）、webhook 關鍵字→回覆機制成熟 · ⭐ 拆出兩個不同需求（A 連結群組=不該碰 ID / B 真的要 ID=給最快自助管道）· 站在巨人肩膀上四法（命令回覆/加群歡迎/自動註冊按名字選/配對碼）· 主方案＝群組關鍵字「群組ID」回覆（建在既有 pattern，零新機制）· ⭐⭐ 揭露更大的問題：若「固定 bot」是**全體共用一支**，租戶歸屬才是真難題，需改走「群組認領」設計（OQ-GID-1 為決定性前提）· FMEA 含共用 bot 跨租戶 P0 | ahern + Claude Code |

@@ -161,15 +161,15 @@ export class LineBotRepository {
   //    排查時會被導向「密鑰或設定壞了」的方向。
   //    （2026-07-28 鮮湧 bot 就是這樣被誤判的）
   async getByBotUserIdWithSecret(tx: Db, botUserId: string): Promise<{
-    botId: string; tenantId: string; channelSecret: string; channelAccessToken: string; status: string;
+    botId: string; tenantId: string; kind: string; channelSecret: string; channelAccessToken: string; status: string;
   } | null> {
     const key = this.encKey();
     const res = await tx.execute<{
-      bot_id: string; tenant_id: string;
+      bot_id: string; tenant_id: string; kind: string;
       channel_secret: string; channel_access_token: string;
       status: string;
     }>(sql`
-      SELECT bot_id, tenant_id,
+      SELECT bot_id, tenant_id, kind,
              pgp_sym_decrypt(channel_secret_enc, ${key})::text AS channel_secret,
              pgp_sym_decrypt(channel_access_token_enc, ${key})::text AS channel_access_token,
              status
@@ -181,7 +181,10 @@ export class LineBotRepository {
     if (!r) return null;
     return {
       botId: r.bot_id,
+      // utility bot 的 tenant_id 為 NULL；analysis bot 由 DB CHECK 保證非 NULL。
+      // 型別留 string —— utility 分支在讀 tenantId 前就早退（line-webhook.service）。
       tenantId: r.tenant_id,
+      kind: r.kind,
       channelSecret: r.channel_secret,
       channelAccessToken: r.channel_access_token,
       status: r.status,

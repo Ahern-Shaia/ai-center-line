@@ -16,6 +16,7 @@ import { EmployeeBindingService } from "../employee-binding/employee-binding.ser
 interface BotWithSecret {
   botId: string;
   tenantId: string;
+  kind: string;                                    // "analysis" | "utility" · utility 只回群組 ID · 不落庫
   channelSecret: string;
   channelAccessToken: string;
   status: string;
@@ -58,6 +59,8 @@ const ALLOWED_MESSAGE_TYPES = new Set(["text", "sticker", "image", "video", "aud
 @Injectable()
 export class LineWebhookService {
   private readonly logger = new Logger(LineWebhookService.name);
+  // 通用 ID bot 的降噪去重 · groupId → 最近一次回覆的 LINE event timestamp(ms)
+  private readonly utilityLastReplyAt = new Map<string, number>();
 
   constructor(
     private readonly botRepo: LineBotRepository,
@@ -140,6 +143,29 @@ export class LineWebhookService {
 
       // 首次驗簽成功 · 標記 webhook_verified_at
       await this.botRepo.markWebhookVerified(tx, bot.botId);
+
+      // 通用 ID bot · 只回群組 ID · 完全不進 ingestion 主線（不落庫/不分析/不查租戶）
+      // 對照 docs/modules/group-id-onboarding.md §4 · replyTasks 於 tx 結束後統一送
+      if (bot.kind === "utility") {
+        for (const event of payload.events!) {
+          const gid = event.source?.groupId;
+          if (!gid || !event.replyToken) continue;
+          const isJoin = event.type === "join";
+          const isKeyword =
+            event.type === "message" &&
+            event.message?.type === "text" &&
+            isGroupIdKeyword(typeof event.message.text === "string" ? event.message.text : "");
+          if (!isJoin && !isKeyword) continue;
+          // 同群 30 秒內只回一次 · 降噪（best-effort · 依 LINE event timestamp 去重）
+          if (!this.utilityShouldReply(gid, event.timestamp)) continue;
+          replyTasks.push({
+            replyToken: event.replyToken,
+            accessToken: bot.channelAccessToken,
+            text: buildGroupIdReply(gid, isJoin),
+          });
+        }
+        return;                                    // 早退 · 跳過群組 upsert + 訊息落庫
+      }
 
       // 處理 events · 群組 + 1-on-1 都處理
       for (const event of payload.events!) {
@@ -305,6 +331,15 @@ export class LineWebhookService {
     for (const task of memberTasks) {
       this.memberFetch.enqueue(task);
     }
+  }
+
+  // 通用 ID bot · 同群 30 秒內只回一次（best-effort · 多實例各自去重，可接受）
+  private utilityShouldReply(groupId: string, eventTsMs: number): boolean {
+    const last = this.utilityLastReplyAt.get(groupId);
+    if (last != null && eventTsMs - last < 30_000) return false;
+    this.utilityLastReplyAt.set(groupId, eventTsMs);
+    if (this.utilityLastReplyAt.size > 5000) this.utilityLastReplyAt.clear();  // 上限保護 · 避免無限長
+    return true;
   }
 
   /**
@@ -553,6 +588,30 @@ function isSetPasswordKeyword(text: string): boolean {
   const t = text.trim().toLowerCase();
   return t === "設密碼" || t === "設定密碼" || t === "密碼" || t === "改密碼"
     || t === "set password" || t === "password";
+}
+
+// 通用 ID bot · 觸發關鍵字＝「群組ID」（M0 CLOSED OQ-GID-2）· 去空白、ID 部分大小寫不敏感
+function isGroupIdKeyword(text: string): boolean {
+  const t = text.trim().replace(/\s+/g, "").toLowerCase();
+  return t === "群組id" || t === "群組ｉｄ";      // 半形 / 全形 ＩＤ 皆收
+}
+
+// 通用 ID bot 的回覆文案 · isJoin=加群歡迎（多帶引導）· 否則＝關鍵字再取一次（精簡）
+function buildGroupIdReply(groupId: string, isJoin: boolean): string {
+  if (isJoin) {
+    return [
+      "你好，我是 aiproot 的群組 ID 小幫手。",
+      "本群組 ID：",
+      groupId,
+      "（複製上面這串，貼到 aiproot 後台的「LINE 群組」欄位即可）",
+      "需要再看一次，在群裡打「群組ID」我就再回你。取得後可將我移除。",
+    ].join("\n");
+  }
+  return [
+    "本群組 ID：",
+    groupId,
+    "（複製後貼到 aiproot 後台的「LINE 群組」欄位）",
+  ].join("\n");
 }
 
 function safeBufFromB64(b64: string | undefined): Buffer | null {

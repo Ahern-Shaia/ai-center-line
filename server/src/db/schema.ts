@@ -326,10 +326,12 @@ export const dataSyncWritebackQueue = pgTable("data_sync_writeback_queue", {
 
 export const lineBot = pgTable("line_bot", {
   botId: uuid("bot_id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.tenantId, { onDelete: "cascade" }),
+  // utility bot（通用 ID bot）不屬任何租戶 → nullable；analysis bot 由 DB CHECK 強制要有（0054）
+  tenantId: uuid("tenant_id").references(() => tenants.tenantId, { onDelete: "cascade" }),
   name: text("name").notNull(),
   botUserId: text("bot_user_id").notNull(),                    // webhook destination lookup (Uxxx)
   channelId: text("channel_id"),                                // LINE Console numeric id · optional
+  kind: text("kind").notNull().default("analysis").$type<"analysis" | "utility">(),  // 0054 · analysis=分析落庫 / utility=只回群組 ID
   // channel_secret_enc / channel_access_token_enc 為 bytea · Drizzle 不直接處理 · 走 raw sql
   status: text("status").notNull().default("active").$type<"active" | "disabled">(),
   webhookVerifiedAt: timestamp("webhook_verified_at", { withTimezone: true }),
