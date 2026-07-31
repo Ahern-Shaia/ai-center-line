@@ -2,14 +2,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError,
   getMyPersonalReport,
+  getAssignedTaskSource,
   regeneratePersonalReport,
   savePersonalReport,
   type PendingRawMessage,
   type PersonalDailyReportItem,
   type PersonalDailyReportRow,
+  type TicketSource,
 } from "../api";
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
+import SourceMessageList from "../warroom/SourceMessageList";
+
+type AssignedTask = { ticketId: string; summary: string | null; canSeeSource?: boolean };
 
 // PDR-M4 · 我的日報頁
 // 對照 docs/modules/personal-daily-report.md §7
@@ -19,7 +24,7 @@ export default function MyDailyReport() {
   const [items, setItems] = useState<PersonalDailyReportItem[]>([]);
   const [pendingMessageCount, setPendingMessageCount] = useState(0);
   const [pendingMessages, setPendingMessages] = useState<PendingRawMessage[]>([]);
-  const [assignedTasks, setAssignedTasks] = useState<Array<{ ticketId: string; summary: string | null }>>([]);
+  const [assignedTasks, setAssignedTasks] = useState<AssignedTask[]>([]);
   // 今天去過哪 · 系統本來就知道，只是這一頁看不到（4FR §5）
   const [todayVisits, setTodayVisits] = useState<Array<{ place: string; at: string }>>([]);
   // AI 幾點自動整理 · 每家自己設（原本前端寫死 17:30，客戶改了時間畫面就在說謊）
@@ -239,14 +244,15 @@ export default function MyDailyReport() {
               有 <b>{assignedTasks.length}</b> 項指派給你的任務尚未加入日報
             </div>
             {assignedTasks.map((t) => (
-              <div key={t.ticketId} className="pdr-raw-item" style={{ alignItems: "center" }}>
-                <div className="pdr-raw-text">{t.summary ?? "（無摘要）"}</div>
-                <button className="btn btn-sm" disabled={!canEdit}
-                  onClick={() => setItems((s) => [...s, {
-                    title: t.summary ?? "", detail: "", time: "",
-                    followup: "", source: "assigned_task", ticketId: t.ticketId,
-                  } as PersonalDailyReportItem])}>加入日報</button>
-              </div>
+              <AssignedTaskItem
+                key={t.ticketId}
+                task={t}
+                canEdit={canEdit}
+                onAdd={() => setItems((s) => [...s, {
+                  title: t.summary ?? "", detail: "", time: "",
+                  followup: "", source: "assigned_task", ticketId: t.ticketId,
+                } as PersonalDailyReportItem])}
+              />
             ))}
           </div>
         )}
@@ -510,4 +516,52 @@ function formatDateTime(iso: string): string {
 
 function formatTimeHM(iso: string): string {
   return new Date(iso).toLocaleTimeString("zh-TW", { hour12: false, hour: "2-digit", minute: "2-digit" });
+}
+
+// 指派任務一列 · 可加入日報 + （部門制 gate 通過時）展開對照原始對話
+// F-3：只有 canSeeSource（任務屬本人部門）才給展開；跨部門後端會 403、前端也不顯示按鈕。
+function AssignedTaskItem({ task, canEdit, onAdd }: {
+  task: AssignedTask;
+  canEdit: boolean;
+  onAdd: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [source, setSource] = useState<TicketSource | null>(null);
+  const [loading, setLoading] = useState(false);
+  const toast = useToast();
+
+  async function toggle() {
+    if (open) { setOpen(false); return; }
+    setOpen(true);
+    if (source) return;
+    setLoading(true);
+    try {
+      setSource(await getAssignedTaskSource(task.ticketId));
+    } catch (err) {
+      toast.show(err instanceof ApiError ? err.message : "載入來源失敗", "danger");
+      setOpen(false);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="pdr-raw-item" style={{ flexDirection: "column", alignItems: "stretch" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="pdr-raw-text" style={{ flex: 1 }}>{task.summary ?? "（無摘要）"}</div>
+        <button className="btn btn-sm" disabled={!canEdit} onClick={onAdd}>加入日報</button>
+      </div>
+      {task.canSeeSource && (
+        <button className="dl-card-toggle" style={{ alignSelf: "flex-start", marginTop: 6 }} onClick={() => void toggle()}>
+          {open ? "收合原始訊息 ▲" : "對照原始訊息 ▼"}
+        </button>
+      )}
+      {open && (
+        <div className="dl-raw" style={{ marginTop: 6 }}>
+          {loading && <div style={{ fontSize: 12, color: "var(--ink-3)", padding: 8 }}>載入中…</div>}
+          {!loading && source && <SourceMessageList data={source} />}
+        </div>
+      )}
+    </div>
+  );
 }

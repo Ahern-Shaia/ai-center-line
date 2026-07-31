@@ -450,6 +450,10 @@ export interface TicketSource {
 export const getTicketSource = (ticketId: string) =>
   req<TicketSource>(`/warroom/tickets/${ticketId}/source`);
 
+// 指派任務的原始對話（員工日報用）· 部門制 gate：只有任務屬本人部門才回，跨部門 403
+export const getAssignedTaskSource = (ticketId: string) =>
+  req<TicketSource>(`/personal-daily-report/assigned-tasks/${ticketId}/source`);
+
 // 任務歸屬 · 導入期由主管手動派（員工綁定 LINE 後才會自動歸屬）
 export interface AssignableMember { userId: string; name: string; hasLineBinding: boolean }
 export const getAssignableMembers = () =>
@@ -623,7 +627,7 @@ export const getMyPersonalReport = (date?: string) => {
     /** AI 幾點自動整理 · 每家自己設 · null = 已關閉或看不懂的 cron，文案要改成泛稱 */
     aiRunAt: string | null;
     pendingMessageCount: number;
-  assignedTasks?: Array<{ ticketId: string; summary: string | null; category: string | null; createdAt: string }>;
+  assignedTasks?: Array<{ ticketId: string; summary: string | null; category: string | null; createdAt: string; canSeeSource?: boolean }>;
   /** 今天打卡去過的地方 · 由本人決定要不要納入日報（4FR §5） */
   todayVisits?: Array<{ place: string; at: string }>;
     pendingMessages: PendingRawMessage[];
