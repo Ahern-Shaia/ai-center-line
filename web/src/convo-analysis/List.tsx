@@ -5,6 +5,7 @@ import { useToast } from "../Toast";
 interface Props {
   onOpen: (id: number) => void;
   onNewUpload: () => void;
+  onInsights: () => void;
 }
 
 const STATUS_LABEL: Record<ConvoUpload["status"], string> = {
@@ -21,7 +22,7 @@ const STATUS_COLOR: Record<ConvoUpload["status"], string> = {
   failed: "#c62828",
 };
 
-export default function ConversationAnalysisList({ onOpen, onNewUpload }: Props) {
+export default function ConversationAnalysisList({ onOpen, onNewUpload, onInsights }: Props) {
   const [uploads, setUploads] = useState<ConvoUpload[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,20 +73,23 @@ export default function ConversationAnalysisList({ onOpen, onNewUpload }: Props)
             上傳歷史 · 點列查看抽取結果、標對錯、看 metric
           </p>
         </div>
-        <button
-          onClick={onNewUpload}
-          style={{
-            padding: "10px 20px",
-            background: "#0066cc",
-            color: "white",
-            border: "none",
-            borderRadius: 4,
-            cursor: "pointer",
-            fontSize: 14,
-          }}
-        >
-          + 上傳新對話
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button className="btn" onClick={onInsights}>抽取準確率 →</button>
+          <button
+            onClick={onNewUpload}
+            style={{
+              padding: "10px 20px",
+              background: "#0066cc",
+              color: "white",
+              border: "none",
+              borderRadius: 4,
+              cursor: "pointer",
+              fontSize: 14,
+            }}
+          >
+            + 上傳新對話
+          </button>
+        </div>
       </div>
 
       {loading && <div style={{ padding: 40, textAlign: "center", color: "#999" }}>載入中...</div>}

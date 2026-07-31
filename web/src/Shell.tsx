@@ -110,6 +110,7 @@ export const PAGE_PERM: Record<string, string[]> = {
   ),
   // 不在側欄、但可從別頁點進去的子頁也要有閘門
   "convo-detail": ["convo:view"],
+  "convo-insights": ["convo:view"],
   // 權限設定教學 · 從「部門/成員」頁點進 · 只給能管部門/成員的人
   "permission-guide": ["departments:view", "users:view"],
 };

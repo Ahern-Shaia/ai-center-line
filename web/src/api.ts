@@ -781,6 +781,17 @@ export const deleteConvoLabel = (uploadId: number, targetType: string, targetId:
 export const getConvoMetrics = (id: number) =>
   req<ConvoMetrics>(`/conversation-analysis/uploads/${id}/metrics`);
 
+// 跨批標記洞察（label-driven-improvement M1+M2）· aiproot 看全、租戶看自家
+export interface LabelInsights {
+  accuracy: Record<"classification" | "daily_report" | "record", { total: number; correct: number }>;
+  errors: Array<{
+    uploadId: number; targetType: "classification" | "daily_report" | "record"; targetId: string;
+    tenantSlug: string; filename: string; content: string; category: string | null; note: string | null; labeledAt: string;
+  }>;
+}
+export const getLabelInsights = () =>
+  req<LabelInsights>("/conversation-analysis/label-insights");
+
 // === LLM Config ===
 
 export type LlmProviderName = "anthropic" | "openai" | "google" | "ollama" | "deepseek";

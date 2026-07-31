@@ -22,6 +22,7 @@ import TenantBindingAudit from "./settings/TenantBindingAudit";
 import ConversationAnalysisUpload from "./convo-analysis/Upload";
 import ConversationAnalysisList from "./convo-analysis/List";
 import ConversationAnalysisDetail from "./convo-analysis/Detail";
+import ConvoInsights from "./convo-analysis/Insights";
 import LlmSettings from "./settings/LlmSettings";
 import LineBots from "./line-bots/Page";
 import TenantManagement from "./aiproot-console/TenantManagement";
@@ -61,6 +62,7 @@ type Route =
   | { page: "convo-list" }
   | { page: "convo-upload" }
   | { page: "convo-detail"; uploadId: number }
+  | { page: "convo-insights" }
   | { page: "llm-settings" }
   | { page: "line-bots" }
   | { page: "tenant-mgmt" }
@@ -95,6 +97,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   "convo-list": "分析列表",
   "convo-upload": "上傳新對話",
   "convo-detail": "分析詳情",
+  "convo-insights": "抽取準確率",
   "llm-settings": "語言模型設定",
   "line-bots": "LINE 機器人管理",
   "tenant-mgmt": "租戶管理",
@@ -276,7 +279,11 @@ export default function App() {
             <ConversationAnalysisList
               onOpen={(id) => setRoute({ page: "convo-detail", uploadId: id })}
               onNewUpload={() => setRoute({ page: "convo-upload" })}
+              onInsights={() => setRoute({ page: "convo-insights" })}
             />
+          )}
+          {route.page === "convo-insights" && (
+            <ConvoInsights onBack={() => setRoute({ page: "convo-list" })} />
           )}
           {route.page === "convo-upload" && (
             <ConversationAnalysisUpload
