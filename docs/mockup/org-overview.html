@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>組織總覽 · 輕量版 mockup</title>
+<style>
+  :root{
+    --canvas:#F7F8FA; --paper:#FFFFFF; --well:#F1F3F6; --line:#E5E7EB; --line-2:#F0F2F5;
+    --ink:#111827; --ink-2:#4B5563; --ink-3:#6B7280; --faint:#9AA1AB;
+    --primary:#4F46E5; --primary-2:#4338CA; --primary-tint:#EEF2FF;
+    --ok:#059669; --ok-tint:#ECFDF5; --warn:#D97706; --warn-tint:#FFFBEB; --warn-bd:#FDE68A;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--ink);
+    font-family:Inter,-apple-system,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:900px;margin:0 auto;padding:28px 24px 70px;}
+  .doc-h{font-size:20px;font-weight:700;margin:0 0 3px;}
+  .doc-sub{color:var(--ink-3);font-size:12.5px;margin:0 0 18px;}
+
+  .pane-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+  h1{font-size:22px;font-weight:680;margin:0;}
+  .sub{color:var(--ink-3);font-size:13px;margin-top:3px;}
+  .sumbar{background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:11px 16px;margin-bottom:18px;font-size:13.5px;color:var(--ink-2);}
+  .sumbar b{color:var(--ink);}
+  .sumbar .warn{color:var(--warn);}
+
+  /* 部門卡（分組容器）*/
+  .dept{background:var(--paper);border:1px solid var(--line);border-radius:11px;margin:0 0 14px;overflow:hidden;}
+  .dept-hd{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--line-2);}
+  .dept-name{font-size:15.5px;font-weight:660;}
+  .dept-grp{font-size:11.5px;color:var(--primary-2);background:var(--primary-tint);border-radius:5px;padding:2px 9px;}
+  .dept-grp.none{color:var(--warn);background:var(--warn-tint);}
+  .dept-count{margin-left:auto;font-size:12px;color:var(--ink-3);}
+  .dept.warn{border-color:var(--warn-bd);}
+  .dept.warn .dept-hd{background:var(--warn-tint);}
+
+  /* 成員列 */
+  .mem{display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid var(--line-2);font-size:14px;}
+  .mem:last-child{border-bottom:none;}
+  .mem .av{width:26px;height:26px;border-radius:50%;background:var(--well);color:var(--ink-3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex:none;}
+  .mem .nm{font-weight:520;}
+  .mem .role{font-size:11px;border-radius:4px;padding:1px 8px;}
+  .role.lead{color:var(--primary-2);background:var(--primary-tint);}
+  .role.emp{color:var(--ink-3);background:var(--well);}
+  .mem .bind{margin-left:auto;font-size:11px;color:var(--faint);}
+  .mem .bind.no{color:var(--warn);}
+  .lead .av{background:var(--primary-tint);color:var(--primary-2);}
+
+  .foot-note{margin-top:26px;font-size:12px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:14px;line-height:1.85;}
+  .foot-note b{color:var(--ink);}
+</style></head><body>
+<div class="wrap">
+  <div class="doc-h">組織總覽 · 輕量版 mockup（示意）</div>
+  <div class="doc-sub">唯讀分組樹 · 重用現有資料 · 不用圖形庫 · 一眼看懂「哪個部門有誰、接哪個 LINE 群」。給用戶 review 用。</div>
+
+  <div class="pane-hdr">
+    <div>
+      <h1>組織總覽</h1>
+      <div class="sub">示範案場 · 公司 → 部門 → 成員 · 由現有設定即時彙整</div>
+    </div>
+  </div>
+
+  <div class="sumbar">
+    共 <b>4</b> 個部門、<b>12</b> 位成員 · <span class="warn">1 群未分派部門</span> · <span class="warn">2 位未分部門</span>
+  </div>
+
+  <!-- 業務部 -->
+  <div class="dept">
+    <div class="dept-hd">
+      <span class="dept-name">業務一部</span>
+      <span class="dept-grp">LINE：業務一部回報群</span>
+      <span class="dept-count">3 位</span>
+    </div>
+    <div class="mem lead"><span class="av">王</span><span class="nm">王經理</span><span class="role lead">部門主管</span><span class="bind">已綁 LINE</span></div>
+    <div class="mem"><span class="av">志</span><span class="nm">志○○</span><span class="role emp">員工</span><span class="bind">已綁 LINE</span></div>
+    <div class="mem"><span class="av">汪</span><span class="nm">汪○○</span><span class="role emp">員工</span><span class="bind">已綁 LINE</span></div>
+  </div>
+
+  <!-- 技術研發 -->
+  <div class="dept">
+    <div class="dept-hd">
+      <span class="dept-name">技術研發</span>
+      <span class="dept-grp">LINE：技術工程群</span>
+      <span class="dept-count">4 位</span>
+    </div>
+    <div class="mem lead"><span class="av">陳</span><span class="nm">陳○○</span><span class="role lead">部門主管</span><span class="bind">已綁 LINE</span></div>
+    <div class="mem"><span class="av">林</span><span class="nm">林○○</span><span class="role emp">員工</span><span class="bind">已綁 LINE</span></div>
+    <div class="mem"><span class="av">吳</span><span class="nm">吳○○</span><span class="role emp">員工</span><span class="bind no">未綁 LINE</span></div>
+    <div class="mem"><span class="av">周</span><span class="nm">周○○</span><span class="role emp">員工</span><span class="bind">已綁 LINE</span></div>
+  </div>
+
+  <!-- 售後服務 -->
+  <div class="dept">
+    <div class="dept-hd">
+      <span class="dept-name">售後服務</span>
+      <span class="dept-grp">LINE：售後服務群</span>
+      <span class="dept-count">3 位</span>
+    </div>
+    <div class="mem lead"><span class="av">阿</span><span class="nm">阿○</span><span class="role lead">部門主管</span><span class="bind">已綁 LINE</span></div>
+    <div class="mem"><span class="av">黃</span><span class="nm">黃○○</span><span class="role emp">員工</span><span class="bind">已綁 LINE</span></div>
+    <div class="mem"><span class="av">蔡</span><span class="nm">蔡○○</span><span class="role emp">員工</span><span class="bind">已綁 LINE</span></div>
+  </div>
+
+  <!-- 未分派（警示卡）-->
+  <div class="dept warn">
+    <div class="dept-hd">
+      <span class="dept-name" style="color:var(--warn)">⚠ 未分派部門</span>
+      <span class="dept-grp none">維修派工群 · 尚未分派</span>
+      <span class="dept-count">2 位</span>
+    </div>
+    <div class="mem"><span class="av">測</span><span class="nm">測試綁定</span><span class="role emp">員工</span><span class="bind no">系統推不出 · 請指派</span></div>
+    <div class="mem"><span class="av">未</span><span class="nm">未命名成員</span><span class="role emp">員工</span><span class="bind no">系統推不出 · 請指派</span></div>
+  </div>
+
+  <div class="foot-note">
+    <b>這一頁怎麼來的：</b>純唯讀，把「部門配置 + 成員（角色/部門）+ 通訊管道（群組→部門）」三份現有資料彙整成一棵樹，沒有新資料、沒有圖形庫。<br>
+    <b>刻意留的信號：</b>① 群沒分派部門 → 該部門卡標警示；② 成員系統推不出部門 → 收進「未分派」卡；③ 沒綁 LINE 的成員標「未綁」（他發言歸不到他）。這三個正是設定容易漏、又看不出來的地方 —— 總覽的價值就在把它們攤在同一頁。<br>
+    <b>不做的：</b>不做拖拉、不做節點連線圖（那是委員簡報版，另見 M0）。這頁的目標是「總經理一眼確認設定對不對」。
+  </div>
+</div>
+</body></html>
