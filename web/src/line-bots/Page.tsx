@@ -96,7 +96,7 @@ export default function LineBots() {
         setBotDetail(res);
         // 重拉 refs · 依 bot 的 tenantId scope departments
         try {
-          const scopedRefs = await getLineRefs(res.bot.tenantId);
+          const scopedRefs = await getLineRefs(res.bot.tenantId ?? undefined);
           setRefs(scopedRefs);
         } catch { /* 忽略 · UI 保留舊 refs */ }
       })

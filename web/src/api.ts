@@ -824,7 +824,8 @@ export const deleteLlmConfig = (tenantId: string) =>
 
 export interface LineBotDto {
   botId: string;
-  tenantId: string;
+  tenantId: string | null;             // utility bot（群組 ID 小幫手）無租戶
+  kind: "analysis" | "utility";
   name: string;
   botUserId: string;
   channelId: string | null;
@@ -869,7 +870,8 @@ export const getLineRefs = (tenantId?: string) =>
   req<LineRefsDto>(`/line-bots/refs${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
 
 export const createLineBot = (payload: {
-  tenantId: string;
+  kind?: "analysis" | "utility";       // 預設 analysis · utility＝群組 ID 小幫手（免租戶）
+  tenantId?: string;
   name: string;
   channelId?: string;
   channelSecret: string;

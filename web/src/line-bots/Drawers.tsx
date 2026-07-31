@@ -25,28 +25,33 @@ export function NewBotDrawer({
 }) {
   const toast = useToast();
   const [saving, setSaving] = useState(false);
+  const [kind, setKind] = useState<"analysis" | "utility">("analysis");
   const [name, setName] = useState("");
   const [tenantId, setTenantId] = useState(refs.tenants[0]?.tenantId ?? "");
   const [channelId, setChannelId] = useState("");
   const [channelSecret, setChannelSecret] = useState("");
   const [accessToken, setAccessToken] = useState("");
 
+  const isUtility = kind === "utility";
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !tenantId || !channelSecret.trim() || !accessToken.trim()) {
+    // utility（群組 ID 小幫手）＝平台工具 bot · 不需選租戶
+    if (!name.trim() || (!isUtility && !tenantId) || !channelSecret.trim() || !accessToken.trim()) {
       toast.show("請填齊必要欄位", "danger");
       return;
     }
     setSaving(true);
     try {
       const res = await createLineBot({
+        kind,
         name: name.trim(),
-        tenantId,
+        tenantId: isUtility ? undefined : tenantId,
         channelId: channelId.trim() || undefined,
         channelSecret: channelSecret.trim(),
         channelAccessToken: accessToken.trim(),
       });
-      toast.show("機器人已新增 · 已驗證 Access Token", "ok");
+      toast.show(isUtility ? "群組 ID 小幫手已新增 · 已驗證 Access Token" : "機器人已新增 · 已驗證 Access Token", "ok");
       onCreated(res.bot);
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "新增失敗", "danger");
@@ -64,22 +69,47 @@ export function NewBotDrawer({
     >
       <form onSubmit={handleSubmit} className="llm-form">
         <div className="field">
-          <label>機器人名稱 *</label>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} disabled={saving} placeholder="例：台灣福祉 AI 客服" required />
-          <div className="llm-hint">此名稱僅顯示於後台 · 與 LINE 官方帳號顯示名可不同</div>
+          <label>類型 *</label>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              type="button"
+              className={`btn${!isUtility ? " btn-primary" : ""}`}
+              onClick={() => setKind("analysis")}
+              disabled={saving}
+            >分析 bot</button>
+            <button
+              type="button"
+              className={`btn${isUtility ? " btn-primary" : ""}`}
+              onClick={() => setKind("utility")}
+              disabled={saving}
+            >群組 ID 小幫手</button>
+          </div>
+          <div className="llm-hint">
+            {isUtility
+              ? "平台層工具 bot · 加進群只回群組 ID · 不屬任何租戶、不做對話分析"
+              : "各租戶的對話分析 bot · 群訊息 → AI → 日誌／任務"}
+          </div>
         </div>
 
         <div className="field">
-          <label>隸屬租戶 *</label>
-          <StyledSelect
-            items={tenantsToItems(refs.tenants)}
-            value={tenantId}
-            onChange={setTenantId}
-            disabled={saving}
-            ariaLabel="隸屬租戶"
-            placeholder="選擇租戶"
-          />
+          <label>機器人名稱 *</label>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} disabled={saving} placeholder={isUtility ? "例：群組 ID 小幫手" : "例：台灣福祉 AI 客服"} required />
+          <div className="llm-hint">此名稱僅顯示於後台 · 與 LINE 官方帳號顯示名可不同</div>
         </div>
+
+        {!isUtility && (
+          <div className="field">
+            <label>隸屬租戶 *</label>
+            <StyledSelect
+              items={tenantsToItems(refs.tenants)}
+              value={tenantId}
+              onChange={setTenantId}
+              disabled={saving}
+              ariaLabel="隸屬租戶"
+              placeholder="選擇租戶"
+            />
+          </div>
+        )}
 
         <div className="field">
           <label>Channel ID（選填）</label>
@@ -120,17 +150,19 @@ export function EditBotDrawer({
   onSaved: () => void;
 }) {
   const toast = useToast();
+  const isUtility = bot.kind === "utility";
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState(bot.name);
   const [channelId, setChannelId] = useState(bot.channelId ?? "");
-  const [tenantId, setTenantId] = useState(bot.tenantId);
+  const [tenantId, setTenantId] = useState(bot.tenantId ?? "");
   const [rotateSecret, setRotateSecret] = useState(false);
   const [rotateToken, setRotateToken] = useState(false);
   const [newSecret, setNewSecret] = useState("");
   const [newToken, setNewToken] = useState("");
   const [showTenantMoveConfirm, setShowTenantMoveConfirm] = useState(false);
 
-  const tenantChanged = tenantId !== bot.tenantId;
+  // utility bot 無租戶 · 不可遷移（後端也會擋）
+  const tenantChanged = !isUtility && tenantId !== bot.tenantId;
 
   async function doSubmit() {
     setSaving(true);
@@ -172,22 +204,29 @@ export function EditBotDrawer({
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} disabled={saving} />
         </div>
 
-        <div className="field">
-          <label>隸屬租戶</label>
-          <StyledSelect
-            items={tenantsToItems(tenants)}
-            value={tenantId}
-            onChange={setTenantId}
-            disabled={saving}
-            ariaLabel="隸屬租戶"
-            placeholder="選擇租戶"
-          />
-          {tenantChanged && (
-            <div className="llm-hint" style={{ color: "var(--warn)" }}>
-              ⚠️ 遷移到新租戶 · 該 bot 底下所有群的「分派部門」將自動清空（舊 tenant 的 dept 對新 tenant 無意義）· 需重新分派
-            </div>
-          )}
-        </div>
+        {isUtility ? (
+          <div className="field">
+            <label>類型</label>
+            <div className="llm-hint">群組 ID 小幫手（平台層工具 bot · 無租戶 · 只回群組 ID）</div>
+          </div>
+        ) : (
+          <div className="field">
+            <label>隸屬租戶</label>
+            <StyledSelect
+              items={tenantsToItems(tenants)}
+              value={tenantId}
+              onChange={setTenantId}
+              disabled={saving}
+              ariaLabel="隸屬租戶"
+              placeholder="選擇租戶"
+            />
+            {tenantChanged && (
+              <div className="llm-hint" style={{ color: "var(--warn)" }}>
+                ⚠️ 遷移到新租戶 · 該 bot 底下所有群的「分派部門」將自動清空（舊 tenant 的 dept 對新 tenant 無意義）· 需重新分派
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="field">
           <label>Channel ID（選填）</label>

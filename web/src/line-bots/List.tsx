@@ -37,7 +37,10 @@ export function BotList({
                 >
                   <span className={`lbot-dot lbot-dot--${dot}`} aria-hidden />
                   <span className="lbot-list-body">
-                    <span className="lbot-list-name">{b.name}</span>
+                    <span className="lbot-list-name">
+                      {b.name}
+                      {b.kind === "utility" && <span className="lbot-tag lbot-tag--muted">ID 小幫手</span>}
+                    </span>
                     <span className="lbot-list-sub">
                       {b.groupCount} 群 · {formatRelative(b.updatedAt)}
                     </span>
