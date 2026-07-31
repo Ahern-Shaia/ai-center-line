@@ -35,6 +35,14 @@ export const AssignDepartmentSchema = z.object({
   departmentId: z.string().regex(uuidRegex).nullable(),   // null = 清空（回未分派）
 });
 
+// 改角色（tenant_admin 可用）· 刻意**只允許 員工↔部門主管** —— 碰不到高階帳號＝不構成提權。
+// employee 不在 RoleEnum（不手動建、由 LINE 綁定自動生）· 這裡是唯一會用到它的指派點。
+export const AssignRoleSchema = z.object({
+  tenantId: z.string().regex(uuidRegex),
+  role: z.enum(["employee", "group_owner"]),
+});
+
 export type UserCreateDto = z.infer<typeof UserCreateSchema>;
 export type UserUpdateDto = z.infer<typeof UserUpdateSchema>;
 export type AssignDepartmentDto = z.infer<typeof AssignDepartmentSchema>;
+export type AssignRoleDto = z.infer<typeof AssignRoleSchema>;

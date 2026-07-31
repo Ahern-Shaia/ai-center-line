@@ -3,7 +3,7 @@ import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { UserService } from "./user.service.js";
-import { AssignDepartmentSchema, UserCreateSchema, UserDeleteSchema, UserUpdateSchema } from "./dto/user.dto.js";
+import { AssignDepartmentSchema, AssignRoleSchema, UserCreateSchema, UserDeleteSchema, UserUpdateSchema } from "./dto/user.dto.js";
 import { resolveTenantId } from "../auth/resolve-tenant-id.js";
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -97,9 +97,34 @@ export class UserController {
     return { user };
   }
 
+  // 改角色 · tenant_admin 可用（users:assign-role）· 刻意獨立於 update：只收 role，且伺服器鎖
+  // 「員工↔部門主管」。改高階帳號、email、密碼仍走 update（users:manage · aiproot only）。
+  // 對照 assignDepartment：屬性/低階角色可下放、提權不可（docs/roles-permissions-matrix.md §5）。
+  @Patch(":id/role")
+  @RequirePermission("users:assign-role")
+  async assignRole(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @CurrentUser() caller: JwtUser,
+  ) {
+    if (!uuidRegex.test(id)) throw new BadRequestException("成員 id 格式不正確");
+    const parsed = AssignRoleSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        status: "invalid_body",
+        errors: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+      });
+    }
+    // resolveTenantId：tenant_admin 鎖自租戶、擋跨租戶（防 IDOR）
+    const tenantId = resolveTenantId(caller, parsed.data.tenantId);
+    const user = await this.svc.assignRole(id, tenantId, parsed.data.role, caller.user_id);
+    return { user };
+  }
+
+  // 刪除 · aiproot（users:manage · 全能）或 tenant_admin（users:delete-member · 限自家 員工/部門主管）
   @Delete(":id")
-  @RequirePermission("users:manage")
-  async delete(@Param("id") id: string, @Body() body: unknown) {
+  @RequirePermission("users:manage", "users:delete-member")
+  async delete(@Param("id") id: string, @Body() body: unknown, @CurrentUser() caller: JwtUser) {
     const parsed = UserDeleteSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException({
@@ -107,7 +132,13 @@ export class UserController {
         errors: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
       });
     }
-    await this.svc.delete(id, parsed.data.tenantId);
+    if (caller.role === "aiproot_admin") {
+      await this.svc.delete(id, parsed.data.tenantId);
+    } else {
+      // 非 aiproot 走護欄版：鎖自租戶 + 限 員工/部門主管 + 不能刪自己
+      const tenantId = resolveTenantId(caller, parsed.data.tenantId);
+      await this.svc.deleteMember(id, tenantId, caller.user_id);
+    }
     return { status: "deleted" };
   }
 }
