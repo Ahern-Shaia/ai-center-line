@@ -930,7 +930,7 @@ export const probeLineGroupName = (groupRegistryId: string) =>
 
 // === Tenant Admin Console (aiproot 統包客戶方組織) ===
 
-export type UserRole = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owner" | "assistant";
+export type UserRole = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owner" | "assistant" | "employee";
 
 export interface DepartmentDto {
   departmentId: string;
@@ -1023,6 +1023,13 @@ export const deleteTenantUser = (userId: string, tenantId: string) =>
   req<{ status: string }>(`/tenant-admin/users/${userId}`, {
     method: "DELETE",
     body: JSON.stringify({ tenantId }),
+  });
+
+// 改成員角色（tenant_admin 可用）· 伺服器限 員工↔部門主管（0055）· 與凍結的 custom-roles assignUserRole 不同端點
+export const assignMemberRole = (userId: string, payload: { tenantId: string; role: "employee" | "group_owner" }) =>
+  req<{ user: TenantUserDto }>(`/tenant-admin/users/${userId}/role`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
   });
 
 // === IAM: Tenant Provisioning + Password Policy ===

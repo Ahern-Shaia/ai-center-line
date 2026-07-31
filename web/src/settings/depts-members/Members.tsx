@@ -6,6 +6,7 @@ import {
   updateTenantUser,
   deleteTenantUser,
   assignUserDepartment,
+  assignMemberRole,
   getSession,
   ApiError,
   type DepartmentDto,
@@ -23,7 +24,11 @@ const ROLE_LABEL: Record<UserRole, string> = {
   tenant_admin: "總經理室",
   group_owner: "部門主管",
   assistant: "助理",
+  employee: "員工",
 };
+
+// tenant_admin 能內嵌調整的角色（碰不到 總經理室/助理/aiproot）· 對齊後端 0055 護欄
+const MEMBER_EDITABLE_ROLES: UserRole[] = ["employee", "group_owner"];
 
 /**
  * 可指派的角色清單 · 對應 `docs/roles-permissions-matrix.md` §2
@@ -66,10 +71,14 @@ export function Members({
   //   canManageFull（aiproot only）  → 才顯示「編輯／刪除」，否則就是 auth-gate 那類「看得到卻 403」
   const canAssignDept = perms.has("users:assign-department");
   const canManageFull = perms.has("users:manage");
+  // 0055 · tenant_admin 自治：改角色 / 刪除自家成員（限 員工↔部門主管）· aiproot 走 canManageFull 的抽屜
+  const canAssignRole = perms.has("users:assign-role");
+  const canDeleteMember = perms.has("users:delete-member");
   const [users, setUsers] = useState<TenantUserDto[]>([]);
   const [depts, setDepts] = useState<DepartmentDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingDept, setSavingDept] = useState<string | null>(null);
+  const [savingRole, setSavingRole] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<null | { kind: "new" } | { kind: "edit"; user: TenantUserDto }>(null);
   const [confirmDelete, setConfirmDelete] = useState<TenantUserDto | null>(null);
 
@@ -100,6 +109,21 @@ export function Members({
       toast.show(err instanceof ApiError ? err.message : "調整失敗", "danger");
     } finally {
       setSavingDept(null);
+    }
+  }
+
+  // 0055 · 直接在列上改角色（員工↔部門主管）· 只有 canAssignRole 的人看得到下拉
+  async function changeRole(u: TenantUserDto, role: "employee" | "group_owner") {
+    setSavingRole(u.userId);
+    try {
+      await assignMemberRole(u.userId, { tenantId, role });
+      toast.show("已調整角色", "ok");
+      await refresh();
+      onChanged();
+    } catch (err) {
+      toast.show(err instanceof ApiError ? err.message : "調整失敗", "danger");
+    } finally {
+      setSavingRole(null);
     }
   }
 
@@ -136,7 +160,14 @@ export function Members({
                 <tr key={u.userId}>
                   <td>{u.displayName ?? <span className="dm-cell-muted">—</span>}</td>
                   <td className="mono dm-cell-muted">{u.email ?? "—"}</td>
-                  <td>{ROLE_LABEL[u.role] ?? u.role}</td>
+                  <td>
+                    <RoleCell
+                      user={u}
+                      editable={canAssignRole && !canManageFull && MEMBER_EDITABLE_ROLES.includes(u.role)}
+                      saving={savingRole === u.userId}
+                      onChange={(r) => void changeRole(u, r)}
+                    />
+                  </td>
                   <td>
                     <DeptCell
                       user={u}
@@ -150,11 +181,16 @@ export function Members({
                   <td className="dm-cell-actions">
                     {/* ⚠️ 編輯/刪除走 users:manage（aiproot only）· 只給真的能用的人看，
                         否則就是 auth-gate 那類「看得到卻 403」。tenant_admin 改部門走上面的下拉。*/}
-                    {canManageFull && (
+                    {canManageFull ? (
                       <>
                         <button className="btn btn-sm btn-ghost" onClick={() => setDrawer({ kind: "edit", user: u })}>編輯</button>
                         <button className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(u)}>刪除</button>
                       </>
+                    ) : (
+                      // 0055 · tenant_admin 只能刪自家 員工/部門主管（碰不到高階帳號）
+                      canDeleteMember && MEMBER_EDITABLE_ROLES.includes(u.role) && (
+                        <button className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(u)}>刪除</button>
+                      )
                     )}
                   </td>
                 </tr>
@@ -209,6 +245,28 @@ export function Members({
         </Drawer>
       )}
     </div>
+  );
+}
+
+// 0055 · 一列的「角色」格 · tenant_admin 可內嵌改 員工↔部門主管；其餘（高階/aiproot 視角）顯示靜態標籤
+function RoleCell({ user, editable, saving, onChange }: {
+  user: TenantUserDto;
+  editable: boolean;
+  saving: boolean;
+  onChange: (role: "employee" | "group_owner") => void;
+}) {
+  if (!editable) {
+    return <span>{ROLE_LABEL[user.role] ?? user.role}</span>;
+  }
+  return (
+    <StyledSelect
+      ariaLabel="角色"
+      value={user.role}
+      disabled={saving}
+      width={120}
+      items={MEMBER_EDITABLE_ROLES.map((r) => ({ id: r, label: ROLE_LABEL[r] }))}
+      onChange={(v) => onChange(v as "employee" | "group_owner")}
+    />
   );
 }
 
