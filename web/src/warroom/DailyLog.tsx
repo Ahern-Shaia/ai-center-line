@@ -150,8 +150,9 @@ function TimelineDay({ day, today }: { day: WarroomDailyDays["days"][number]; to
   const shown = [...attn, ...(showQuiet ? [...hasContent, ...quiet] : hasContent)];
   const itemCount = hasContent.reduce((n, u) => n + u.dailyReports.length + u.records.length, 0);
 
+  // today/past 只管大小排版；發光實心點跟著 open（展開中的日期就發光）
   return (
-    <div className={`dl-tl-node${today ? " today" : " past"}`}>
+    <div className={`dl-tl-node${today ? " today" : " past"}${open ? " is-open" : ""}`}>
       {today ? (
         <div className="dl-tl-date">{formatDay(day.batchDate)}</div>
       ) : (
