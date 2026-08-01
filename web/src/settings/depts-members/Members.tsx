@@ -75,6 +75,10 @@ export function Members({
   // 0055 · tenant_admin 自治：改角色 / 刪除自家成員（限 員工↔部門主管）· aiproot 走 canManageFull 的抽屜
   const canAssignRole = perms.has("users:assign-role");
   const canDeleteMember = perms.has("users:delete-member");
+  // 不能改/刪「自己那一列」（後端 assignRole/assignDepartment/deleteMember 都有 self-guard）·
+  // Session 沒帶 userId，用 email 認自己（能登入 web 的帳號都有 email）
+  const selfEmail = getSession()?.email ?? null;
+  const isSelf = (u: TenantUserDto) => !!selfEmail && u.email === selfEmail;
   const [users, setUsers] = useState<TenantUserDto[]>([]);
   const [depts, setDepts] = useState<DepartmentDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,7 +168,7 @@ export function Members({
                   <td>
                     <RoleCell
                       user={u}
-                      editable={canAssignRole && !canManageFull && MEMBER_EDITABLE_ROLES.includes(u.role)}
+                      editable={canAssignRole && !canManageFull && !isSelf(u) && MEMBER_EDITABLE_ROLES.includes(u.role)}
                       saving={savingRole === u.userId}
                       onChange={(r) => void changeRole(u, r)}
                     />
@@ -173,7 +177,7 @@ export function Members({
                     <DeptCell
                       user={u}
                       depts={depts}
-                      editable={canAssignDept && u.role !== "tenant_admin"}
+                      editable={canAssignDept && u.role !== "tenant_admin" && !isSelf(u)}
                       saving={savingDept === u.userId}
                       onChange={(d) => void changeDept(u, d)}
                     />
@@ -188,8 +192,8 @@ export function Members({
                         <button className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(u)}>刪除</button>
                       </>
                     ) : (
-                      // 0055 · tenant_admin 只能刪自家 員工/部門主管（碰不到高階帳號）
-                      canDeleteMember && MEMBER_EDITABLE_ROLES.includes(u.role) && (
+                      // 0055 · tenant_admin 只能刪自家 員工/部門主管（碰不到高階帳號、不能刪自己）
+                      canDeleteMember && !isSelf(u) && MEMBER_EDITABLE_ROLES.includes(u.role) && (
                         <button className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(u)}>刪除</button>
                       )
                     )}
