@@ -40,7 +40,7 @@ import MyTrips from "./personal-report/MyTrips";
 import RolesManagement from "./aiproot-console/RolesManagement";
 import FirstLoginChangePassword from "./auth/FirstLoginChangePassword";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
-import { getSession, logout, login, type Session } from "./api";
+import { getSession, logout, login, onTokenChange, type Session } from "./api";
 import { ToastProvider } from "./Toast";
 
 type Route =
@@ -147,6 +147,9 @@ export default function App() {
         .catch(() => undefined);
     }
   }, [session]);
+
+  // 顯示名稱同步進 localStorage 後（改名 / 登入拉 /me/permissions）→ 重讀 session，topbar 更新
+  useEffect(() => onTokenChange(() => setSession(getSession())), []);
 
   // 深層元件跨頁導航（TaskBoard / DailyLog → 分析詳情）
   // 原本靠 window.location.hash，但這裡從未監聽 hashchange → 點了沒反應

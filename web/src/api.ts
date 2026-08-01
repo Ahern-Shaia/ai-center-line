@@ -49,6 +49,7 @@ export interface ConfirmResult {
 export type Role = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owner" | "employee";
 export interface Session {
   email: string;
+  displayName: string | null;          // 顯示名稱（topbar 用）· 來自 /me/permissions 或自服務改名
   role: Role;
   tenantId: string;
   departmentId: string | null;
@@ -61,6 +62,7 @@ const TOKEN_KEY = "acl.token";
 const EMAIL_KEY = "acl.email";
 const MUST_CHANGE_KEY = "acl.must_change";
 const EXPIRES_AT_KEY = "acl.password_expires";
+const DISPLAY_KEY = "acl.display_name";
 
 let token: string | null = localStorage.getItem(TOKEN_KEY);
 export const getToken = () => token;
@@ -96,6 +98,7 @@ export function getSession(): Session | null {
   const email = localStorage.getItem(EMAIL_KEY) ?? "";
   return {
     email,
+    displayName: localStorage.getItem(DISPLAY_KEY) || null,
     role: (p.role as Role) ?? "group_owner",
     tenantId: (p.tenant_id as string) ?? "",
     departmentId: (p.department_id as string | null) ?? null,
@@ -103,6 +106,13 @@ export function getSession(): Session | null {
     mustChangePassword: localStorage.getItem(MUST_CHANGE_KEY) === "1",
     passwordExpiresAt: localStorage.getItem(EXPIRES_AT_KEY),
   };
+}
+
+// 顯示名稱寫入 localStorage 並通知（App 會重讀 session、topbar 更新）· 空值＝清掉（回退 email 前綴）
+export function setLocalDisplayName(name: string | null) {
+  if (name) localStorage.setItem(DISPLAY_KEY, name);
+  else localStorage.removeItem(DISPLAY_KEY);
+  tokenListeners.forEach((fn) => fn());
 }
 
 export function clearMustChange() {
@@ -117,6 +127,7 @@ export function logout() {
   localStorage.removeItem("acl.perms");
   localStorage.removeItem("acl.perms_ts");
   localStorage.removeItem("acl.perms_id");
+  localStorage.removeItem(DISPLAY_KEY);
 }
 
 export class ApiError extends Error {
@@ -1124,8 +1135,24 @@ export interface RoleDto {
   permissions: string[];
 }
 
-export const getMyPermissions = () =>
-  req<{ permissions: string[] }>("/me/permissions");
+export const getMyPermissions = async () => {
+  const res = await req<{ permissions: string[]; displayName?: string | null }>("/me/permissions");
+  // 登入 / identity 變時會呼叫 → 順便把顯示名稱同步進 localStorage（topbar 用）· 變了才通知避免多餘 render
+  if ((res.displayName || null) !== (localStorage.getItem(DISPLAY_KEY) || null)) {
+    setLocalDisplayName(res.displayName || null);
+  }
+  return res;
+};
+
+// 自服務改顯示名稱（含 LINE 登入用戶）· 成功後同步 topbar
+export const updateMyDisplayName = async (displayName: string) => {
+  const res = await req<{ displayName: string }>("/auth/display-name", {
+    method: "POST",
+    body: JSON.stringify({ displayName }),
+  });
+  setLocalDisplayName(res.displayName);
+  return res;
+};
 export const listPermissions = () =>
   req<{ permissions: PermissionDto[] }>("/permissions");
 export const listRoles = () =>

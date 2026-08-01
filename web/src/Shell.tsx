@@ -5,6 +5,7 @@ import type { Session } from "./api";
 import { useToast } from "./Toast";
 import { usePermissions } from "./permission/PermissionContext";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
+import ChangeDisplayNameDialog from "./auth/ChangeDisplayNameDialog";
 
 // 對照 docs/roles-permissions-matrix.md · 每個 item 綁 permission
 //
@@ -197,6 +198,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
   const toast = useToast();
   const initials = session.email.slice(0, 2).toUpperCase();
   const [changePwOpen, setChangePwOpen] = useState(false);
+  const [changeNameOpen, setChangeNameOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const perms = usePermissions();
   const itemVisible = (it: { perm?: string; permAny?: string[] }) => {
@@ -327,7 +329,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
             <AriaButton className="user-btn">
               <span className="user-avatar">{initials}</span>
               <span className="user-meta">
-                <span className="user-name">{session.email.split("@")[0]}</span>
+                <span className="user-name">{session.displayName || session.email.split("@")[0]}</span>
                 <span className="user-role">{ROLE_LABEL[session.role] ?? session.role}</span>
               </span>
             </AriaButton>
@@ -335,13 +337,15 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
               <Menu className="user-menu" onAction={(key) => {
                 if (key === "logout") onLogout();
                 else if (key === "change-password") setChangePwOpen(true);
+                else if (key === "change-name") setChangeNameOpen(true);
               }}>
                 <AriaHeader className="user-menu-hdr">
-                  <div className="n">{session.email.split("@")[0]}</div>
+                  <div className="n">{session.displayName || session.email.split("@")[0]}</div>
                   <div className="e">{session.email}</div>
                   <div className="t">{ROLE_LABEL[session.role] ?? session.role} · {tenantName}</div>
                 </AriaHeader>
                 <Separator className="user-menu-sep" />
+                <MenuItem id="change-name">變更顯示名稱</MenuItem>
                 <MenuItem id="change-password">變更密碼</MenuItem>
                 <MenuItem id="switch" isDisabled>切換租戶</MenuItem>
                 <MenuItem id="logout" className="danger">登出</MenuItem>
@@ -353,6 +357,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
         <main className="pane">{children}</main>
       </div>
       <ChangePasswordDialog open={changePwOpen} onClose={() => setChangePwOpen(false)} />
+      <ChangeDisplayNameDialog open={changeNameOpen} current={session.displayName || ""} onClose={() => setChangeNameOpen(false)} />
     </div>
   );
 }
