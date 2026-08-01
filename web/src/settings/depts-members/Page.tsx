@@ -16,8 +16,9 @@ import { usePermissions } from "../../permission/PermissionContext";
 import { useToast } from "../../Toast";
 import { Departments } from "./Departments";
 import { Members } from "./Members";
+import OrgGraph from "./OrgGraph";
 
-type Tab = "dept" | "member";
+type Tab = "dept" | "member" | "org";
 
 // 部門 / 成員管理 · v2 分權 · tenant_admin 可管自 tenant
 // 對照 docs/roles-permissions-matrix.md §3.5
@@ -145,6 +146,9 @@ export default function DepartmentsMembers({ initialTab, onOpenGuide }: { initia
         <button className={`dm-tab${tab === "member" ? " active" : ""}`} onClick={() => setTab("member")}>
           成員
         </button>
+        <button className={`dm-tab${tab === "org" ? " active" : ""}`} onClick={() => setTab("org")}>
+          組織圖
+        </button>
       </div>
 
       {!selectedTenantId ? (
@@ -158,6 +162,8 @@ export default function DepartmentsMembers({ initialTab, onOpenGuide }: { initia
           canEdit={canEdit}
           onChanged={triggerReload}
         />
+      ) : tab === "org" ? (
+        <OrgGraph key={`org-${selectedTenantId}-${reloadKey}`} tenantId={selectedTenantId} />
       ) : (
         <Members
           key={`mem-${selectedTenantId}-${reloadKey}`}

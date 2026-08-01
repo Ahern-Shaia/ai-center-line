@@ -1040,6 +1040,17 @@ export const deleteTenantUser = (userId: string, tenantId: string) =>
     body: JSON.stringify({ tenantId }),
   });
 
+// 組織關係圖（org-overview M1）· aiproot 帶 tenantId 看任一家 / tenant_admin 鎖自租戶
+export interface OrgMember { name: string; role: string; hasLineBinding: boolean; departmentSource: "auto" | "manual" }
+export interface OrgOverview {
+  company: string;
+  gm: string[];
+  departments: Array<{ name: string; groups: string[]; members: OrgMember[] }>;
+  unassigned: { groups: string[]; members: OrgMember[] };
+}
+export const getOrgOverview = (tenantId?: string) =>
+  req<OrgOverview>(`/tenant-admin/org-overview${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
+
 // 改成員角色（tenant_admin 可用）· 伺服器限 員工↔部門主管（0055）· 與凍結的 custom-roles assignUserRole 不同端點
 export const assignMemberRole = (userId: string, payload: { tenantId: string; role: "employee" | "group_owner" }) =>
   req<{ user: TenantUserDto }>(`/tenant-admin/users/${userId}/role`, {
