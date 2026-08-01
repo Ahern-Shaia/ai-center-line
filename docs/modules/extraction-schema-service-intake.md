@@ -1,6 +1,8 @@
 # extraction-schema-service-intake · 客服報修派工單抽取（service_intake）
 
-> 狀態：✅ **M0 定案 + M1 程式就緒**（2026-08-01）· OQ-ESI-1..7 全數裁定 · migration 0057 待人套 prod（R10）、未 push · **M2 真實樣本回歸前，判別準則尚未經實跑驗證**（見 §8 註）
+> 狀態：⚠️ **M0 定案 · M1 v1 已 revert（2026-08-01）· 待 M1 v2 重做**
+> · M1 v1 把 service_intake 併進 service_order 主 output schema → 超過 **Anthropic 結構化輸出 ≤16 union 上限**、API 回 400（本地 smoke 抓到、已 push+部署，revert `7cfd308` 止血）。見 §3.6 + FMEA F-10 + [[pitfall-anthropic-structured-output-union-limit]]。
+> · **重做方向（v2）：service_intake 拆成獨立第二次 LLM 呼叫**（自己一份 ≤16 union 的 schema），不併主 schema。
 > · 觸發＝查 [`extraction-schema-service-order.md`](extraction-schema-service-order.md) M1 一週填出率時，發現 **warranty 0% 的真因是報修單整個沒被抽**（§0）
 >
 > 相關：[`extraction-schema-service-order.md`](extraction-schema-service-order.md)（進度回報抽取／本文的姊妹區塊）、[`conversation-analysis-pilot.md`](conversation-analysis-pilot.md)（抽取管線）、[`task-completion-tracking.md`](task-completion-tracking.md)（報修單＝任務 intake 的天然來源）、[`warroom-task-board.md`](warroom-task-board.md)（下游材料化）
@@ -145,6 +147,25 @@ service_intake: z.array(z.object({
 - prompt：`service_order` 的 `promptFragment` 加一條「報修單 → service_intake」規則（含 §3.2 判別準則 + §3.3 warranty 映射），並把暫放的 rule 13 warranty 邏輯遷過來。
 - **phone 遮罩在 pipeline 後處理**：模型輸出完整號碼（transient、不落庫），persist 前用 deterministic regex 遮成尾三碼（`09xx-xxx-670`）。**不叫模型自己遮**——模型遮罩會不一致、甚至改動數字，違反 R11「不臆測數字」。
 
+### 3.6 ⚠️ Anthropic ≤16 union 上限 → service_intake 必須獨立 LLM 呼叫（M1 v1 的教訓）
+
+M1 v1 把 service_intake 加進 `buildAnalysisSchema("service_order")` 的**同一份 output schema**
+（classifications + records + service_reports + service_intake）。zod 綠、tsc 綠、21 支測試綠，
+但**送 Anthropic 時 400**：
+
+> Schemas contains too many parameters with union types (24 ... **limit: 16**)
+
+`nullable`／`enum`／`array` 都算一個 union 參數；主 schema 原本約 15，加 service_intake 的 9 個
+nullable 欄衝到 24。這限制在 **API 端、不在 zod** → 靜態驗不到，部署後真的呼叫才炸，
+而且是**每個 service_order 批次都 400**。（詳見 [[pitfall-anthropic-structured-output-union-limit]]。）
+
+**v2 正解**：service_intake 用**獨立的第二次 `provider.chat` 呼叫**、自己一份小 schema
+（只有 service_intake 一個陣列，union 數遠低於 16）。代價：service_order 每段多一次 API 呼叫
+（單一租戶、低量、可接受）。pipeline 在 service_order 時對每段跑兩次抽取、各收各的區塊。
+
+> ⚠️ 驗收紀律：改抽取 schema **必跑一次真實 LLM 呼叫**才算過（zod 綠不夠）。這也是為什麼
+> M1 v1 靠本地唯讀 smoke（[[feedback_local_repro_before_debugging_prod]]）而非單元測試抓到。
+
 ### 3.5 ⚠️ raw_content 已明文存電話 —— phone 遮罩的真實邊界
 
 同一支電話**在 `analysis_upload.raw_content` 是明文**（報修單原文整段落庫）。所以 `service_intake.phone` 遮罩尾三碼**只降低「結構化欄位被批量撈」的風險**，擋不住：
@@ -194,8 +215,9 @@ service_intake: z.array(z.object({
 | F-7 | 重複 | 同一報修單跨日重貼 → service_intake 出現重複筆 | 看板重複、任務重開 | P1 | 依 `source_ids` 去重；lifecycle linking 屬 #48（OQ-ESI-6） |
 | F-8 | prompt 膨脹 | 兩區塊規則使 prompt 變長、成本上升 | token 成本 | P2 | system prompt 走 caching；規則精簡 |
 | F-9 | 部署順序 | 程式先上、migration 0057 未套 → `analyze.service` insert `service_intake` 撞「欄位不存在」，**每個 service_order 批次都失敗** | 台灣福祉當天所有批次掛掉 | **P0** | **順序：先套 migration 0057（人工 · R10）→ 確認欄位存在 → 再 deploy 程式**。additive + default '[]'，早套不影響舊程式 |
+| F-10 | schema 複雜度 | service_intake 併進主 output schema → 超過 Anthropic ≤16 union 上限、API 回 400 · **每個 service_order 批次 400 失敗** | 抽取全掛（M1 v1 實際踩到，已 revert） | **P0** | **v2 拆成獨立第二次 LLM 呼叫**（§3.6）· 改抽取 schema **必跑一次真實 LLM 呼叫驗收**（zod/tsc/unit 綠都驗不到） |
 
-**P0 共 6 條**：型態判別、warranty 未知誤填、PII、無 RLS 端點 scope、回歸、部署順序。任一未緩解不得上 prod（R17）。
+**P0 共 7 條**：型態判別、warranty 未知誤填、PII、無 RLS 端點 scope、回歸、部署順序、schema union 上限。任一未緩解不得上 prod（R17）。
 
 > ⚠️ **部署 runbook**：① 人工在 prod 套 `0057_analysis_service_intake.sql`（psql）② `\d analysis_result` 確認 `service_intake` 欄在 ③ 才 push 觸發 Render 部署 ④ smoke：跑一批 service_order 確認 insert 不炸、`service_intake` 有值。**F-1 判別準則的真實驗收在 M2**（靜態測不到模型行為）。
 
@@ -224,7 +246,8 @@ service_intake: z.array(z.object({
 | 里程碑 | 內容 |
 |---|---|
 | **M0** ✅ | 本文件 · OQ-ESI-1..7 全數裁定（2026-08-01） |
-| **M1** ✅ | `serviceIntakeSchema` + `service_order` promptFragment 加報修單規則 15-18（判別準則 + warranty 映射）+ `extraSection`（key/schema/postProcess）+ `buildAnalysisSchema` 吐第二區塊 + pipeline 收集+phone 遮罩 + `analyze.service` 映射 + `analysis_result.service_intake` 欄位（migration 0057）+ 單元測試 6 支（templates.test）← **程式已就緒；migration 待人套 prod（R10）、未 push** |
+| **M1 v1** ❌ | 併進主 output schema 的作法 → 超 Anthropic 16 union 上限、400 · **已 revert `7cfd308`**（DB 欄位 service_intake 保留） |
+| **M1 v2** | 重做：service_intake 獨立第二次 LLM 呼叫（§3.6）· serviceIntakeSchema + 報修單 prompt（判別準則 + warranty 映射）+ pipeline 對 service_order 每段跑兩次抽取 + phone 遮罩 + migration 0057 復原 · **驗收含一次真實 LLM 呼叫（F-10）** |
 | **M2** | 真實報修單去識別化入 `samples/` + R12 回歸（新舊都過）+ §5.3 驗收（6 張報修單、warranty > 0%）|
 | **M3** | 前端顯示（群組日誌「報修派工」區）+ 材料化規則（依 OQ-ESI-6）+ **讀取端點自 scope（F-4 · 無 RLS）**|
 | **M4** | 台灣福祉實跑一週、量 `service_intake` 產出量與 warranty/customer/vehicle 填出率 |
@@ -242,5 +265,6 @@ service_intake: z.array(z.object({
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
-| 2026-08-01 | v0.2 | **M1 程式落地** · `serviceIntakeSchema` + service_order promptFragment 規則 15-18（判別準則 + 是否保固內→warranty 映射）+ `TemplateDef.extraSection`（key/schema/trackedFields/postProcess，不動 factory/general）+ `buildAnalysisSchema` 吐第二區塊 + pipeline 收集並 `maskIntakePhone` 遮罩 + `analyze.service` 映射 + migration 0057（additive `service_intake` 欄）· 單元測試新增 6 支（含遮罩/兩區塊/prompt 教學）· ⚠️ 途中發現：把 service_intake 設為 output schema 必填（同 service_reports）會讓既有 3 支 service_order 測試缺 key → 補 `service_intake: []`（正確：模型應永遠吐兩區塊，F-6）· tsc 綠、templates.test 21 支綠 · migration 待人套、未 push | ahern + Claude Code |
+| 2026-08-01 | v0.3 | **M1 v1 revert（`7cfd308`）** · 併進 service_order 主 output schema 使 union 參數衝到 24 > Anthropic ≤16 上限 → API 400、每個 service_order 批次會失敗 · 本地唯讀 smoke 跑真實批次抓到（zod/tsc/21 測試全綠都驗不到，限制在 API 端）· 已 push+部署故 revert 止血、DB 欄位保留 · 加 §3.6 + FMEA F-10 + memory [[pitfall-anthropic-structured-output-union-limit]] · **v2 重做方向：service_intake 拆獨立第二次 LLM 呼叫** | ahern + Claude Code |
+| 2026-08-01 | v0.2 | **M1 v1 程式落地（後 revert）** · `serviceIntakeSchema` + service_order promptFragment 規則 15-18（判別準則 + 是否保固內→warranty 映射）+ `TemplateDef.extraSection`（key/schema/trackedFields/postProcess，不動 factory/general）+ `buildAnalysisSchema` 吐第二區塊 + pipeline 收集並 `maskIntakePhone` 遮罩 + `analyze.service` 映射 + migration 0057（additive `service_intake` 欄）· 單元測試新增 6 支（含遮罩/兩區塊/prompt 教學）· ⚠️ 途中發現：把 service_intake 設為 output schema 必填（同 service_reports）會讓既有 3 支 service_order 測試缺 key → 補 `service_intake: []`（正確：模型應永遠吐兩區塊，F-6）· tsc 綠、templates.test 21 支綠 · migration 待人套、未 push | ahern + Claude Code |
 | 2026-08-01 | v0.1 | M0 首版 · 觸發＝service_order M1 一週填出率查驗發現 warranty 0% 真因是**報修單整個沒被抽**（6 張 100% 漏，客戶名比對 prod 確認非抽漏）· 用戶裁定報修單**另立 `service_intake` 區塊**不混進進度回報 · schema 草案含 warranty 映射（是否保固內→保內/保外）· **ESI-2 裁定：phone 存遮罩尾三碼**（§3.5 補「raw_content 已明文＝遮罩是密度降低非完整 at-rest；加密單欄位屬劇場」的認知，PII-at-rest 記 backlog）· FMEA 5 個 P0（型態判別/warranty 未知誤填/PII/無 RLS 端點 scope/回歸）· 其餘 OQ-ESI-1,3,4,5,6,7 待裁定 | ahern + Claude Code |
