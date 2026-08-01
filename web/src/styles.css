@@ -1983,6 +1983,19 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .hdr-group .btn { font-size:12.5px; padding:6px 12px; text-align:center; }
 .hdr-group-hint { font-size:10.5px; color:var(--ink-3); margin-top:2px; }
 .hdr-group-hint.warn { color:var(--warn); }
+
+/* 連續分段控制（segmented）· 視圖過濾 · 對照 design-research-daily-report.md 方向 C */
+.seg { display:inline-flex; border:1px solid var(--line); border-radius:7px; overflow:hidden; background:var(--surface); }
+.seg > button { background:transparent; border:0; border-right:1px solid var(--line); padding:6px 13px; font-size:12.5px; color:var(--ink-3); font-family:inherit; cursor:pointer; transition:background .12s var(--ease), color .12s var(--ease); }
+.seg > button:last-child { border-right:0; }
+.seg > button:hover:not(.on) { background:var(--well); color:var(--ink); }
+.seg > button.on { background:var(--primary); color:#fff; }
+/* 狀態燈點 · 與 pill 雙編碼（observability-light §B0-OL）*/
+.st-dot { width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:7px; vertical-align:middle; }
+.st-dot.ok { background:var(--ok); }
+.st-dot.warn { background:var(--warn); }
+.st-dot.danger { background:var(--danger); }
+.st-dot.mut { background:#CBD5E1; }
 @media (max-width:760px) {
   .hdr-toolbar { flex-direction:column; gap:10px; width:100%; }
   .hdr-group + .hdr-group { border-left:none; padding-left:0; border-top:1px solid var(--line); padding-top:10px; }

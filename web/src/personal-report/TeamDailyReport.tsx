@@ -91,33 +91,33 @@ export default function TeamDailyReport() {
           <h1>部門日報</h1>
           <div className="sub">部門成員送出的每日工作日報 · 點一列展開看內容</div>
         </div>
-        <div className="hdr-toolbar">
-          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="seg">
             {FILTERS.map((f) => (
               <button
                 key={f.key}
-                className={`btn${filter === f.key ? " btn-primary" : ""}`}
+                className={filter === f.key ? "on" : ""}
                 aria-pressed={filter === f.key}
                 onClick={() => setFilter(f.key)}
               >{f.label}</button>
             ))}
-            {departments.length > 1 && (
-              <div style={{ minWidth: 132 }}>
-                <StyledSelect
-                  items={departments.map((d) => ({ id: d, label: d }))}
-                  value={dept}
-                  onChange={setDept}
-                  ariaLabel="依部門過濾"
-                  allowEmpty
-                  emptyLabel="全部部門"
-                  width={132}
-                />
-              </div>
-            )}
-            <div style={{ display: "flex", gap: 6, marginLeft: 4 }}>
-              <button className={`btn${days === 7 ? " btn-primary" : ""}`} onClick={() => setDays(7)}>近 7 天</button>
-              <button className={`btn${days === 30 ? " btn-primary" : ""}`} onClick={() => setDays(30)}>近 30 天</button>
+          </div>
+          {departments.length > 1 && (
+            <div style={{ minWidth: 132 }}>
+              <StyledSelect
+                items={departments.map((d) => ({ id: d, label: d }))}
+                value={dept}
+                onChange={setDept}
+                ariaLabel="依部門過濾"
+                allowEmpty
+                emptyLabel="全部部門"
+                width={132}
+              />
             </div>
+          )}
+          <div className="seg">
+            <button className={days === 7 ? "on" : ""} onClick={() => setDays(7)}>近 7 天</button>
+            <button className={days === 30 ? "on" : ""} onClick={() => setDays(30)}>近 30 天</button>
           </div>
         </div>
       </div>
@@ -216,7 +216,7 @@ function TeamReportRow({ row, items, open, statusLabel, statusPill, onToggle }: 
         <td className="dm-td-name">{row.userDisplayName ?? "（未命名）"}</td>
         <td>{row.departmentName ?? <span style={{ color: "var(--ink-3)" }}>未分派部門</span>}</td>
         <td className="num">{items.length}</td>
-        <td><span className={`nc-pill ${statusPill}`}>{statusLabel}</span></td>
+        <td><span className={`st-dot ${statusPill}`} /><span className={`nc-pill ${statusPill}`}>{statusLabel}</span></td>
         <td style={{ textAlign: "right", color: "var(--ink-3)" }}>{open ? "收合 ▲" : "展開 ▼"}</td>
       </tr>
       {open && (
