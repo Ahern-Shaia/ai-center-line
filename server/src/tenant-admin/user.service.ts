@@ -95,6 +95,9 @@ export class UserService {
     const existing = await this.repo.getById(tx, userId);
     // RLS 之下看不到＝不在這個租戶（或不存在）· 都回 404，不洩漏「存在但跨租戶」
     if (!existing || existing.tenantId !== tenantId) throw new NotFoundException("找不到該成員");
+    // 不能改自己的部門（與 assignRole/deleteMember 的 self-guard 一致）——
+    // 管理者調整的是「別人」的歸屬；自己的歸屬由上一層管，避免自我改動造成 scope 混亂。
+    if (userId === actorUserId) throw new ForbiddenException("不能修改自己的部門");
     if (departmentId) {
       const ok = await this.repo.departmentBelongsToTenant(tx, departmentId, tenantId);
       if (!ok) throw new BadRequestException("該部門不屬於這個公司");

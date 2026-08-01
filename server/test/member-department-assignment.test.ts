@@ -99,6 +99,14 @@ test("⭐⭐ 不能改別家租戶的成員（RLS + 明擋）", async () => {
   );
 });
 
+test("⭐⭐ 不能改自己的部門（self-guard · 對齊 assignRole/deleteMember）", async () => {
+  await assert.rejects(
+    () => runAsTenant(T1, () => svc.assignDepartment(ADMIN1, T1, DEPT_1A, ADMIN1)),
+    /不能修改自己的部門/,
+    "管理者改自己的部門必須被擋 —— 改角色/刪除都擋自己，改部門也要一致",
+  );
+});
+
 // ── P0② 藉端點提權 ─────────────────────────────────────────────
 test("⭐⭐ 這條路碰不到 role —— schema 根本不收 role 欄位", () => {
   // 就算 client 硬塞 role，zod 也不會把它放進 parsed.data（strip），service 更沒有改 role 的碼。
