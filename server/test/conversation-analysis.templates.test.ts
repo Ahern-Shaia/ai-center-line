@@ -11,7 +11,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { buildAnalysisSchema, DEFAULT_CATEGORIES } from "../src/conversation-analysis/pipeline/schemas.js";
-import { TEMPLATE_REGISTRY, EXTRACTION_TEMPLATES, resolveTemplate, DEFAULT_TEMPLATE } from "../src/conversation-analysis/pipeline/templates.js";
+import { TEMPLATE_REGISTRY, EXTRACTION_TEMPLATES, resolveTemplate, DEFAULT_TEMPLATE, maskIntakePhone } from "../src/conversation-analysis/pipeline/templates.js";
 import { TWH_TENANT } from "../src/conversation-analysis/pipeline/tenant-twh.js";
 
 const L1_FIXTURE = {
@@ -30,6 +30,7 @@ test("L1 通用核心 · 每個模板都吃得下（不可關）", () => {
     const def = TEMPLATE_REGISTRY[t];
     const input: Record<string, unknown> = { ...L1_FIXTURE };
     if (def.resultKey) input[def.resultKey] = [];
+    if (def.extraSection) input[def.extraSection.key] = [];
     assert.ok(schema.safeParse(input).success, `${t} 應接受 L1 核心`);
   }
 });
@@ -73,6 +74,7 @@ test("service_order · 一則多客戶 + 多項目，且**每個項目各有狀�
       ],
       status: null, issues: null, source_ids: [12], confidence: "high",
     }],
+    service_intake: [],
   });
   assert.ok(ok.success, ok.success ? "" : JSON.stringify(ok.error.issues.slice(0, 3)));
 });
@@ -90,6 +92,7 @@ test("⭐ service_order · 車型在**項目層**（同一客戶多台不同車 
       ],
       status: null, issues: null, source_ids: [7], confidence: "medium",
     }],
+    service_intake: [],
   });
   assert.ok(ok.success);
 });
@@ -105,8 +108,72 @@ test("⭐⭐ service_order · 新增的三個項目欄位不可省略（必須�
       items: [{ name: "保養", qty: 1, amount: null }],   // ← 少了 vehicle/status/warranty
       status: null, issues: null, source_ids: [1], confidence: "high",
     }],
+    service_intake: [],
   });
   assert.equal(missing.success, false, "省略新欄位應被 schema 擋下");
+});
+
+// ── service_intake（客服報修派工單 · M1）────────────────────────
+// 對照 docs/modules/extraction-schema-service-intake.md。
+// 觸發：service_order 的 warranty 填出率 0%，真因是帶「是否保固內」的報修單整型別沒被抽。
+
+const INTAKE_FIXTURE = {
+  date: "2026-07-31", customer: "祝三", site: "板橋", vehicle: "VERYCA RFB-3630",
+  warranty: "保外", issue: "斜坡板放不下來", status: "待派工",
+  contact: "黃先生", phone: "0928336700", source_ids: [4], confidence: "high" as const,
+};
+
+test("⭐⭐ service_order · 多吐 service_intake 區塊（報修單），且與 service_reports 並存", () => {
+  const schema = buildAnalysisSchema("service_order");
+  const ok = schema.safeParse({ ...L1_FIXTURE, service_reports: [], service_intake: [INTAKE_FIXTURE] });
+  assert.ok(ok.success, ok.success ? "" : JSON.stringify(ok.error.issues.slice(0, 3)));
+  // F-6：兩區塊都要在 output schema 裡，否則模型只會吐一個
+  const parsed = schema.parse({ ...L1_FIXTURE, service_reports: [], service_intake: [] }) as Record<string, unknown>;
+  assert.ok("service_reports" in parsed, "service_reports 必須在（進度回報）");
+  assert.ok("service_intake" in parsed, "service_intake 必須在（報修單），少了模型不會吐第二區塊");
+});
+
+test("service_intake 只屬 service_order · 其他模板 schema 不得有此區塊", () => {
+  for (const t of ["general", "factory_report"] as const) {
+    const parsed = buildAnalysisSchema(t).parse(
+      t === "factory_report" ? { ...L1_FIXTURE, daily_reports: [] } : L1_FIXTURE,
+    ) as Record<string, unknown>;
+    assert.ok(!("service_intake" in parsed), `${t} 不應有 service_intake`);
+  }
+});
+
+test("⭐⭐ service_order 的 prompt 必須教報修單判別 + 是否保固內→warranty 映射", () => {
+  const f = TEMPLATE_REGISTRY.service_order.promptFragment;
+  for (const must of [
+    "service_intake",       // 第二區塊本身
+    "是否保固內",           // warranty 來源欄位
+    "保外",                 // 否→保外 映射
+    "報修派工單",           // 判別準則：報修單 vs 進度回報
+    "系統會自動遮罩",       // phone 交給後處理、不叫模型遮
+  ]) {
+    assert.ok(f.includes(must), `promptFragment 少了「${must}」—— schema 有 service_intake 但沒教模型怎麼分/怎麼填`);
+  }
+});
+
+test("⭐⭐ maskIntakePhone · 遮罩 PII（尾三碼）· deterministic 後處理", () => {
+  // 台灣手機 10 碼 09 開頭 → 保留可讀格式、只露尾三碼
+  assert.equal(maskIntakePhone("0928336700"), "09xx-xxx-700");
+  assert.equal(maskIntakePhone("0928-336-700"), "09xx-xxx-700");   // 帶分隔符先正規化
+  // 非手機（市話等，非 09 開頭）→ 通用遮罩、同樣只露尾三碼
+  assert.equal(maskIntakePhone("0233361234"), "xxxxxxx234");   // 10 碼非 09 → 7 個 x + 尾三碼
+  assert.equal(maskIntakePhone("062345678"), "xxxxxx678");     // 9 碼 → 6 個 x + 尾三碼
+  // null / 太短 → null（不保留短碼，也不炸）
+  assert.equal(maskIntakePhone(null), null);
+  assert.equal(maskIntakePhone("12"), null);
+});
+
+test("⭐ service_order.extraSection 設定正確（key + postProcess 會遮 phone）", () => {
+  const ex = TEMPLATE_REGISTRY.service_order.extraSection;
+  assert.ok(ex, "service_order 必須設 extraSection");
+  assert.equal(ex!.key, "service_intake");
+  const out = ex!.postProcess!({ ...INTAKE_FIXTURE }) as Record<string, unknown>;
+  assert.equal(out.phone, "09xx-xxx-700", "postProcess 必須把完整電話遮成尾三碼");
+  assert.equal(out.customer, "祝三", "其他欄位不動");
 });
 
 // ── prompt 拆分：不可在拆的過程中漏掉規則 ────────────────────────

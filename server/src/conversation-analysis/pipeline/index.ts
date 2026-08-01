@@ -20,6 +20,8 @@ export interface PipelineResult {
   messages: EnrichedMessage[];
   /** L2 業種區塊 · 依 template 決定存到哪個欄位（見 templates.ts resultKey）*/
   templateReports: Array<Record<string, unknown>>;
+  /** 第二區塊 · 目前只有 service_order → service_intake（見 templates.ts extraSection）*/
+  extraReports: Array<Record<string, unknown>>;
   template: ExtractionTemplate;
   records: AnalysisResultT["records"];
   messageCount: number;
@@ -58,6 +60,7 @@ export async function runPipeline(
   // AAL · L2 業種模板 · 讀不到就讓這批失敗，不猜（理由見 loadTemplate）
   const template = await loadTemplate(tenantId);
   const resultKey = TEMPLATE_REGISTRY[template].resultKey;
+  const extraSection = TEMPLATE_REGISTRY[template].extraSection;
   const { groupName, messages } = parseLineExport(rawText);
   const segments = segmentMessages(messages);
 
@@ -70,6 +73,7 @@ export async function runPipeline(
 
   const catMap = new Map<number, { category: string; confidence: string }>();
   const templateReports: Array<Record<string, unknown>> = [];
+  const extraReports: Array<Record<string, unknown>> = [];
   const records: AnalysisResultT["records"] = [];
   const usage = emptyUsage();
 
@@ -81,6 +85,15 @@ export async function runPipeline(
     if (resultKey) {
       const section = (result as unknown as Record<string, unknown>)[resultKey];
       if (Array.isArray(section)) templateReports.push(...(section as Array<Record<string, unknown>>));
+    }
+    if (extraSection) {
+      const section = (result as unknown as Record<string, unknown>)[extraSection.key];
+      if (Array.isArray(section)) {
+        const post = extraSection.postProcess;
+        for (const rec of section as Array<Record<string, unknown>>) {
+          extraReports.push(post ? post(rec) : rec);
+        }
+      }
     }
     records.push(...result.records);
     addUsage(usage, u);
@@ -108,6 +121,7 @@ export async function runPipeline(
     groupName,
     messages: enriched,
     templateReports,
+    extraReports,
     template,
     records,
     messageCount: messages.length,
