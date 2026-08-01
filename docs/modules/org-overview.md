@@ -1,9 +1,10 @@
 # org-overview · 組織關係視覺化（總覽 + 簡報圖）
 
-> 🚧 **狀態：M0 v0.2（2026-08-01）· OQ 裁定：輕量版暫留、走簡報版漂亮節點圖**
+> ✅ **狀態：M0 CLOSED v0.3（2026-08-01）· M1 可開工** · 走漂亮節點連線圖（資料驅動 + 固定版型）
 >
-> 用戶裁定：輕量分組樹「太扁平，先暫留」；先做**簡報版節點連線圖**且「既然要做就要做漂亮的」。
-> → 漂亮版 mockup 已產：`docs/mockup/org-graph-presentation.html`（待 review）。互動產品版是否做見 OQ-ORG-2。
+> 定案：輕量分組樹暫留；產品走**四層節點連線圖**（公司→總經理室→部門→成員），**真資料 + 固定版型**，
+> 用「三招」（量不排 / 溢位收合 / 水平捲）避開自動佈局坑。mockup：`org-graph-presentation.html`（美術定稿）、
+> `org-graph-data-driven.html`（5 部門×20 人壓測不崩）。M1 落地見 §5。
 >
 > 相關：[`member-department-assignment.md`](member-department-assignment.md)（部門↔成員）、
 > `docs/mockup/org-overview.html`（輕量版 mockup · 待 review）、[`roles-permissions-matrix.md`](../roles-permissions-matrix.md)
@@ -64,11 +65,35 @@
 
 ---
 
-## 5. 輕量版落地設計（4.1）
+## 5. M1 落地設計 · 資料驅動節點連線圖（✅ 用戶定案 2026-08-01）
 
-- **後端**：`GET /tenant-admin/org-overview`（`departments:view` 或 `users:view`）· 回 `[{department, lineGroups[], members[{name, role, hasLineBinding, departmentSource}]}]` + 未分派桶。aiproot 看全/租戶看自家（resolveTenantId）。彙整自 departments / users / line_group，無新表。
-- **前端**：部門/成員頁加一個「**總覽**」tab（第三個分頁），或獨立頁（OQ-ORG-3）。純渲染，重用現有 API 也可（前端彙整），端點只是省往返。
-- **不做**：拖拉改結構（改結構走現有可編輯的兩個分頁）、即時 websocket（進頁拉一次即可，OQ-ORG-4）。
+決策：走**漂亮節點連線圖**（非輕量分組樹）· **真資料 + 固定版型**（OQ-ORG-2 選 A' = 產品內、資料驅動、非 react-flow 互動版）。
+mockup 驗證：`docs/mockup/org-graph-presentation.html`（美術定稿 · 四層）＋ `docs/mockup/org-graph-data-driven.html`（資料驅動壓力測試 · 5 部門/20 人不崩）。
+
+### 5.1 版面（四層）
+`公司 → 總經理室（紫·看全公司，連所有部門）→ 部門（一色系一分支）→ 成員`。未分派群/成員用琥珀虛線掛旁。
+
+### 5.2 三招（讓「固定版型吃任意數量」不崩）— 這是核心
+| 招 | 做法 | 治什麼 |
+|---|---|---|
+| ① **座標用量不用排** | 節點交 CSS flow（一部門一直欄）；連線 render 後用 `getBoundingClientRect` 量真實位置再畫 SVG bezier；resize/展開重畫 | 手排 pixel 一換數量就崩 |
+| ② **成員溢位收合** | 每部門顯示 主管+4，其餘收「＋N 位」node、點擊展開 | 一部門 20 人爆版 |
+| ③ **部門多水平捲** | 一部門一欄，加部門＝多一欄，不重算 | 5/10 個部門排不下 |
+> 刻意**不用** react-flow / d3 自動佈局（那是「B 互動版」的坑）—— 三招 = 純前端渲染邏輯，無新依賴。
+
+### 5.3 後端
+- `GET /tenant-admin/org-overview`（`users:view` 或 `departments:view`）· aiproot 看全 / 租戶看自家（resolveTenantId + 比照 MDA 的租戶 scope，**防跨租戶 P0**）。
+- 回：`{ company, gmMembers[], departments[{name, lineGroups[], memberCount, members[{name, role, hasLineBinding, departmentSource}]}], unassigned{groups[], members[]} }`。
+- 彙整自 `departments / users / line_group`，**無新表**。成員可只回前 N + count（收合用），或全回由前端收合（量小先全回）。
+
+### 5.4 前端
+- 新頁（獨立側欄項 or 部門/成員第三 tab，OQ-ORG-3 待定）· 把 `org-graph-data-driven.html` 的 `DATA` 換成 API 回傳。
+- 保留三個信號：未綁 LINE、未分派群、成員推不出部門。
+- **不做**：拖拉改結構（改結構走現有可編輯分頁）、websocket 即時（進頁拉一次，OQ-ORG-4=A）、hover 高亮/動畫（產品版 polish，非 M1 必需）。
+
+### 5.5 用途雙軌
+- **簡報/委員**：直接用 `org-graph-presentation.html` 靜態圖（截圖最美、可控）—— 現在就能用。
+- **產品內**：M1 的資料驅動版（登入看自家真實組織）。
 
 ---
 
@@ -76,9 +101,9 @@
 
 | # | 內容 | 依賴 |
 |---|---|---|
-| **M0** 🚧 | 本 doc + 輕量 mockup · 待 OQ-ORG-1..4 | — |
-| **M1** | 輕量組織總覽（彙整端點 + 總覽頁 + 三個警示信號）| OQ-ORG-1/3/4 |
-| **M2**（選配）| 簡報用靜態示意圖（非互動）| OQ-ORG-2 |
+| **M0** ✅ | 本 doc + 兩份 mockup（美術定稿 + 資料驅動壓測）· OQ 定案 | — |
+| **M1** 🔜 | 後端 `/org-overview` 彙整端點（租戶 scope）+ 前端資料驅動節點圖（三招 + 四層 + 三信號）· 跨租戶 P0 測試 | — |
+| **M2**（選配）| 互動 polish（hover 高亮分支、展開動畫）· 只在有反饋需求時 | M1 |
 
 ---
 
@@ -87,8 +112,8 @@
 | # | 問題 | 選項 | 建議 |
 |---|---|---|---|
 | ~~OQ-ORG-1~~ | 輕量組織總覽做不做？ | A. 做 / B. 暫留 | ⏸️ **用戶裁定 B**：「太扁平，先暫留」（mockup `org-overview.html` 保留備用）|
-| **OQ-ORG-2** | 委員簡報的漂亮節點圖？ | A. 靜態 mockup/截圖簡報 / B. 產品內互動 react-flow | ✅ **先 A**：漂亮**靜態** mockup 已做（`org-graph-presentation.html`）· 互動產品版待 review 後再定 |
-| ~~OQ-ORG-3~~ | 總覽放哪？ | A. tab / B. 獨立頁 | 隨 OQ-ORG-1 暫留 |
+| ~~OQ-ORG-2~~ | 漂亮節點圖怎麼做？ | A. 靜態簡報 / A'. 產品內資料驅動+固定版型 / B. react-flow 互動 | ✅ **A + A'**：簡報用靜態圖（已做）；產品內走**資料驅動+固定版型**（三招證明不崩，見 §5.2），**不走 B**（避開自動佈局坑）|
+| **OQ-ORG-3** | 產品版放哪？ | A. 部門/成員第三 tab / B. 獨立側欄頁 | 待定（M1 前確認）|
 | ~~OQ-ORG-4~~ | 資料即時性？ | A. 進頁拉 / B. 即時 | **A**（若日後做產品版）|
 
 ---
@@ -108,5 +133,6 @@
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
+| 2026-08-01 | v0.3 | **M0 CLOSED · M1 可開工**。定案走**資料驅動節點連線圖 + 固定版型**（非 react-flow）· 補「總經理室」層（四層）· ⭐ §5.2 三招（座標用量不用排＝getBoundingClientRect 量位置畫 SVG／成員溢位收合＝主管+4 其餘「＋N 位」／部門多水平捲）解「5 部門×20 人不崩」· 資料驅動壓測 mockup `org-graph-data-driven.html` 佐證 · M1＝後端 /org-overview 彙整（租戶 scope · 跨租戶 P0）+ 前端資料驅動圖 · OQ-ORG-2 定 A+A'（不走 B 互動 react-flow）| ahern + Claude Code |
 | 2026-08-01 | v0.2 | 用戶裁定：輕量分組樹「太扁平，先暫留」（OQ-ORG-1→B）；改做**簡報版漂亮節點連線圖**（OQ-ORG-2→先靜態 mockup）· 產出 `docs/mockup/org-graph-presentation.html`（公司→部門→成員 節點+曲線連線、分支配色、含「未綁 LINE / 未分派」信號與資料流動 band）· 互動產品版待 review 再定 | ahern + Claude Code |
 | 2026-08-01 | v0.1 | M0 首版 · 起於「要不要動態組織關係圖」· ⭐ 拆兩需求（A 總經理自用確認 / B 委員簡報）· 站在巨人肩膀上：扁平兩層+小租戶 → **節點圖是反模式、分組樹才對** · 主線＝輕量唯讀組織總覽（mockup `docs/mockup/org-overview.html`，露三個設定漏洞信號）· 簡報版先用截圖/靜態圖，互動 react-flow 等層級變深或成賣點再說 · 4 OQ · FMEA 含跨租戶 P0 | ahern + Claude Code |
