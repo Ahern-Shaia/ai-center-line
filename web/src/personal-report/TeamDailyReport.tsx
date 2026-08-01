@@ -36,6 +36,18 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "全部" },
 ];
 
+const WEEKDAY = ["日", "一", "二", "三", "四", "五", "六"];
+function weekdayOf(date: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+  if (!y || !m || !d) return "";
+  return `星期${WEEKDAY[new Date(y, m - 1, d).getDay()]}`;
+}
+function previewOf(items: PersonalDailyReportItem[]): string {
+  if (items.length === 0) return "";
+  const head = items.slice(0, 2).map((i) => i.title || "（未命名事項）").join("、");
+  return items.length > 2 ? `${head}…` : head;
+}
+
 export default function TeamDailyReport() {
   const toast = useToast();
   const [days, setDays] = useState<7 | 30>(7);
@@ -44,6 +56,7 @@ export default function TeamDailyReport() {
   const [rows, setRows] = useState<PersonalDailyReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set());
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -83,6 +96,23 @@ export default function TeamDailyReport() {
     () => rows.filter((r) => deptMatch(r) && r.status === "empty").length,
     [rows, deptMatch],
   );
+
+  // 依日期分組（新到舊）· 方向 A 時間軸
+  const groups = useMemo(() => {
+    const map = new Map<string, PersonalDailyReportRow[]>();
+    for (const r of visible) {
+      const arr = map.get(r.reportDate) ?? [];
+      arr.push(r);
+      map.set(r.reportDate, arr);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [visible]);
+
+  const toggleDate = (d: string) => setCollapsedDates((prev) => {
+    const next = new Set(prev);
+    next.has(d) ? next.delete(d) : next.add(d);
+    return next;
+  });
 
   return (
     <div className="pane">
@@ -144,37 +174,28 @@ export default function TeamDailyReport() {
           )}
         </div>
       ) : (
-        <div className="dm-table-wrap">
-          <table className="dm-table">
-            <thead>
-              <tr>
-                <th style={{ width: "14%" }}>日期</th>
-                <th style={{ width: "20%" }}>姓名</th>
-                <th style={{ width: "20%" }}>部門</th>
-                <th className="num" style={{ width: "9%" }}>項數</th>
-                <th style={{ width: "16%" }}>狀態</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((r) => {
-                const items = r.finalItems ?? r.aiItems ?? [];
-                const open = openId === r.reportId;
-                const st = STATUS[r.status];
-                return (
+        <div>
+          {groups.map(([date, list]) => {
+            const gCollapsed = collapsedDates.has(date);
+            return (
+              <div className="dr-grp" key={date}>
+                <div className="dr-grp-hd" onClick={() => toggleDate(date)}>
+                  <span className="gchev">{gCollapsed ? "▸" : "▾"}</span>
+                  <span className="d mono">{date}</span>
+                  <span className="wk">{weekdayOf(date)}</span>
+                  <span className="c">{list.length} 筆</span>
+                </div>
+                {!gCollapsed && list.map((r) => (
                   <TeamReportRow
                     key={r.reportId}
                     row={r}
-                    items={items}
-                    open={open}
-                    statusLabel={st.label}
-                    statusPill={st.pill}
-                    onToggle={() => setOpenId(open ? null : r.reportId)}
+                    open={openId === r.reportId}
+                    onToggle={() => setOpenId(openId === r.reportId ? null : r.reportId)}
                   />
-                );
-              })}
-            </tbody>
-          </table>
+                ))}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -201,47 +222,48 @@ export default function TeamDailyReport() {
   );
 }
 
-function TeamReportRow({ row, items, open, statusLabel, statusPill, onToggle }: {
+function TeamReportRow({ row, open, onToggle }: {
   row: PersonalDailyReportRow;
-  items: PersonalDailyReportItem[];
   open: boolean;
-  statusLabel: string;
-  statusPill: string;
   onToggle: () => void;
 }) {
+  const items = row.finalItems ?? row.aiItems ?? [];
+  const st = STATUS[row.status];
   return (
-    <>
-      <tr onClick={onToggle} style={{ cursor: "pointer" }}>
-        <td className="mono">{row.reportDate}</td>
-        <td className="dm-td-name">{row.userDisplayName ?? "（未命名）"}</td>
-        <td>{row.departmentName ?? <span style={{ color: "var(--ink-3)" }}>未分派部門</span>}</td>
-        <td className="num">{items.length}</td>
-        <td><span className={`st-dot ${statusPill}`} /><span className={`nc-pill ${statusPill}`}>{statusLabel}</span></td>
-        <td style={{ textAlign: "right", color: "var(--ink-3)" }}>{open ? "收合 ▲" : "展開 ▼"}</td>
-      </tr>
+    <div className="dr-row">
+      <div className="dr-row-hd" onClick={onToggle} role="button" tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}>
+        <span className={`st-dot ${st.pill}`} />
+        <span className="dr-nm">{row.userDisplayName ?? "（未命名）"}</span>
+        {row.departmentName
+          ? <span className="dr-dept">{row.departmentName}</span>
+          : <span className="dr-dept" style={{ color: "var(--ink-3)" }}>未分派</span>}
+        <span className={`nc-pill ${st.pill}`}>{st.label}</span>
+        <span className="dr-n">{items.length}</span>
+        <span className="dr-prev">{previewOf(items)}</span>
+        <span className="dr-chev">{open ? "▴" : "▾"}</span>
+      </div>
       {open && (
-        <tr>
-          <td colSpan={6} style={{ background: "var(--surface-2, #F5F6F8)", padding: "10px 14px" }}>
-            {items.length === 0 ? (
-              <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>這份日報沒有項目。</div>
-            ) : (
-              items.map((it, i) => (
-                <div key={i} className="pdr-item">
-                  <div className="pdr-item-hdr">
-                    <span className="pdr-item-idx">{i + 1}</span>
-                    {it.time && <span className="pdr-item-time">{it.time}</span>}
-                    <span className="pdr-item-title">{it.title || "（未命名事項）"}</span>
-                  </div>
-                  {it.detail && <div className="pdr-item-detail">{it.detail}</div>}
-                  {it.followup && (
-                    <div className="pdr-item-followup"><b>追蹤</b> · {it.followup}</div>
-                  )}
+        <div className="dr-body">
+          {items.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>這份日報沒有項目。</div>
+          ) : (
+            items.map((it, i) => (
+              <div key={i} className="pdr-item">
+                <div className="pdr-item-hdr">
+                  <span className="pdr-item-idx">{i + 1}</span>
+                  {it.time && <span className="pdr-item-time">{it.time}</span>}
+                  <span className="pdr-item-title">{it.title || "（未命名事項）"}</span>
                 </div>
-              ))
-            )}
-          </td>
-        </tr>
+                {it.detail && <div className="pdr-item-detail">{it.detail}</div>}
+                {it.followup && (
+                  <div className="pdr-item-followup"><b>追蹤</b> · {it.followup}</div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
       )}
-    </>
+    </div>
   );
 }
