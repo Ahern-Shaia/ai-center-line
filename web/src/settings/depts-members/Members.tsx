@@ -333,8 +333,12 @@ function MemberDrawer({
 }) {
   const toast = useToast();
   const session = getSession();
-  const assignable = useMemo(() => assignableRolesFor(session?.role), [session?.role]);
   const isEdit = user != null;
+  // 新增：不列「員工」（員工由 LINE 綁定自動生）· 編輯：要能設回「員工」（部門主管降級），故補上
+  const assignable = useMemo(() => {
+    const base = assignableRolesFor(session?.role);
+    return isEdit && !base.includes("employee") ? (["employee", ...base] as UserRole[]) : base;
+  }, [session?.role, isEdit]);
   const [saving, setSaving] = useState(false);
   const [email, setEmail] = useState(user?.email ?? "");
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
