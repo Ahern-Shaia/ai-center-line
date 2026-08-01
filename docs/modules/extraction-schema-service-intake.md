@@ -1,8 +1,8 @@
 # extraction-schema-service-intake · 客服報修派工單抽取（service_intake）
 
-> 狀態：⚠️ **M0 定案 · M1 v1 已 revert（2026-08-01）· 待 M1 v2 重做**
-> · M1 v1 把 service_intake 併進 service_order 主 output schema → 超過 **Anthropic 結構化輸出 ≤16 union 上限**、API 回 400（本地 smoke 抓到、已 push+部署，revert `7cfd308` 止血）。見 §3.6 + FMEA F-10 + [[pitfall-anthropic-structured-output-union-limit]]。
-> · **重做方向（v2）：service_intake 拆成獨立第二次 LLM 呼叫**（自己一份 ≤16 union 的 schema），不併主 schema。
+> 狀態：✅ **M0 定案 · M1 v2 程式完成、本地真實 smoke 過（2026-08-01）· 待 push**
+> · v1 併進主 schema → 超 Anthropic ≤16 union 上限、400，已 revert `7cfd308`。**v2＝service_intake 獨立第二次 LLM 呼叫**（§3.6），smoke 驗證主呼叫無 400、service_intake 5=5、warranty 從 0% 救回（填出所有非「未知」的表單）。
+> · 驗收紀律（F-10 教訓）：改抽取 schema **必跑一次真實 LLM 呼叫**，不只信 zod/tsc/unit 綠。見 [[pitfall-anthropic-structured-output-union-limit]]。
 > · 觸發＝查 [`extraction-schema-service-order.md`](extraction-schema-service-order.md) M1 一週填出率時，發現 **warranty 0% 的真因是報修單整個沒被抽**（§0）
 >
 > 相關：[`extraction-schema-service-order.md`](extraction-schema-service-order.md)（進度回報抽取／本文的姊妹區塊）、[`conversation-analysis-pilot.md`](conversation-analysis-pilot.md)（抽取管線）、[`task-completion-tracking.md`](task-completion-tracking.md)（報修單＝任務 intake 的天然來源）、[`warroom-task-board.md`](warroom-task-board.md)（下游材料化）
@@ -247,7 +247,7 @@ nullable 欄衝到 24。這限制在 **API 端、不在 zod** → 靜態驗不�
 |---|---|
 | **M0** ✅ | 本文件 · OQ-ESI-1..7 全數裁定（2026-08-01） |
 | **M1 v1** ❌ | 併進主 output schema 的作法 → 超 Anthropic 16 union 上限、400 · **已 revert `7cfd308`**（DB 欄位 service_intake 保留） |
-| **M1 v2** | 重做：service_intake 獨立第二次 LLM 呼叫（§3.6）· serviceIntakeSchema + 報修單 prompt（判別準則 + warranty 映射）+ pipeline 對 service_order 每段跑兩次抽取 + phone 遮罩 + migration 0057 復原 · **驗收含一次真實 LLM 呼叫（F-10）** |
+| **M1 v2** ✅ | 重做完成：`extraSection` 帶自己的 schema + promptFragment · `analyzeExtraSection` 獨立第二次呼叫 · pipeline 每段跑主+intake 兩次抽取 · phone 遮罩 · migration 0057 復原 · **本地真實 smoke 過**（upload #81：主呼叫無 400、service_intake 5=5、warranty 2/5＝正好對上 5 張裡 2 張非「未知」，其餘「未知」正確→null、phone 已遮罩）· 25 支單元測試綠 · **未 push、migration 已在 prod** |
 | **M2** | 真實報修單去識別化入 `samples/` + R12 回歸（新舊都過）+ §5.3 驗收（6 張報修單、warranty > 0%）|
 | **M3** | 前端顯示（群組日誌「報修派工」區）+ 材料化規則（依 OQ-ESI-6）+ **讀取端點自 scope（F-4 · 無 RLS）**|
 | **M4** | 台灣福祉實跑一週、量 `service_intake` 產出量與 warranty/customer/vehicle 填出率 |
@@ -265,6 +265,7 @@ nullable 欄衝到 24。這限制在 **API 端、不在 zod** → 靜態驗不�
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
+| 2026-08-01 | v0.4 | **M1 v2 完成** · service_intake 改**獨立第二次 LLM 呼叫**（`analyzeExtraSection` + extraSection 帶自己的 schema/promptFragment）· 主 schema 保持精簡（回歸防線：test 斷言 service_intake 不在主 output schema）· pipeline 每段跑主+intake 兩次 · migration 0057 復原 · **本地真實 smoke（upload #81）過**：主呼叫無 400、service_intake 5=5、warranty 2/5（＝5 張裡 2 張非「未知」，其餘正確 null）、phone 遮罩 · 25 支測試綠 | ahern + Claude Code |
 | 2026-08-01 | v0.3 | **M1 v1 revert（`7cfd308`）** · 併進 service_order 主 output schema 使 union 參數衝到 24 > Anthropic ≤16 上限 → API 400、每個 service_order 批次會失敗 · 本地唯讀 smoke 跑真實批次抓到（zod/tsc/21 測試全綠都驗不到，限制在 API 端）· 已 push+部署故 revert 止血、DB 欄位保留 · 加 §3.6 + FMEA F-10 + memory [[pitfall-anthropic-structured-output-union-limit]] · **v2 重做方向：service_intake 拆獨立第二次 LLM 呼叫** | ahern + Claude Code |
 | 2026-08-01 | v0.2 | **M1 v1 程式落地（後 revert）** · `serviceIntakeSchema` + service_order promptFragment 規則 15-18（判別準則 + 是否保固內→warranty 映射）+ `TemplateDef.extraSection`（key/schema/trackedFields/postProcess，不動 factory/general）+ `buildAnalysisSchema` 吐第二區塊 + pipeline 收集並 `maskIntakePhone` 遮罩 + `analyze.service` 映射 + migration 0057（additive `service_intake` 欄）· 單元測試新增 6 支（含遮罩/兩區塊/prompt 教學）· ⚠️ 途中發現：把 service_intake 設為 output schema 必填（同 service_reports）會讓既有 3 支 service_order 測試缺 key → 補 `service_intake: []`（正確：模型應永遠吐兩區塊，F-6）· tsc 綠、templates.test 21 支綠 · migration 待人套、未 push | ahern + Claude Code |
 | 2026-08-01 | v0.1 | M0 首版 · 觸發＝service_order M1 一週填出率查驗發現 warranty 0% 真因是**報修單整個沒被抽**（6 張 100% 漏，客戶名比對 prod 確認非抽漏）· 用戶裁定報修單**另立 `service_intake` 區塊**不混進進度回報 · schema 草案含 warranty 映射（是否保固內→保內/保外）· **ESI-2 裁定：phone 存遮罩尾三碼**（§3.5 補「raw_content 已明文＝遮罩是密度降低非完整 at-rest；加密單欄位屬劇場」的認知，PII-at-rest 記 backlog）· FMEA 5 個 P0（型態判別/warranty 未知誤填/PII/無 RLS 端點 scope/回歸）· 其餘 OQ-ESI-1,3,4,5,6,7 待裁定 | ahern + Claude Code |
