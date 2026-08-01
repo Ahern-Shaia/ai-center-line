@@ -174,8 +174,9 @@ function brandFor(session: Session): { mark: string; name: string; sub: string }
   if (session.role === "consultant") {
     return { mark: "A", name: "AIPROOT", sub: "顧問視角" };
   }
+  // 客戶方左上角只放公司名（不加「戰情室」副標）· 用戶裁定 2026-08-01
   const tenantName = TENANT_NAME[session.tenantId] ?? "客戶方";
-  return { mark: tenantName.slice(0, 1), name: tenantName, sub: "戰情室" };
+  return { mark: tenantName.slice(0, 1), name: tenantName, sub: "" };
 }
 
 interface Props {
@@ -249,7 +250,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
           <span className="sb-brand-mark" aria-hidden>{brand.mark}</span>
           <div className="sb-brand-text">
             <div className="sb-brand-name">{brand.name}</div>
-            <div className="sb-brand-sub">{brand.sub}</div>
+            {brand.sub && <div className="sb-brand-sub">{brand.sub}</div>}
           </div>
           <button className="sb-close" onClick={() => setMobileNavOpen(false)} aria-label="關閉選單">×</button>
         </div>
