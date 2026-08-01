@@ -14,8 +14,11 @@ export class PermissionController {
   @Get("me/permissions")
   @AllowAnyUser()
   async myPermissions(@CurrentUser() user: JwtUser) {
-    const perms = await this.svc.getUserPermissions(user.user_id);
-    return { permissions: Array.from(perms) };
+    const [perms, displayName] = await Promise.all([
+      this.svc.getUserPermissions(user.user_id),
+      this.svc.getDisplayName(user.user_id),
+    ]);
+    return { permissions: Array.from(perms), displayName };
   }
 
   // GET /permissions · 全部 · 給建 role 用

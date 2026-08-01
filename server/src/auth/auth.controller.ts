@@ -5,6 +5,7 @@ import type { JwtUser } from "./jwt-user.js";
 import { LineOauthService } from "./line-oauth.service.js";
 import { Public } from "./public.decorator.js";
 import { ChangePasswordSchema } from "./dto/change-password.dto.js";
+import { DisplayNameSchema } from "./dto/display-name.dto.js";
 import { AllowAnyUser } from "../auth/allow-any-user.decorator.js";
 
 @Controller("auth")
@@ -36,6 +37,21 @@ export class AuthController {
     }
     await this.auth.changePassword(user.user_id, parsed.data.oldPassword, parsed.data.newPassword);
     return { status: "ok" };
+  }
+
+  // 自服務改顯示名稱 · 任何登入使用者皆可（只改自己的）· LINE 用戶把佔位名改成真名
+  @Post("display-name")
+  @AllowAnyUser()
+  async changeDisplayName(@CurrentUser() user: JwtUser, @Body() body: unknown) {
+    const parsed = DisplayNameSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        status: "invalid_body",
+        errors: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+      });
+    }
+    const displayName = await this.auth.changeDisplayName(user.user_id, parsed.data.displayName);
+    return { displayName };
   }
 
   // LINE Login OAuth · 前端拿 auth URL

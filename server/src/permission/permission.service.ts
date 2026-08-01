@@ -45,6 +45,13 @@ export class PermissionService {
     return perms;
   }
 
+  // 目前使用者的顯示名稱（給 topbar 顯示）· 走 withAuthLookup 繞 users RLS（同 getUserPermissions）
+  async getDisplayName(userId: string): Promise<string | null> {
+    const res = await withAuthLookup((tx) =>
+      tx.execute<{ display_name: string | null }>(sql`SELECT display_name FROM users WHERE user_id = ${userId} LIMIT 1`));
+    return res.rows[0]?.display_name ?? null;
+  }
+
   // Cache invalidation · 改 role_permissions 或 user.role_id 時呼叫
   invalidateUser(userId: string): void {
     this.cache.delete(userId);

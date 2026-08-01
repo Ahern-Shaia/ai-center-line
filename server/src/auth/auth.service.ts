@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -150,5 +150,16 @@ export class AuthService {
         mustChangePassword: false,
       })
       .where(eq(users.userId, userId));
+  }
+
+  // 自服務改顯示名稱 · 只改自己那一列（走 RLS：current_tenant 內才更新得到）· 純外觀，無提權
+  async changeDisplayName(userId: string, displayName: string): Promise<string> {
+    const tx = currentTx();
+    const rows = await tx.update(users)
+      .set({ displayName })
+      .where(eq(users.userId, userId))
+      .returning({ displayName: users.displayName });
+    if (!rows[0]) throw new NotFoundException("使用者不存在");
+    return rows[0].displayName ?? displayName;
   }
 }
