@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>部門日報 · C 精簡表格（對標 Metabase · 改動最小）</title>
+<style>
+:root{--canvas:#F7F8FA;--surface:#FFFFFF;--well:#F1F3F6;--line:#E5E7EB;--line-2:#F0F2F5;--ink:#111827;--ink-2:#4B5563;--ink-3:#6B7280;--primary:#4F46E5;--primary-2:#4338CA;--primary-tint:#EEF2FF;--ok:#059669;--ok-tint:#ECFDF5;--warn:#D97706;--warn-tint:#FFFBEB;--sans:'Inter','Noto Sans TC',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+.wrap{max-width:920px;margin:0 auto;padding:26px 24px 70px;}
+.doc-h{font-size:20px;font-weight:700;margin:0 0 3px;}
+.doc-sub{color:var(--ink-3);font-size:12.5px;margin:0 0 6px;}
+.legend{font-size:12px;color:var(--ink-3);margin:8px 0 18px;padding:9px 13px;background:var(--surface);border:1px solid var(--line);border-radius:7px;}
+.legend b{color:var(--primary-2);}
+.app{border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:0 2px 14px rgba(17,24,39,.05);overflow:hidden;}
+.pane{padding:20px 22px 30px;}
+.pane-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;}
+.pane-hdr h1{font-size:18px;font-weight:700;margin:0 0 3px;}
+.pane-hdr .sub{color:var(--ink-3);font-size:12px;margin:0;}
+.viewbar{display:flex;gap:8px;align-items:center;}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;}
+.seg span{padding:6px 12px;font-size:12px;color:var(--ink-3);cursor:pointer;border-right:1px solid var(--line);}
+.seg span:last-child{border-right:0;}.seg span.on{background:var(--primary);color:#fff;}
+.sel{font-size:12px;color:var(--ink-2);border:1px solid var(--line);border-radius:7px;padding:6px 10px;background:var(--surface);cursor:pointer;}
+table{width:100%;border-collapse:collapse;}
+thead th{text-align:left;font-size:11.5px;font-weight:600;color:var(--ink-3);padding:0 10px 8px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);}
+thead th.n{text-align:right;}
+tbody td{padding:11px 10px;border-bottom:1px solid var(--line-2);font-size:13px;}
+tbody tr.r{cursor:pointer;}tbody tr.r:hover td{background:#FAFBFC;}
+td.date{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);}
+td.nm{font-weight:600;}
+.dept{font-size:11px;color:var(--ink-3);background:var(--well);border-radius:3px;padding:1px 7px;}
+td.n{text-align:right;font-family:var(--mono);color:var(--ink-2);}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle;}
+.dot.ok{background:var(--ok);}.dot.warn{background:var(--warn);}.dot.mute{background:#CBD5E1;}
+.pill{font-size:10.5px;font-weight:600;border-radius:3px;padding:1px 7px;}
+.pill.ok{background:var(--ok-tint);color:var(--ok);}.pill.warn{background:var(--warn-tint);color:var(--warn);}.pill.mute{background:var(--well);color:var(--ink-3);}
+td.act{text-align:right;color:var(--ink-3);font-size:11px;}
+.body td{background:#FCFCFD;padding:6px 14px 10px 34px;}
+.item{padding:7px 0;border-bottom:1px dashed var(--line-2);font-size:13px;}
+.item:last-child{border-bottom:none;}
+.item .t{font-weight:600;}.item .t .idx{color:var(--ink-3);font-family:var(--mono);font-size:11px;margin-right:8px;}
+.item .m{font-size:11.5px;color:var(--ink-3);margin-top:2px;}
+.quiet{margin-top:12px;padding:10px 14px;font-size:12.5px;color:var(--ink-3);background:var(--well);border-radius:8px;display:flex;align-items:center;gap:8px;}
+.quiet b{color:var(--ink-2);}.quiet .cta{margin-left:auto;color:var(--primary);font-weight:600;cursor:pointer;}
+.foot{margin-top:16px;font-size:12px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:12px;line-height:1.8;}
+</style></head><body>
+<div class="wrap">
+  <div class="doc-h">部門日報 · 方向 C — 精簡表格（對標 Metabase · 改動最小）</div>
+  <div class="doc-sub">維持單一表格 · 只加：預設過濾空列 + segmented + ●燈點 pill + tabular 數字 + 底部聚合行 · 假名示意</div>
+  <div class="legend">偷 Metabase 的手藝、動最少：<b>sticky 表頭 + tabular 數字 + pill 語意</b> · <b>空列預設隱藏、收成底部一行</b> · empty 與 zero 分明。與現況版面最接近，風險最低、最快上線。</div>
+
+  <div class="app"><div class="pane">
+    <div class="pane-hdr">
+      <div><h1>部門日報</h1><div class="sub">部門成員送出的每日工作日報 · 點一列展開看內容</div></div>
+      <div class="viewbar">
+        <div class="seg"><span class="on">有內容</span><span>未回報</span><span>全部</span></div>
+        <div class="sel">全部部門 ▾</div>
+        <div class="seg"><span class="on">近 7 天</span><span>近 30 天</span></div>
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th style="width:14%">日期</th><th style="width:20%">姓名</th><th style="width:20%">部門</th><th class="n" style="width:9%">項數</th><th style="width:16%">狀態</th><th></th></tr></thead>
+      <tbody>
+        <tr class="r"><td class="date">07-29</td><td class="nm">王○○</td><td><span class="dept">報工生產</span></td><td class="n">2</td><td><span class="dot ok"></span><span class="pill ok">已送出</span></td><td class="act">展開 ▾</td></tr>
+        <tr class="r"><td class="date">07-29</td><td class="nm">陳○○</td><td><span class="dept">技術部</span></td><td class="n">2</td><td><span class="dot mute"></span><span class="pill mute">草稿</span></td><td class="act">收合 ▴</td></tr>
+        <tr class="body"><td colspan="6">
+          <div class="item"><div class="t"><span class="idx">1</span>改裝圖 v2 核對</div><div class="m">14:20 · 尾門鉸鏈位置調整，待主管確認</div></div>
+          <div class="item"><div class="t"><span class="idx">2</span>法規檢驗討論</div><div class="m">追蹤 · 需補側踏承重測試報告</div></div>
+        </td></tr>
+        <tr class="r"><td class="date">07-29</td><td class="nm">李○○</td><td><span class="dept">測試組</span></td><td class="n">1</td><td><span class="dot mute"></span><span class="pill mute">草稿</span></td><td class="act">展開 ▾</td></tr>
+        <tr class="r"><td class="date">07-27</td><td class="nm">李○○</td><td><span class="dept">測試組</span></td><td class="n">4</td><td><span class="dot ok"></span><span class="pill ok">已送出</span></td><td class="act">展開 ▾</td></tr>
+        <tr class="r"><td class="date">07-27</td><td class="nm">王○○</td><td><span class="dept">報工生產</span></td><td class="n">1</td><td><span class="dot warn"></span><span class="pill warn">待送出</span></td><td class="act">展開 ▾</td></tr>
+        <tr class="r"><td class="date">07-26</td><td class="nm">陳○○</td><td><span class="dept">技術部</span></td><td class="n">3</td><td><span class="dot ok"></span><span class="pill ok">已送出</span></td><td class="act">展開 ▾</td></tr>
+      </tbody>
+    </table>
+
+    <div class="quiet">另有 <b>12 筆</b>當日無內容（預設隱藏）<span class="cta">顯示 →</span></div>
+    <div class="foot">共 6 筆有內容 · 空日報收成上方一行 · scope 依角色（部門主管看自己部門、租戶管理者看全公司）。</div>
+  </div></div>
+</div>
+</body></html>

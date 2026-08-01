@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>部門日報 · B facet 過濾表（對標 Datadog Logs）</title>
+<style>
+:root{--canvas:#F7F8FA;--surface:#FFFFFF;--well:#F1F3F6;--line:#E5E7EB;--line-2:#F0F2F5;--ink:#111827;--ink-2:#4B5563;--ink-3:#6B7280;--primary:#4F46E5;--primary-2:#4338CA;--primary-tint:#EEF2FF;--ok:#059669;--ok-tint:#ECFDF5;--warn:#D97706;--warn-tint:#FFFBEB;--sans:'Inter','Noto Sans TC',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+.wrap{max-width:960px;margin:0 auto;padding:26px 24px 70px;}
+.doc-h{font-size:20px;font-weight:700;margin:0 0 3px;}
+.doc-sub{color:var(--ink-3);font-size:12.5px;margin:0 0 6px;}
+.legend{font-size:12px;color:var(--ink-3);margin:8px 0 18px;padding:9px 13px;background:var(--surface);border:1px solid var(--line);border-radius:7px;}
+.legend b{color:var(--primary-2);}
+.app{border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:0 2px 14px rgba(17,24,39,.05);overflow:hidden;}
+.pane{padding:20px 22px 30px;}
+.pane-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;}
+.pane-hdr h1{font-size:18px;font-weight:700;margin:0 0 3px;}
+.pane-hdr .sub{color:var(--ink-3);font-size:12px;margin:0;}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;}
+.seg span{padding:6px 12px;font-size:12px;color:var(--ink-3);cursor:pointer;border-right:1px solid var(--line);}
+.seg span:last-child{border-right:0;}.seg span.on{background:var(--primary);color:#fff;}
+/* 兩欄 */
+.split{display:grid;grid-template-columns:186px 1fr;gap:16px;}
+.facets{font-size:12.5px;}
+.fac-grp{margin-bottom:16px;}
+.fac-h{font-size:11px;font-weight:700;color:var(--ink-3);text-transform:none;margin-bottom:6px;letter-spacing:.02em;}
+.fac{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;color:var(--ink-2);}
+.fac:hover{background:var(--well);}
+.fac.on{background:var(--primary-tint);color:var(--primary-2);font-weight:600;}
+.cb{width:13px;height:13px;border:1.5px solid var(--line);border-radius:3px;flex-shrink:0;}
+.fac.on .cb{background:var(--primary);border-color:var(--primary);}
+.fac .fc{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+.dotm{width:7px;height:7px;border-radius:50%;}
+.dot.ok,.dotm.ok{background:var(--ok);}.dot.warn,.dotm.warn{background:var(--warn);}.dot.mute,.dotm.mute{background:#CBD5E1;}
+/* 表 */
+table{width:100%;border-collapse:collapse;}
+thead th{text-align:left;font-size:11.5px;font-weight:600;color:var(--ink-3);padding:0 10px 8px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);}
+thead th.n{text-align:right;}
+tbody td{padding:11px 10px;border-bottom:1px solid var(--line-2);font-size:13px;}
+tbody tr.r{cursor:pointer;}tbody tr.r:hover td{background:#FAFBFC;}
+td.date{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);}
+td.nm{font-weight:600;}
+.dept{font-size:11px;color:var(--ink-3);background:var(--well);border-radius:3px;padding:1px 7px;}
+td.n{text-align:right;font-family:var(--mono);color:var(--ink-2);}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle;}
+.pill{font-size:10.5px;font-weight:600;border-radius:3px;padding:1px 7px;}
+.pill.ok{background:var(--ok-tint);color:var(--ok);}.pill.warn{background:var(--warn-tint);color:var(--warn);}.pill.mute{background:var(--well);color:var(--ink-3);}
+.chev{color:var(--ink-3);font-size:11px;}
+.body td{background:#FCFCFD;padding:6px 14px 10px 34px;}
+.item{padding:7px 0;border-bottom:1px dashed var(--line-2);font-size:13px;}
+.item:last-child{border-bottom:none;}
+.item .t{font-weight:600;}.item .t .idx{color:var(--ink-3);font-family:var(--mono);font-size:11px;margin-right:8px;}
+.item .m{font-size:11.5px;color:var(--ink-3);margin-top:2px;}
+.foot{margin-top:20px;font-size:12px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:12px;line-height:1.8;}
+</style></head><body>
+<div class="wrap">
+  <div class="doc-h">部門日報 · 方向 B — facet 過濾表（對標 Datadog Logs）</div>
+  <div class="doc-sub">左窄 facet 過濾、右主表只顯命中的 · 空日報要勾「未回報」facet 才現 · 假名示意</div>
+  <div class="legend">偷 Datadog Logs：<b>左側 facet 做過濾</b>（部門/狀態，帶 count）· <b>預設濾掉低訊號</b>（未回報預設不勾＝不顯示）· <b>severity 用燈點+pill 不整列上色</b>。切多維度（誰、哪部門、什麼狀態）時最快。</div>
+
+  <div class="app"><div class="pane">
+    <div class="pane-hdr">
+      <div><h1>部門日報</h1><div class="sub">部門成員送出的每日工作日報 · 左側過濾、點列展開</div></div>
+      <div class="seg"><span class="on">近 7 天</span><span>近 30 天</span></div>
+    </div>
+
+    <div class="split">
+      <!-- facets -->
+      <div class="facets">
+        <div class="fac-grp"><div class="fac-h">部門</div>
+          <div class="fac on"><span class="cb"></span>報工生產<span class="fc">2</span></div>
+          <div class="fac on"><span class="cb"></span>技術部<span class="fc">2</span></div>
+          <div class="fac on"><span class="cb"></span>測試組<span class="fc">2</span></div>
+          <div class="fac"><span class="cb"></span>未分派<span class="fc">3</span></div>
+        </div>
+        <div class="fac-grp"><div class="fac-h">狀態</div>
+          <div class="fac on"><span class="cb"></span><span class="dotm ok"></span>已送出<span class="fc">3</span></div>
+          <div class="fac on"><span class="cb"></span><span class="dotm warn"></span>待送出<span class="fc">1</span></div>
+          <div class="fac on"><span class="cb"></span><span class="dotm mute"></span>草稿<span class="fc">2</span></div>
+          <div class="fac"><span class="cb"></span><span class="dotm mute"></span>未回報<span class="fc">12</span></div>
+        </div>
+      </div>
+
+      <!-- 表 -->
+      <div>
+        <table>
+          <thead><tr><th style="width:15%">日期</th><th style="width:20%">姓名</th><th style="width:20%">部門</th><th class="n" style="width:10%">項數</th><th style="width:18%">狀態</th><th></th></tr></thead>
+          <tbody>
+            <tr class="r"><td class="date">07-29</td><td class="nm">王○○</td><td><span class="dept">報工生產</span></td><td class="n">2</td><td><span class="dot ok"></span><span class="pill ok">已送出</span></td><td class="chev">▾</td></tr>
+            <tr class="r"><td class="date">07-29</td><td class="nm">陳○○</td><td><span class="dept">技術部</span></td><td class="n">2</td><td><span class="dot mute"></span><span class="pill mute">草稿</span></td><td class="chev">▴</td></tr>
+            <tr class="body"><td colspan="6">
+              <div class="item"><div class="t"><span class="idx">1</span>改裝圖 v2 核對</div><div class="m">14:20 · 尾門鉸鏈位置調整，待主管確認</div></div>
+              <div class="item"><div class="t"><span class="idx">2</span>法規檢驗討論</div><div class="m">追蹤 · 需補側踏承重測試報告</div></div>
+            </td></tr>
+            <tr class="r"><td class="date">07-29</td><td class="nm">李○○</td><td><span class="dept">測試組</span></td><td class="n">1</td><td><span class="dot mute"></span><span class="pill mute">草稿</span></td><td class="chev">▾</td></tr>
+            <tr class="r"><td class="date">07-27</td><td class="nm">李○○</td><td><span class="dept">測試組</span></td><td class="n">4</td><td><span class="dot ok"></span><span class="pill ok">已送出</span></td><td class="chev">▾</td></tr>
+            <tr class="r"><td class="date">07-27</td><td class="nm">王○○</td><td><span class="dept">報工生產</span></td><td class="n">1</td><td><span class="dot warn"></span><span class="pill warn">待送出</span></td><td class="chev">▾</td></tr>
+            <tr class="r"><td class="date">07-26</td><td class="nm">陳○○</td><td><span class="dept">技術部</span></td><td class="n">3</td><td><span class="dot ok"></span><span class="pill ok">已送出</span></td><td class="chev">▾</td></tr>
+          </tbody>
+        </table>
+        <div class="foot">命中 6 筆（未勾「未回報」facet，12 筆空日報不顯示）· scope 靠後端 RLS：部門主管只看自己部門。</div>
+      </div>
+    </div>
+  </div></div>
+</div>
+</body></html>
