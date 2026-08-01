@@ -169,7 +169,6 @@ export class AnalyzeService {
         messages: result.messages,
         dailyReports: result.template === "factory_report" ? result.templateReports : [],
         serviceReports: result.template === "service_order" ? result.templateReports : [],
-        serviceIntake: result.template === "service_order" ? result.extraReports : [],
         extractionTemplate: result.template,
         records: result.records,
       });

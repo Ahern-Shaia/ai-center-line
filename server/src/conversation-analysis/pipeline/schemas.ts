@@ -65,13 +65,10 @@ export function buildAnalysisSchema(template: ExtractionTemplate) {
     classifications: z.array(classificationSchema),
     records: z.array(recordSchema),
   };
-  const extra = def.extraSection
-    ? { [def.extraSection.key]: z.array(def.extraSection.schema) }
-    : {};
   if (!def.resultKey || !def.schema) {
-    return z.object({ ...base, ...extra });
+    return z.object(base);
   }
-  return z.object({ ...base, [def.resultKey]: z.array(def.schema), ...extra });
+  return z.object({ ...base, [def.resultKey]: z.array(def.schema) });
 }
 
 // 既有呼叫端與回歸樣本沿用（＝ factory_report 模板）· 行為不變
@@ -82,5 +79,4 @@ export type AnalysisResultT = {
   records: z.infer<typeof recordSchema>[];
   daily_reports?: Array<Record<string, unknown>>;
   service_reports?: Array<Record<string, unknown>>;
-  service_intake?: Array<Record<string, unknown>>;
 };
