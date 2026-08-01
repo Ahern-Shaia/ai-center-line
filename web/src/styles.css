@@ -2434,7 +2434,10 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 
 /* ── 組織關係圖（org-overview M1）· 對照 docs/mockup/org-graph-data-driven.html ── */
 .og-scroll{ overflow-x:auto; padding:6px 0 16px; }
-.og-stage{ position:relative; min-width:100%; padding:8px 20px 20px; }
+/* width:max-content → stage 撐到內容真實寬度（部門多會超出視窗）· min-width:100% 保底。
+   這樣 company / lanes / 未分派 都在「同一個真實寬度」內置中、彼此對齊，整張圖一起水平捲，
+   不會各自在超寬 stage 裡置中而漂位（原本 justify-content:center + margin:auto 造成的跑版）。*/
+.og-stage{ position:relative; min-width:100%; width:max-content; padding:8px 20px 20px; }
 .og-edges{ position:absolute; inset:0; overflow:visible; z-index:0; pointer-events:none; }
 .og-layer{ position:relative; z-index:1; }
 .og-band{ display:flex; flex-direction:column; align-items:center; margin-bottom:40px; }

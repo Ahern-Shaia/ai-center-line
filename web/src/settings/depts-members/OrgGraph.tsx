@@ -24,6 +24,7 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [dim, setDim] = useState({ w: 0, h: 0 });
   const stageRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
 
   useEffect(() => {
@@ -63,6 +64,12 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
   }, []);
 
   useLayoutEffect(() => { draw(); }, [data, expanded, draw]);
+  // 部門多會超出視窗 · 載入後把水平捲動置中，開啟時看到的是「置中的組織圖」而非漂在一邊（跑版感來源）。
+  // 只在資料變更時置中，不在展開/收合時重置捲動位置。
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollLeft = Math.max(0, (el.scrollWidth - el.clientWidth) / 2);
+  }, [data]);
   useEffect(() => {
     window.addEventListener("resize", draw);
     return () => window.removeEventListener("resize", draw);
@@ -77,7 +84,7 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
   const hasOrphan = data.unassigned.members.length > 0 || data.unassigned.groups.length > 0;
 
   return (
-    <div className="og-scroll">
+    <div className="og-scroll" ref={scrollRef}>
       <div className="og-stage" ref={stageRef}>
         <svg className="og-edges" width={dim.w} height={dim.h}>
           {edges.map((e, i) => (
