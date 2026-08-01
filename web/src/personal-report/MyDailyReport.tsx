@@ -35,10 +35,13 @@ export default function MyDailyReport() {
   const [busy, setBusy] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  // 哪一項正在就地編輯（提升到父層：編輯時把底部送出條解除固定，避免蓋住「完成」鈕）
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const toast = useToast();
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setEditingIdx(null);
     try {
       const res = await getMyPersonalReport(date);
       setReport(res.report);
@@ -269,17 +272,20 @@ export default function MyDailyReport() {
                 key={idx}
                 item={item}
                 idx={idx}
+                editing={editingIdx === idx}
+                onStartEdit={() => setEditingIdx(idx)}
+                onStopEdit={() => setEditingIdx(null)}
                 onChange={(updated) => {
                   if (!canEdit) return;
                   setItems((s) => s.map((it, i) => i === idx ? updated : it));
                 }}
-                onDelete={() => canEdit && setItems((s) => s.filter((_, i) => i !== idx))}
+                onDelete={() => { if (canEdit) { setEditingIdx(null); setItems((s) => s.filter((_, i) => i !== idx)); } }}
                 readonly={!canEdit}
               />
             ))}
 
             {canEdit && (
-              <button className="btn pdr-add" onClick={() => setItems((s) => [...s, { title: "", detail: "", time: "", followup: "" }])}>
+              <button className="btn pdr-add" onClick={() => { setEditingIdx(items.length); setItems((s) => [...s, { title: "", detail: "", time: "", followup: "" }]); }}>
                 + 手動加一項
               </button>
             )}
@@ -324,7 +330,7 @@ export default function MyDailyReport() {
           今天沒有 AI 日報、但自己從打卡/任務加了項目 → 加得進去卻沒有送出按鈕，
           使用者走到死路。只要有東西可送就要給他送出的地方。*/}
       {(report || items.length > 0) && !isEmpty && !isFailed && (
-        <div className="pdr-foot">
+        <div className={`pdr-foot${editingIdx !== null ? " pdr-foot-flow" : ""}`}>
           <div style={{ fontSize: 12, color: "var(--ink-3)" }}>
             {(report?.messageCount ?? 0) > 0 && <>今日私訊 {report!.messageCount} 則 · </>}
             {isSent && !hasUnsentUpdate
@@ -384,25 +390,27 @@ function normalizeTimeOnBlur(s: string): string {
 }
 
 function ItemCard({
-  item, idx, onChange, onDelete, readonly,
+  item, idx, editing, onChange, onDelete, onStartEdit, onStopEdit, readonly,
 }: {
   item: PersonalDailyReportItem;
   idx: number;
+  editing: boolean;
   onChange: (u: PersonalDailyReportItem) => void;
   onDelete: () => void;
+  onStartEdit: () => void;
+  onStopEdit: () => void;
   readonly: boolean;
 }) {
-  const [editing, setEditing] = useState(false);
   const [timeErr, setTimeErr] = useState("");
 
   function finishEdit() {
     const t = (item.time ?? "").trim();
     if (t && !TIME_RE.test(t)) {
-      setTimeErr("時間請填 HH:MM 或 HH:MM-HH:MM（例 08:30、08:30-10:00）· 不填也可以");
+      setTimeErr("時間直接打數字就好，例 0900（會自動變 09:00）、區間 0900-1000 · 不填也可以");
       return;
     }
     setTimeErr("");
-    setEditing(false);
+    onStopEdit();
   }
 
   if (editing && !readonly) {
@@ -411,7 +419,8 @@ function ItemCard({
         <div className="pdr-item-row">
           <input
             className="tf pdr-time"
-            placeholder="時間 · 例 08:30 或 08:30-10:00"
+            inputMode="numeric"
+            placeholder="時間 · 直接打數字，例 0900、0900-1000"
             value={item.time ?? ""}
             onChange={(e) => { onChange({ ...item, time: cleanTimeInput(e.target.value) }); if (timeErr) setTimeErr(""); }}
             onBlur={() => { const v = normalizeTimeOnBlur(item.time ?? ""); if (v !== (item.time ?? "")) onChange({ ...item, time: v }); }}
@@ -451,7 +460,7 @@ function ItemCard({
         <span className="pdr-item-title">{item.title || "（未命名事項）"}</span>
         {!readonly && (
           <div className="pdr-item-actions">
-            <button className="btn small" onClick={() => setEditing(true)}>編輯</button>
+            <button className="btn small" onClick={onStartEdit}>編輯</button>
             <button className="btn small" onClick={onDelete}>刪除</button>
           </div>
         )}
