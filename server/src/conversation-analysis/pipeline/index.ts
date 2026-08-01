@@ -2,7 +2,7 @@
 // LINE 匯出檔 raw text → parser → segments → analyzeSegment × N → 匯總 result
 import { sql } from "drizzle-orm";
 import { parseLineExport, segmentMessages, type ChatMessage } from "./parser.js";
-import { analyzeSegment, addUsage, emptyUsage, type UsageStats } from "./classify.js";
+import { analyzeSegment, analyzeExtraSection, addUsage, emptyUsage, type UsageStats } from "./classify.js";
 import { TWH_TENANT, type Tenant } from "./tenant-twh.js";
 import { DEFAULT_CATEGORIES, type AnalysisResultT } from "./schemas.js";
 import { TEMPLATE_REGISTRY, resolveTemplate, DEFAULT_TEMPLATE, type ExtractionTemplate } from "./templates.js";
@@ -20,6 +20,8 @@ export interface PipelineResult {
   messages: EnrichedMessage[];
   /** L2 業種區塊 · 依 template 決定存到哪個欄位（見 templates.ts resultKey）*/
   templateReports: Array<Record<string, unknown>>;
+  /** 第二區塊 · 獨立 LLM 呼叫的產出（目前只有 service_order → service_intake）*/
+  extraReports: Array<Record<string, unknown>>;
   template: ExtractionTemplate;
   records: AnalysisResultT["records"];
   messageCount: number;
@@ -58,6 +60,7 @@ export async function runPipeline(
   // AAL · L2 業種模板 · 讀不到就讓這批失敗，不猜（理由見 loadTemplate）
   const template = await loadTemplate(tenantId);
   const resultKey = TEMPLATE_REGISTRY[template].resultKey;
+  const extraSection = TEMPLATE_REGISTRY[template].extraSection;
   const { groupName, messages } = parseLineExport(rawText);
   const segments = segmentMessages(messages);
 
@@ -70,6 +73,7 @@ export async function runPipeline(
 
   const catMap = new Map<number, { category: string; confidence: string }>();
   const templateReports: Array<Record<string, unknown>> = [];
+  const extraReports: Array<Record<string, unknown>> = [];
   const records: AnalysisResultT["records"] = [];
   const usage = emptyUsage();
 
@@ -84,6 +88,13 @@ export async function runPipeline(
     }
     records.push(...result.records);
     addUsage(usage, u);
+
+    // 第二區塊 · 獨立呼叫（不併主 schema，避免超 Anthropic 16 union 上限 · doc §3.6）
+    if (extraSection) {
+      const { records: extra, usage: eu } = await analyzeExtraSection(provider, groupName, seg, tenant, extraSection);
+      extraReports.push(...extra);
+      addUsage(usage, eu);
+    }
   }
 
   // WTB-M2 · 新分類 upsert (OQ-WTB-2 = A · auto-active)
@@ -108,6 +119,7 @@ export async function runPipeline(
     groupName,
     messages: enriched,
     templateReports,
+    extraReports,
     template,
     records,
     messageCount: messages.length,

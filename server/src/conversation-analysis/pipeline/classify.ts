@@ -1,7 +1,8 @@
 // 對話分類抽取 · 走 LLMProvider 抽象 · 支援 5 家 provider（Anthropic/OpenAI/Google/Ollama/DeepSeek）
 // ⚠️ Backend self-contained · 未來遷 shared package
+import { z } from "zod";
 import { buildAnalysisSchema, type AnalysisResultT } from "./schemas.js";
-import { TEMPLATE_REGISTRY, type ExtractionTemplate } from "./templates.js";
+import { TEMPLATE_REGISTRY, type ExtractionTemplate, type ExtraSection } from "./templates.js";
 import type { Tenant } from "./tenant-twh.js";
 import type { ChatMessage } from "./parser.js";
 import type { ChatUsage, LLMProvider } from "../../llm/provider.interface.js";
@@ -70,6 +71,47 @@ export async function analyzeSegment(
 
   return {
     result: output.parsed as AnalysisResultT,
+    usage: {
+      calls: 1,
+      inputTokens: output.usage.inputTokens,
+      outputTokens: output.usage.outputTokens,
+      cacheWriteTokens: output.usage.cacheWriteTokens,
+      cacheReadTokens: output.usage.cacheReadTokens,
+    },
+  };
+}
+
+/**
+ * 第二區塊抽取 · 獨立 LLM 呼叫（v2）。
+ * ⚠️ 為什麼是獨立呼叫而非併進主 schema：併進去整包 union 參數會超過
+ *    Anthropic 結構化輸出 ≤16 上限、API 回 400（doc §3.6 / FMEA F-10）。
+ *    這裡的 schema 只有一個陣列（約 11 union），單獨呼叫穩在上限內。
+ * 回傳已套 postProcess（如 phone 遮罩）的區塊記錄。
+ */
+export async function analyzeExtraSection(
+  provider: LLMProvider,
+  groupName: string,
+  segment: ChatMessage[],
+  tenant: Tenant,
+  section: ExtraSection,
+): Promise<{ records: Record<string, unknown>[]; usage: UsageStats }> {
+  const body = segment
+    .map((m) => `#${m.id} [${m.date} ${m.time}] ${m.sender}: ${m.text.replace(/\n/g, " ⏎ ")}`)
+    .join("\n");
+
+  const output = await provider.chat({
+    systemPrompt: tenant.systemPrompt + section.promptFragment,
+    cacheableContext: `# 工廠主檔資料（模擬 Ragic 主檔，供實體對應）\n${tenant.masterDataJson}`,
+    userMessage: `群組名稱：${groupName}\n\n請從以下 ${segment.length} 則訊息抽取（依上方規則）：\n${body}`,
+    outputSchema: z.object({ [section.key]: z.array(section.schema) }),
+  });
+
+  const parsed = output.parsed as Record<string, unknown>;
+  const raw = Array.isArray(parsed[section.key]) ? (parsed[section.key] as Record<string, unknown>[]) : [];
+  const records = section.postProcess ? raw.map(section.postProcess) : raw;
+
+  return {
+    records,
     usage: {
       calls: 1,
       inputTokens: output.usage.inputTokens,

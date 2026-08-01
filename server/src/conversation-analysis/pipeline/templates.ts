@@ -65,6 +65,39 @@ const serviceOrderSchema = z.object({
   confidence: Confidence,
 });
 
+// ── L2 · 服務工單型的第二區塊：客服報修派工單（service_intake）──────
+// 設計見 docs/modules/extraction-schema-service-intake.md。
+// ⚠️ v2：這是**獨立的第二次 LLM 呼叫**，不併進 service_order 主 output schema ——
+//    併進去會讓整包 union 參數超過 Anthropic ≤16 上限、API 回 400（見 doc §3.6 / FMEA F-10）。
+//    本 schema 單獨算約 11 個 union（9 nullable + array + enum），在上限內。
+const serviceIntakeSchema = z.object({
+  date: z.string().nullable(),
+  customer: z.string().nullable(),      // 客戶：祝三、台中智障者協會
+  site: z.string().nullable(),          // 站點／地址區域（只存區域，完整地址屬 PII）
+  vehicle: z.string().nullable(),       // 車種＋車牌合併原文：「VERYCA RFB-3630」
+  warranty: z.string().nullable(),      // 是否保固內:是→保內／否→保外／未知→null · 讀明寫欄位非推斷
+  issue: z.string().nullable(),         // 狀況：斜坡板放不下來
+  status: z.string().nullable(),        // 派工狀態：待派工／待聯絡客戶／已安排
+  contact: z.string().nullable(),       // 聯絡人姓名
+  phone: z.string().nullable(),         // 電話 · 模型照抄完整號碼，落庫前 pipeline 遮罩尾三碼（見 maskIntakePhone）
+  source_ids: z.array(z.number()),
+  confidence: Confidence,
+});
+
+/**
+ * service_intake.phone 遮罩 · PII 密度降低（ESI-2）。
+ * ⚠️ 在 pipeline 後處理做 deterministic 遮罩，**不叫模型遮**——模型遮會不一致甚至改數字（違 R11）。
+ * ⚠️ 這只降低「結構化欄位被批量撈」的風險；同一支號碼在 raw_content 仍是明文（見 doc §3.5）。
+ */
+export function maskIntakePhone(raw: string | null): string | null {
+  if (!raw) return null;
+  const d = raw.replace(/\D/g, "");
+  if (d.length < 4) return null;                 // 太短不像電話 · 不保留（也避免洩漏短碼）
+  const last3 = d.slice(-3);
+  if (d.length === 10 && d.startsWith("09")) return `09xx-xxx-${last3}`;
+  return `${"x".repeat(d.length - 3)}${last3}`;
+}
+
 interface TemplateDef {
   /** 中文名 · 前端顯示 */
   label: string;
@@ -80,6 +113,20 @@ interface TemplateDef {
   trackedFields: string[];
   /** 是否可在前端選用（service_order 待客戶欄位確認）*/
   selectable: boolean;
+  /**
+   * 選配 · 第二輸出區塊（目前只有 service_order → service_intake）。
+   * ⚠️ v2：這是**獨立的第二次 LLM 呼叫**（自己的 schema + promptFragment），
+   *    不併進主 schema —— 併進去會超過 Anthropic ≤16 union 上限（見 doc §3.6 / FMEA F-10）。
+   * postProcess 在落庫前對該區塊每筆做 deterministic 後處理（如 phone 遮罩）。
+   */
+  extraSection?: {
+    key: "service_intake";
+    schema: z.ZodTypeAny;
+    /** 第二次呼叫專用的抽取規則（接在 tenant.systemPrompt 後） */
+    promptFragment: string;
+    trackedFields: string[];
+    postProcess?: (rec: Record<string, unknown>) => Record<string, unknown>;
+  };
 }
 
 export const TEMPLATE_REGISTRY: Record<ExtractionTemplate, TemplateDef> = {
@@ -150,8 +197,32 @@ export const TEMPLATE_REGISTRY: Record<ExtractionTemplate, TemplateDef> = {
     // 開放的另一個理由：關著的時候切換端點會擋，改模板得繞去 prod 手動下 SQL，
     // 而 tenants 的 RLS 會讓漏設 session 變數的 UPDATE 靜默回 0 列（2026-07-30 實際踩到）。
     selectable: true,
+    // 第二區塊：客服報修派工單 · warranty 只在這裡（見 extraction-schema-service-intake.md）。
+    // ⚠️ 獨立第二次 LLM 呼叫（不併主 schema）· promptFragment 是那次呼叫的專屬規則。
+    extraSection: {
+      key: "service_intake",
+      schema: serviceIntakeSchema,
+      trackedFields: ["customer", "warranty"],   // 健康度接嵌套路徑後啟用（M3），目前未接
+      postProcess: (rec) => ({ ...rec, phone: maskIntakePhone((rec.phone as string | null) ?? null) }),
+      promptFragment: `
+## 本次任務：只抽「客服報修派工單」→ service_intake
+你這次**只需要**把訊息裡的**客服報修派工單**抽成 service_intake 陣列，其他都不用管。
+
+1. 報修派工單 = **冒號標籤表單**，連續多行如「客戶:／聯絡人:／電話:／車種:／車牌:／是否保固內:／地址:／狀況:」。
+   這是客服貼出、描述「待處理」維修需求的單子（狀態在派工前）。
+   ⚠️ **師傅的「今日進度回報／今日工作內容回報」不是報修單**，那種**一律略過、不要放進 service_intake**。
+2. 訊息裡**沒有**報修派工單時，service_intake 回**空陣列**。不要把進度回報或閒聊硬塞進來。
+3. 欄位對照表單原文：客戶→customer、聯絡人→contact、電話→phone（照抄完整號碼，系統會自動遮罩）、
+   車種＋車牌→vehicle（合併原文，如「VERYCA RFB-3630」）、地址→site（只取區域如「板橋」）、狀況→issue。
+4. warranty 由「是否保固內」映射：是→「保內」、否→「保外」、未知／空白→null。
+   這是**讀取表單明寫的欄位值**，不是推斷保固期 —— 沒有此欄就 null，仍禁止自行判斷。
+5. status 填派工狀態原文語意（待派工／待聯絡客戶／已安排），沒有就 null。
+6. 缺漏欄位一律 null（不可省略 key）；source_ids 必填、可回溯（R11）。`,
+    },
   },
 };
+
+export type ExtraSection = NonNullable<TemplateDef["extraSection"]>;
 
 export function resolveTemplate(value: string | null | undefined): ExtractionTemplate {
   return (EXTRACTION_TEMPLATES as readonly string[]).includes(value ?? "")

@@ -201,6 +201,7 @@ export const analysisResult = pgTable("analysis_result", {
   dailyReports: jsonb("daily_reports").notNull().default([]).$type<unknown[]>(),
   records: jsonb("records").notNull().default([]).$type<unknown[]>(),
   serviceReports: jsonb("service_reports").notNull().default([]).$type<unknown[]>(),
+  serviceIntake: jsonb("service_intake").notNull().default([]).$type<unknown[]>(),   // 0057 · 客服報修派工單（service_order 第二區塊 · 獨立 LLM 呼叫）
   extractionTemplate: text("extraction_template"),   // null = 0030 前舊資料 ≡ factory_report
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

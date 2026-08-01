@@ -11,7 +11,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { buildAnalysisSchema, DEFAULT_CATEGORIES } from "../src/conversation-analysis/pipeline/schemas.js";
-import { TEMPLATE_REGISTRY, EXTRACTION_TEMPLATES, resolveTemplate, DEFAULT_TEMPLATE } from "../src/conversation-analysis/pipeline/templates.js";
+import { TEMPLATE_REGISTRY, EXTRACTION_TEMPLATES, resolveTemplate, DEFAULT_TEMPLATE, maskIntakePhone } from "../src/conversation-analysis/pipeline/templates.js";
 import { TWH_TENANT } from "../src/conversation-analysis/pipeline/tenant-twh.js";
 
 const L1_FIXTURE = {
@@ -107,6 +107,76 @@ test("⭐⭐ service_order · 新增的三個項目欄位不可省略（必須�
     }],
   });
   assert.equal(missing.success, false, "省略新欄位應被 schema 擋下");
+});
+
+// ── service_intake（客服報修派工單 · M1 v2 · 獨立 LLM 呼叫）────────
+// 對照 docs/modules/extraction-schema-service-intake.md §3.6。
+// ⚠️ v1 把 service_intake 併進主 schema → 超 Anthropic ≤16 union 上限、API 400（已 revert）。
+//    v2 拆成獨立呼叫：主 schema 保持精簡，service_intake 走自己的 schema/promptFragment。
+
+const INTAKE_FIXTURE = {
+  date: "2026-07-31", customer: "祝三", site: "板橋", vehicle: "VERYCA RFB-3630",
+  warranty: "保外", issue: "斜坡板放不下來", status: "待派工",
+  contact: "黃先生", phone: "0928336700", source_ids: [4], confidence: "high" as const,
+};
+
+test("⭐⭐ service_intake 不得併進 service_order 主 output schema（F-10 · 超 16 union 上限的回歸防線）", () => {
+  // v1 的 400 就是併進來造成的。主 schema 只能有 classifications/records/service_reports。
+  const parsed = buildAnalysisSchema("service_order").parse({
+    ...L1_FIXTURE,
+    service_reports: [],
+  }) as Record<string, unknown>;
+  assert.ok(!("service_intake" in parsed),
+    "service_intake 不可在主 schema —— 併進來會超過 Anthropic 16 union 上限（doc §3.6）");
+  assert.deepEqual(
+    Object.keys(parsed).sort(),
+    ["classifications", "records", "service_reports"].sort(),
+    "service_order 主 schema 的 key 應維持精簡三項",
+  );
+});
+
+test("⭐ service_order.extraSection 是獨立區塊（自己的 schema + promptFragment + phone 遮罩）", () => {
+  const ex = TEMPLATE_REGISTRY.service_order.extraSection;
+  assert.ok(ex, "service_order 必須設 extraSection");
+  assert.equal(ex!.key, "service_intake");
+  // 自己的 schema 吃得下真實報修單
+  assert.ok(ex!.schema.safeParse(INTAKE_FIXTURE).success, "extraSection.schema 應接受報修單記錄");
+  // 有自己的抽取規則（獨立呼叫的 system prompt 片段）
+  assert.ok(ex!.promptFragment.length > 0, "extraSection 必須有 promptFragment（第二次呼叫的規則）");
+  // postProcess 遮 phone
+  const out = ex!.postProcess!({ ...INTAKE_FIXTURE }) as Record<string, unknown>;
+  assert.equal(out.phone, "09xx-xxx-700", "postProcess 必須把完整電話遮成尾三碼");
+  assert.equal(out.customer, "祝三", "其他欄位不動");
+});
+
+test("⭐⭐ extraSection.promptFragment 必須教報修單判別 + 是否保固內→warranty 映射", () => {
+  const f = TEMPLATE_REGISTRY.service_order.extraSection!.promptFragment;
+  for (const must of [
+    "service_intake",       // 目標區塊
+    "是否保固內",           // warranty 來源欄位
+    "保外",                 // 否→保外
+    "報修派工單",           // 判別準則
+    "今日進度回報",         // 明確排除進度回報
+    "系統會自動遮罩",       // phone 交給後處理
+  ]) {
+    assert.ok(f.includes(must), `extraSection.promptFragment 少了「${must}」`);
+  }
+});
+
+test("⭐ 主 service_order.promptFragment 不得殘留 service_intake 規則（避免主呼叫被干擾）", () => {
+  // v2：報修單規則搬到 extraSection.promptFragment。主 fragment 只講 service_reports。
+  const main = TEMPLATE_REGISTRY.service_order.promptFragment;
+  assert.ok(!main.includes("service_intake"),
+    "service_intake 規則應只在 extraSection.promptFragment，不在主 fragment");
+});
+
+test("⭐⭐ maskIntakePhone · 遮罩 PII（尾三碼）· deterministic 後處理", () => {
+  assert.equal(maskIntakePhone("0928336700"), "09xx-xxx-700");
+  assert.equal(maskIntakePhone("0928-336-700"), "09xx-xxx-700");   // 帶分隔符先正規化
+  assert.equal(maskIntakePhone("0233361234"), "xxxxxxx234");        // 10 碼非 09 → 7 個 x + 尾三碼
+  assert.equal(maskIntakePhone("062345678"), "xxxxxx678");          // 9 碼 → 6 個 x + 尾三碼
+  assert.equal(maskIntakePhone(null), null);
+  assert.equal(maskIntakePhone("12"), null);                        // 太短 → null
 });
 
 // ── prompt 拆分：不可在拆的過程中漏掉規則 ────────────────────────
