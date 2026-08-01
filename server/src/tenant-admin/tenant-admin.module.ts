@@ -5,11 +5,13 @@ import { DepartmentController } from "./department.controller.js";
 import { UserRepository } from "./user.repository.js";
 import { UserService } from "./user.service.js";
 import { UserController } from "./user.controller.js";
+import { OrgOverviewService } from "./org-overview.service.js";
+import { OrgOverviewController } from "./org-overview.controller.js";
 
-// aiproot 統包客戶方組織：departments + users CRUD · 對應 UI 的「部門/成員」頁
+// aiproot 統包客戶方組織：departments + users CRUD + 組織關係圖 · 對應 UI 的「部門/成員」頁
 @Module({
-  controllers: [DepartmentController, UserController],
-  providers: [DepartmentRepository, DepartmentService, UserRepository, UserService],
+  controllers: [DepartmentController, UserController, OrgOverviewController],
+  providers: [DepartmentRepository, DepartmentService, UserRepository, UserService, OrgOverviewService],
   exports: [DepartmentService, UserService],
 })
 export class TenantAdminModule {}
