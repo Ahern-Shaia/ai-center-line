@@ -83,7 +83,7 @@ test("⭐ 同一個群同一天分析兩次，日誌只顯示最新那一張（�
   await addAnalysis(G_OK, "第一次 · 排程");
   await addAnalysis(G_OK, "第二次 · 手動重跑");
 
-  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }));
+  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }, { role: "tenant_admin", tenantId: T, departmentId: null }));
   const mine = (r.days[0]?.uploads ?? []).filter((u) => u.groupId === G_OK);
   assert.equal(
     mine.length, 1,
@@ -94,7 +94,7 @@ test("⭐ 同一個群同一天分析兩次，日誌只顯示最新那一張（�
 test("⭐ 沒分派部門的群要看得出來（不然使用者只能猜為什麼沒有任務）", async () => {
   await addAnalysis(G_NODEPT, "沒部門的群");
 
-  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }));
+  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }, { role: "tenant_admin", tenantId: T, departmentId: null }));
   const card = (r.days[0]?.uploads ?? []).find((u) => u.groupId === G_NODEPT);
   assert.ok(card, "這個群的分析結果本身還是要顯示");
   assert.equal(
@@ -196,7 +196,7 @@ test("沒有來源訊息 id 的舊任務不會炸，只是沒有照片", async (
 test("⭐⭐ 分析失敗的群仍要出現在日誌，並標成未完成", async () => {
   await addAnalysis(G_FAIL, "分析失敗", "failed");
 
-  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }));
+  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }, { role: "tenant_admin", tenantId: T, departmentId: null }));
   const card = (r.days[0]?.uploads ?? []).find((u) => u.groupId === G_FAIL);
   assert.ok(card, "⚠️ 失敗的群整列消失＝畫面顯示「當日無資料」，跟那天真的很閒分不出來");
   assert.equal(card!.analysisIncomplete, true, "要標出來，前端才能說「尚未完成」而不是「無資料」");
@@ -204,7 +204,7 @@ test("⭐⭐ 分析失敗的群仍要出現在日誌，並標成未完成", asyn
 
 test("⭐ 排了沒跑（pending）也算未完成 —— 那是最難查的形狀，完全沒有錯誤訊息", async () => {
   await addAnalysis(G_FAIL, "排了沒跑", "pending");
-  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }));
+  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }, { role: "tenant_admin", tenantId: T, departmentId: null }));
   const card = (r.days[0]?.uploads ?? []).find((u) => u.groupId === G_FAIL);
   assert.equal(card!.analysisIncomplete, true);
 });
@@ -215,7 +215,7 @@ test("⭐⭐ 重跑失敗**不可以**蓋掉同一天先前成功的分析", asy
   await addAnalysis(G_RERUN, "第一次 · 成功", "done");
   await addAnalysis(G_RERUN, "第二次 · 重跑失敗", "failed");
 
-  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }));
+  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }, { role: "tenant_admin", tenantId: T, departmentId: null }));
   const mine = (r.days[0]?.uploads ?? []).filter((u) => u.groupId === G_RERUN);
   assert.equal(mine.length, 1, "仍然只留一張");
   assert.equal(
@@ -226,7 +226,7 @@ test("⭐⭐ 重跑失敗**不可以**蓋掉同一天先前成功的分析", asy
 
 test("分析成功的群 analysisIncomplete 必須是 false（不要反過來到處長警語）", async () => {
   await addAnalysis(G_OK, "成功");
-  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }));
+  const r = await asTenant(() => svc.listDailyReports({ fromDate: TODAY, toDate: TODAY }, { role: "tenant_admin", tenantId: T, departmentId: null }));
   const card = (r.days[0]?.uploads ?? []).find((u) => u.groupId === G_OK);
   assert.equal(card!.analysisIncomplete, false);
 });

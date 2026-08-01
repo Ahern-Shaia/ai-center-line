@@ -39,7 +39,10 @@ export class WarroomController {
     @CurrentUser() user: JwtUser,
     @Query("from") fromDate?: string, @Query("to") toDate?: string,
   ) {
-    const r = await this.tasksService.listDailyReports({ fromDate, toDate });
+    const r = await this.tasksService.listDailyReports(
+      { fromDate, toDate },
+      { role: user.role, tenantId: user.tenant_id, departmentId: user.department_id },
+    );
     // 批次幾點跑 · 每家自己設（前端原本寫死 17:30，客戶改成 18:00 之後畫面就在說謊）
     return { ...r, batchRunAt: await schedulerTimeLabel(currentTx(), user.tenant_id, "group_batch") };
   }

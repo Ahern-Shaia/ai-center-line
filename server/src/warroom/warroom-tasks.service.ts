@@ -295,7 +295,10 @@ export class WarroomTasksService {
    * List daily reports · 日誌 view
    * · 按天列 · 每 upload 一 card · limit 30 天
    */
-  async listDailyReports(args: { fromDate?: string; toDate?: string }): Promise<{
+  async listDailyReports(
+    args: { fromDate?: string; toDate?: string },
+    caller: { role: string; tenantId: string | null; departmentId: string | null },
+  ): Promise<{
     days: Array<{
       batchDate: string;
       uploads: WarroomDaily[];
@@ -304,6 +307,18 @@ export class WarroomTasksService {
     const tx = currentTx();
     const fromDate = args.fromDate ?? sqlDaysAgo(7);
     const toDate = args.toDate ?? sqlToday();
+
+    // ⚠️ analysis_upload / analysis_result **沒有 RLS**（rowsecurity=false）→ 這裡若不明確 scope，
+    //    任何有 warroom-daily:view 的人都會看到全部群、甚至跨租戶（接第二家客戶就漏）。
+    //    比照 tickets / personal_daily_report 的部門邏輯，在 service 層明確過濾：
+    const platform = caller.role === "aiproot_admin" || caller.role === "consultant";
+    //   ① 租戶：平台角色看全；其餘鎖自租戶
+    const tenantFilter = platform ? sql`` : sql`AND au.tenant_id = ${caller.tenantId}::uuid`;
+    //   ② 部門：部門主管只看「分派到自己部門」的群；沒設部門的部門主管看不到任何群（逼先指派，避免 over-scope）。
+    //      總經理室 / 平台角色不限部門（看全租戶的群）。
+    const deptFilter = caller.role === "group_owner"
+      ? (caller.departmentId ? sql`AND lg.department_id = ${caller.departmentId}::uuid` : sql`AND FALSE`)
+      : sql``;
 
     const rows = await tx.execute<{
       id: number;
@@ -343,6 +358,8 @@ export class WarroomTasksService {
         AND au.status IN ('done', 'failed', 'pending')
         -- Bug fix · 私訊佔位 group 不進群組日誌
         AND au.group_id NOT LIKE '\\_\\_personal\\_\\_%' ESCAPE '\\'
+        ${tenantFilter}
+        ${deptFilter}
       -- ⚠️ (au.status = 'done') DESC 必須排在 uploaded_at 之前：
       --    把失敗的列一起撈進來之後，若只按時間取最新，一次**重跑失敗**就會
       --    蓋掉同一天先前已經成功的分析 —— 有內容的卡片變成一句警語，那是退步。
