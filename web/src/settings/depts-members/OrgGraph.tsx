@@ -23,9 +23,11 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [edges, setEdges] = useState<Edge[]>([]);
   const [dim, setDim] = useState({ w: 0, h: 0 });
+  const [zoom, setZoom] = useState(1);
   const stageRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
+  const clampZoom = (z: number) => Math.min(1.4, Math.max(0.4, Math.round(z * 20) / 20));
 
   useEffect(() => {
     let alive = true;
@@ -41,9 +43,15 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
     const stage = stageRef.current;
     if (!stage) return;
     const host = stage.getBoundingClientRect();
+    // stage 被 transform:scale 後，getBoundingClientRect 回的是縮放後座標；除以 zoom 還原成
+    // stage 內部原生座標，SVG 用原生座標畫、再隨 stage 一起縮放 → 線條精準貼合、不會雙重縮放。
     const rel = (el: Element) => {
       const a = el.getBoundingClientRect();
-      return { xc: a.left - host.left + a.width / 2, top: a.top - host.top, bot: a.top - host.top + a.height };
+      return {
+        xc: (a.left - host.left + a.width / 2) / zoom,
+        top: (a.top - host.top) / zoom,
+        bot: (a.top - host.top + a.height) / zoom,
+      };
     };
     const es: Edge[] = [];
     const co = stage.querySelector("[data-og='company']");
@@ -61,15 +69,20 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
     });
     setEdges(es);
     setDim({ w: stage.scrollWidth, h: stage.scrollHeight });
-  }, []);
+  }, [zoom]);
 
-  useLayoutEffect(() => { draw(); }, [data, expanded, draw]);
+  useLayoutEffect(() => { draw(); }, [data, expanded, zoom, draw]);
+
+  const fitAll = useCallback(() => {
+    const el = scrollRef.current;
+    if (el && dim.w) setZoom(clampZoom((el.clientWidth - 4) / dim.w));
+  }, [dim.w]);
   // 部門多會超出視窗 · 載入後把水平捲動置中，開啟時看到的是「置中的組織圖」而非漂在一邊（跑版感來源）。
   // 只在資料變更時置中，不在展開/收合時重置捲動位置。
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollLeft = Math.max(0, (el.scrollWidth - el.clientWidth) / 2);
-  }, [data]);
+  }, [data, dim.w, zoom]);
   useEffect(() => {
     window.addEventListener("resize", draw);
     return () => window.removeEventListener("resize", draw);
@@ -84,9 +97,17 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
   const hasOrphan = data.unassigned.members.length > 0 || data.unassigned.groups.length > 0;
 
   return (
-    <div className="og-scroll" ref={scrollRef}>
-      <div className="og-stage" ref={stageRef}>
-        <svg className="og-edges" width={dim.w} height={dim.h}>
+    <div className="og-wrap">
+      <div className="og-zoom">
+        <button onClick={() => setZoom((z) => clampZoom(z - 0.15))} disabled={zoom <= 0.4} aria-label="縮小">－</button>
+        <span>{Math.round(zoom * 100)}%</span>
+        <button onClick={() => setZoom((z) => clampZoom(z + 0.15))} disabled={zoom >= 1.4} aria-label="放大">＋</button>
+        <button className="fit" onClick={fitAll}>全覽</button>
+      </div>
+      <div className="og-scroll" ref={scrollRef}>
+        <div className="og-zoomwrap" style={{ width: dim.w * zoom, height: dim.h * zoom }}>
+          <div className="og-stage" ref={stageRef} style={{ transform: `scale(${zoom})` }}>
+            <svg className="og-edges" width={dim.w} height={dim.h}>
           {edges.map((e, i) => (
             <path key={i} d={e.d} stroke={e.stroke} strokeWidth={2} fill="none" opacity={0.45} />
           ))}
@@ -142,6 +163,8 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
               </div>
             </div>
           )}
+          </div>
+          </div>
         </div>
       </div>
     </div>

@@ -2433,11 +2433,22 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
   background:var(--warn-tint); border:1px solid var(--warn); color:#78350F; }
 
 /* ── 組織關係圖（org-overview M1）· 對照 docs/mockup/org-graph-data-driven.html ── */
-.og-scroll{ overflow-x:auto; padding:6px 0 16px; }
-/* width:max-content → stage 撐到內容真實寬度（部門多會超出視窗）· min-width:100% 保底。
-   這樣 company / lanes / 未分派 都在「同一個真實寬度」內置中、彼此對齊，整張圖一起水平捲，
-   不會各自在超寬 stage 裡置中而漂位（原本 justify-content:center + margin:auto 造成的跑版）。*/
-.og-stage{ position:relative; min-width:100%; width:max-content; padding:8px 20px 20px; }
+.og-wrap{ position:relative; }
+.og-scroll{ overflow:auto; padding:6px 0 16px; }
+/* zoomwrap 用「縮放後的尺寸」定義捲動範圍（含 overflow:hidden 裁掉 stage 的原生 layout 溢位）·
+   margin-inline:auto → 內容比視窗窄時置中（部門少 / 全覽縮小後），寬時靠左可捲。*/
+.og-zoomwrap{ position:relative; overflow:hidden; margin-inline:auto; }
+/* stage 撐到內容真實寬度、絕對定位讓 zoomwrap 的顯式尺寸主導捲動範圍 · transform:scale 由 JS 給。
+   縮放不影響 layout 寬度，所以量座標（getBoundingClientRect）除以 zoom 還原（見 OrgGraph draw）。*/
+.og-stage{ position:absolute; top:0; left:0; width:max-content; padding:8px 20px 20px; transform-origin:0 0; }
+/* 縮放控制列 */
+.og-zoom{ position:absolute; top:4px; right:8px; z-index:4; display:flex; align-items:center; gap:1px;
+  background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:2px; box-shadow:0 2px 8px rgba(15,23,42,.08); }
+.og-zoom button{ width:28px; height:28px; border:0; background:transparent; color:var(--ink-2); font-size:15px; line-height:1; cursor:pointer; border-radius:6px; }
+.og-zoom button:hover:not(:disabled){ background:var(--well); }
+.og-zoom button:disabled{ opacity:.35; cursor:default; }
+.og-zoom button.fit{ width:auto; padding:0 11px; font-size:12px; font-weight:600; color:var(--primary); }
+.og-zoom span{ font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; min-width:40px; text-align:center; }
 .og-edges{ position:absolute; inset:0; overflow:visible; z-index:0; pointer-events:none; }
 .og-layer{ position:relative; z-index:1; }
 .og-band{ display:flex; flex-direction:column; align-items:center; margin-bottom:40px; }
