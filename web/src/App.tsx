@@ -1,3 +1,4 @@
+import Spinner from "./shared/Spinner";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePermissions } from "./permission/PermissionContext";
 import Login from "./Login";
@@ -245,7 +246,7 @@ export default function App() {
             初始 route 是猜的（defaultRouteFor），猜錯的話那一頁會先打一次
             自己沒權限的 API —— 使用者一登入就看到紅色 toast，而那是我們自己
             造成的噪音，不是他做錯什麼。 */}
-        {!pageReady && <div className="dm-empty">載入中…</div>}
+        {!pageReady && <Spinner block />}
         {pageReady && (
         <div key={route.page} className="page-fade">
           {route.page === "warroom" && <WarRoom onRegister={onRegister} onLoadingChange={setRefreshing} />}

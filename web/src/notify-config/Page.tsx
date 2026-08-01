@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, ncListRules, ncRemove, ncSetEnabled, notifyWebhookUrl, type NotifyRuleRow } from "../api";
 import { useToast } from "../Toast";
@@ -75,7 +76,7 @@ export default function NotifyConfigPage() {
       </div>
 
       {tab === "logs" ? <LogsTab /> : loading ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : rules.length === 0 ? (
         <div className="dm-empty">
           尚無通知規則

@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import type { LineBotDto } from "../api";
 import { formatRelative } from "./utils";
 
@@ -17,7 +18,7 @@ export function BotList({
         機器人 <span className="lbot-list-count">{bots.length}</span>
       </div>
       {loading ? (
-        <div className="lbot-list-empty">載入中…</div>
+        <Spinner block />
       ) : bots.length === 0 ? (
         <div className="lbot-list-empty">
           尚無機器人

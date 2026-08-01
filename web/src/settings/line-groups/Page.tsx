@@ -1,3 +1,4 @@
+import Spinner from "../../shared/Spinner";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError,
@@ -119,7 +120,7 @@ export default function LineGroupsPage() {
         {picker}
       </div>
 
-      {loading && <div className="dm-empty">載入中…</div>}
+      {loading && <Spinner block />}
 
       {!loading && activeGroups.length === 0 && leftGroups.length === 0 && (
         <div className="dm-empty">尚無群組 · 加 bot 到 LINE 群後 · 首則訊息會自動註冊</div>

@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useEffect, useMemo, useState } from "react";
 import {
   Button as AriaButton,
@@ -269,7 +270,7 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
       </div>
 
       {loading ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : rows.length === 0 ? (
         <div className="dm-empty">
           {selectedTenantId

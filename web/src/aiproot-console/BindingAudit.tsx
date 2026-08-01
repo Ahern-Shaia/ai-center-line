@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useEffect, useMemo, useState } from "react";
 import {
   Button as AriaButton,
@@ -135,7 +136,7 @@ export default function BindingAudit() {
       )}
 
       {loading ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : bindings.length === 0 ? (
         <div className="dm-empty">
           尚無綁定紀錄

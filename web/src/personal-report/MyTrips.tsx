@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, getMapTileConfig, getSession, getTrips, relabelPunch, type PunchRow, type TripRow } from "../api";
 import { useToast } from "../Toast";
@@ -62,7 +63,7 @@ export default function MyTrips() {
       </div>
 
       {loading ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : loadError ? (
         <div className="dm-empty">
           讀取失敗

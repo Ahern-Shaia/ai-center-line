@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useEffect, useState } from "react";
 import { getCostSummary, ApiError, type CostSummaryDto } from "../api";
 import { useToast } from "../Toast";
@@ -25,7 +26,7 @@ export default function CostDashboard({ onOpenAnalysis }: Props = {}) {
   }, [toast]);
 
   if (loading) {
-    return <div className="pane"><div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>載入中…</div></div>;
+    return <div className="pane"><Spinner block /></div>;
   }
   if (!data) {
     return <div className="pane"><div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>暫無資料</div></div>;

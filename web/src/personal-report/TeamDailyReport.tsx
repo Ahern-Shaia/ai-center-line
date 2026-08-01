@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError,
@@ -147,7 +148,7 @@ export default function TeamDailyReport() {
       </div>
 
       {loading ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : rows.length === 0 ? (
         <div className="dm-empty">
           此範圍內尚無部門日報

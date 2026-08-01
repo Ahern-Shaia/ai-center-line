@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listConvoUploads, type ConvoUpload, ApiError } from "../api";
 import { useToast } from "../Toast";
@@ -92,7 +93,7 @@ export default function ConversationAnalysisList({ onOpen, onNewUpload, onInsigh
         </div>
       </div>
 
-      {loading && <div style={{ padding: 40, textAlign: "center", color: "#999" }}>載入中...</div>}
+      {loading && <Spinner block />}
       {error && (
         <div style={{ padding: 16, background: "#fee", borderLeft: "4px solid #c62828", borderRadius: 4 }}>
           {error}

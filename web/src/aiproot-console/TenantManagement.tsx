@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import { usePermissions } from "../permission/PermissionContext";
 import OnboardWizard from "./OnboardWizard";
@@ -145,7 +146,7 @@ export default function TenantManagement() {
       </div>
 
       {loading ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : tenants.length === 0 ? (
         <div className="dm-empty">
           尚未開通任何租戶
@@ -189,7 +190,7 @@ export default function TenantManagement() {
               </div>
             )}
             {!selected ? null : usersLoading ? (
-              <div className="dm-empty">載入中…</div>
+              <Spinner block />
             ) : users.length === 0 ? (
               <div className="dm-empty">
                 這個租戶還沒有任何帳號

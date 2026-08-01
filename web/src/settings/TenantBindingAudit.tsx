@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useEffect, useState } from "react";
 import {
   ApiError,
@@ -79,7 +80,7 @@ export default function TenantBindingAudit() {
       {unbound && <UnboundActiveAlert unboundCount={unbound.unboundCount} top={unbound.top} />}
 
       {loading ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : bindings.length === 0 ? (
         <div className="dm-empty">
           尚無綁定紀錄

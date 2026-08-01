@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, getExtractionHealth, type FieldFill, type TenantHealth } from "../api";
 import { useToast } from "../Toast";
@@ -52,7 +53,7 @@ export default function ExtractionHealth() {
       </div>
 
       {loading ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : active.length === 0 ? (
         <div className="dm-empty">
           這段期間沒有任何客戶產生分析結果

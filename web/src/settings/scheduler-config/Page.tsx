@@ -1,3 +1,4 @@
+import Spinner from "../../shared/Spinner";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError,
@@ -116,7 +117,7 @@ export default function SchedulerConfigPage() {
         </div>
       </div>
 
-      {loading && <div className="dm-empty">載入中…</div>}
+      {loading && <Spinner block />}
 
       {!loading && configs.length === 0 && (
         <div className="dm-empty">尚未建立排程 · 請聯繫 AIPROOT 技術支援</div>

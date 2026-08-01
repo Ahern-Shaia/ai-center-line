@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, getWarroomDailyReports, triggerWarroomBatchRerun, type WarroomDailyDays } from "../api";
 import { usePermissions } from "../permission/PermissionContext";
@@ -99,7 +100,7 @@ export default function DailyLog() {
         tone="primary"
       />
 
-      {loading && !data && <div className="dm-empty">載入中…</div>}
+      {loading && !data && <Spinner block />}
       {data && data.days.length === 0 && <div className="dm-empty">此期間內無日誌</div>}
 
       {/* V4 · 摘要條：一眼知道今天要不要細看（掃描型摘要的入口）*/}

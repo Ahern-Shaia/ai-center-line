@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useEffect, useState } from "react";
 import { ApiError, liffGetPrefill, liffCompleteBinding, type LiffPrefill } from "../api";
 import type { LiffCtx } from "./types";
@@ -37,7 +38,7 @@ export default function BindingView({ ctx }: { ctx: LiffCtx }) {
     }
   }
 
-  if (loading) return <div className="liff-wrap"><div className="dm-empty">載入中…</div></div>;
+  if (loading) return <div className="liff-wrap"><Spinner block /></div>;
 
   if (done) {
     const dept = done.departmentName ? `「${done.departmentName}」部門`

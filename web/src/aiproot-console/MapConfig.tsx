@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useEffect, useState } from "react";
 import { ApiError, backfillMileage, getMapConfig, setMapConfig, setMapTileConfig, testMapRouting } from "../api";
 import { useToast } from "../Toast";
@@ -108,7 +109,7 @@ export default function MapConfig() {
       </div></div>
 
       {loading ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : (
         <div style={{ maxWidth: 520 }}>
           <h2 style={{ fontSize: 14, marginBottom: 8, color: "var(--ink-3)" }}>里程計算 provider</h2>

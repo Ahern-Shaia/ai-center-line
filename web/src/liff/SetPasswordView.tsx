@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useEffect, useState } from "react";
 import { ApiError, liffGetPrefill, liffSetPassword } from "../api";
 import type { LiffCtx, LiffSdk } from "./types";
@@ -43,7 +44,7 @@ export default function SetPasswordView({ ctx, liff }: { ctx: LiffCtx; liff: Lif
     }
   }
 
-  if (loading) return <div className="liff-wrap"><div className="dm-empty">載入中…</div></div>;
+  if (loading) return <div className="liff-wrap"><Spinner block /></div>;
   if (notBound) return (
     <div className="liff-wrap liff-center">
       <h2 className="liff-h">尚未完成綁定</h2>

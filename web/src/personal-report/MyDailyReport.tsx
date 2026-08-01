@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError,
@@ -173,7 +174,7 @@ export default function MyDailyReport() {
         </div>
       </div>
 
-      {loading && !report && <div className="dm-empty">載入中…</div>}
+      {loading && !report && <Spinner block />}
 
       {isEmpty && !loading && (
         pendingMessageCount > 0 ? (

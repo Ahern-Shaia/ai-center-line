@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import MyDailyReport from "../personal-report/MyDailyReport";
@@ -100,7 +101,7 @@ function LiffApp() {
     })();
   }, []);
 
-  if (phase === "init") return <div style={CENTER} className="dm-empty">載入中…</div>;
+  if (phase === "init") return <div style={CENTER}><Spinner block /></div>;
   if (phase === "error") {
     return <div style={CENTER} className="dm-empty"><div style={{ fontWeight: 600, marginBottom: 6 }}>無法開啟</div><div className="dm-empty-hint">{msg}</div></div>;
   }

@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getConvoUpload,
@@ -80,7 +81,7 @@ export default function ConversationAnalysisDetail({ uploadId, onBack }: Props) 
   }
 
   if (loading) {
-    return <div className="pane"><div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>載入中…</div></div>;
+    return <div className="pane"><Spinner block /></div>;
   }
   if (!detail) {
     return <div className="pane"><div style={{ padding: 40, textAlign: "center", color: "var(--cat-maint)" }}>找不到資料</div></div>;

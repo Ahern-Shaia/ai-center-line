@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import {
   Button as AriaButton,
@@ -219,7 +220,7 @@ export default function LlmSettings() {
         <div className="llm-page">
           <h1>語言模型設定</h1>
           <TenantPicker tenants={tenants} value={selectedTenantId} onChange={setSelectedTenantId} />
-          <div className="dm-empty" style={{ marginTop: 20 }}>載入中…</div>
+          <Spinner block />
         </div>
       </div>
     );

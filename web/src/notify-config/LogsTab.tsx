@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, ncListLogs, type NotifyLogRow } from "../api";
 import { useToast } from "../Toast";
@@ -52,7 +53,7 @@ export default function LogsTab() {
       </div>
 
       {loading ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : rows.length === 0 ? (
         <div className="dm-empty">
           {status ? "這個狀態沒有紀錄" : "還沒有任何通知紀錄"}

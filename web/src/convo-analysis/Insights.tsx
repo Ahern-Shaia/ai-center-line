@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import { getLabelInsights, ApiError, type LabelInsights } from "../api";
 import { useToast } from "../Toast";
@@ -40,7 +41,7 @@ export default function ConvoInsights({ onBack }: { onBack: () => void }) {
         <button className="btn" onClick={onBack}>← 回分析列表</button>
       </div>
 
-      {loading && !data && <div className="dm-empty">載入中…</div>}
+      {loading && !data && <Spinner block />}
 
       {data && totalLabels === 0 && (
         <div className="dm-empty">

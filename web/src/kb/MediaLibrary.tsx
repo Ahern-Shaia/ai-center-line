@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import {
   ApiError, deleteMedia, fetchMediaBlobUrl, getSession, listMedia, purgeMedia, restoreMedia,
@@ -159,7 +160,7 @@ export default function MediaLibrary() {
       )}
 
       {loading && !data ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : total === 0 ? (
         <div className="dm-empty">
           {trash

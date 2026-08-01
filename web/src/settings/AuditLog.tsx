@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, listAudit, type AuditItem, type AuditScope } from "../api";
 import { useToast } from "../Toast";
@@ -71,7 +72,7 @@ export default function AuditLog() {
       </div>
 
       {loading && items.length === 0 ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : items.length === 0 ? (
         <div className="dm-empty">
           這個範圍還沒有紀錄

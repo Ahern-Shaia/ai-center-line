@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import {
   ApiError, getCompletionStats, getUnresolvedSignals, listAiprootTenants,
@@ -72,7 +73,7 @@ export default function CompletionTracking() {
         </div>
       </div>
 
-      {loading && !stats && <div className="dm-empty">載入中…</div>}
+      {loading && !stats && <Spinner block />}
 
       {stats && (
         <>

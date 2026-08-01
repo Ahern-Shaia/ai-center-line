@@ -1,3 +1,4 @@
+import Spinner from "../../shared/Spinner";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getOrgOverview, ApiError, type OrgOverview, type OrgMember } from "../../api";
 import { useToast } from "../../Toast";
@@ -88,7 +89,7 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
     return () => window.removeEventListener("resize", draw);
   }, [draw]);
 
-  if (loading && !data) return <div className="dm-empty">載入中…</div>;
+  if (loading && !data) return <Spinner block />;
   if (!data) return <div className="dm-empty">無法載入組織圖</div>;
 
   const toggle = (di: number) => setExpanded((s) => {

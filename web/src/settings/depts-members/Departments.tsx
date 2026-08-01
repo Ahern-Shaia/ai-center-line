@@ -1,3 +1,4 @@
+import Spinner from "../../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import {
   listDepartments,
@@ -46,7 +47,7 @@ export function Departments({
       )}
 
       {loading ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : rows.length === 0 ? (
         <div className="dm-empty">
           <div>此租戶尚無部門</div>

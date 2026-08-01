@@ -1,3 +1,4 @@
+import Spinner from "../../shared/Spinner";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   listDepartments,
@@ -136,7 +137,7 @@ export function Members({
       )}
 
       {loading ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : users.length === 0 ? (
         <div className="dm-empty">
           <div>此租戶尚無成員</div>

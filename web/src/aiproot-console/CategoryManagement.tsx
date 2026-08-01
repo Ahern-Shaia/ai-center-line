@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import {
   Button as AriaButton,
@@ -133,7 +134,7 @@ export default function CategoryManagement() {
       </div>
 
       {loading && items.length === 0 ? (
-        <div className="dm-empty">載入中…</div>
+        <Spinner block />
       ) : items.length === 0 ? (
         <div className="dm-empty">
           尚無分類

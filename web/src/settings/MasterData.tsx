@@ -1,3 +1,4 @@
+import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import {
   ApiError, getMasterDataSource, getSession, listAiprootTenants, ncFetchFields, ncUpdateKey,
@@ -139,7 +140,7 @@ export default function MasterData() {
       </div>
     );
   }
-  if (loading && !state) return <div className="pane"><div className="dm-empty">載入中…</div></div>;
+  if (loading && !state) return <div className="pane"><Spinner block /></div>;
 
   // ⚠️ 被拒絕**不可以**掉到下面的正常渲染。
   // 那樣會畫出「0 筆客戶 / 尚未連線 Ragic」，而那兩件事我們根本不知道 ——
