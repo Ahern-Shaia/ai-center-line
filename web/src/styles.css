@@ -420,13 +420,23 @@ button { cursor:pointer; }
   .pdr-item-title { flex:1 1 100%; margin-top:2px; }
   .pdr-item-actions { padding-left:0; }
   .pdr-item-detail, .pdr-item-followup { padding-left:0; }
-  .pdr-foot { flex-direction:column; align-items:stretch; gap:10px; }
+  /* LIFF 底部固定送出條（方向 A · design-research-liff-daily-report.md）*/
+  .pdr-foot { position:sticky; bottom:0; z-index:5; flex-direction:row; align-items:center; gap:8px;
+    margin:16px -10px 0; padding:11px 14px; background:var(--surface); border-top:1px solid var(--line);
+    box-shadow:0 -2px 10px rgba(0,0,0,.05); }
+  .pdr-foot > div:first-child { flex:1; }
   .pdr-foot > div:last-child { display:flex; gap:8px; }
-  .pdr-foot > div:last-child > .btn { flex:1; }
+  .pdr-foot > div:last-child > .btn { flex:0 0 auto; }
 
-  /* Personal edit view */
-  .pdr-item-row { flex-direction:column; }
-  .pdr-time { flex:1 1 100%; }
+  /* Personal edit view · 就地編輯 · 欄位固定高（修 LINE webview 爆高：
+     舊 code 在 flex-column 下給 .pdr-time flex:1 1 100% → flex-basis 沿垂直軸算 → 吃滿卡高）*/
+  .pdr-item-row { flex-direction:row; gap:8px; }
+  .pdr-time { flex:0 0 116px; width:116px; text-align:center; }
+  .pdr-title { flex:1; min-width:0; }
+  .pdr-item-edit .tf { height:44px; font-size:16px; }
+  .pdr-item-edit textarea.pdr-detail { height:auto; min-height:76px; max-height:170px; }
+  .pdr-item-edit .btn.btn-primary { width:100%; height:44px; }
+  .pdr-item-edit > div:last-child { display:block; }
 
   /* Drawer · 手機半屏 */
   .drawer-overlay + .drawer { width:100vw !important; max-width:none !important; }

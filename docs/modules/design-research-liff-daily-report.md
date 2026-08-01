@@ -104,8 +104,8 @@
 
 | 里程碑 | 內容 |
 |---|---|
-| **M0** 📝 | 本研究（待選方向）+ 三方向 mockup |
-| **M1** | 依方向重構 `MyDailyReport.tsx` 手機版 + `.pdr-*` mobile-first CSS · §A6 全態 · §A10 手機截圖驗 |
+| **M0** ✅ | 本研究 + 方向 A 定案（用戶採建議 2026-08-01）+ mockup |
+| **M1** ✅ | 方向 A 落地（**CSS-only**，既有 markup 即符 mockup）：修爆高（balloon 真因＝flex-column 下 `flex:1 1 100%` basis 沿垂直軸→吃滿卡高）· 編輯欄固定高 44px/16px · textarea bounded · 完成鈕全寬 · **底部 sticky 送出條** · 全在 `@max-width:760px`，桌機不動 · §A10 對 real styles.css 390px 截圖比對 mockup A 通過 |
 | **M2** | 真機（LINE in-app webview）實測 + 微調（鍵盤、爆高、觸控） |
 | **M3** | 同 pattern 評估群組日誌 LIFF（OQ-LIFF-5） |
 
