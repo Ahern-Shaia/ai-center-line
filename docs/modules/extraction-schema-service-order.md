@@ -310,6 +310,10 @@ service_reports: z.array(z.object({
 | **M4** | 台灣福祉實跑一週、量測命中率與欄位填充率，對照本文 §0 的基準數字 |
 | **M5** | FMEA 覆核 + 上線 |
 
+> ⭐ **2026-08-01 M4 首次量測發現 warranty 0% 的真因**：帶 `是否保固內` 的**客服報修派工單整個沒被抽**（只抽了師傅的進度回報）。
+> 報修單另立區塊的設計見姊妹檔 [`extraction-schema-service-intake.md`](extraction-schema-service-intake.md)。
+> 其餘填出率（vehicle 52% / status 48% / customer 50% / date 100%）均健康，vehicle/status 兩個 v0.2 新增欄位證明加對了。
+
 **M4 的量測是這個模組的驗收標準**：`service_reports` 的產出量與欄位填充率，要明顯優於現行 `daily_report` 的「2 筆 / 機台 7% / 工單 8%」。
 
 ---
