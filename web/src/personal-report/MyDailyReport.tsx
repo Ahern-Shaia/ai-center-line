@@ -101,6 +101,9 @@ export default function MyDailyReport() {
   const hasUnsentUpdate = report ? hasNewerAi(report) : false;
 
   const canEdit = (!isSent || hasUnsentUpdate) && !busy;
+  // 「今天」才給加自動建議項（指派任務／打卡地點）—— 否則能把今天的任務回填到 8 天前的日報，把記錄搞亂。
+  // 過去日期只能檢視 / 編輯既有內容，不能注入新的當日建議。
+  const isToday = date === getTaipeiDate();
 
   // bot 已收到、但晚於上次 AI 整理時間的訊息 → 尚未被整理進日報
   // （AI 是輔助：原始訊息立刻可見，不必每來一則就重跑 LLM 燒 token）
@@ -218,7 +221,7 @@ export default function MyDailyReport() {
         {/* 今天打卡去過的地方 · 一樣不自動寫進日報，由本人決定（4FR §5）
             日報 16 份只有 3 份送出，多半是因為「要自己想今天做了什麼」——
             系統知道他去了哪，給他看，讓這件事從「想」變成「改」。*/}
-        {todayVisits.length > 0 && (
+        {isToday && todayVisits.length > 0 && (
           <div className="pdr-raw-list" style={{ marginTop: 16 }}>
             <div className="pdr-raw-hdr">
               今天打卡去過 <b>{todayVisits.length}</b> 個地方
@@ -238,7 +241,7 @@ export default function MyDailyReport() {
 
         {/* 指派給我的任務 · 由本人決定要不要納入日報（task-to-personal-report §5）
             不自動寫進去：AI 歸屬可能錯、日報也可能已確認 —— 本人是最後一道防線。*/}
-        {assignedTasks.length > 0 && (
+        {isToday && assignedTasks.length > 0 && (
           <div className="pdr-raw-list" style={{ marginTop: 16, borderColor: "var(--primary)" }}>
             <div className="pdr-raw-hdr">
               有 <b>{assignedTasks.length}</b> 項指派給你的任務尚未加入日報
