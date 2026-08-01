@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError,
   getTeamPersonalReports,
   type PersonalDailyReportRow,
   type PersonalDailyReportItem,
 } from "../api";
+import StyledSelect from "../shared/StyledSelect";
 import { useToast } from "../Toast";
 
 // 部門日報 · 主管（group_owner / tenant_admin）看下屬送出的個人日報
@@ -12,21 +13,34 @@ import { useToast } from "../Toast";
 //
 // scope 全靠後端 RLS（personal_daily_report_scope policy）：
 //   group_owner 只看得到自己部門成員的日報、tenant_admin 看全租戶。
-//   查詢本身沒有部門過濾 —— 前端不需要、也不該自己 scope（2026-07-30 prod 驗證）。
+//   前端不自己 scope（2026-07-30 prod 驗證）。部門下拉只是視覺過濾、非權限邊界。
 //
-// 慣例：table=.dm-table · 日期範圍沿用群組日誌的「近 7/30 天」· item 渲染重用 .pdr-item
+// 設計：docs/modules/design-research-daily-report.md（方向 C · 對標 Metabase）——
+//   後端為每人每天都建一筆（沒回報的 status='empty'），全部平鋪會被空列淹沒
+//   （實測 21 筆裡 12 筆空）。這裡預設只顯示「有內容」，空日報收成底部一行聚合，
+//   要查「誰沒交」切「未回報」。慣例沿用 .dm-table / .pill / .btn / StyledSelect。
 
-const STATUS: Record<PersonalDailyReportRow["status"], { label: string; tone: string }> = {
-  sent: { label: "已送出", tone: "var(--ok-600)" },
-  confirmed: { label: "待送出", tone: "var(--warn)" },
-  draft: { label: "草稿", tone: "var(--ink-3)" },
-  empty: { label: "當日無內容", tone: "var(--ink-3)" },
-  failed: { label: "產生失敗", tone: "var(--rose-600)" },
+// 狀態 pill 沿用表格狀態欄慣例 .nc-pill（同 TenantManagement / notify LogsTab），非 inline 的 .pill
+const STATUS: Record<PersonalDailyReportRow["status"], { label: string; pill: string }> = {
+  sent: { label: "已送出", pill: "ok" },
+  confirmed: { label: "待送出", pill: "warn" },
+  draft: { label: "草稿", pill: "mut" },
+  empty: { label: "當日無內容", pill: "mut" },
+  failed: { label: "產生失敗", pill: "danger" },
 };
+
+type Filter = "content" | "empty" | "all";
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: "content", label: "有內容" },
+  { key: "empty", label: "未回報" },
+  { key: "all", label: "全部" },
+];
 
 export default function TeamDailyReport() {
   const toast = useToast();
   const [days, setDays] = useState<7 | 30>(7);
+  const [filter, setFilter] = useState<Filter>("content");
+  const [dept, setDept] = useState<string>("");   // "" = 全部部門
   const [rows, setRows] = useState<PersonalDailyReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -50,6 +64,26 @@ export default function TeamDailyReport() {
 
   useEffect(() => { void refresh(); }, [refresh]);
 
+  const departments = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.departmentName).filter((d): d is string => !!d))).sort(),
+    [rows],
+  );
+
+  const deptMatch = useCallback((r: PersonalDailyReportRow) => !dept || r.departmentName === dept, [dept]);
+
+  // 「未回報」＝後端明確標的 status==='empty'（那天沒內容）；其餘 (sent/confirmed/draft/failed) 皆算有內容
+  const visible = useMemo(() => rows.filter((r) => {
+    if (!deptMatch(r)) return false;
+    if (filter === "all") return true;
+    return filter === "empty" ? r.status === "empty" : r.status !== "empty";
+  }), [rows, filter, deptMatch]);
+
+  // 目前 scope 下被隱藏的空日報數（給聚合行）
+  const hiddenEmpty = useMemo(
+    () => rows.filter((r) => deptMatch(r) && r.status === "empty").length,
+    [rows, deptMatch],
+  );
+
   return (
     <div className="pane">
       <div className="pane-hdr">
@@ -58,9 +92,29 @@ export default function TeamDailyReport() {
           <div className="sub">部門成員送出的每日工作日報 · 點一列展開看內容</div>
         </div>
         <div className="hdr-toolbar">
-          <div className="hdr-group">
-            <label className="hdr-label">查看範圍</label>
-            <div style={{ display: "flex", gap: 6 }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+            {FILTERS.map((f) => (
+              <button
+                key={f.key}
+                className={`btn${filter === f.key ? " btn-primary" : ""}`}
+                aria-pressed={filter === f.key}
+                onClick={() => setFilter(f.key)}
+              >{f.label}</button>
+            ))}
+            {departments.length > 1 && (
+              <div style={{ minWidth: 132 }}>
+                <StyledSelect
+                  items={departments.map((d) => ({ id: d, label: d }))}
+                  value={dept}
+                  onChange={setDept}
+                  ariaLabel="依部門過濾"
+                  allowEmpty
+                  emptyLabel="全部部門"
+                  width={132}
+                />
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 6, marginLeft: 4 }}>
               <button className={`btn${days === 7 ? " btn-primary" : ""}`} onClick={() => setDays(7)}>近 7 天</button>
               <button className={`btn${days === 30 ? " btn-primary" : ""}`} onClick={() => setDays(30)}>近 30 天</button>
             </div>
@@ -78,6 +132,17 @@ export default function TeamDailyReport() {
             group_owner 只看得到自己部門的成員。
           </div>
         </div>
+      ) : visible.length === 0 ? (
+        <div className="dm-empty">
+          {filter === "content"
+            ? "這段期間部門成員都沒有送出有內容的日報"
+            : filter === "empty"
+              ? "這段期間每個人都有回報，沒有空日報"
+              : "此部門在這段期間沒有日報"}
+          {filter === "content" && hiddenEmpty > 0 && (
+            <div className="dm-empty-hint">切「未回報」可看有哪 {hiddenEmpty} 筆當日無內容。</div>
+          )}
+        </div>
       ) : (
         <div className="dm-table-wrap">
           <table className="dm-table">
@@ -86,13 +151,13 @@ export default function TeamDailyReport() {
                 <th style={{ width: "14%" }}>日期</th>
                 <th style={{ width: "20%" }}>姓名</th>
                 <th style={{ width: "20%" }}>部門</th>
-                <th className="num" style={{ width: "10%" }}>項數</th>
-                <th style={{ width: "14%" }}>狀態</th>
+                <th className="num" style={{ width: "9%" }}>項數</th>
+                <th style={{ width: "16%" }}>狀態</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {visible.map((r) => {
                 const items = r.finalItems ?? r.aiItems ?? [];
                 const open = openId === r.reportId;
                 const st = STATUS[r.status];
@@ -103,7 +168,7 @@ export default function TeamDailyReport() {
                     items={items}
                     open={open}
                     statusLabel={st.label}
-                    statusTone={st.tone}
+                    statusPill={st.pill}
                     onToggle={() => setOpenId(open ? null : r.reportId)}
                   />
                 );
@@ -113,19 +178,35 @@ export default function TeamDailyReport() {
         </div>
       )}
 
-      <div className="login-hint" style={{ marginTop: 12 }}>
-        共 {rows.length} 筆 · 顯示範圍依你的角色：部門主管看自己部門、租戶管理者看全公司。
-      </div>
+      {!loading && filter === "content" && hiddenEmpty > 0 && (
+        <div
+          className="dm-info-note"
+          role="button"
+          tabIndex={0}
+          onClick={() => setFilter("empty")}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setFilter("empty"); } }}
+          style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
+        >
+          <span>另有 <b>{hiddenEmpty}</b> 筆當日無內容（預設隱藏）</span>
+          <span style={{ marginLeft: "auto", color: "var(--primary)", fontWeight: 600 }}>顯示 →</span>
+        </div>
+      )}
+
+      {!loading && rows.length > 0 && (
+        <div className="login-hint" style={{ marginTop: 12 }}>
+          顯示 {visible.length} 筆 · 依你的角色範圍：部門主管看自己部門、租戶管理者看全公司。空日報預設隱藏。
+        </div>
+      )}
     </div>
   );
 }
 
-function TeamReportRow({ row, items, open, statusLabel, statusTone, onToggle }: {
+function TeamReportRow({ row, items, open, statusLabel, statusPill, onToggle }: {
   row: PersonalDailyReportRow;
   items: PersonalDailyReportItem[];
   open: boolean;
   statusLabel: string;
-  statusTone: string;
+  statusPill: string;
   onToggle: () => void;
 }) {
   return (
@@ -135,7 +216,7 @@ function TeamReportRow({ row, items, open, statusLabel, statusTone, onToggle }: 
         <td className="dm-td-name">{row.userDisplayName ?? "（未命名）"}</td>
         <td>{row.departmentName ?? <span style={{ color: "var(--ink-3)" }}>未分派部門</span>}</td>
         <td className="num">{items.length}</td>
-        <td style={{ color: statusTone, fontWeight: 500 }}>{statusLabel}</td>
+        <td><span className={`nc-pill ${statusPill}`}>{statusLabel}</span></td>
         <td style={{ textAlign: "right", color: "var(--ink-3)" }}>{open ? "收合 ▲" : "展開 ▼"}</td>
       </tr>
       {open && (
