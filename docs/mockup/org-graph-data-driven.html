@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>組織關係圖 · 資料驅動壓力測試</title>
+<style>
+  :root{ --ink:#0F172A; --ink-2:#475569; --ink-3:#94A3B8; --gm:#7C3AED; --gm-2:#8B5CF6; --line:#E2E8F0; }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 620px at 50% -10%, #EEF2FF 0%, rgba(238,242,255,0) 60%),linear-gradient(180deg,#FBFCFE,#F5F7FB);
+    color:var(--ink);min-height:100vh;font-family:Inter,-apple-system,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1200px;margin:0 auto;padding:24px 22px 60px;}
+  h1{font-size:21px;font-weight:720;margin:0 0 2px;}
+  .sub{color:var(--ink-3);font-size:12.5px;margin:0 0 4px;}
+  .note{background:#FFF;border:1px solid var(--line);border-left:3px solid var(--gm-2);border-radius:8px;padding:10px 14px;margin:12px 0 6px;font-size:12.5px;color:var(--ink-2);line-height:1.7;}
+  .note b{color:var(--ink);}
+
+  /* 捲動舞台（部門多就水平捲，不擠爆）*/
+  .scroll{overflow-x:auto;padding:6px 0 14px;}
+  .stage{position:relative;min-width:100%;padding:8px 20px 20px;}
+  svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:0;}
+  .layer{position:relative;z-index:1;}
+
+  .band{display:flex;flex-direction:column;align-items:center;gap:0;margin-bottom:40px;}
+  .company{padding:12px 28px;border-radius:15px;color:#fff;text-align:center;background:linear-gradient(135deg,#1E293B,#0F172A);box-shadow:0 12px 30px rgba(15,23,42,.26);}
+  .company .t{font-size:10.5px;letter-spacing:2px;color:#93A5C4;font-weight:600;} .company .n{font-size:18px;font-weight:720;margin-top:2px;}
+  .gm{margin-top:40px;display:flex;align-items:center;gap:9px;padding:8px 18px 8px 9px;border-radius:13px;background:#fff;border:1.5px solid var(--gm-2);box-shadow:0 10px 26px rgba(124,58,237,.16);}
+  .gm .av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gm),var(--gm-2));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none;}
+  .gm .n{font-size:14.5px;font-weight:720;} .gm .r{font-size:11px;color:var(--gm);font-weight:600;}
+
+  .lanes{display:flex;gap:26px;align-items:flex-start;justify-content:center;}
+  .lane{width:196px;flex:none;display:flex;flex-direction:column;align-items:center;}
+  .dept{width:196px;border-radius:13px;background:#fff;border:1px solid var(--line);box-shadow:0 9px 24px rgba(15,23,42,.10);overflow:hidden;}
+  .dept .bar{height:5px;} .dept .body{padding:10px 14px 11px;}
+  .dept .n{font-size:15px;font-weight:680;} .dept .cnt{float:right;font-size:11px;color:var(--ink-3);margin-top:2px;}
+  .dept .grp{display:inline-block;margin-top:6px;font-size:11px;font-weight:600;border-radius:6px;padding:3px 9px;}
+
+  .members{display:flex;flex-direction:column;gap:12px;margin-top:44px;align-items:center;}
+  .mem{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 4px;box-shadow:0 4px 12px rgba(15,23,42,.08);white-space:nowrap;}
+  .mem .av{width:26px;height:26px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;flex:none;}
+  .mem .nm{font-size:13px;font-weight:600;} .mem.lead .nm{font-weight:720;}
+  .badge{font-size:9px;font-weight:700;color:#fff;border-radius:5px;padding:1px 6px;margin-left:2px;}
+  .nolink{font-size:9.5px;color:#B45309;background:#FEF3C7;border-radius:5px;padding:1px 6px;margin-left:2px;}
+  .more{background:#F1F5F9;border:1px dashed #CBD5E1;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer;box-shadow:0 4px 12px rgba(15,23,42,.06);}
+  .mem.warn{border-color:#FDE68A;background:#FFFBEB;} .mem.warn .av{background:#E5E7EB;color:#B45309;}
+
+  .foot{margin-top:18px;font-size:12px;color:var(--ink-3);line-height:1.85;border-top:1px solid var(--line);padding-top:14px;}
+  .foot b{color:var(--ink-2);}
+</style></head><body>
+<div class="wrap">
+  <h1>組織關係圖 · 資料驅動（壓力測試）</h1>
+  <p class="sub">同一份版型，餵不同資料自動長出來 —— 這頁刻意放 5 部門、其中「技術研發」塞 20 人，證明不會崩。</p>
+  <div class="note">
+    <b>怎麼不崩的（三招）：</b>
+    ① <b>座標用「量」不用「排」</b>：節點交給 CSS flow 排（一部門一直欄），連線在 render 後用 <code>getBoundingClientRect</code> 量真實位置再畫 → 任何數量都對得上。
+    ② <b>成員溢位收合</b>：每部門最多顯示主管+4 人，其餘收成「＋N 位」node（點擊展開）→ 20 人不會爆。
+    ③ <b>部門多就水平捲</b>：一部門一直欄，加部門只是多一欄、不用重算 → 5 個、10 個都排得下。
+    <br>拉寬/縮小視窗、或點「＋N 位」，連線都會自動重畫。
+  </div>
+
+  <div class="scroll"><div class="stage" id="stage">
+    <svg class="edges" id="edges"></svg>
+    <div class="layer">
+      <div class="band">
+        <div class="company" id="n-company"><div class="t">公司</div><div class="n"></div></div>
+        <div class="gm" id="n-gm"><span class="av"></span><span><span class="n"></span><br><span class="r">總經理室 · 看全公司</span></span></div>
+      </div>
+      <div class="lanes" id="lanes"></div>
+    </div>
+  </div></div>
+
+  <div class="foot">
+    <b>這證明了什麼：</b>「A. 真資料 + 固定版型」是可行的 —— 版型固定（你控外觀），資料任意（自動長）。做成產品時，把下面 <code>DATA</code> 換成後端 <code>/org-overview</code> 回的真實部門/成員即可。<br>
+    <b>還是靜態假名資料</b>，只是渲染方式改成資料驅動。互動細節（hover 高亮、展開/收合動畫）產品版再補。
+  </div>
+</div>
+
+<script>
+const PALETTE = [
+  {c:"#4F46E5",c2:"#6366F1",t:"#EEF2FF"}, {c:"#0D9488",c2:"#14B8A6",t:"#ECFDF5"},
+  {c:"#D97706",c2:"#F59E0B",t:"#FFFBEB"}, {c:"#DB2777",c2:"#EC4899",t:"#FDF2F8"},
+  {c:"#0284C7",c2:"#0EA5E9",t:"#EFF6FF"},
+];
+const surname = "陳林黃張李王吳劉蔡楊許鄭謝郭洪曾邱周葉蘇".split("");
+const mkMembers = (n) => Array.from({length:n}, (_,i) => ({
+  name: (i===0? "" : surname[i%surname.length]) + (i===0? "○經理" : "○○"),
+  lead: i===0, bound: !(i===2),   // 第 3 位示意未綁
+}));
+
+const DATA = {
+  company: "示範公司",
+  gm: "郭○○",
+  departments: [
+    { name:"業務一部", group:"業務一部回報群", members: mkMembers(3) },
+    { name:"技術研發", group:"技術工程群",   members: mkMembers(20) },   // ← 壓力：20 人
+    { name:"售後服務", group:"售後服務群",   members: mkMembers(4) },
+    { name:"客服中心", group:"客服值班群",   members: mkMembers(6) },
+    { name:"行政人資", group:"行政公告群",   members: mkMembers(2) },
+  ],
+};
+const MAX = 5; // 主管 + 4
+
+function el(t, cls, html){ const e=document.createElement(t); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+
+function render(){
+  document.querySelector("#n-company .n").textContent = DATA.company;
+  document.querySelector("#n-gm .av").textContent = DATA.gm[0];
+  document.querySelector("#n-gm .n").textContent = DATA.gm;
+
+  const lanes = document.getElementById("lanes"); lanes.innerHTML="";
+  DATA.departments.forEach((d, di) => {
+    const p = PALETTE[di % PALETTE.length];
+    const lane = el("div","lane"); lane.dataset.dept = di;
+    const dept = el("div","dept");
+    dept.innerHTML = `<div class="bar" style="background:linear-gradient(90deg,${p.c},${p.c2})"></div>
+      <div class="body"><span class="cnt">${d.members.length} 位</span><div class="n">${d.name}</div>
+      <span class="grp" style="color:${p.c};background:${p.t}">◍ LINE：${d.group}</span></div>`;
+    dept.id = `dept-${di}`;
+    lane.appendChild(dept);
+
+    const mems = el("div","members");
+    const shown = d.members.slice(0, MAX);
+    shown.forEach((m, mi) => {
+      const node = el("div", "mem" + (m.lead?" lead":"") + (m.bound===false?" warn":""));
+      node.dataset.dept = di;
+      node.innerHTML = `<span class="av" style="background:linear-gradient(135deg,${p.c},${p.c2})">${(m.name||"？")[0]}</span>`+
+        `<span class="nm">${m.name}</span>`+
+        (m.lead?`<span class="badge" style="background:${p.c}">主管</span>`:"")+
+        (m.bound===false?`<span class="nolink">未綁</span>`:"");
+      mems.appendChild(node);
+    });
+    if (d.members.length > MAX){
+      const more = el("div","more", `＋${d.members.length - MAX} 位…`);
+      more.dataset.dept = di;
+      more.onclick = () => { d._expanded = !d._expanded; renderExpanded(mems, d, p, di, more); };
+      mems.appendChild(more);
+    }
+    lane.appendChild(mems);
+    lanes.appendChild(lane);
+  });
+  requestAnimationFrame(drawEdges);
+}
+
+function renderExpanded(mems, d, p, di, more){
+  // 展開：把剩下的人補上（示意）
+  more.remove();
+  d.members.slice(MAX).forEach((m) => {
+    const node = el("div","mem"+(m.bound===false?" warn":"")); node.dataset.dept = di;
+    node.innerHTML = `<span class="av" style="background:linear-gradient(135deg,${p.c},${p.c2})">${(m.name||"？")[0]}</span><span class="nm">${m.name}</span>`+
+      (m.bound===false?`<span class="nolink">未綁</span>`:"");
+    mems.appendChild(node);
+  });
+  requestAnimationFrame(drawEdges);
+}
+
+function center(elm, host){
+  const a = elm.getBoundingClientRect(), b = host.getBoundingClientRect();
+  return { x: a.left - b.left + a.width/2, y: a.top - b.top, xb: a.left-b.left+a.width/2, yb: a.top-b.top+a.height };
+}
+function edge(x1,y1,x2,y2,stroke,dash){
+  const dy=Math.max(28,(y2-y1)*0.5);
+  return `<path d="M${x1} ${y1} C ${x1} ${y1+dy}, ${x2} ${y2-dy}, ${x2} ${y2}" stroke="${stroke}" stroke-width="2" fill="none" opacity=".42"${dash?' stroke-dasharray="5 6"':''}/>`;
+}
+function drawEdges(){
+  const stage = document.getElementById("stage");
+  const svg = document.getElementById("edges");
+  svg.setAttribute("width", stage.scrollWidth); svg.setAttribute("height", stage.scrollHeight);
+  const co = center(document.getElementById("n-company"), stage);
+  const gm = center(document.getElementById("n-gm"), stage);
+  let paths = edge(co.xb, co.yb, gm.x, gm.y, "#7C3AED");
+  DATA.departments.forEach((d, di) => {
+    const p = PALETTE[di % PALETTE.length];
+    const dept = center(document.getElementById(`dept-${di}`), stage);
+    paths += edge(gm.xb, gm.yb, dept.x, dept.y, "#7C3AED");        // GM → 部門
+    document.querySelectorAll(`.mem[data-dept="${di}"], .more[data-dept="${di}"]`).forEach((mn) => {
+      const m = center(mn, stage);
+      paths += edge(dept.xb, dept.yb, m.x, m.y, p.c);              // 部門 → 成員
+    });
+  });
+  svg.innerHTML = paths;
+}
+render();
+window.addEventListener("resize", drawEdges);
+</script>
+</body></html>
