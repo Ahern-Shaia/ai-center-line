@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError,
   getTeamPersonalReports,
   type PersonalDailyReportRow,
-  type PersonalDailyReportItem,
 } from "../api";
 import StyledSelect from "../shared/StyledSelect";
 import { useToast } from "../Toast";
@@ -41,11 +40,6 @@ function weekdayOf(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
   if (!y || !m || !d) return "";
   return `星期${WEEKDAY[new Date(y, m - 1, d).getDay()]}`;
-}
-function previewOf(items: PersonalDailyReportItem[]): string {
-  if (items.length === 0) return "";
-  const head = items.slice(0, 2).map((i) => i.title || "（未命名事項）").join("、");
-  return items.length > 2 ? `${head}…` : head;
 }
 
 export default function TeamDailyReport() {
@@ -174,28 +168,43 @@ export default function TeamDailyReport() {
           )}
         </div>
       ) : (
-        <div>
-          {groups.map(([date, list]) => {
-            const gCollapsed = collapsedDates.has(date);
-            return (
-              <div className="dr-grp" key={date}>
-                <div className="dr-grp-hd" onClick={() => toggleDate(date)}>
-                  <span className="gchev">{gCollapsed ? "▸" : "▾"}</span>
-                  <span className="d mono">{date}</span>
-                  <span className="wk">{weekdayOf(date)}</span>
-                  <span className="c">{list.length} 筆</span>
-                </div>
-                {!gCollapsed && list.map((r) => (
-                  <TeamReportRow
-                    key={r.reportId}
-                    row={r}
-                    open={openId === r.reportId}
-                    onToggle={() => setOpenId(openId === r.reportId ? null : r.reportId)}
-                  />
-                ))}
-              </div>
-            );
-          })}
+        <div className="dm-table-wrap">
+          <table className="dm-table">
+            <thead>
+              <tr>
+                <th style={{ width: "22%" }}>姓名</th>
+                <th style={{ width: "22%" }}>部門</th>
+                <th className="num" style={{ width: "9%" }}>項數</th>
+                <th style={{ width: "18%" }}>狀態</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {groups.map(([date, list]) => {
+                const gCollapsed = collapsedDates.has(date);
+                return (
+                  <Fragment key={date}>
+                    <tr className="dr-grp-row" onClick={() => toggleDate(date)}>
+                      <td colSpan={5}>
+                        <span className="gchev">{gCollapsed ? "▸" : "▾"}</span>
+                        <span className="mono">{date}</span>
+                        <span className="wk">{weekdayOf(date)}</span>
+                        <span className="c">{list.length} 筆</span>
+                      </td>
+                    </tr>
+                    {!gCollapsed && list.map((r) => (
+                      <TeamReportRow
+                        key={r.reportId}
+                        row={r}
+                        open={openId === r.reportId}
+                        onToggle={() => setOpenId(openId === r.reportId ? null : r.reportId)}
+                      />
+                    ))}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -230,40 +239,37 @@ function TeamReportRow({ row, open, onToggle }: {
   const items = row.finalItems ?? row.aiItems ?? [];
   const st = STATUS[row.status];
   return (
-    <div className="dr-row">
-      <div className="dr-row-hd" onClick={onToggle} role="button" tabIndex={0}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}>
-        <span className={`st-dot ${st.pill}`} />
-        <span className="dr-nm">{row.userDisplayName ?? "（未命名）"}</span>
-        {row.departmentName
-          ? <span className="dr-dept">{row.departmentName}</span>
-          : <span className="dr-dept" style={{ color: "var(--ink-3)" }}>未分派</span>}
-        <span className={`nc-pill ${st.pill}`}>{st.label}</span>
-        <span className="dr-n">{items.length}</span>
-        <span className="dr-prev">{previewOf(items)}</span>
-        <span className="dr-chev">{open ? "▴" : "▾"}</span>
-      </div>
+    <>
+      <tr onClick={onToggle} style={{ cursor: "pointer" }}>
+        <td className="dm-td-name">{row.userDisplayName ?? "（未命名）"}</td>
+        <td>{row.departmentName ?? <span style={{ color: "var(--ink-3)" }}>未分派部門</span>}</td>
+        <td className="num">{items.length}</td>
+        <td><span className={`st-dot ${st.pill}`} /><span className={`nc-pill ${st.pill}`}>{st.label}</span></td>
+        <td style={{ textAlign: "right", color: "var(--ink-3)" }}>{open ? "收合 ▲" : "展開 ▼"}</td>
+      </tr>
       {open && (
-        <div className="dr-body">
-          {items.length === 0 ? (
-            <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>這份日報沒有項目。</div>
-          ) : (
-            items.map((it, i) => (
-              <div key={i} className="pdr-item">
-                <div className="pdr-item-hdr">
-                  <span className="pdr-item-idx">{i + 1}</span>
-                  {it.time && <span className="pdr-item-time">{it.time}</span>}
-                  <span className="pdr-item-title">{it.title || "（未命名事項）"}</span>
+        <tr>
+          <td colSpan={5} style={{ background: "var(--surface-2, #F5F6F8)", padding: "10px 14px" }}>
+            {items.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>這份日報沒有項目。</div>
+            ) : (
+              items.map((it, i) => (
+                <div key={i} className="pdr-item">
+                  <div className="pdr-item-hdr">
+                    <span className="pdr-item-idx">{i + 1}</span>
+                    {it.time && <span className="pdr-item-time">{it.time}</span>}
+                    <span className="pdr-item-title">{it.title || "（未命名事項）"}</span>
+                  </div>
+                  {it.detail && <div className="pdr-item-detail">{it.detail}</div>}
+                  {it.followup && (
+                    <div className="pdr-item-followup"><b>追蹤</b> · {it.followup}</div>
+                  )}
                 </div>
-                {it.detail && <div className="pdr-item-detail">{it.detail}</div>}
-                {it.followup && (
-                  <div className="pdr-item-followup"><b>追蹤</b> · {it.followup}</div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </td>
+        </tr>
       )}
-    </div>
+    </>
   );
 }
