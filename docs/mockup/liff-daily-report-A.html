@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>LIFF 我的日報 · 方向 A（清單卡 + 底部送出條）</title>
+<style>
+:root{--canvas:#F7F8FA;--surface:#FFFFFF;--well:#F1F3F6;--line:#E5E7EB;--line-2:#F0F2F5;--ink:#111827;--ink-2:#4B5563;--ink-3:#6B7280;--primary:#4F46E5;--primary-2:#4338CA;--primary-tint:#EEF2FF;--ok:#059669;--ok-tint:#ECFDF5;--warn:#D97706;--warn-tint:#FFFBEB;--sans:'Inter','Noto Sans TC',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;}
+*{box-sizing:border-box;}
+body{margin:0;background:#E9EBEF;color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;padding:24px;}
+.doc-h{font-size:19px;font-weight:700;margin:0 0 3px;}
+.doc-sub{color:var(--ink-3);font-size:12.5px;margin:0 0 18px;}
+.row{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;}
+.phone{width:340px;background:var(--canvas);border:1px solid #CBD0D8;border-radius:26px;overflow:hidden;box-shadow:0 8px 30px rgba(17,24,39,.12);position:relative;}
+.cap{font-size:12px;color:var(--ink-3);text-align:center;margin-top:8px;}
+.status{height:26px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink-3);border-bottom:1px solid var(--line-2);}
+.hd{background:var(--surface);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.hd h1{font-size:15.5px;font-weight:700;margin:0;}
+.hd .date{font-size:11.5px;color:var(--ink-3);margin-top:2px;}
+.hd .regen{font-size:12px;color:var(--primary);font-weight:600;background:var(--primary-tint);border:0;border-radius:7px;padding:7px 11px;white-space:nowrap;}
+.body{padding:14px 14px 96px;min-height:520px;}
+.hint{font-size:12px;color:var(--ink-3);margin:0 2px 12px;}
+/* 日報項目卡 */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:12px 13px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+.card-top{display:flex;align-items:center;gap:9px;}
+.idx{background:var(--primary);color:#fff;width:22px;height:22px;border-radius:50%;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;}
+.title{font-size:14.5px;font-weight:600;flex:1;}
+.time{font-size:11.5px;color:var(--ink-2);font-family:var(--mono);background:var(--well);padding:2px 8px;border-radius:4px;}
+.edit-lnk{font-size:12px;color:var(--ink-3);}
+.detail{font-size:12.5px;color:var(--ink-2);line-height:1.55;margin:7px 0 0 31px;}
+.follow{font-size:12px;color:var(--warn);margin:5px 0 0 31px;}
+/* 編輯就地展開 · 欄位固定高、不爆版 */
+.card.editing{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-tint);}
+.fld{width:100%;height:44px;border:1px solid var(--line);border-radius:8px;padding:0 12px;font-size:16px;font-family:inherit;color:var(--ink);background:var(--surface);margin-top:9px;}
+.fld.area{height:auto;min-height:72px;max-height:160px;padding:10px 12px;line-height:1.5;resize:none;}
+.fld::placeholder{color:var(--ink-3);}
+.fld-row{display:flex;gap:9px;}
+.fld.t{flex:0 0 120px;text-align:center;}
+.fld.n{flex:1;}
+.done{margin-top:11px;width:100%;height:42px;background:var(--primary);color:#fff;border:0;border-radius:8px;font-size:14px;font-weight:600;}
+.add{width:100%;height:44px;background:transparent;border:1px dashed var(--line);border-radius:9px;color:var(--ink-2);font-size:13.5px;margin-top:2px;}
+/* 底部固定送出條 */
+.foot{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 -2px 10px rgba(0,0,0,.05);}
+.foot .n{font-size:12.5px;color:var(--ink-3);flex:1;}
+.foot .n b{color:var(--ink);}
+.btn{height:42px;border-radius:8px;font-size:14px;font-weight:600;padding:0 14px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);}
+.btn.pri{background:var(--primary);color:#fff;border-color:var(--primary);}
+/* 空 + 已私訊 */
+.cta-card{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:20px 16px;text-align:center;margin-bottom:14px;}
+.cta-big{font-size:15px;font-weight:600;}
+.cta-big b{color:var(--primary-2);font-size:22px;}
+.cta-sub{font-size:12px;color:var(--ink-3);margin:6px 0 14px;line-height:1.5;}
+.cta-btn{height:46px;width:100%;background:var(--primary);color:#fff;border:0;border-radius:9px;font-size:15px;font-weight:600;}
+.raw-hd{font-size:11.5px;color:var(--ink-3);margin:4px 2px 8px;}
+.raw{display:flex;gap:10px;background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:10px 12px;margin-bottom:7px;}
+.raw .tm{font-size:11.5px;color:var(--ink-3);font-family:var(--mono);flex-shrink:0;}
+.raw .tx{font-size:13px;}
+</style></head><body>
+<div class="doc-h">LIFF「我的日報」· 方向 A — 清單卡 + 底部送出條（對標 Todoist / Linear）</div>
+<div class="doc-sub">mobile-first · observability-light token · 欄位固定高（防 LINE webview 爆高）· 大拇指友善 · 假名示意</div>
+
+<div class="row">
+
+  <!-- A1 · AI 草稿清單 + 底部送出條 -->
+  <div><div class="phone">
+    <div class="status">16:40　　　　5G ▲ 88%</div>
+    <div class="hd"><div><h1>我的日報</h1><div class="date">8/1 星期六 · 今日</div></div><button class="regen">重新生成</button></div>
+    <div class="body">
+      <div class="hint">AI 已於 15:16 整理 · 點卡片可微調，確認後送出</div>
+      <div class="card"><div class="card-top"><span class="idx">1</span><span class="title">科技大樓上課</span><span class="time">09:30</span></div></div>
+      <div class="card"><div class="card-top"><span class="idx">2</span><span class="title">午餐</span><span class="time">14:00</span><span class="edit-lnk">編輯 ▸</span></div></div>
+      <div class="card"><div class="card-top"><span class="idx">3</span><span class="title">下課返程</span><span class="time">16:40</span></div><div class="detail">課程結束，返回辦公室</div></div>
+      <button class="add">＋ 手動加一項</button>
+    </div>
+    <div class="foot"><span class="n"><b>3</b> 項待送出</span><button class="btn">草稿</button><button class="btn pri">送出日報</button></div>
+  </div><div class="cap">A1 · AI 草稿清單（底部固定送出條）</div></div>
+
+  <!-- A2 · 就地編輯 · 欄位固定高 -->
+  <div><div class="phone">
+    <div class="status">16:41　　　　5G ▲ 88%</div>
+    <div class="hd"><div><h1>我的日報</h1><div class="date">8/1 星期六 · 今日</div></div><button class="regen">重新生成</button></div>
+    <div class="body">
+      <div class="hint">AI 已於 15:16 整理 · 點卡片可微調，確認後送出</div>
+      <div class="card"><div class="card-top"><span class="idx">1</span><span class="title">科技大樓上課</span><span class="time">09:30</span></div></div>
+      <div class="card editing">
+        <div class="fld-row"><input class="fld t" value="14:00" placeholder="時間"><input class="fld n" value="午餐" placeholder="事項標題"></div>
+        <textarea class="fld area" placeholder="內容摘要（可留空）"></textarea>
+        <input class="fld" placeholder="追蹤事項 · 例 明日 09:00 跟人資申請">
+        <button class="done">完成</button>
+      </div>
+      <div class="card"><div class="card-top"><span class="idx">3</span><span class="title">下課返程</span><span class="time">16:40</span></div></div>
+    </div>
+    <div class="foot"><span class="n"><b>3</b> 項待送出</span><button class="btn">草稿</button><button class="btn pri">送出日報</button></div>
+  </div><div class="cap">A2 · 點卡片就地編輯（欄位固定高、16px 字、不爆版）</div></div>
+
+  <!-- A3 · 空 + 已私訊 3 則 -->
+  <div><div class="phone">
+    <div class="status">15:16　　　　5G ▲ 88%</div>
+    <div class="hd"><div><h1>我的日報</h1><div class="date">8/1 星期六 · 今日</div></div><button class="regen">重新生成</button></div>
+    <div class="body">
+      <div class="cta-card">
+        <div class="cta-big">你今日已私訊 bot <b>3</b> 則</div>
+        <div class="cta-sub">AI 還沒整理 · 按下面讓 AI 抽成日報，<br>或等 18:00 自動整理</div>
+        <button class="cta-btn">立即整理成日報</button>
+      </div>
+      <div class="raw-hd">bot 收到的原始訊息 · 依時間</div>
+      <div class="raw"><span class="tm">15:15</span><span class="tx">9:30科技大樓上課</span></div>
+      <div class="raw"><span class="tm">15:15</span><span class="tx">14:00吃午餐</span></div>
+      <div class="raw"><span class="tm">15:15</span><span class="tx">16:40下課</span></div>
+    </div>
+  </div><div class="cap">A3 · 訊息已收、AI 未整理（大 CTA「立即整理」+ 原始訊息）</div></div>
+
+</div>
+</body></html>
