@@ -118,7 +118,9 @@ export class AuditService {
       SELECT a.id::text,
              to_char(a.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
              a.action, a.result, a.actor_role,
-             u.display_name AS actor_name
+             -- display_name 常為 null（多數帳號沒設暱稱）→ fallback email 前綴，
+             -- 對齊 topbar 的「暱稱否則 email 前綴」，避免「使用者」整欄顯示「—」
+             COALESCE(NULLIF(u.display_name, ''), split_part(u.email, '@', 1)) AS actor_name
         FROM audit_log a
         LEFT JOIN users u ON u.user_id = a.actor_user_id
        WHERE (${scope}::text = 'all'
