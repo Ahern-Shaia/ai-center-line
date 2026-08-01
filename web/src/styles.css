@@ -2008,6 +2008,10 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
   .hdr-toolbar { flex-direction:column; gap:10px; width:100%; }
   .hdr-group + .hdr-group { border-left:none; padding-left:0; border-top:1px solid var(--line); padding-top:10px; }
   .hdr-group .tf, .hdr-group .btn { width:100%; }
+  /* 定時任務設定：桌機是 200px 標籤 + 值兩欄，手機會把值擠成一條 → 改上下堆疊 */
+  .sc-card { padding:16px 16px; }
+  .sc-row { grid-template-columns:1fr; gap:6px; padding:12px 0; align-items:start; }
+  .sc-card-hdr { flex-wrap:wrap; gap:8px; }
 }
 
 /* pdr preview · 主管將看到的完整報告 · 編輯區下方即時 preview + confirm dialog 內共用 */
