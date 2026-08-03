@@ -75,10 +75,19 @@ export class AuthController {
 
   // LIFF · 前端送 access token（liff.getAccessToken）· backend 驗證 channel+效期+profile 後換 JWT
   // 取代舊「信任前端 lineUserId」的 @Public LIFF 端點（修 IDOR）· 見 docs/modules/liff-webapp-consolidation.md
+  // botId：LIFF 從特定租戶的 bot 開 → 用它綁死租戶（一人多租戶時才不會拿錯家 · 見 line-oauth A）
   @Public()
   @Post("liff/token")
-  async liffToken(@Body() body: { accessToken?: string }) {
+  async liffToken(@Body() body: { accessToken?: string; botId?: string }) {
     if (!body?.accessToken) throw new BadRequestException("缺 accessToken");
-    return this.lineOauth.handleLiffToken(body.accessToken);
+    return this.lineOauth.handleLiffToken(body.accessToken, body.botId);
+  }
+
+  // 一人多租戶 · 網頁登入選了組織後換該租戶的 JWT（B）· selectionToken 內含已驗證 lineUserId
+  @Public()
+  @Post("line/select-tenant")
+  async lineSelectTenant(@Body() body: { selectionToken?: string; tenantId?: string }) {
+    if (!body?.selectionToken || !body?.tenantId) throw new BadRequestException("缺 selectionToken 或 tenantId");
+    return this.lineOauth.selectTenant(body.selectionToken, body.tenantId);
   }
 }

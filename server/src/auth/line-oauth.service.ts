@@ -93,7 +93,7 @@ export class LineOauthService {
    * · 若查不到 binding · 提示「請先綁定」
    * · 多 tenant · 若某 lineUserId 綁多個 bot（罕見）· 用第一個 active
    */
-  async handleCallback(code: string): Promise<{ access_token: string; role: string; tenant_id: string | null }> {
+  async handleCallback(code: string): Promise<LineLoginResult | TenantChoiceResult> {
     const clientId = process.env.LINE_LOGIN_CHANNEL_ID;
     const clientSecret = process.env.LINE_LOGIN_CHANNEL_SECRET;
     const callbackUrl = process.env.LINE_LOGIN_CALLBACK_URL;
@@ -131,8 +131,9 @@ export class LineOauthService {
     const profile = await profileRes.json() as { userId?: string; displayName?: string };
     if (!profile.userId) throw new UnauthorizedException("LINE profile 無 userId");
 
-    // Step 3 · lineUserId → binding → JWT（與 LIFF token 路徑共用）
-    return this.issueJwtForLineUserId(profile.userId);
+    // Step 3 · lineUserId → binding → JWT 或（一人多租戶時）回選單
+    // 網頁「以 LINE 登入」沒有 bot 上下文，多綁時無法確定要哪個租戶 → 讓使用者選（B）。
+    return this.resolveOrChoose(profile.userId);
   }
 
   /**
@@ -141,41 +142,98 @@ export class LineOauthService {
    *   （對照 https://developers.line.biz/en/docs/liff/using-user-profile/）
    * · 前提：LIFF app 掛在 LINE_LOGIN_CHANNEL_ID 這支 LINE Login channel 下（verify 的 client_id 才會相符）
    */
-  async handleLiffToken(accessToken: string): Promise<{ access_token: string; role: string; tenant_id: string | null }> {
+  // LIFF 是從**特定租戶的 bot** 開的（URL 帶 botId）· 用 botId 綁死租戶（A）——
+  // 一人綁多個租戶時，才不會像舊版那樣拿「最近綁定」的別家帳號（2026-08-03 實際踩到：
+  // Patrick 的 LINE 綁台灣福祉在先、綁鮮湧在後 → 從台灣福祉 bot 開卻登入成鮮湧林乙坤）。
+  async handleLiffToken(accessToken: string, botId?: string): Promise<LineLoginResult> {
     const lineUserId = await verifyLiffAccessToken(accessToken);
-    return this.issueJwtForLineUserId(lineUserId);
+    const bindings = await this.resolveBindings(lineUserId);
+    if (bindings.length === 0) {
+      throw new UnauthorizedException("此 LINE 帳號尚未綁定 aiproot · 請先加 bot 好友完成綁定");
+    }
+    if (botId) {
+      const match = bindings.find((b) => b.bot_id === botId);
+      if (!match) throw new UnauthorizedException("此 LINE 帳號未綁定到這個組織 · 請用正確組織的 bot 開啟");
+      return this.signJwtForBinding(match);
+    }
+    // 舊版前端沒帶 botId → 退回「最新綁定」（維持相容 · 新前端一律帶 botId）
+    return this.signJwtForBinding(bindings[0]);
   }
 
-  /**
-   * lineUserId → user_line_binding → JWT（OAuth callback 與 LIFF token 共用）
-   * · 走 aiproot_admin 上下文跨租戶讀；多 bot 取最新 active
-   */
-  private async issueJwtForLineUserId(lineUserId: string): Promise<{ access_token: string; role: string; tenant_id: string | null }> {
-    const bindings = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{
+  /** 一人多租戶時讓網頁使用者選組織後發 JWT（B）· selectionToken 內含已驗證的 lineUserId、防偽造 */
+  async selectTenant(selectionToken: string, tenantId: string): Promise<LineLoginResult> {
+    let payload: { purpose?: string; line_user_id?: string };
+    try {
+      payload = await this.jwt.verifyAsync(selectionToken);
+    } catch {
+      throw new UnauthorizedException("選擇連結已失效 · 請重新以 LINE 登入");
+    }
+    if (payload.purpose !== "tenant-select" || !payload.line_user_id) {
+      throw new UnauthorizedException("無效的組織選擇 token");
+    }
+    const bindings = await this.resolveBindings(payload.line_user_id);
+    const match = bindings.find((b) => b.tenant_id === tenantId);
+    if (!match) throw new UnauthorizedException("你在該組織沒有帳號");
+    return this.signJwtForBinding(match);
+  }
+
+  /** 該 lineUserId 的所有 active 綁定（跨租戶）· aiproot 上下文讀 · 新到舊 */
+  private async resolveBindings(lineUserId: string) {
+    const res = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{
       user_id: string; role: string; tenant_id: string | null; department_id: string | null;
+      tenant_name: string | null; bot_id: string;
     }>(sql`
-      SELECT b.user_id::text, u.role, u.tenant_id::text, u.department_id::text
+      SELECT b.user_id::text, u.role, u.tenant_id::text, u.department_id::text,
+             t.tenant_name, b.bot_id::text
       FROM user_line_binding b
       JOIN users u ON u.user_id = b.user_id
+      LEFT JOIN tenants t ON t.tenant_id = u.tenant_id
       WHERE b.line_user_id = ${lineUserId}
         AND b.status = 'active'
       ORDER BY b.bound_at DESC
-      LIMIT 1
     `));
+    return res.rows;
+  }
 
-    const binding = bindings.rows[0];
-    if (!binding) {
+  /** 綁定 0 → 擋；1 → 直接發 JWT；多筆 → 回選單（需使用者選組織）*/
+  private async resolveOrChoose(lineUserId: string): Promise<LineLoginResult | TenantChoiceResult> {
+    const bindings = await this.resolveBindings(lineUserId);
+    if (bindings.length === 0) {
       throw new UnauthorizedException("此 LINE 帳號尚未綁定 aiproot · 請先加 bot 好友完成綁定");
     }
+    if (bindings.length === 1) {
+      return this.signJwtForBinding(bindings[0]);
+    }
+    const selectionToken = await this.jwt.signAsync(
+      { purpose: "tenant-select", line_user_id: lineUserId },
+      { expiresIn: "5m" },
+    );
+    this.logger.log(`LINE 多租戶綁定 · 需選組織 · lineUserId=…${lineUserId.slice(-6)} · ${bindings.length} 個`);
+    return {
+      needsTenantChoice: true,
+      selectionToken,
+      options: bindings.map((b) => ({ tenantId: b.tenant_id, tenantName: b.tenant_name, role: b.role })),
+    };
+  }
 
+  private async signJwtForBinding(b: {
+    user_id: string; role: string; tenant_id: string | null; department_id: string | null;
+  }): Promise<LineLoginResult> {
     const payload: JwtUser = {
-      user_id: binding.user_id,
-      role: binding.role as JwtUser["role"],
-      tenant_id: binding.tenant_id,
-      department_id: binding.department_id,
+      user_id: b.user_id,
+      role: b.role as JwtUser["role"],
+      tenant_id: b.tenant_id,
+      department_id: b.department_id,
     };
     const token = await this.jwt.signAsync(payload);
-    this.logger.log(`LINE JWT issued · userId=${binding.user_id.slice(-6)} · role=${binding.role}`);
-    return { access_token: token, role: binding.role, tenant_id: binding.tenant_id };
+    this.logger.log(`LINE JWT issued · userId=${b.user_id.slice(-6)} · role=${b.role} · tenant=${b.tenant_id?.slice(0, 8) ?? "—"}`);
+    return { access_token: token, role: b.role, tenant_id: b.tenant_id };
   }
+}
+
+export interface LineLoginResult { access_token: string; role: string; tenant_id: string | null }
+export interface TenantChoiceResult {
+  needsTenantChoice: true;
+  selectionToken: string;
+  options: Array<{ tenantId: string | null; tenantName: string | null; role: string }>;
 }
