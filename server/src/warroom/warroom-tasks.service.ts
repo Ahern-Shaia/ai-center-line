@@ -47,6 +47,8 @@ export interface WarroomTicket {
   departmentName: string | null;
   /** 來源 LINE 群組名（su=source upload → line_group）· 卡片顯示用，比部門更直覺辨認 */
   groupName: string | null;
+  /** 分類顯示名 · 來自 category_registry（客戶可自訂）· null = 該分類尚未註冊 */
+  categoryName: string | null;
   confirmedByName: string | null;
   // 0036 · 第四條軸（當責人本人回報）· displayState 是四軸投影後的對外單一狀態
   workStatus: "open" | "closed";
@@ -144,6 +146,7 @@ export class WarroomTasksService {
       department_id: string;
       department_name: string | null;
       group_name: string | null;
+      category_name: string | null;
       confirmed_by_name: string | null;
       confirmed_at: string | null;
       work_status: "open" | "closed";
@@ -163,6 +166,7 @@ export class WarroomTasksService {
              t.created_at::text,
              t.department_id::text, d.department_name,
              lg.display_name AS group_name,
+             cr.category_name AS category_name,
              u.display_name AS confirmed_by_name,
              t.confirmed_at::text,
              t.work_status, t.work_outcome, t.work_closed_via,
@@ -174,6 +178,9 @@ export class WarroomTasksService {
       -- 來源群組名（su=source upload · analysis_upload 無 RLS 但 join 的是本 ticket 自己的 upload_id，不跨租戶）
       LEFT JOIN analysis_upload su ON su.id = t.source_upload_id
       LEFT JOIN line_group lg ON lg.group_id = su.group_id
+      -- 分類顯示名吃 category_registry（客戶可在「任務設定→分類詞庫」自己改中文名）
+      -- ⚠️ join 用 slug 不用 category_id：prod 實查 category_id 100% 為 null（從沒被寫入）
+      LEFT JOIN category_registry cr ON cr.tenant_id = t.tenant_id AND cr.category_slug = t.category
       LEFT JOIN users u ON u.user_id = t.confirmed_by
       LEFT JOIN users au ON au.user_id = t.assignee_user_id
       LEFT JOIN users wu ON wu.user_id = t.work_closed_by
@@ -230,6 +237,7 @@ export class WarroomTasksService {
       departmentId: r.department_id,
       departmentName: r.department_name,
       groupName: r.group_name,
+      categoryName: r.category_name,
       confirmedByName: r.confirmed_by_name,
       confirmedAt: r.confirmed_at,
       workStatus: r.work_status,
