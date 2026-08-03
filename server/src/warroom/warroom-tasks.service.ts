@@ -81,6 +81,8 @@ export interface WarroomDaily {
   batchDate: string;
   dailyReports: Array<Record<string, unknown>>;
   records: Array<Record<string, unknown>>;    // AI 抽的分類記錄 · 業務對話 (無工廠報工) 情境當 fallback 顯示
+  /** 客服報修派工單（service_order 模板第二區塊）· 空陣列＝該批無報修單或非該模板 */
+  serviceIntake: Array<Record<string, unknown>>;
   status: string;
   uploadedAt: string;
   /**
@@ -336,6 +338,7 @@ export class WarroomTasksService {
       uploaded_at: string;
       daily_reports: unknown;
       records: unknown;
+      service_intake: unknown;
       group_name: string | null;
       department_id: string | null;
       department_name: string | null;
@@ -349,6 +352,7 @@ export class WarroomTasksService {
              au.uploaded_at::text,
              ar.daily_reports,
              ar.records,
+             ar.service_intake,
              lg.display_name AS group_name,
              lg.department_id::text AS department_id,
              d.department_name
@@ -389,6 +393,7 @@ export class WarroomTasksService {
         batchDate: r.batch_date,
         dailyReports: (r.daily_reports as Array<Record<string, unknown>>) ?? [],
         records: (r.records as Array<Record<string, unknown>>) ?? [],
+        serviceIntake: (r.service_intake as Array<Record<string, unknown>>) ?? [],
         status: r.status,
         uploadedAt: r.uploaded_at,
         analysisIncomplete: r.status !== "done",
