@@ -2232,6 +2232,13 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .login-divider::before, .login-divider::after { content:""; flex:1; height:1px; background:var(--line); }
 .line-login-btn { display:flex; align-items:center; justify-content:center; gap:10px; background:var(--line-brand); color:#fff; border:1px solid var(--line-brand); width:100%; padding:12px; font-size:14.5px; font-weight:600; }
 .line-login-btn:hover { background:#05B14E; border-color:#05B14E; }
+/* 一人多租戶 · LINE 登入選組織（B）*/
+.tenant-pick { display:flex; flex-direction:column; gap:8px; margin-top:16px; }
+.tenant-pick-item { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:13px 16px; background:var(--surface); border:1px solid var(--line); border-radius:8px; cursor:pointer; text-align:left; transition:border-color .12s var(--ease), background .12s var(--ease); }
+.tenant-pick-item:hover:not(:disabled) { border-color:var(--primary); background:var(--primary-tint); }
+.tenant-pick-item:disabled { opacity:.5; cursor:default; }
+.tenant-pick-item .tp-name { font-size:14.5px; font-weight:600; color:var(--ink); }
+.tenant-pick-item .tp-role { font-size:12px; color:var(--ink-3); background:var(--well); padding:2px 9px; border-radius:999px; flex-shrink:0; }
 .line-login-btn:disabled { opacity:.5; cursor:not-allowed; }
 .line-login-icon { display:flex; align-items:center; }
 .login-hint { margin-top:16px; padding:12px; background:var(--surface-2, #F5F6F8); border-radius:6px; font-size:12px; color:var(--ink-2); line-height:1.7; }

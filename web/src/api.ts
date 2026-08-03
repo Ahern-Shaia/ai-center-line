@@ -237,11 +237,16 @@ export async function getLineOauthUrl(): Promise<{ url: string; state: string }>
   return req<{ url: string; state: string }>("/auth/line/oauth-url");
 }
 
-export async function completeLineOauth(code: string, state?: string): Promise<void> {
-  const d = await req<{ access_token: string; role: string; tenant_id: string | null }>("/auth/line/callback", {
-    method: "POST",
-    body: JSON.stringify({ code, state }),
-  });
+export interface TenantChoice {
+  needsTenantChoice: true;
+  selectionToken: string;
+  options: Array<{ tenantId: string | null; tenantName: string | null; role: string }>;
+}
+type LineLoginResp =
+  | { access_token: string; role: string; tenant_id: string | null }
+  | TenantChoice;
+
+function finishLineLogin(d: { access_token: string; tenant_id: string | null }) {
   setToken(d.access_token);
   // LINE 登入不走 email/密碼 · 記錄 email 用預設佔位
   localStorage.setItem(EMAIL_KEY, `line-user@${d.tenant_id ?? "aiproot"}`);
@@ -249,12 +254,32 @@ export async function completeLineOauth(code: string, state?: string): Promise<v
   localStorage.removeItem(EXPIRES_AT_KEY);
 }
 
+// 回傳 null = 已登入；回傳 TenantChoice = 一人多租戶、需選組織（B）
+export async function completeLineOauth(code: string, state?: string): Promise<TenantChoice | null> {
+  const d = await req<LineLoginResp>("/auth/line/callback", {
+    method: "POST",
+    body: JSON.stringify({ code, state }),
+  });
+  if ("needsTenantChoice" in d) return d;
+  finishLineLogin(d);
+  return null;
+}
+
+export async function selectLineTenant(selectionToken: string, tenantId: string): Promise<void> {
+  const d = await req<{ access_token: string; role: string; tenant_id: string | null }>("/auth/line/select-tenant", {
+    method: "POST",
+    body: JSON.stringify({ selectionToken, tenantId }),
+  });
+  finishLineLogin(d);
+}
+
 // LIFF · 用 liff.getAccessToken() 換 JWT（後端驗 channel+效期+profile · 見 /auth/liff/token）
 // 401 未綁定會以 ApiError 拋出真實訊息（/auth/liff/token 在 PRE_AUTH_PATHS · 不被蓋成「工作階段過期」）
-export async function applyLiffToken(accessToken: string): Promise<{ role: string; tenant_id: string | null }> {
+// botId：LIFF 從特定租戶的 bot 開 → 傳給後端綁死租戶（一人多租戶時才不會登入到別家）
+export async function applyLiffToken(accessToken: string, botId?: string): Promise<{ role: string; tenant_id: string | null }> {
   const d = await req<{ access_token: string; role: string; tenant_id: string | null }>("/auth/liff/token", {
     method: "POST",
-    body: JSON.stringify({ accessToken }),
+    body: JSON.stringify({ accessToken, botId }),
   });
   setToken(d.access_token);
   localStorage.setItem(EMAIL_KEY, `line-user@${d.tenant_id ?? "aiproot"}`);

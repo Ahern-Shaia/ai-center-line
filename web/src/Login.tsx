@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { ApiError, login, getLineOauthUrl, completeLineOauth } from "./api";
+import { ApiError, login, getLineOauthUrl, completeLineOauth, selectLineTenant, type TenantChoice } from "./api";
+
+const ROLE_LABEL: Record<string, string> = {
+  aiproot_admin: "平台管理員", consultant: "顧問", tenant_admin: "總經理室",
+  group_owner: "部門主管", assistant: "助理", employee: "員工",
+};
 
 // LINE OAuth state 由後端簽章並驗證（見 line-oauth.service）。
 // 早期版本存在 sessionStorage 前端自驗 → 手機上 LINE 內建瀏覽器把導回交給 Safari 時，
@@ -11,6 +16,8 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [lineBusy, setLineBusy] = useState(false);
+  // 一人多租戶 · 需選組織（B）
+  const [tenantChoice, setTenantChoice] = useState<TenantChoice | null>(null);
 
   // 處理 LINE OAuth callback · URL 帶 ?code=&state=
   useEffect(() => {
@@ -20,9 +27,10 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     if (!code) return;
     setLineBusy(true);
     completeLineOauth(code, state ?? undefined)
-      .then(() => {
+      .then((choice) => {
         window.history.replaceState({}, "", window.location.pathname);
-        onLogin();
+        if (choice) setTenantChoice(choice);   // 多綁 → 顯示選單，先不登入
+        else onLogin();
       })
       .catch((e) => {
         setErr(e instanceof ApiError ? e.message : "LINE 登入失敗");
@@ -30,6 +38,21 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       })
       .finally(() => setLineBusy(false));
   }, [onLogin]);
+
+  async function pickTenant(tenantId: string | null) {
+    if (!tenantChoice || !tenantId || lineBusy) return;
+    setLineBusy(true);
+    setErr("");
+    try {
+      await selectLineTenant(tenantChoice.selectionToken, tenantId);
+      onLogin();
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : "選擇組織失敗 · 請重新以 LINE 登入");
+      setTenantChoice(null);
+    } finally {
+      setLineBusy(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,6 +92,31 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
           <span className="mark">AI</span>
           <span className="name">aiproot 戰情室</span>
         </div>
+        {tenantChoice ? (
+          <div>
+            <div className="login-h1">選擇組織</div>
+            <div className="login-sub">你的 LINE 帳號在多個組織有帳號 · 請選擇要登入哪一個</div>
+            {err && <div className="login-err" role="alert" style={{ marginTop: 10 }}>{err}</div>}
+            <div className="tenant-pick">
+              {tenantChoice.options.map((o) => (
+                <button
+                  key={`${o.tenantId}-${o.role}`}
+                  type="button"
+                  className="tenant-pick-item"
+                  onClick={() => void pickTenant(o.tenantId)}
+                  disabled={lineBusy}
+                >
+                  <span className="tp-name">{o.tenantName ?? "（未命名組織）"}</span>
+                  <span className="tp-role">{ROLE_LABEL[o.role] ?? o.role}</span>
+                </button>
+              ))}
+            </div>
+            <button type="button" className="btn btn-ghost" style={{ marginTop: 12 }} onClick={() => { setTenantChoice(null); setErr(""); }} disabled={lineBusy}>
+              取消
+            </button>
+          </div>
+        ) : (
+        <>
         <div>
           <div className="login-h1">登入</div>
           <div className="login-sub">主管級請用公司帳號 · 員工可直接用 LINE 登入</div>
@@ -110,6 +158,8 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
           <b>員工</b>：先加公司 LINE Bot 好友完成綁定 · 才能用 LINE 登入<br />
           <b>主管</b>：兩者皆可 · 建議用公司帳號密碼（有 2FA 保護）
         </div>
+        </>
+        )}
       </div>
     </div>
   );

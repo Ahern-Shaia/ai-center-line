@@ -82,7 +82,7 @@ function LiffApp() {
         // JWT 流程（需已綁定）：我的日報、外勤打卡、我的行程
         if (page === "mine" || page === "punch" || page === "trips") {
           try {
-            await applyLiffToken(accessToken);   // 驗證 → JWT
+            await applyLiffToken(accessToken, botId);   // 驗證 → JWT · botId 綁死租戶（一人多租戶）
             setPhase(page);
           } catch (e) {
             if (e instanceof ApiError && e.status === 401) { setPhase("unbound"); setMsg(e.message); }
