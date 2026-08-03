@@ -20,6 +20,10 @@ export default function TaskBoard() {
   const [board, setBoard] = useState<WarroomTaskBoard | null>(null);
   // 「只看卡住的」· Linear 的 display options —— 要聚焦用篩選，不用另開一個容器
   const [onlyStuck, setOnlyStuck] = useState(false);
+  // 分類篩選（null = 全部）· V5：68 張混雜一欄時，先讓主管能一次只看一類
+  const [catFilter, setCatFilter] = useState<string | null>(null);
+  // 分類組的收合覆寫 · key = `${欄名}::${分類}`；預設前 2 組展開（見 isGroupCollapsed）
+  const [groupToggled, setGroupToggled] = useState<Set<string>>(new Set());
   // V4 · 存查改成獨立次頁（不再壓在看板底部）· 由 toolbar「存查」按鈕切換
   const [showArchive, setShowArchive] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -89,8 +93,26 @@ export default function TaskBoard() {
 
   // 篩選只影響「顯示什麼」，不影響欄頭計數 —— 計數要一直是真實總數，
   // 否則開了篩選之後數字跟著變，人會分不清是篩掉了還是真的少了
-  const pick = (list: typeof board.kanban.pending) =>
-    onlyStuck ? list.filter((t) => t.stuckDays != null) : list;
+  const pick = (list: typeof board.kanban.pending) => {
+    const byStuck = onlyStuck ? list.filter((t) => t.stuckDays != null) : list;
+    return catFilter ? byStuck.filter((t) => (t.category || UNCAT) === catFilter) : byStuck;
+  };
+
+  // 分類篩選 chip 的來源＝待處理的兩欄（已簽核是回顧用，不影響 triage 的分類視野）
+  const catChips = groupByCategory([...board.kanban.pending, ...board.kanban.overdue]);
+  const catTotal = board.kanban.pending.length + board.kanban.overdue.length;
+
+  const isGroupCollapsed = (colTitle: string, catKey: string, idx: number) => {
+    // 預設前 2 組展開、其餘收合（68 張分 5 組時，一次攤開全部等於沒分組）；使用者點過就反轉
+    const def = idx >= 2;
+    return groupToggled.has(`${colTitle}::${catKey}`) ? !def : def;
+  };
+  const toggleGroup = (colTitle: string, catKey: string) => setGroupToggled((prev) => {
+    const next = new Set(prev);
+    const k = `${colTitle}::${catKey}`;
+    next.has(k) ? next.delete(k) : next.add(k);
+    return next;
+  });
 
   return (
     <>
@@ -118,6 +140,26 @@ export default function TaskBoard() {
         </div>
       </div>
 
+      {/* V5 · 分類篩選 · 68 張混雜時先讓主管一次只看一類（維保要判「派給誰」、研發討論要判「算不算任務」）*/}
+      {catChips.length > 1 && (
+        <div className="kb-catbar">
+          <button
+            className={`kb-cchip${catFilter === null ? " on" : ""}`}
+            onClick={() => setCatFilter(null)}
+          >全部 <span className="n">{catTotal}</span></button>
+          {catChips.map((g) => (
+            <button
+              key={g.key}
+              className={`kb-cchip${catFilter === g.key ? " on" : ""}`}
+              onClick={() => setCatFilter(catFilter === g.key ? null : g.key)}
+            >
+              <span className={`kb-cdot kb-avatar-${catTone(g.key)}`} aria-hidden />
+              {g.label} <span className="n">{g.items.length}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <UnconfirmedQueue
         tickets={board.kanban.unconfirmed}
         onOpen={setDrawer}
@@ -131,6 +173,9 @@ export default function TaskBoard() {
           count={board.counts.pending}
           tickets={pick(board.kanban.pending)}
           onOpen={setDrawer}
+          grouped
+          isCollapsed={isGroupCollapsed}
+          onToggleGroup={toggleGroup}
         />
         <KanbanColumn
           title="逾時警示"
@@ -138,6 +183,9 @@ export default function TaskBoard() {
           count={board.counts.overdue}
           tickets={pick(board.kanban.overdue)}
           onOpen={setDrawer}
+          grouped
+          isCollapsed={isGroupCollapsed}
+          onToggleGroup={toggleGroup}
         />
         <KanbanColumn
           title="已簽核"
@@ -171,6 +219,7 @@ type Tone = "warn" | "danger" | "ok";
 
 function KanbanColumn({
   title, tone, count, tickets, onOpen, note, emptyLabel,
+  grouped, isCollapsed, onToggleGroup,
 }: {
   title: string;
   tone: Tone;
@@ -179,7 +228,14 @@ function KanbanColumn({
   onOpen: (t: WarroomKanbanTicket) => void;
   note?: string;
   emptyLabel?: string;
+  /** V5 · 依分類收攏（待簽核／逾時這種要 triage 的欄才開；已簽核是回顧用，平鋪即可）*/
+  grouped?: boolean;
+  isCollapsed?: (colTitle: string, catKey: string, idx: number) => boolean;
+  onToggleGroup?: (colTitle: string, catKey: string) => void;
 }) {
+  // 只有一組時不必分組（例：套了分類篩選）—— 多一層組頭只是噪音
+  const groups = grouped ? groupByCategory(tickets) : [];
+  const useGroups = grouped && groups.length > 1;
   // 空欄收起來 —— 留一個 400px 高的空框沒有資訊量，只是噪音（prod 分布 13/0/2）
   return (
     <div className={`kb-col${tickets.length === 0 ? " is-empty" : ""}`}>
@@ -196,15 +252,40 @@ function KanbanColumn({
         {tickets.length === 0 && (
           <div className="kb-empty">{emptyLabel ?? `目前沒有${title}的任務`}</div>
         )}
-        {tickets.map((t) => (
-          <TicketCard key={t.ticketId} t={t} tone={tone} onOpen={() => onOpen(t)} />
-        ))}
+        {useGroups
+          ? groups.map((g, idx) => {
+            const collapsed = isCollapsed?.(title, g.key, idx) ?? false;
+            return (
+              <div className={`kb-grp${collapsed ? " is-collapsed" : ""}`} key={g.key}>
+                <button className="kb-grp-hdr" onClick={() => onToggleGroup?.(title, g.key)} aria-expanded={!collapsed}>
+                  <span className="kb-grp-chev" aria-hidden>{collapsed ? "▸" : "▾"}</span>
+                  <span className={`kb-cdot kb-avatar-${catTone(g.key)}`} aria-hidden />
+                  <span className="kb-grp-title">{g.label}</span>
+                  <span className="kb-grp-count">{g.items.length} 張</span>
+                </button>
+                {!collapsed && (
+                  <div className="kb-grp-body">
+                    {g.items.map((t) => (
+                      <TicketCard key={t.ticketId} t={t} tone={tone} onOpen={() => onOpen(t)} inGroup />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })
+          : tickets.map((t) => (
+            <TicketCard key={t.ticketId} t={t} tone={tone} onOpen={() => onOpen(t)} />
+          ))}
       </div>
     </div>
   );
 }
 
-function TicketCard({ t, tone, onOpen }: { t: WarroomKanbanTicket; tone: Tone; onOpen: () => void }) {
+function TicketCard({ t, tone, onOpen, inGroup }: {
+  t: WarroomKanbanTicket; tone: Tone; onOpen: () => void;
+  /** 在分類組內 → 分類已在組頭寫過，卡片就不再重複（改讓來源群組出頭）*/
+  inGroup?: boolean;
+}) {
   // 高信度是本看板預設（sub 已說明）· 逐卡標「信度高」反成雜訊 · 只在中/低時提醒審核者留意
   const confChip = t.confidence === "medium"
     ? { label: "信度中", level: "mid", tip: "AI 對這張任務的把握程度為「中」· 建議點開卡片對照原始訊息再簽核" }
@@ -225,7 +306,7 @@ function TicketCard({ t, tone, onOpen }: { t: WarroomKanbanTicket; tone: Tone; o
       <div className="kb-card-summary">{t.summary}</div>
       <div className="kb-card-meta">
         {t.groupName && <span className="kb-group" title={`來源群組：${t.groupName}`}>{t.groupName}</span>}
-        {t.category && <span className="kb-tag">{catLabel(t.category)}</span>}
+        {!inGroup && t.category && <span className="kb-tag">{catLabel(t.category)}</span>}
         {confChip && (
           <span className={`kb-conf kb-conf-${confChip.level}`} title={confChip.tip}>
             <span className="kb-conf-d" aria-hidden />
@@ -294,6 +375,28 @@ function avatarTone(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (Math.imul(31, h) + name.charCodeAt(i)) | 0;
   return AVATAR_TONES[Math.abs(h) % AVATAR_TONES.length];
+}
+
+// 分類色 · 沿用同一組色盤與雜湊法。
+// ⚠️ 分類是**開放字串**（WTB-M2 category_registry 動態註冊），不可寫死清單 ——
+//    用雜湊配色，新分類自動有顏色且同名恆同色。
+const UNCAT = "__uncat__";
+function catTone(category: string): string {
+  return avatarTone(category || UNCAT);
+}
+
+/** 依分類分組 · 張數多的排前面（主管先處理大宗）· 未分類墊底 */
+function groupByCategory(tickets: WarroomKanbanTicket[]): Array<{ key: string; label: string; items: WarroomKanbanTicket[] }> {
+  const map = new Map<string, WarroomKanbanTicket[]>();
+  for (const t of tickets) {
+    const key = t.category || UNCAT;
+    const arr = map.get(key) ?? [];
+    arr.push(t);
+    map.set(key, arr);
+  }
+  return Array.from(map.entries())
+    .map(([key, items]) => ({ key, label: key === UNCAT ? "未分類" : catLabel(key), items }))
+    .sort((a, b) => (a.key === UNCAT ? 1 : b.key === UNCAT ? -1 : 0) || b.items.length - a.items.length);
 }
 
 // 手動派發 · 導入期的主要流程

@@ -1840,6 +1840,24 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .kb-avatar { width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:#fff; flex-shrink:0; }
 .kb-avatar-blue { background:#5B76B7; } .kb-avatar-green { background:#3E9E82; } .kb-avatar-rose { background:#C05B7A; }
 .kb-avatar-amber { background:#B98431; } .kb-avatar-slate { background:#6B7686; }
+/* V5 · 分類篩選 chips（taskboard-v5-grouped.html）*/
+.kb-catbar { display:flex; gap:6px; flex-wrap:wrap; padding:10px 0 12px; border-bottom:1px solid var(--line-2); margin-bottom:12px; }
+.kb-cchip { font-size:12px; padding:5px 11px; border-radius:16px; border:1px solid var(--line); background:var(--surface); color:var(--ink-2); cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-family:inherit; }
+.kb-cchip:hover:not(.on) { border-color:var(--primary); color:var(--primary-2); }
+.kb-cchip.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+.kb-cchip .n { font-family:var(--mono); font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+.kb-cchip.on .n { color:#C7CBD3; }
+.kb-cdot { width:8px; height:8px; border-radius:2px; flex-shrink:0; display:inline-block; }
+/* V5 · 分類組（待簽核／逾時欄內收攏）*/
+.kb-grp { margin-bottom:10px; }
+/* sticky：欄內是捲動容器（.kb-col-body max-height + overflow-y:auto），
+   一組 18 張捲下去就不知道自己在哪一類了 —— 組頭黏在頂端才有導航作用 */
+.kb-grp-hdr { position:sticky; top:-2px; z-index:2; display:flex; align-items:center; gap:8px; width:100%; padding:7px 8px; background:var(--surface); border:1px solid var(--line); border-radius:6px; cursor:pointer; font-family:inherit; text-align:left; box-shadow:0 1px 2px rgba(17,24,39,.04); }
+.kb-grp-hdr:hover { border-color:var(--primary); }
+.kb-grp-chev { color:var(--ink-3); font-size:10px; }
+.kb-grp-title { font-size:12.5px; font-weight:600; color:var(--ink); }
+.kb-grp-count { margin-left:auto; font-family:var(--mono); font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+.kb-grp-body { padding:9px 0 2px 4px; }
 .kb-assignee, .kb-due { display:inline-flex; align-items:center; gap:3px; color:var(--ink-3); }
 .kb-ic { flex-shrink:0; opacity:.7; }
 .kb-card-dept { font-size:11px; color:var(--ink-3); margin-top:2px; }
