@@ -570,6 +570,7 @@ export interface WarroomDailyReport {
   batchDate: string;
   dailyReports: Array<Record<string, unknown>>;
   records: Array<Record<string, unknown>>;    // AI 抽的分類記錄 · daily_reports 空 (業務對話) 時 fallback 顯
+  serviceIntake: Array<Record<string, unknown>>;   // 客服報修派工單 · 獨立一區，不進 fallback 鏈
   status: string;
   uploadedAt: string;
   /** 這一天這個群的分析沒有完成 —— 要顯示「尚未整理」而不是「當日無資料」 */

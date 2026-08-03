@@ -118,22 +118,35 @@ export default function DailyLog() {
   );
 }
 
+// ⚠️ 「這個群今天有沒有內容」的單一判準 —— 三種產出都算。
+//    原本只看 dailyReports/records，於是「只有報修派工單」的群被歸成「今日無活動」摺疊起來，
+//    等於抽出來也看不到（service_intake 上線後才會踩到）。新增產出型別時要一起加進這裡。
+type DailyUpload = WarroomDailyDays["days"][number]["uploads"][number];
+const itemsOf = (u: DailyUpload) =>
+  u.dailyReports.length + u.records.length + (u.serviceIntake?.length ?? 0);
+const hasAnyContent = (u: DailyUpload) => itemsOf(u) > 0;
+
 // 今日概況 —— 需注意（未分派/未完成）優先，其餘一句話帶過
 function daySummary(day: WarroomDailyDays["days"][number]) {
   const attn = day.uploads.filter((u) => u.analysisIncomplete || !u.departmentId);
-  const active = day.uploads.filter((u) => !u.analysisIncomplete && u.departmentId && (u.dailyReports.length > 0 || u.records.length > 0));
+  const active = day.uploads.filter((u) => !u.analysisIncomplete && u.departmentId && hasAnyContent(u));
   const reports = active.reduce((n, u) => n + u.dailyReports.length, 0);
   const records = active.reduce((n, u) => n + u.records.length, 0);
-  return { attn: attn.length, active: active.length, reports, records };
+  const intake = active.reduce((n, u) => n + (u.serviceIntake?.length ?? 0), 0);
+  return { attn: attn.length, active: active.length, reports, records, intake };
 }
 
 function SummaryBar({ day }: { day: WarroomDailyDays["days"][number] }) {
-  const { attn, active, reports, records } = daySummary(day);
+  const { attn, active, reports, records, intake } = daySummary(day);
+  const parts: string[] = [];
+  if (reports > 0) parts.push(`${reports} 筆日報`);
+  if (intake > 0) parts.push(`${intake} 張報修派工`);
+  if (records > 0) parts.push(`${records} 項記錄`);
   return (
     <div className="dl-sumbar">
       今日 <b>{active}</b> 群有活動
       {attn > 0 && <> · <b className="warn">{attn} 群需注意</b></>}
-      {(reports > 0 || records > 0) && <> · 共 <b>{reports}</b> 筆日報、<b>{records}</b> 項記錄</>}
+      {parts.length > 0 && <> · 共 {parts.join("、")}</>}
     </div>
   );
 }
@@ -146,10 +159,10 @@ function TimelineDay({ day, today }: { day: WarroomDailyDays["days"][number]; to
   // 需注意（未分派/未完成）置頂 → 有內容 → 無活動收成一行。掃描時眼睛只在琥珀燈點停。
   const attn = day.uploads.filter((u) => u.analysisIncomplete || !u.departmentId);
   const finished = day.uploads.filter((u) => !u.analysisIncomplete && u.departmentId);
-  const hasContent = finished.filter((u) => u.dailyReports.length > 0 || u.records.length > 0);
-  const quiet = finished.filter((u) => u.dailyReports.length === 0 && u.records.length === 0);
+  const hasContent = finished.filter(hasAnyContent);
+  const quiet = finished.filter((u) => !hasAnyContent(u));
   const shown = [...attn, ...(showQuiet ? [...hasContent, ...quiet] : hasContent)];
-  const itemCount = hasContent.reduce((n, u) => n + u.dailyReports.length + u.records.length, 0);
+  const itemCount = hasContent.reduce((n, u) => n + itemsOf(u), 0);
 
   // today/past 只管大小排版；發光實心點跟著 open（展開中的日期就發光）
   return (
@@ -176,6 +189,7 @@ function TimelineDay({ day, today }: { day: WarroomDailyDays["days"][number]; to
               batchDate={u.batchDate}
               dailyReports={u.dailyReports}
               records={u.records}
+              serviceIntake={u.serviceIntake ?? []}
               uploadId={u.uploadId}
               analysisIncomplete={u.analysisIncomplete}
             />

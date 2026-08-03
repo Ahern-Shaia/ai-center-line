@@ -21,6 +21,8 @@ export interface GroupRowProps {
   batchDate: string;
   dailyReports: Array<Record<string, unknown>>;
   records: Array<Record<string, unknown>>;
+  /** 客服報修派工單（service_order 第二區塊）· 獨立一區顯示，不被 records fallback 蓋掉 */
+  serviceIntake: Array<Record<string, unknown>>;
   uploadId: number;
   /** 分析沒完成 —— 摘要要說「尚未整理」不是「當日無工作日報」 */
   analysisIncomplete: boolean;
@@ -33,6 +35,18 @@ function deriveRow(p: GroupRowProps): { signal: Signal; summary: string; count: 
   }
   if (p.analysisIncomplete) {
     return { signal: "warn", summary: "這一天的分析尚未完成 · 內容還沒整理出來", count: "", pill: "分析未完成" };
+  }
+  // 報修派工單優先：它是「有人在等回覆」的待辦，比當日記錄更該被看到
+  if (p.serviceIntake.length > 0) {
+    const first = p.serviceIntake[0];
+    const who = (first.customer as string) || (first.vehicle as string) || "";
+    const issue = typeof first.issue === "string" && first.issue.trim() ? first.issue.trim() : "";
+    return {
+      signal: "ok",
+      summary: `${p.serviceIntake.length} 張報修派工${who || issue ? ` · ${who ? who + "：" : ""}${issue}` : ""}`,
+      count: `${p.serviceIntake.length} 張`,
+      pill: null,
+    };
   }
   if (p.dailyReports.length > 0) {
     const first = p.dailyReports[0];
@@ -59,7 +73,7 @@ function deriveRow(p: GroupRowProps): { signal: Signal; summary: string; count: 
 }
 
 export default function GroupCard(props: GroupRowProps) {
-  const { groupId, groupName, departmentId, departmentName, batchDate, dailyReports, records, uploadId, analysisIncomplete } = props;
+  const { groupId, groupName, departmentId, departmentName, batchDate, dailyReports, records, serviceIntake, uploadId, analysisIncomplete } = props;
   const [expanded, setExpanded] = useState(false);
   const [messages, setMessages] = useState<WarroomGroupMessage[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -115,6 +129,23 @@ export default function GroupCard(props: GroupRowProps) {
               <span className="dl-card-nodept-hint">已記錄，系統管理員會處理 · 完成後這裡會自動出現內容</span>
             </div>
           )}
+          {/* 報修派工單 · 獨立一區（不進 dailyReports/records 的 fallback 鏈）——
+              同一天可能既有派工單又有其他記錄，用 fallback 會把派工單蓋掉。*/}
+          {serviceIntake.length > 0 && (
+            <div className="dl-intake">
+              <div className="dl-intake-hdr">報修派工 · {serviceIntake.length} 張</div>
+              {serviceIntake.slice(0, MAX_ITEMS).map((r, i) => <IntakeItem key={i} r={r} />)}
+              {serviceIntake.length > MAX_ITEMS && (
+                <div className="dl-report-more">
+                  {canOpenConvoDetail() ? (
+                    <button className="nc-lnk" onClick={() => navigateTo({ page: "convo-detail", uploadId })}>
+                      + {serviceIntake.length - MAX_ITEMS} 張 · 查完整對話 →
+                    </button>
+                  ) : <span>+ {serviceIntake.length - MAX_ITEMS} 張</span>}
+                </div>
+              )}
+            </div>
+          )}
           {dailyReports.length > 0 ? (
             <ul className="dl-report-list">
               {dailyReports.slice(0, MAX_ITEMS).map((r, i) => (
@@ -143,7 +174,8 @@ export default function GroupCard(props: GroupRowProps) {
                 </div>
               )}
             </div>
-          ) : analysisIncomplete || !departmentId ? null : (
+          ) : analysisIncomplete || !departmentId || serviceIntake.length > 0 ? null : (
+            // ⚠️ serviceIntake 有東西時不可再說「當日無工作日報」—— 上面才剛列出派工單，會自相矛盾
             <div className="dl-card-empty">當日無工作日報</div>
           )}
 
@@ -209,6 +241,45 @@ function RecordItem({ r }: { r: Record<string, unknown> }) {
       <div className="dl-record-summary">
         {title}
         {detail && detail !== title && <span style={{ color: "var(--ink-2)" }}> · {detail}</span>}
+      </div>
+      {fields.length > 0 && (
+        <div className="dl-record-fields">
+          {fields.map(([k, v]) => (
+            <span key={k} className="dl-record-field"><b>{k}</b>{v}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 一張客服報修派工單 · 沿用 .dl-record-* 版型（同一頁的視覺語言）
+// 欄位對照 serviceIntakeSchema：customer/site/vehicle/warranty/issue/status/contact/phone
+function IntakeItem({ r }: { r: Record<string, unknown> }) {
+  const customer = (r.customer as string) || "";
+  const site = (r.site as string) || "";
+  const vehicle = (r.vehicle as string) || "";
+  const issue = (r.issue as string) || "";
+  const warranty = r.warranty as string | null;
+  const status = r.status as string | null;
+  const contact = r.contact as string | null;
+  const phone = r.phone as string | null;
+
+  const fields: Array<[string, string]> = [];
+  if (vehicle) fields.push(["車輛", vehicle]);
+  if (warranty) fields.push(["保固", warranty]);
+  if (contact) fields.push(["聯絡人", contact]);
+  if (phone) fields.push(["電話", phone]);
+  if (status) fields.push(["狀態", status]);
+
+  // 客戶未抽到時（表單常無「客戶:」欄）用車輛當標題，不要顯示空白列
+  const head = customer || vehicle || "未指明客戶";
+  return (
+    <div className="dl-record-item">
+      <div className="dl-record-cat dl-intake-cat">報修</div>
+      <div className="dl-record-summary">
+        <b>{head}</b>{site && <span style={{ color: "var(--ink-3)" }}> · {site}</span>}
+        {issue && <span style={{ color: "var(--ink-2)" }}> · {issue}</span>}
       </div>
       {fields.length > 0 && (
         <div className="dl-record-fields">
