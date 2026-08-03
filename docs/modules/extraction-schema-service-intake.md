@@ -249,7 +249,7 @@ nullable 欄衝到 24。這限制在 **API 端、不在 zod** → 靜態驗不�
 | **M1 v1** ❌ | 併進主 output schema 的作法 → 超 Anthropic 16 union 上限、400 · **已 revert `7cfd308`**（DB 欄位 service_intake 保留） |
 | **M1 v2** ✅ | 重做完成：`extraSection` 帶自己的 schema + promptFragment · `analyzeExtraSection` 獨立第二次呼叫 · pipeline 每段跑主+intake 兩次抽取 · phone 遮罩 · migration 0057 復原 · **本地真實 smoke 過**（upload #81：主呼叫無 400、service_intake 5=5、warranty 2/5＝正好對上 5 張裡 2 張非「未知」，其餘「未知」正確→null、phone 已遮罩）· 25 支單元測試綠 · **未 push、migration 已在 prod** |
 | **M2** | 真實報修單去識別化入 `samples/` + R12 回歸（新舊都過）+ §5.3 驗收（6 張報修單、warranty > 0%）|
-| **M3** | 前端顯示（群組日誌「報修派工」區）+ 材料化規則（依 OQ-ESI-6）+ **讀取端點自 scope（F-4 · 無 RLS）**|
+| **M3** 🚧 | ✅ **前端顯示已完成**（2026-08-03）：群組日誌獨立「報修派工」區 + 卡片摘要優先 + 日概況計數。F-4 由 `listDailyReports` 既有 tenantFilter/deptFilter 覆蓋（不需新 scope 碼）。⚠️ 途中發現並修掉：`DailyLog` 的「有內容 vs 今日無活動」判準只看 dailyReports/records → **只有報修單的群會被摺疊隱藏**（抽了也看不到），已抽成 `hasAnyContent/itemsOf` 單一判準。<br>⏳ **材料化成任務（OQ-ESI-6）尚未做** —— 需先評估會不會灌爆看板 |
 | **M4** | 台灣福祉實跑一週、量 `service_intake` 產出量與 warranty/customer/vehicle 填出率 |
 | **M5** | FMEA 覆核 + 上線 |
 
