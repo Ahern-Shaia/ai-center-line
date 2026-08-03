@@ -499,6 +499,7 @@ export interface WarroomKanbanTicket {
   createdAt: string;
   departmentId: string;
   departmentName: string | null;
+  groupName: string | null;
   confirmedByName: string | null;
   confirmedAt: string | null;
   // 第四條軸 · 擁有者是當責人本人（前三條是 AI／主管／歸屬）

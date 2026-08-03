@@ -224,6 +224,7 @@ function TicketCard({ t, tone, onOpen }: { t: WarroomKanbanTicket; tone: Tone; o
       <span className={`kb-stripe kb-stripe-${tone}`} aria-hidden />
       <div className="kb-card-summary">{t.summary}</div>
       <div className="kb-card-meta">
+        {t.groupName && <span className="kb-group" title={`來源群組：${t.groupName}`}>{t.groupName}</span>}
         {t.category && <span className="kb-tag">{catLabel(t.category)}</span>}
         {confChip && (
           <span className={`kb-conf kb-conf-${confChip.level}`} title={confChip.tip}>
@@ -428,6 +429,7 @@ function TicketDrawer({
           <div className="drawer-summary">{ticket.summary}</div>
 
           <dl className="drawer-meta">
+            {ticket.groupName && (<><dt>來源群組</dt><dd>{ticket.groupName}</dd></>)}
             {ticket.category && (<><dt>分類</dt><dd>{catLabel(ticket.category)}</dd></>)}
             {ticket.departmentName && (<><dt>部門</dt><dd>{ticket.departmentName}</dd></>)}
             {ticket.assigneeDisplayName && (<><dt>指派</dt><dd>{ticket.assigneeDisplayName}</dd></>)}
