@@ -206,8 +206,10 @@ function KanbanColumn({
 
 function TicketCard({ t, tone, onOpen }: { t: WarroomKanbanTicket; tone: Tone; onOpen: () => void }) {
   // 高信度是本看板預設（sub 已說明）· 逐卡標「信度高」反成雜訊 · 只在中/低時提醒審核者留意
-  const confChip = t.confidence === "medium" ? { label: "信度中", level: "mid" }
-    : t.confidence === "low" ? { label: "信度低", level: "low" }
+  const confChip = t.confidence === "medium"
+    ? { label: "信度中", level: "mid", tip: "AI 對這張任務的把握程度為「中」· 建議點開卡片對照原始訊息再簽核" }
+    : t.confidence === "low"
+      ? { label: "信度低", level: "low", tip: "AI 對這張任務的把握程度為「低」· 語意較模糊，簽核前務必點開對照原始訊息" }
       : null;
   // 逾時要顯「量級」不只是「在逾時欄」—— 逾 1 天和逾 15 天的處理順序完全不同
   // ⚠️ 改吃後端算好的 overdueDays：prod 的 due_at 100% 是 null，
@@ -224,7 +226,7 @@ function TicketCard({ t, tone, onOpen }: { t: WarroomKanbanTicket; tone: Tone; o
       <div className="kb-card-meta">
         {t.category && <span className="kb-tag">{catLabel(t.category)}</span>}
         {confChip && (
-          <span className={`kb-conf kb-conf-${confChip.level}`}>
+          <span className={`kb-conf kb-conf-${confChip.level}`} title={confChip.tip}>
             <span className="kb-conf-d" aria-hidden />
             {confChip.label}
           </span>
