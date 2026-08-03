@@ -45,6 +45,8 @@ export interface WarroomTicket {
   createdAt: string;
   departmentId: string;
   departmentName: string | null;
+  /** 來源 LINE 群組名（su=source upload → line_group）· 卡片顯示用，比部門更直覺辨認 */
+  groupName: string | null;
   confirmedByName: string | null;
   // 0036 · 第四條軸（當責人本人回報）· displayState 是四軸投影後的對外單一狀態
   workStatus: "open" | "closed";
@@ -139,6 +141,7 @@ export class WarroomTasksService {
       created_at: string;
       department_id: string;
       department_name: string | null;
+      group_name: string | null;
       confirmed_by_name: string | null;
       confirmed_at: string | null;
       work_status: "open" | "closed";
@@ -157,6 +160,7 @@ export class WarroomTasksService {
              t.source_upload_id, t.source_record_index,
              t.created_at::text,
              t.department_id::text, d.department_name,
+             lg.display_name AS group_name,
              u.display_name AS confirmed_by_name,
              t.confirmed_at::text,
              t.work_status, t.work_outcome, t.work_closed_via,
@@ -165,6 +169,9 @@ export class WarroomTasksService {
              t.work_asked_at::text
       FROM tickets t
       LEFT JOIN departments d ON d.department_id = t.department_id
+      -- 來源群組名（su=source upload · analysis_upload 無 RLS 但 join 的是本 ticket 自己的 upload_id，不跨租戶）
+      LEFT JOIN analysis_upload su ON su.id = t.source_upload_id
+      LEFT JOIN line_group lg ON lg.group_id = su.group_id
       LEFT JOIN users u ON u.user_id = t.confirmed_by
       LEFT JOIN users au ON au.user_id = t.assignee_user_id
       LEFT JOIN users wu ON wu.user_id = t.work_closed_by
@@ -220,6 +227,7 @@ export class WarroomTasksService {
       createdAt: r.created_at,
       departmentId: r.department_id,
       departmentName: r.department_name,
+      groupName: r.group_name,
       confirmedByName: r.confirmed_by_name,
       confirmedAt: r.confirmed_at,
       workStatus: r.work_status,
