@@ -11,4 +11,15 @@ export const CATEGORY_LABEL: Record<string, string> = {
   chitchat: "閒聊",
 };
 
-export const catLabel = (c: string): string => CATEGORY_LABEL[c] ?? c;
+/**
+ * 分類顯示名。
+ * 優先序：① 客戶在「任務設定→分類詞庫」自訂的名字（category_registry.category_name）
+ *        ② 內建中文對照表　③ 原始 slug（不吞資料）
+ *
+ * ⚠️ registryName 等於 slug 時視為「還沒命名」而非自訂 —— 註冊時預設就是塞 slug，
+ *    若直接採用會讓 AI 新產生的分類在畫面上顯示英文（違反 UI 中文優先鐵則）。
+ */
+export const catLabel = (c: string, registryName?: string | null): string => {
+  if (registryName && registryName !== c) return registryName;
+  return CATEGORY_LABEL[c] ?? c;
+};

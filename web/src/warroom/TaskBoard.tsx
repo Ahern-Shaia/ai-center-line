@@ -306,7 +306,7 @@ function TicketCard({ t, tone, onOpen, inGroup }: {
       <div className="kb-card-summary">{t.summary}</div>
       <div className="kb-card-meta">
         {t.groupName && <span className="kb-group" title={`來源群組：${t.groupName}`}>{t.groupName}</span>}
-        {!inGroup && t.category && <span className="kb-tag">{catLabel(t.category)}</span>}
+        {!inGroup && t.category && <span className="kb-tag">{catLabel(t.category, t.categoryName)}</span>}
         {confChip && (
           <span className={`kb-conf kb-conf-${confChip.level}`} title={confChip.tip}>
             <span className="kb-conf-d" aria-hidden />
@@ -395,7 +395,7 @@ function groupByCategory(tickets: WarroomKanbanTicket[]): Array<{ key: string; l
     map.set(key, arr);
   }
   return Array.from(map.entries())
-    .map(([key, items]) => ({ key, label: key === UNCAT ? "未分類" : catLabel(key), items }))
+    .map(([key, items]) => ({ key, label: key === UNCAT ? "未分類" : catLabel(key, items[0]?.categoryName), items }))
     .sort((a, b) => (a.key === UNCAT ? 1 : b.key === UNCAT ? -1 : 0) || b.items.length - a.items.length);
 }
 
@@ -533,7 +533,7 @@ function TicketDrawer({
 
           <dl className="drawer-meta">
             {ticket.groupName && (<><dt>來源群組</dt><dd>{ticket.groupName}</dd></>)}
-            {ticket.category && (<><dt>分類</dt><dd>{catLabel(ticket.category)}</dd></>)}
+            {ticket.category && (<><dt>分類</dt><dd>{catLabel(ticket.category, ticket.categoryName)}</dd></>)}
             {ticket.departmentName && (<><dt>部門</dt><dd>{ticket.departmentName}</dd></>)}
             {ticket.assigneeDisplayName && (<><dt>指派</dt><dd>{ticket.assigneeDisplayName}</dd></>)}
             {ticket.dueAt && (<><dt>截止</dt><dd>{formatDate(ticket.dueAt)}</dd></>)}

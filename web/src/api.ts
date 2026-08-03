@@ -525,6 +525,7 @@ export interface WarroomKanbanTicket {
   departmentId: string;
   departmentName: string | null;
   groupName: string | null;
+  categoryName: string | null;   // 客戶自訂的分類中文名（category_registry）
   confirmedByName: string | null;
   confirmedAt: string | null;
   // 第四條軸 · 擁有者是當責人本人（前三條是 AI／主管／歸屬）
