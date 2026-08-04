@@ -67,7 +67,17 @@
 ### B3 · 設每個區塊的動作（**關鍵**）
 點每一個按鈕區塊 → **動作類型選「連結」（URI）** → 貼對應網址：
 
-網址格式：`https://liff.line.me/<該 bot 的 LIFF ID>?page=<punch|trips|mine>&botId=<該 bot 的 bot_id>`
+網址格式：
+
+```
+https://liff.line.me/<LIFF ID>?page=<punch|trips|mine>&botId=<bot_id>&liffId=<LIFF ID>
+```
+
+**⚠️ `liffId` 要重複帶一次，不是贅字。** 前面那個是給 LINE 用來決定開哪支 LIFF app 的，
+query 裡那個是給頁面自己 `liff.init()` 用的 —— 頁面拿不到「我是被哪支 LIFF 開的」，
+沒帶就會退回預設 LIFF ID，用 A 的 ID 去 init 一個以 B 開啟的 LIFF，LINE 會直接回
+`Invalid LIFF ID`（2026-08-04 aiproot 實際踩到）。
+用預設那支（`2010801742-WBQkAv5t`）的 channel 剛好不會出錯，所以這個坑只在第二支 LIFF 出現。
 
 **⚠️ `botId` 不可省，`LIFF ID` 也必須是該 channel 自己那一支。**
 兩者都是**每個 channel 不同**的，不能從別家複製貼上。原因見下方兩節。
@@ -83,9 +93,9 @@
 例（aiproot 的三顆按鈕）：
 
 ```
-打卡     https://liff.line.me/2010964394-L0F2wcmt?page=punch&botId=99142261-c99d-4aac-9256-67158382c700
-我的行程 https://liff.line.me/2010964394-L0F2wcmt?page=trips&botId=99142261-c99d-4aac-9256-67158382c700
-我的日報 https://liff.line.me/2010964394-L0F2wcmt?page=mine&botId=99142261-c99d-4aac-9256-67158382c700
+打卡     https://liff.line.me/2010964394-L0F2wcmt?page=punch&botId=99142261-c99d-4aac-9256-67158382c700&liffId=2010964394-L0F2wcmt
+我的行程 https://liff.line.me/2010964394-L0F2wcmt?page=trips&botId=99142261-c99d-4aac-9256-67158382c700&liffId=2010964394-L0F2wcmt
+我的日報 https://liff.line.me/2010964394-L0F2wcmt?page=mine&botId=99142261-c99d-4aac-9256-67158382c700&liffId=2010964394-L0F2wcmt
 ```
 
 > ⚠️ 一定要選「連結／URI」並貼 `liff.line.me/...`，選單才會在 LINE 內開 LIFF 頁。不要選「文字」或「優惠券」。
@@ -135,6 +145,7 @@ LINE 的 userId 是**依 provider 發放**的。LIFF 掛在哪個 provider 的 L
 | 症狀 | 原因 / 解法 |
 |---|---|
 | 點按鈕沒反應 / 開錯頁 | 動作沒選「連結」或網址貼錯；`?page=` 拼錯（punch / mine） |
+| **`Invalid LIFF ID` / 無法開啟** | 選單網址漏了 `&liffId=`（B3）· 頁面退回預設 LIFF ID 去 init，與實際開啟的那支不符。用預設 LIFF 的 channel 不會遇到，只有第二支以後的 LIFF 會 |
 | 顯示「綁定了多個組織，無法判斷要開哪一個」 | 選單網址漏了 `botId`（B3）· **三顆按鈕都要補**。只綁一家的人不會遇到，所以很容易漏測 |
 | 進去看到的是**別家公司**的資料 | 同上，且是舊版行為（會靜默取最新綁定）· 補上 `botId` 後就會改成明確報錯 |
 | 開了頁但「缺 botId」 | 三顆按鈕的網址都要帶 `botId`（B3）· 若已帶仍出錯，多為 LINE webview 快取舊版 → 完全關閉 LINE 重開 |
