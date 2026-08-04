@@ -23,9 +23,11 @@ export class SchedulerConfigController {
    * tenantId：平台角色用來指定「要看哪一家的 override」。不傳＝只看 platform default。
    *
    * 先前沒有這個參數，於是 aiproot 看不到、也就建不出任何 per-tenant override
-   * （前端只能拿 session.tenant_id，平台帳號是 null）。後果是新接的租戶永遠沒有排程 ——
-   * 群組收得到訊息、看起來一切正常，但不會被分析，也不會產生日報。
-   * 2026-08-04 aiproot 自己的測試群就是這樣累積了 15 則訊息、0 個批次。
+   * （前端只能拿 session.tenant_id，平台帳號是 null）。
+   *
+   * 註：沒有 override 的租戶會吃 platform default（tenant_id=NULL 那兩列），
+   * 所以不是「完全不會跑」—— 但時間與 lookback 全平台一致，
+   * 想給某一家不同的節奏（或先停掉）就只能改平台預設，會波及所有人。
    */
   @Get()
   @RequirePermission("scheduler-config:view")

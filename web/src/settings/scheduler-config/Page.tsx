@@ -24,7 +24,7 @@ export default function SchedulerConfigPage() {
   const canManagePlatform = perms.has("scheduler-config:manage-platform");
 
   // 平台角色要能指定「在設哪一家」。沒有這個，aiproot 存檔一律變成 platform default
-  // （session.tenantId 是 null），於是新租戶永遠沒有自己的排程 —— 群組收得到訊息但不會被分析。
+  // （session.tenantId 是 null）—— 想單獨調某一家的節奏就只能改平台預設，會波及所有租戶。
   const [pickedTenantId, tenantPicker, tenantReady] = useTenantPicker();
 
   const [configs, setConfigs] = useState<SchedulerConfigRow[]>([]);
