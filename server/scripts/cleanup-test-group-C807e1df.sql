@@ -76,7 +76,9 @@ UNION ALL SELECT 'line_group',    count(*) FROM line_group    WHERE group_id = '
 UNION ALL SELECT 'analysis_upload', count(*) FROM analysis_upload WHERE group_id = 'C807e1df2e7e17ffde6a5df33ddf34104'
 UNION ALL SELECT 'pending_signal', count(*) FROM pending_completion_signal WHERE group_id = 'C807e1df2e7e17ffde6a5df33ddf34104';
 
--- 台灣福祉任務總數應從 141 → 125，待簽核應從 68 → 62
+-- 台灣福祉任務總數應從 180 → 159，待簽核應從 92 → 84
+-- （2026-08-04 17:xx 實測值。這個群在被踢出前又跑過分析批次，數字會隨時間長，
+--   跑之前先自己 SELECT 一次現況，不要照抄這行註解 —— 我第一版寫的 141/68 就已經過期了。）
 SELECT confirm_status AS 狀態, count(*) FROM tickets
 WHERE tenant_id = '4d97eced-64c5-4a38-952b-dfce9588ab7c'::uuid GROUP BY 1 ORDER BY 2 DESC;
 
