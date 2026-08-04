@@ -1455,8 +1455,9 @@ export interface SchedulerConfigRow {
   updatedAt: string;
 }
 
-export const listSchedulerConfigs = () =>
-  req<{ configs: SchedulerConfigRow[] }>("/scheduler-config");
+// tenantId：平台角色指定要看哪一家的設定 · 不傳＝只看平台預設
+export const listSchedulerConfigs = (tenantId?: string) =>
+  req<{ configs: SchedulerConfigRow[] }>(`/scheduler-config${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
 
 export const upsertSchedulerConfig = (args: {
   schedulerId: SchedulerId;

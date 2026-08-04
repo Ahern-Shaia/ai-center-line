@@ -11,6 +11,7 @@ import {
 import { usePermissions } from "../../permission/PermissionContext";
 import { useToast } from "../../Toast";
 import ConfirmDialog from "../../shared/ConfirmDialog";
+import { useTenantPicker } from "../../shared/TenantPicker";
 
 // scheduler-config M4 · 定時任務設定
 // 對照 docs/modules/scheduler-config.md §4 · v0.2 APPROVED
@@ -22,6 +23,10 @@ export default function SchedulerConfigPage() {
   const canManageTenant = perms.has("scheduler-config:manage-tenant");
   const canManagePlatform = perms.has("scheduler-config:manage-platform");
 
+  // 平台角色要能指定「在設哪一家」。沒有這個，aiproot 存檔一律變成 platform default
+  // （session.tenantId 是 null），於是新租戶永遠沒有自己的排程 —— 群組收得到訊息但不會被分析。
+  const [pickedTenantId, tenantPicker, tenantReady] = useTenantPicker();
+
   const [configs, setConfigs] = useState<SchedulerConfigRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -29,16 +34,17 @@ export default function SchedulerConfigPage() {
 
   const refresh = useCallback(async () => {
     if (!canView) { setLoading(false); return; }
+    if (!tenantReady) return;                 // 平台角色等租戶清單載回來再查，否則會拿到空 tenantId
     setLoading(true);
     try {
-      const res = await listSchedulerConfigs();
+      const res = await listSchedulerConfigs(pickedTenantId);
       setConfigs(res.configs);
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
     } finally {
       setLoading(false);
     }
-  }, [canView, toast]);
+  }, [canView, toast, pickedTenantId, tenantReady]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -59,15 +65,44 @@ export default function SchedulerConfigPage() {
     return entry?.override ?? entry?.platform ?? null;
   }, [resolved]);
 
+  /**
+   * 這家還沒有任何設定時的起始值。
+   *
+   * 沒有它的話頁面會走進死路：`activeCfg` 回 null → 不渲染任何卡片 →
+   * 空狀態叫人「聯繫 AIPROOT 技術支援」，而 aiproot 自己就是技術支援。
+   * 新接的租戶因此永遠沒有排程，群組收得到訊息卻不會被分析。
+   *
+   * 預設值取自台灣福祉實際在跑的設定（已驗證可用），一律先停用 ——
+   * 開不開由人決定，不要幫客戶自動啟動會花 API 費用的東西。
+   */
+  const draftCfg = useCallback((id: SchedulerId): SchedulerConfigRow => ({
+    schedulerId: id,
+    tenantId: pickedTenantId ?? session?.tenantId ?? null,
+    enabled: false,
+    cronExpr: "0 18 * * *",
+    timeZone: "Asia/Taipei",
+    minSourceCount: id === "pdr" ? 2 : 0,
+    lookbackDays: id === "pdr" ? 1 : 2,
+    concurrency: 3,
+    lastRunAt: null,
+    nextRunAt: null,
+    lastRunResult: null,
+    updatedBy: null,
+    updatedAt: "",
+  }), [pickedTenantId, session?.tenantId]);
+
   async function doSave(patch: Partial<SchedulerConfigRow> & { schedulerId: SchedulerId }) {
     if (!canManageTenant && !canManagePlatform) return;
     setBusy(true);
     try {
-      const active = activeCfg(patch.schedulerId);
-      if (!active) return;
+      const active = activeCfg(patch.schedulerId) ?? draftCfg(patch.schedulerId);
       await upsertSchedulerConfig({
         schedulerId: patch.schedulerId,
-        tenantId: canManagePlatform && patch.tenantId === null ? null : (session?.tenantId ?? null),
+        // 平台角色寫到「目前選的租戶」；只有明確指定 null 才動平台預設。
+        // 舊寫法一律取 session.tenantId，而平台帳號沒有租戶 → 永遠只能寫平台預設。
+        tenantId: canManagePlatform
+          ? (patch.tenantId === null ? null : (pickedTenantId ?? null))
+          : (session?.tenantId ?? null),
         enabled: patch.enabled ?? active.enabled,
         cronExpr: patch.cronExpr ?? active.cronExpr,
         timeZone: patch.timeZone ?? active.timeZone,
@@ -117,14 +152,19 @@ export default function SchedulerConfigPage() {
         </div>
       </div>
 
+      {tenantPicker && <div className="dm-tenant-picker">{tenantPicker}</div>}
+
       {loading && <Spinner block />}
 
-      {!loading && configs.length === 0 && (
+      {!loading && configs.length === 0 && !canManagePlatform && (
         <div className="dm-empty">尚未建立排程 · 請聯繫 AIPROOT 技術支援</div>
       )}
 
       {!loading && (["pdr", "group_batch"] as SchedulerId[]).map((sid) => {
-        const active = activeCfg(sid);
+        // 沒有現成設定時給一份草稿（停用中），讓這家可以從零建立 ——
+        // 否則平台端會看到「請聯繫技術支援」，而自己就是技術支援
+        const existing = activeCfg(sid);
+        const active = existing ?? (canManagePlatform ? draftCfg(sid) : null);
         if (!active) return null;
         const isOverride = resolved.get(sid)?.override !== null && resolved.get(sid)?.override !== undefined;
         const title = sid === "pdr" ? "個人日報 · 每日整理" : "群組日誌 · 每日整理";
@@ -135,6 +175,7 @@ export default function SchedulerConfigPage() {
             schedulerId={sid}
             cfg={active}
             isOverride={isOverride}
+            isDraft={!existing}
             canManageTenant={canManageTenant}
             canManagePlatform={canManagePlatform}
             busy={busy}
@@ -176,7 +217,7 @@ export default function SchedulerConfigPage() {
 }
 
 function SchedulerCard({
-  title, schedulerId, cfg, isOverride,
+  title, schedulerId, cfg, isOverride, isDraft,
   canManageTenant, canManagePlatform, busy,
   onToggle, onSave,
 }: {
@@ -184,6 +225,8 @@ function SchedulerCard({
   schedulerId: SchedulerId;
   cfg: SchedulerConfigRow;
   isOverride: boolean;
+  /** 這家還沒有任何設定 · 畫面上的值只是草稿，按儲存才會真的建立 */
+  isDraft: boolean;
   canManageTenant: boolean;
   canManagePlatform: boolean;
   busy: boolean;
@@ -224,7 +267,7 @@ function SchedulerCard({
         <div>
           <h2 style={{ margin: 0, fontSize: 15 }}>{title}</h2>
           <div className="sub" style={{ marginTop: 3 }}>
-            {isOverride ? "已自訂" : "採用系統預設值"}
+            {isDraft ? "這家尚未建立排程 · 以下為建議值，儲存後才生效" : (isOverride ? "已自訂" : "採用系統預設值")}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
