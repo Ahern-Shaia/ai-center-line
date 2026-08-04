@@ -61,7 +61,15 @@
 
 BEGIN;
 
-SET LOCAL app.actor_role         = 'system';
+-- ⚠️ 必須是 'aiproot_admin' 而不是 'system'。
+--    users 的 policy 是 `tenant_id = current_tenant OR actor_role = 'aiproot_admin'`
+--    —— 'system' **不在** users 的逃生門裡。用 system 跑的話，下面那個
+--    「台灣福祉使用者 → aiproot 使用者」的對照表會靜默回 0 筆，
+--    300 則訊息的 sender_user_id 全被設成 NULL，而且畫面上其他數字都正常。
+--    （2026-08-04 試跑時就是這樣，靠輸出裡的 `SELECT 0` 才看出來）
+--    其餘表（line_message/member/media/group、analysis_batch、pending_completion_signal）
+--    的逃生門都含 aiproot_admin；tickets 是 AND-only，靠下面的 current_tenant。
+SET LOCAL app.actor_role         = 'aiproot_admin';
 SET LOCAL app.current_tenant     = '4d97eced-64c5-4a38-952b-dfce9588ab7c';   -- 被刪的那一邊
 SET LOCAL app.current_department = '';
 
@@ -108,6 +116,18 @@ CREATE TEMP TABLE _umap ON COMMIT DROP AS
       ON dst.tenant_id = '77777777-0000-0000-0000-000000000001'::uuid
      AND dst.display_name = src.display_name
    WHERE src.tenant_id = '4d97eced-64c5-4a38-952b-dfce9588ab7c'::uuid;
+
+-- 對照表是 0 筆就停下來 —— 那代表 RLS 把 aiproot 的使用者擋掉了（見檔頭 actor_role 說明），
+-- 不是「真的沒有同名的人」。至少「林曉風 Patrick」兩邊都有，所以正常情況不可能是 0。
+DO $$
+DECLARE n int;
+BEGIN
+  SELECT count(*) INTO n FROM _umap;
+  IF n = 0 THEN
+    RAISE EXCEPTION '守衛失敗：使用者對照表 0 筆 · 多半是 actor_role 設錯導致 users 被 RLS 擋掉';
+  END IF;
+  RAISE NOTICE '使用者對照：% 人可對到 aiproot（對不到的訊息 sender_user_id 會設 NULL）', n;
+END $$;
 
 UPDATE line_media SET tenant_id = '77777777-0000-0000-0000-000000000001'::uuid
  WHERE message_id IN (SELECT message_id FROM line_message
