@@ -17,7 +17,12 @@ import "../styles.css";
 //
 // ⚠️ M3 切換：把「現有」LIFF(2010801742-WBQkAv5t) 的 Endpoint URL 改成 .../liff.html 即可，
 // bot 按鈕 URL 不用改（同一支 LIFF · 只是背後頁面換 React 版）。
-const LIFF_ID = "2010801742-WBQkAv5t";
+//
+// 0060 · 這只是**預設值**。LINE 的 userId 依 provider 發放，不同 provider 的 messaging
+// channel 必須配自己 provider 的 LIFF，否則綁定會寫進一個永遠對不上 webhook 的 ID。
+// 所以真正要用哪支 LIFF 由 bot 決定（後端 buildLiffUrl 帶 ?liffId= 進來）。
+// 詳見 docs/modules/liff-multi-provider.md
+const DEFAULT_LIFF_ID = "2010801742-WBQkAv5t";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare global { interface Window { liff: any } }
@@ -67,12 +72,24 @@ function LiffApp() {
       try {
         const liff = window.liff;
         if (!liff) { setPhase("error"); setMsg("LIFF SDK 未載入 · 請重開頁面"); return; }
-        await liff.init({ liffId: LIFF_ID });
 
-        // 登入前先解析並持久化 botId/page（否則導向來回後抓不到）
+        // 登入前先解析並持久化 botId/page/liffId（liff.login 導向來回會把 query 剝掉）
         const botId = resolveQuery("botId") || sessionStorage.getItem("liff_bot_id") || "";
         const page = resolveQuery("page") || sessionStorage.getItem("liff_page") || "binding";
-        if (botId) { sessionStorage.setItem("liff_bot_id", botId); sessionStorage.setItem("liff_page", page); }
+        // ⚠️ 只有在 botId 也對得上時才敢沿用存起來的 liffId ——
+        //    否則「從 bot A 開過、再從沒設 liff_id 的 bot B 開」會拿 A 的 LIFF 去 init，
+        //    等於又跨回錯的 provider。對不上就退回預設。
+        const storedBotId = sessionStorage.getItem("liff_bot_id");
+        const liffId = resolveQuery("liffId")
+          || (botId && botId === storedBotId ? sessionStorage.getItem("liff_id") : null)
+          || DEFAULT_LIFF_ID;
+        if (botId) {
+          sessionStorage.setItem("liff_bot_id", botId);
+          sessionStorage.setItem("liff_page", page);
+          sessionStorage.setItem("liff_id", liffId);
+        }
+
+        await liff.init({ liffId });
 
         if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
         const accessToken = liff.getAccessToken();

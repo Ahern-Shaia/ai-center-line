@@ -887,6 +887,9 @@ export interface LineBotDto {
   channelAccessTokenMasked: string;
   status: "active" | "disabled";
   webhookVerifiedAt: string | null;
+  /** 0060 · 這支 bot 專用的 LIFF（須與其 channel 同 provider）· null＝用系統預設 */
+  liffId: string | null;
+  loginChannelId: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -930,6 +933,8 @@ export const createLineBot = (payload: {
   channelId?: string;
   channelSecret: string;
   channelAccessToken: string;
+  liffId?: string;
+  loginChannelId?: string;
 }) =>
   req<{ bot: LineBotDto }>("/line-bots", {
     method: "POST",
@@ -943,6 +948,8 @@ export const updateLineBot = (botId: string, patch: {
   channelAccessToken?: string;
   status?: "active" | "disabled";
   tenantId?: string;
+  liffId?: string | null;              // null＝清空、退回系統預設
+  loginChannelId?: string | null;
 }) =>
   req<{ bot: LineBotDto; movedTenant?: boolean; clearedGroupDepartments?: number }>(`/line-bots/${botId}`, {
     method: "PATCH",

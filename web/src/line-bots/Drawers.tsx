@@ -31,6 +31,8 @@ export function NewBotDrawer({
   const [channelId, setChannelId] = useState("");
   const [channelSecret, setChannelSecret] = useState("");
   const [accessToken, setAccessToken] = useState("");
+  const [liffId, setLiffId] = useState("");
+  const [loginChannelId, setLoginChannelId] = useState("");
 
   const isUtility = kind === "utility";
 
@@ -39,6 +41,12 @@ export function NewBotDrawer({
     // utility（群組 ID 小幫手）＝平台工具 bot · 不需選租戶
     if (!name.trim() || (!isUtility && !tenantId) || !channelSecret.trim() || !accessToken.trim()) {
       toast.show("請填齊必要欄位", "danger");
+      return;
+    }
+    // 只填 LIFF ID 不填 Login channel 的話，token 驗證會退回全域清單 ——
+    // 那正是跨 provider 憑證被默默接受的破口，所以要求成對填寫（後端 DTO 也擋一次）
+    if (liffId.trim() && !loginChannelId.trim()) {
+      toast.show("填了 LIFF ID 就必須填對應的 LINE Login Channel ID", "danger");
       return;
     }
     setSaving(true);
@@ -50,6 +58,8 @@ export function NewBotDrawer({
         channelId: channelId.trim() || undefined,
         channelSecret: channelSecret.trim(),
         channelAccessToken: accessToken.trim(),
+        liffId: liffId.trim() || undefined,
+        loginChannelId: loginChannelId.trim() || undefined,
       });
       toast.show(isUtility ? "群組 ID 小幫手已新增 · 已驗證 Access Token" : "機器人已新增 · 已驗證 Access Token", "ok");
       onCreated(res.bot);
@@ -129,6 +139,26 @@ export function NewBotDrawer({
           <div className="llm-hint">會即刻呼叫 LINE API 驗證真實有效 · 失敗會提示</div>
         </div>
 
+        {!isUtility && (
+          <>
+            <div className="field">
+              <label>LIFF ID（選填）</label>
+              <input type="text" value={liffId} onChange={(e) => setLiffId(e.target.value)} disabled={saving} placeholder="例：2010801742-WBQkAv5t" />
+              <div className="llm-hint">
+                這支 bot 的員工綁定／我的日報要開哪個 LIFF。
+                <strong>必須與上面的 channel 屬於同一個 LINE provider</strong> ——
+                跨 provider 的話員工會「綁定成功」但機器人永遠認不得他。留空則用系統預設。
+              </div>
+            </div>
+
+            <div className="field">
+              <label>LINE Login Channel ID{liffId.trim() ? " *" : "（選填）"}</label>
+              <input type="text" value={loginChannelId} onChange={(e) => setLoginChannelId(e.target.value)} disabled={saving} placeholder="例：2010801742" required={!!liffId.trim()} />
+              <div className="llm-hint">上面那個 LIFF 所屬的 Login channel · 用來擋掉從別的組織開啟的綁定連結</div>
+            </div>
+          </>
+        )}
+
         <div className="llm-form-actions">
           <button type="submit" className="btn btn-primary" disabled={saving}>
             {saving ? "新增中…" : "新增機器人"}
@@ -159,6 +189,8 @@ export function EditBotDrawer({
   const [rotateToken, setRotateToken] = useState(false);
   const [newSecret, setNewSecret] = useState("");
   const [newToken, setNewToken] = useState("");
+  const [liffId, setLiffId] = useState(bot.liffId ?? "");
+  const [loginChannelId, setLoginChannelId] = useState(bot.loginChannelId ?? "");
   const [showTenantMoveConfirm, setShowTenantMoveConfirm] = useState(false);
 
   // utility bot 無租戶 · 不可遷移（後端也會擋）
@@ -171,6 +203,9 @@ export function EditBotDrawer({
         name: name.trim() !== bot.name ? name.trim() : undefined,
         channelId: channelId !== (bot.channelId ?? "") ? (channelId.trim() || null) : undefined,
         tenantId: tenantChanged ? tenantId : undefined,
+        // 清空 → 送 null（退回系統預設 LIFF）· 沒動 → undefined（不更動）
+        liffId: liffId.trim() !== (bot.liffId ?? "") ? (liffId.trim() || null) : undefined,
+        loginChannelId: loginChannelId.trim() !== (bot.loginChannelId ?? "") ? (loginChannelId.trim() || null) : undefined,
       };
       if (rotateSecret && newSecret.trim()) patch.channelSecret = newSecret.trim();
       if (rotateToken && newToken.trim()) patch.channelAccessToken = newToken.trim();
@@ -232,6 +267,25 @@ export function EditBotDrawer({
           <label>Channel ID（選填）</label>
           <input type="text" value={channelId} onChange={(e) => setChannelId(e.target.value)} disabled={saving} placeholder="例：1234567890" />
         </div>
+
+        {!isUtility && (
+          <>
+            <div className="field">
+              <label>LIFF ID（選填）</label>
+              <input type="text" value={liffId} onChange={(e) => setLiffId(e.target.value)} disabled={saving} placeholder="留空＝用系統預設" />
+              <div className="llm-hint">
+                <strong>必須與這支 bot 的 channel 同一個 LINE provider</strong> ——
+                跨 provider 的話員工會「綁定成功」但機器人永遠認不得他。
+              </div>
+            </div>
+
+            <div className="field">
+              <label>LINE Login Channel ID{liffId.trim() ? " *" : "（選填）"}</label>
+              <input type="text" value={loginChannelId} onChange={(e) => setLoginChannelId(e.target.value)} disabled={saving} placeholder="例：2010801742" />
+              <div className="llm-hint">上面那個 LIFF 所屬的 Login channel · 用來擋掉從別的組織開啟的綁定連結</div>
+            </div>
+          </>
+        )}
 
         <div className="lbot-rotate">
           <label className="lbot-rotate-hdr">
