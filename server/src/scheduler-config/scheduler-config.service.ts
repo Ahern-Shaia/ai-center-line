@@ -24,8 +24,9 @@ export class SchedulerConfigService {
     this.manager = manager;
   }
 
-  async list(user: JwtUser): Promise<Array<SchedulerConfigRow & { nextRunAt: string | null }>> {
-    const rows = await this.repo.list(currentTx(), user.tenant_id);
+  /** scope 由 controller 的 resolveTenantFilter 決定 · null＝只看 platform default */
+  async list(scope: string | null): Promise<Array<SchedulerConfigRow & { nextRunAt: string | null }>> {
+    const rows = await this.repo.list(currentTx(), scope);
     // 下次觸發時間：讓使用者不必看懂 cron 也能確認自己設對（見 scheduler-config UI 小白化）
     return rows.map((r) => ({ ...r, nextRunAt: nextRunOf(r.cronExpr, r.timeZone, r.enabled) }));
   }

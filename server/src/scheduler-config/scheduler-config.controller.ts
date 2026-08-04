@@ -1,7 +1,8 @@
-import { BadRequestException, Body, Controller, Get, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Post, Query } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
+import { resolveTenantFilter } from "../auth/resolve-tenant-id.js";
 import { SchedulerConfigService } from "./scheduler-config.service.js";
 import type { SchedulerId } from "./scheduler-config.repository.js";
 
@@ -18,10 +19,20 @@ const VALID_SCHEDULER_IDS: SchedulerId[] = ["pdr", "group_batch"];
 export class SchedulerConfigController {
   constructor(private readonly svc: SchedulerConfigService) {}
 
+  /**
+   * tenantId：平台角色用來指定「要看哪一家的 override」。不傳＝只看 platform default。
+   *
+   * 先前沒有這個參數，於是 aiproot 看不到、也就建不出任何 per-tenant override
+   * （前端只能拿 session.tenant_id，平台帳號是 null）。後果是新接的租戶永遠沒有排程 ——
+   * 群組收得到訊息、看起來一切正常，但不會被分析，也不會產生日報。
+   * 2026-08-04 aiproot 自己的測試群就是這樣累積了 15 則訊息、0 個批次。
+   */
   @Get()
   @RequirePermission("scheduler-config:view")
-  async list(@CurrentUser() user: JwtUser) {
-    return { configs: await this.svc.list(user) };
+  async list(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
+    // 把關寫在 handler 裡（不是 service）—— route-guard 測試靠靜態掃描這一行，
+    // 而且與其他 controller 的慣例一致：平台角色可指定，其他角色一律鎖自己家
+    return { configs: await this.svc.list(resolveTenantFilter(user, tenantId) ?? null) };
   }
 
   @Post()

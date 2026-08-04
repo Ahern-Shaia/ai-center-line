@@ -27,10 +27,19 @@ interface Seed {
 async function seed(msgText: string | null = "@小陳 麻煩把三號機軸承換一下",
                     messageType = "text"): Promise<Seed | null> {
   return withSystemTx(async (tx) => {
+    // ⚠️ ORDER BY 不可省：原本只有 LIMIT 1，回哪一列由實體順序決定，
+    //    任何一次 UPDATE/DELETE 都可能換一個租戶 —— 同一份 code 會時綠時紅。
+    //
+    // ⚠️ 這裡**不能**加 `EXISTS (SELECT 1 FROM users ...)` 來挑「有人的租戶」：
+    //    withSystemTx 設的是 actor_role='system'，而 users 的 policy 只認 aiproot_admin，
+    //    子查詢會永遠回空 → seed() 對所有測試回 null → 11 條 `if (!s) return` 默默跳過還報綠。
+    //    （2026-08-04 真的這樣寫過一次）「有沒有人」的問題交給 addAssignedTicket 在租戶上下文處理。
     const g = await tx.execute<{ group_id: string; tenant_id: string; bot_id: string; department_id: string }>(sql`
       SELECT g.group_id, b.tenant_id::text, b.bot_id::text, g.department_id::text
         FROM line_group g JOIN line_bot b ON b.bot_id = g.bot_id
-       WHERE g.department_id IS NOT NULL LIMIT 1
+       WHERE g.department_id IS NOT NULL
+       ORDER BY b.tenant_id, g.group_id
+       LIMIT 1
     `);
     const grp = g.rows[0];
     if (!grp) return null;
@@ -101,7 +110,7 @@ const resolutionOf = (s: Seed) =>
 
 test("⭐ 對得上任務 → 關掉，並記下是誰在 LINE 回報的", async () => {
   const s = await seed();
-  if (!s) return;
+  if (!s) throw new Error("測試資料不足（dev DB 找不到有部門的群）· 別讓它靜默跳過");
   try {
     await addTicket(s);
     await addSignal(s, "completion");
@@ -118,7 +127,7 @@ test("⭐ 對得上任務 → 關掉，並記下是誰在 LINE 回報的", async
 
 test("⭐⭐ 對不上任務但是完成語意 → 回頭補建（材料化涵蓋率只有 11%）", async () => {
   const s = await seed("@Wang C 麻煩鮮湧的10支產品BOM先完成");
-  if (!s) return;
+  if (!s) throw new Error("測試資料不足（dev DB 找不到有部門的群）· 別讓它靜默跳過");
   try {
     // 刻意不建任務 —— 這正是 prod 三則真完成回覆的處境
     await addSignal(s, "completion", "鮮湧 10 支產品 BOM已完成（沒有料號的除外）");
@@ -135,7 +144,7 @@ test("⭐⭐ 對不上任務但是完成語意 → 回頭補建（材料化涵�
 
 test("⭐ 進度回報對不上任務時不補建（否則每句『零件週四到』都長出一張已完成卡）", async () => {
   const s = await seed();
-  if (!s) return;
+  if (!s) throw new Error("測試資料不足（dev DB 找不到有部門的群）· 別讓它靜默跳過");
   try {
     await addSignal(s, "progress", "零件已叫，週四到貨");
     const r = await svc.resolvePending(s.tenantId, s.groupId);
@@ -147,7 +156,7 @@ test("⭐ 進度回報對不上任務時不補建（否則每句『零件週四�
 
 test("進度回報對得上任務 → 記一筆，任務留著", async () => {
   const s = await seed();
-  if (!s) return;
+  if (!s) throw new Error("測試資料不足（dev DB 找不到有部門的群）· 別讓它靜默跳過");
   try {
     await addTicket(s);
     await addSignal(s, "progress", "零件已叫，週四到貨");
@@ -196,7 +205,7 @@ test("⭐⭐ 掛到的任務被刪掉之後，不可以再算成「已接住」"
 
 test("⭐ 已經被結掉的任務不再蓋一次（人可能已在網頁補登）", async () => {
   const s = await seed();
-  if (!s) return;
+  if (!s) throw new Error("測試資料不足（dev DB 找不到有部門的群）· 別讓它靜默跳過");
   try {
     const tid = await addTicket(s);
     await asTenant(s.tenantId, (tx) => tx.execute(sql`
@@ -215,7 +224,7 @@ test("⭐ 已經被結掉的任務不再蓋一次（人可能已在網頁補登�
 
 test("⭐ 問過但還沒回答的先留著（人可能等一下才按）", async () => {
   const s = await seed();
-  if (!s) return;
+  if (!s) throw new Error("測試資料不足（dev DB 找不到有部門的群）· 別讓它靜默跳過");
   try {
     await addTicket(s);
     await addSignal(s, "asked", "快好了");
@@ -228,7 +237,7 @@ test("⭐ 問過但還沒回答的先留著（人可能等一下才按）", asyn
 
 test("消化過的訊號不會被重掃（跑兩次結果一樣）", async () => {
   const s = await seed();
-  if (!s) return;
+  if (!s) throw new Error("測試資料不足（dev DB 找不到有部門的群）· 別讓它靜默跳過");
   try {
     await addTicket(s);
     await addSignal(s, "completion");
@@ -251,9 +260,18 @@ test("消化過的訊號不會被重掃（跑兩次結果一樣）", async () =>
 /** 建一張指派給某人的票 · 回傳當責人的 user_id */
 async function addAssignedTicket(s: Seed): Promise<string> {
   return asTenant(s.tenantId, async (tx) => {
+    // 這個租戶不一定有人（seed 是挑現成的群，挑到誰不保證）——
+    // 沒人就自己補一個，不要讓它變成 undefined.id 那種看不出原因的 TypeError
     const u = await tx.execute<{ id: string }>(sql`
-      SELECT user_id::text AS id FROM users WHERE tenant_id = ${s.tenantId}::uuid LIMIT 1`);
-    const owner = u.rows[0].id;
+      SELECT user_id::text AS id FROM users WHERE tenant_id = ${s.tenantId}::uuid ORDER BY user_id LIMIT 1`);
+    let owner = u.rows[0]?.id;
+    if (!owner) {
+      const ins = await tx.execute<{ id: string }>(sql`
+        INSERT INTO users (tenant_id, role, display_name, email)
+        VALUES (${s.tenantId}::uuid, 'employee', '訊號測試當責人', ${`sig-${s.tenantId}@t.test`})
+        RETURNING user_id::text AS id`);
+      owner = ins.rows[0].id;
+    }
     await tx.execute(sql`
       INSERT INTO tickets (tenant_id, department_id, summary, confirm_status,
                            source_message_ids, assignee_user_id, assign_status)
@@ -265,7 +283,7 @@ async function addAssignedTicket(s: Seed): Promise<string> {
 
 test("⭐⭐ 票有當責人，別人在群裡說「已完成」→ 不關票，記成進度並標 not_assignee", async () => {
   const s = await seed();
-  if (!s) return;
+  if (!s) throw new Error("測試資料不足（dev DB 找不到有部門的群）· 別讓它靜默跳過");
   try {
     await addAssignedTicket(s);
     await addSignal(s, "completion", "他弄好了");    // 回報者 U_worker 沒有綁定，不是當責人
@@ -282,7 +300,7 @@ test("⭐⭐ 票有當責人，別人在群裡說「已完成」→ 不關票，
 
 test("⭐ 票有當責人，而且回報的就是他 → 照關", async () => {
   const s = await seed();
-  if (!s) return;
+  if (!s) throw new Error("測試資料不足（dev DB 找不到有部門的群）· 別讓它靜默跳過");
   let owner = "";
   try {
     owner = await addAssignedTicket(s);
@@ -307,7 +325,7 @@ test("⭐ 票有當責人，而且回報的就是他 → 照關", async () => {
 
 test("票沒有當責人 → 維持現狀，誰回報都算（38/45 是這種，一律檢查會全部關不掉）", async () => {
   const s = await seed();
-  if (!s) return;
+  if (!s) throw new Error("測試資料不足（dev DB 找不到有部門的群）· 別讓它靜默跳過");
   try {
     await addTicket(s);                              // 不帶 assignee_user_id
     await addSignal(s, "completion");
@@ -322,7 +340,7 @@ test("⭐⭐ 引用的是照片（沒有文字）→ 補建的摘要要講得出
   // 舊版摘要一律落到「（來自 LINE 完成回報）」—— 任務建出來了、照片也存著、
   // 點開看得到圖，但**看板上那一行完全不知道發生了什麼事**。
   const s = await seed(null, "image");
-  if (!s) return;
+  if (!s) throw new Error("測試資料不足（dev DB 找不到有部門的群）· 別讓它靜默跳過");
   try {
     await asTenant(s.tenantId, (tx) => tx.execute(sql`
       INSERT INTO line_member (tenant_id, bot_id, group_id, user_id, display_name)
