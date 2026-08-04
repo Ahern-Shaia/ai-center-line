@@ -973,6 +973,8 @@ export const patchLineGroup = (groupRegistryId: string, patch: {
   displayName?: string;
   analyzeEnabled?: boolean;
   replyEnabled?: boolean;
+  /** 把「已離開的群」移出清單（隱藏，非刪除 · 歷史資料仍保留群名）*/
+  hidden?: boolean;
 }) =>
   req<{ group: LineGroupRow }>(`/line-groups/${groupRegistryId}`, {
     method: "PATCH",

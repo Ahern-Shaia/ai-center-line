@@ -11,6 +11,7 @@ import {
 } from "../../api";
 import { usePermissions } from "../../permission/PermissionContext";
 import { useToast } from "../../Toast";
+import ConfirmDialog from "../../shared/ConfirmDialog";
 import StyledSelect from "../../shared/StyledSelect";
 import { useTenantPicker } from "../../shared/TenantPicker";
 
@@ -74,6 +75,24 @@ export default function LineGroupsPage() {
    * @param field analyzeEnabled = 要不要跑 AI 分析 · replyEnabled = bot 要不要在群裡回話
    * 兩者刻意分開：客戶可能想要分析照跑，只是不要 bot 在群裡出聲。
    */
+  // 0059 · 把已離開的群移出清單（隱藏，非刪除 —— 歷史群組日誌仍靠這列顯示群名）
+  const [confirmHide, setConfirmHide] = useState<{ id: string; name: string } | null>(null);
+  async function doHide() {
+    if (!confirmHide) return;
+    const id = confirmHide.id;
+    setSavingIds((s) => new Set(s).add(id));
+    try {
+      await patchLineGroup(id, { hidden: true });
+      toast.show("已移除（歷史記錄仍保留群名）", "ok");
+      setConfirmHide(null);
+      await refresh();
+    } catch (err) {
+      toast.show(err instanceof ApiError ? err.message : "移除失敗", "danger");
+    } finally {
+      setSavingIds((s) => { const n = new Set(s); n.delete(id); return n; });
+    }
+  }
+
   async function handleToggle(
     groupRegistryId: string, field: "analyzeEnabled" | "replyEnabled", enabled: boolean,
   ) {
@@ -187,6 +206,15 @@ export default function LineGroupsPage() {
                   />
                   <td style={{ textAlign: "right", fontFamily: "var(--mono, ui-monospace, monospace)", fontSize: 12 }}>{g.eventCount}</td>
                   <td style={{ fontSize: 12, color: "var(--ink-3)" }}>{formatDateTime(g.lastEventAt)}</td>
+                  <td style={{ textAlign: "right" }}>
+                    {canAssign && (
+                      <button
+                        className="btn btn-sm btn-ghost"
+                        onClick={() => setConfirmHide({ id: g.groupRegistryId, name: g.displayName ?? g.groupId.slice(0, 16) })}
+                        disabled={savingIds.has(g.groupRegistryId)}
+                      >移除</button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
@@ -196,13 +224,17 @@ export default function LineGroupsPage() {
 
       {!loading && leftGroups.length > 0 && (
         <>
-          <h2 style={{ fontSize: 14, marginTop: 24, marginBottom: 8, color: "var(--ink-3)" }}>已離開的群 ({leftGroups.length})</h2>
+          <h2 style={{ fontSize: 14, marginTop: 24, marginBottom: 4, color: "var(--ink-3)" }}>已離開的群 ({leftGroups.length})</h2>
+          <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginBottom: 8 }}>
+            bot 已不在這些群 · 可「移除」讓清單乾淨（歷史記錄仍保留群名；bot 若被重新加入會自動回到上方清單）
+          </div>
           <table className="lg-table lg-table-left">
             <thead>
               <tr>
                 <th style={{ minWidth: 180 }}>群組</th>
                 <th style={{ minWidth: 160 }}>原部門</th>
                 <th style={{ minWidth: 120 }}>最後活動</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -220,6 +252,25 @@ export default function LineGroupsPage() {
           </table>
         </>
       )}
+
+      <ConfirmDialog
+        open={confirmHide !== null}
+        onClose={() => { if (!confirmHide || !savingIds.has(confirmHide.id)) setConfirmHide(null); }}
+        onConfirm={() => void doHide()}
+        busy={confirmHide ? savingIds.has(confirmHide.id) : false}
+        title="移除已離開的群"
+        body={
+          <div style={{ fontSize: 13, lineHeight: 1.7 }}>
+            將「<b>{confirmHide?.name}</b>」從清單移除。
+            <div style={{ marginTop: 8, fontSize: 12, color: "var(--ink-3)" }}>
+              這只是隱藏，不會刪除資料 —— 過去的群組日誌、分析記錄仍會顯示這個群名。
+              若 bot 之後被重新加入該群，它會自動回到上方的群組清單。
+            </div>
+          </div>
+        }
+        confirmLabel="確定移除"
+        tone="primary"
+      />
     </div>
   );
 }
