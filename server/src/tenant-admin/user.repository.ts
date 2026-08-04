@@ -112,6 +112,24 @@ export class UserRepository {
   }
 
   /**
+   * 這個人被幾張任務「留下姓名」。
+   *
+   * tickets 的 confirmed_by / assigned_by / proxy_by 三個外鍵都是 ON DELETE NO ACTION，
+   * 有引用就刪不掉人。不先算就直接刪，使用者會收到一坨 Postgres 的
+   * `tickets_confirmed_by_fkey` 錯誤 —— 既看不懂，也不知道下一步該做什麼。
+   *
+   * ⚠️ 走 RLS 上下文（呼叫端已 setTenantContext），只看得到該租戶的任務。
+   *    跨租戶引用理論上不該存在，真有的話由 service 的 FK catch 兜底。
+   */
+  async countTicketReferences(tx: Db, userId: string): Promise<number> {
+    const res = await tx.execute<{ n: number }>(sql`
+      SELECT count(*)::int AS n FROM tickets
+      WHERE confirmed_by = ${userId} OR assigned_by = ${userId} OR proxy_by = ${userId}
+    `);
+    return res.rows[0]?.n ?? 0;
+  }
+
+  /**
    * MDA · 手動指派部門 —— 只改部門 + 標記來源，**不碰 role/password**。
    * ⚠️ 目標部門必須屬同一租戶（防跨租戶 IDOR）· 由呼叫端在 RLS 上下文內先驗（service）。
    * ⚠️ 標 department_source='manual' → 自動推導日後不得覆寫（Okta/Azure 手動優先）。

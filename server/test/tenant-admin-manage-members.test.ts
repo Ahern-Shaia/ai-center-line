@@ -23,6 +23,9 @@ const EMP1 = "b0da0000-0000-4000-8000-0000000000f1";     // T1 員工
 const GO1 = "b0da0000-0000-4000-8000-0000000000f2";      // T1 部門主管
 const DEL_EMP = "b0da0000-0000-4000-8000-0000000000fd";  // 專供刪除測試
 const EMP2 = "b0da0000-0000-4000-8000-0000000000f9";     // T2 員工
+const SIGNER = "b0da0000-0000-4000-8000-0000000000fc";   // T1 員工 · 被任務記為簽核人 → 不可刪
+const DEPT = "b0da0000-0000-4000-8000-0000000000d1";     // T1 部門（tickets.department_id 必填）
+const TICKET = "b0da0000-0000-4000-8000-0000000000c1";
 
 const admin = () => new pg.Client({ connectionString: process.env.MIGRATION_DATABASE_URL });
 
@@ -46,6 +49,12 @@ before(async () => {
   await mkUser(GO1, T1, "group_owner", "主管一");
   await mkUser(DEL_EMP, T1, "employee", "待刪員工");
   await mkUser(EMP2, T2, "employee", "別家員工");
+  await mkUser(SIGNER, T1, "employee", "簽核過的員工");
+  // departments 的 line_group_id / extraction_schema / ragic_table 都是 NOT NULL 且無預設
+  await c.query(`INSERT INTO departments (department_id, tenant_id, department_name,
+                                          line_group_id, extraction_schema, ragic_table)
+                 VALUES ($1,$2,$3,$4,$5,$6)`,
+  [DEPT, T1, "測試部門", `Cmm${T1.slice(-8)}`, "daily_report", "mm-test"]);
   await c.end();
 });
 
@@ -110,6 +119,28 @@ test("⭐⭐ 不能改別家租戶的成員（RLS + 明擋 · 回 404）", async
 test("⭐ 可刪自家員工", async () => {
   await runAsTenant(() => svc.deleteMember(DEL_EMP, T1, ADMIN1));
   assert.equal(await roleOf(DEL_EMP), null, "刪掉後查不到");
+});
+
+// 2026-08-04 · 清 demo 假資料時，後台把 Postgres 的 `tickets_confirmed_by_fkey`
+// 原文丟到畫面上。使用者看不懂，也不知道下一步該做什麼。
+test("⭐⭐ 被任務記為簽核人的成員 · 擋下來並說人話（不是丟外鍵錯誤）", async () => {
+  const c = admin(); await c.connect();
+  await c.query(
+    `INSERT INTO tickets (ticket_id, tenant_id, department_id, summary, confirmed_by)
+     VALUES ($1,$2,$3,$4,$5)`,
+    [TICKET, T1, DEPT, "簽核人測試用任務", SIGNER],
+  );
+  await c.end();
+
+  await assert.rejects(
+    () => runAsTenant(() => svc.deleteMember(SIGNER, T1, ADMIN1)),
+    (err: Error) => {
+      assert.match(err.message, /被 1 張任務記為簽核人或指派人/, "要講清楚是幾張、為什麼");
+      assert.doesNotMatch(err.message, /fkey|constraint|violates/i, "不可洩漏 Postgres 原文");
+      return true;
+    },
+  );
+  assert.equal(await roleOf(SIGNER), "employee", "擋下之後人還在");
 });
 
 test("⭐⭐ 不能刪另一位總經理（碰不到同級）", async () => {

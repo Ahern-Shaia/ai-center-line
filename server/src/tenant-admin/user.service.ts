@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import bcrypt from "bcryptjs";
 import { currentTx } from "../db/client.js";
 import type { Role } from "../db/schema.js";
@@ -146,6 +146,16 @@ export class UserService {
     if (userId === callerUserId) throw new ForbiddenException("不能刪除自己");
     if (!MEMBER_ROLES.includes(existing.role)) {
       throw new ForbiddenException("只能刪除員工或部門主管 · 高階帳號請聯繫 aiproot");
+    }
+    // 任務會記下「誰簽核 / 誰指派 / 誰代簽」，那三個外鍵都是 NO ACTION —— 有引用就刪不掉人。
+    // 先算清楚再擋，否則使用者拿到的是 `tickets_confirmed_by_fkey` 這種 Postgres 原文，
+    // 既看不懂也不知道下一步要做什麼。
+    const refs = await this.repo.countTicketReferences(tx, userId);
+    if (refs > 0) {
+      throw new ConflictException(
+        `${existing.displayName ?? "這位成員"}還被 ${refs} 張任務記為簽核人或指派人，因此無法刪除`
+        + " · 任務需要保留是誰經手的 · 請先處理掉那些任務，或改為保留帳號不用",
+      );
     }
     await this.repo.delete(tx, userId);
   }
