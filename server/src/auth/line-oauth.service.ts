@@ -158,8 +158,17 @@ export class LineOauthService {
       if (!match) throw new UnauthorizedException("此 LINE 帳號未綁定到這個組織 · 請用正確組織的 bot 開啟");
       return this.signJwtForBinding(match);
     }
-    // 舊版前端沒帶 botId → 退回「最新綁定」（維持相容 · 新前端一律帶 botId）
-    return this.signJwtForBinding(bindings[0]);
+    // 沒帶 botId：只有一筆綁定時沒有歧義，照發。
+    if (bindings.length === 1) return this.signJwtForBinding(bindings[0]);
+
+    // 多筆就**不能猜**。舊版這裡退回「最新綁定」，2026-08-04 出事：
+    // rich menu 的 URL（見 docs/sop/richmenu-attendance-setup.md）沒帶 botId，
+    // 於是 Patrick 從 aiproot 的選單開「我的日報」，卻被當成鮮湧的林乙坤，
+    // 按下「重新生成」把日報寫進了別家公司 —— 全程沒有任何提示。
+    // 靜默猜錯比報錯危險得多：使用者不會發現，資料已經進了錯的租戶。
+    throw new UnauthorizedException(
+      "這個 LINE 帳號綁定了多個組織，無法判斷要開哪一個 · 請從該組織機器人的選單重新開啟",
+    );
   }
 
   /** 一人多租戶時讓網頁使用者選組織後發 JWT（B）· selectionToken 內含已驗證的 lineUserId、防偽造 */

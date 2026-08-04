@@ -96,12 +96,18 @@ test("⭐⭐ A · botId 不在此人的綁定內 → 401（不放行到沒綁的
   } finally { restore(); }
 });
 
-test("A · 舊版前端沒帶 botId → 退回最近綁定（相容 · 不炸）", async () => {
+// 2026-08-04 逆轉：原本沒帶 botId 會退回「最近綁定」。
+// rich menu 的 URL（docs/sop/richmenu-attendance-setup.md）正是沒帶 botId 的，
+// 於是 Patrick 從 aiproot 選單開「我的日報」被當成鮮湧的林乙坤，
+// 按「重新生成」把日報寫進了別家公司 —— 全程沒有任何提示。
+test("⭐⭐ A · 沒帶 botId 且綁多個組織 → 401（不可以猜 · 猜錯會寫進別家）", async () => {
   const restore = mockLineFetch();
   try {
-    const r = await svc.handleLiffToken("tok");
-    const p = JSON.parse(r.access_token);
-    assert.equal(p.tenant_id, TB, "沒 botId 時退回最近綁定（B）");
+    await assert.rejects(
+      () => svc.handleLiffToken("tok"),
+      /綁定了多個組織/,
+      "寧可要使用者從正確的選單重開，也不要靜默挑一個",
+    );
   } finally { restore(); }
 });
 

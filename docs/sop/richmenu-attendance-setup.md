@@ -67,14 +67,50 @@
 ### B3 · 設每個區塊的動作（**關鍵**）
 點每一個按鈕區塊 → **動作類型選「連結」（URI）** → 貼對應網址：
 
-| 按鈕（左→右） | 動作＝連結，網址貼 |
-|---|---|
-| **打卡** | `https://liff.line.me/2010801742-WBQkAv5t?page=punch` |
-| **我的行程** | `https://liff.line.me/2010801742-WBQkAv5t?page=trips` |
-| **我的日報** | `https://liff.line.me/2010801742-WBQkAv5t?page=mine` |
+網址格式：`https://liff.line.me/<該 bot 的 LIFF ID>?page=<punch|trips|mine>&botId=<該 bot 的 bot_id>`
+
+**⚠️ `botId` 不可省，`LIFF ID` 也必須是該 channel 自己那一支。**
+兩者都是**每個 channel 不同**的，不能從別家複製貼上。原因見下方兩節。
+
+兩個值都在後台「LINE 機器人管理 → 該 bot」看得到。現行值（2026-08-04）：
+
+| bot | LIFF ID | botId |
+|---|---|---|
+| 台灣福祉 | `2010801742-WBQkAv5t` | `ad363dc2-2d6f-4e65-8037-f0fabb44d32e` |
+| 鮮湧AI客服 | `2010801742-WBQkAv5t` | `b6bd5940-d16a-4a3d-b8e6-fa9767ab5695` |
+| aiproot | `2010964394-L0F2wcmt` | `99142261-c99d-4aac-9256-67158382c700` |
+
+例（aiproot 的三顆按鈕）：
+
+```
+打卡     https://liff.line.me/2010964394-L0F2wcmt?page=punch&botId=99142261-c99d-4aac-9256-67158382c700
+我的行程 https://liff.line.me/2010964394-L0F2wcmt?page=trips&botId=99142261-c99d-4aac-9256-67158382c700
+我的日報 https://liff.line.me/2010964394-L0F2wcmt?page=mine&botId=99142261-c99d-4aac-9256-67158382c700
+```
 
 > ⚠️ 一定要選「連結／URI」並貼 `liff.line.me/...`，選單才會在 LINE 內開 LIFF 頁。不要選「文字」或「優惠券」。
-> ⚠️ 三個區塊的網址只差結尾 `?page=`（punch / trips / mine），別貼錯。
+> ⚠️ 三個區塊只差 `page=`（punch / trips / mine），`botId` 三顆都一樣。
+
+#### 為什麼一定要帶 botId
+
+LIFF 只知道「這個 LINE 帳號是誰」，不知道「他現在想進哪一家公司」。
+而**一個 LINE 帳號可以綁多個租戶**（一人替兩家公司做事是真實情境）。
+
+本文件原本寫「打卡/日報走 JWT 不需 botId」——**那是錯的**：JWT 正是靠
+`applyLiffToken(accessToken, botId)` 換來的，`botId` 就是用來決定租戶的。
+
+2026-08-04 實際出事：Patrick 的 LINE 同時綁了台灣福祉與鮮湧，他從 aiproot 的選單開
+「我的日報」，因為網址沒帶 botId，後端退回「取最新綁定」→ 判成**鮮湧的林乙坤**，
+按下「重新生成」把日報寫進了別家公司，而畫面上看不出任何異常。
+
+後端已改成「沒帶 botId 且綁多個組織 → 直接 401」，所以現在**漏帶 botId 會明確報錯，
+不會再靜默寫錯家**。相對地，舊的選單網址必須更新，否則多租戶的人會開不起來。
+
+#### 為什麼 LIFF ID 也要對
+
+LINE 的 userId 是**依 provider 發放**的。LIFF 掛在哪個 provider 的 LINE Login channel 底下，
+拿到的 userId 就屬於那個 provider —— 用別家 provider 的 LIFF，拿到的 ID 永遠對不上這支 bot 的綁定
+（詳見 [`liff-setup.md`](liff-setup.md) §2.2–2.4）。
 
 ### B4 · 儲存並設為顯示中
 儲存 → 確認狀態為「**顯示中 / 使用中**」。
@@ -99,7 +135,9 @@
 | 症狀 | 原因 / 解法 |
 |---|---|
 | 點按鈕沒反應 / 開錯頁 | 動作沒選「連結」或網址貼錯；`?page=` 拼錯（punch / mine） |
-| 開了頁但「缺 botId」 | 只有綁定/設密碼頁需要 botId；打卡/日報走 JWT 不需 botId。若仍出錯多為 LINE webview 快取舊版 → 完全關閉重開 |
+| 顯示「綁定了多個組織，無法判斷要開哪一個」 | 選單網址漏了 `botId`（B3）· **三顆按鈕都要補**。只綁一家的人不會遇到，所以很容易漏測 |
+| 進去看到的是**別家公司**的資料 | 同上，且是舊版行為（會靜默取最新綁定）· 補上 `botId` 後就會改成明確報錯 |
+| 開了頁但「缺 botId」 | 三顆按鈕的網址都要帶 `botId`（B3）· 若已帶仍出錯，多為 LINE webview 快取舊版 → 完全關閉 LINE 重開 |
 | 打卡成功但里程空白 | 地圖 key 未設（Part A）· 或 provider API 暫時失敗（會記 null，不影響打卡） |
 | 定位一直失敗 / 逾時 | iOS 有時需重試（到空曠處）；確認手機定位服務、LINE 定位權限已開 |
 | 顯示「尚未完成綁定」 | 該帳號還沒綁 → 先私訊 bot 點「開始綁定」 |
