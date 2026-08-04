@@ -20,6 +20,8 @@ interface BotWithSecret {
   channelSecret: string;
   channelAccessToken: string;
   status: string;
+  /** 0060 · 這支 bot 專屬的 LIFF（須與 messaging channel 同 provider）· null = 用 env 預設 */
+  liffId: string | null;
 }
 
 // LINE webhook payload · 依 https://developers.line.biz/en/reference/messaging-api/#webhook-event-objects
@@ -353,10 +355,9 @@ export class LineWebhookService {
 
     // follow event · Alice 加好友
     if (event.type === "follow") {
-      const liffUrl = process.env.LIFF_URL;
-      if (liffUrl && event.replyToken) {
+      if ((bot.liffId || process.env.LIFF_URL) && event.replyToken) {
         try {
-          const url = `${liffUrl}?botId=${bot.botId}`;
+          const url = this.liffUrlFor(bot, "binding");
           await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
             { type: "text", text: "歡迎加入！請點下方按鈕完成綁定 · 綁定後即可使用個人日報功能" },
             {
@@ -401,11 +402,11 @@ export class LineWebhookService {
       const senderUserId = await this.bindingService.resolveUserByLineUserId(bot.botId, userId);
 
       if (!senderUserId) {
-        // 未綁定 · 不論型別回一次綁定提示 · 有 LIFF_URL 給按鈕 · 無則 fallback 文字（比照 follow）
+        // 未綁定 · 不論型別回一次綁定提示 · 有 LIFF 給按鈕 · 無則 fallback 文字（比照 follow）
         if (event.replyToken) {
-          const liffUrl = process.env.LIFF_URL;
+          const hasLiff = !!(bot.liffId || process.env.LIFF_URL);
           try {
-            if (liffUrl) {
+            if (hasLiff) {
               await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
                 { type: "text", text: "看起來還沒完成綁定 · 點下方按鈕即可（綁定後才能記錄日報）" },
                 {
@@ -414,7 +415,7 @@ export class LineWebhookService {
                   template: {
                     type: "buttons",
                     text: "點按鈕開始綁定",
-                    actions: [{ type: "uri", label: "開始綁定", uri: `${liffUrl}?botId=${bot.botId}` }],
+                    actions: [{ type: "uri", label: "開始綁定", uri: this.liffUrlFor(bot, "binding") }],
                   },
                 },
               ]);
@@ -439,7 +440,7 @@ export class LineWebhookService {
       // 3 頁共用同一 LIFF endpoint (binding.html) · 用 ?page=set-password 切 view
       if (textContent && isSetPasswordKeyword(textContent)) {
         if (event.replyToken) {
-          const url = buildLiffUrl(bot.botId, "set-password");
+          const url = this.liffUrlFor(bot, "set-password");
           try {
             await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
               {
@@ -465,7 +466,7 @@ export class LineWebhookService {
       // 3 頁共用同一 LIFF endpoint (binding.html) · 用 ?page=mine 切 view
       if (textContent && isDailyReportKeyword(textContent)) {
         if (event.replyToken) {
-          const url = buildLiffUrl(bot.botId, "mine");
+          const url = this.liffUrlFor(bot, "mine");
           try {
             await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
               {
@@ -552,6 +553,23 @@ export class LineWebhookService {
    * · 失敗只 log · 不影響 webhook 處理
    * · 用 withSystemTx 獨立 tx (fire-and-forget 跳出 webhook 的 tenant tx)
    */
+  /**
+   * 0060 · 取這支 bot 該用的 LIFF 連結。
+   *
+   * bot 沒設 liff_id 時退回 LIFF_URL env（既有客戶維持原行為），但**記 warn** ——
+   * 因為若這支 bot 的 messaging channel 與 env 那支 LIFF 不同 provider，
+   * 使用者會「綁定成功」卻永遠對不上，且沒有任何錯誤可循（OQ-LMP-2 裁定：fallback + 告警）。
+   */
+  private liffUrlFor(bot: BotWithSecret, page: "binding" | "set-password" | "mine"): string {
+    if (!bot.liffId) {
+      this.logger.warn(
+        `[line-webhook] bot 未設 liff_id · 退回 LIFF_URL env · botId=${bot.botId} · `
+        + "若此 bot 的 channel 與該 LIFF 不同 provider，綁定會寫入對不上的 line_user_id",
+      );
+    }
+    return buildLiffUrl(bot, page);
+  }
+
   private async autoProbeGroupName(accessToken: string, botId: string, groupId: string): Promise<void> {
     try {
       const summary = await this.lineApi.getGroupSummary(accessToken, groupId);
@@ -567,13 +585,22 @@ export class LineWebhookService {
 }
 
 // 建 LIFF button URL · 3 個 view (binding / set-password / mine) 共用同一 endpoint
-// 若 LIFF_URL 是 liff.line.me/{liffId} · 直接 append query
-// 若 LIFF_URL 是 Web URL (含 .html) · 也直接 append query
-// 若無 LIFF_URL env · fallback 到 demo web URL
-function buildLiffUrl(botId: string, page: "binding" | "set-password" | "mine"): string {
-  const base = process.env.LIFF_URL ?? "https://ai-center-line-demo.onrender.com/liff/binding.html";
+//
+// 0060 · 為什麼要 per-bot（docs/modules/liff-multi-provider.md）：
+//   LIFF 取得的 line_user_id 屬於「LIFF app 所掛的 Login channel」的 provider，
+//   webhook 收到的屬於「messaging channel」的 provider。兩者不同 provider 時，
+//   同一個人有兩組 ID，綁定寫進去的值永遠對不上 —— 而且綁定流程看起來是成功的。
+//   所以 bot 有自己的 liffId 時一律優先用它。
+//
+// liffId 也一併帶進 query：前端 liff.init() 需要知道自己是哪一支 LIFF。
+// 沒設 liffId 就退回 LIFF_URL env（既有客戶維持原行為），由呼叫端記 warn。
+function buildLiffUrl(bot: { botId: string; liffId: string | null }, page: "binding" | "set-password" | "mine"): string {
+  const base = bot.liffId
+    ? `https://liff.line.me/${bot.liffId}`
+    : (process.env.LIFF_URL ?? "https://ai-center-line-demo.onrender.com/liff/binding.html");
   const sep = base.includes("?") ? "&" : "?";
-  return `${base}${sep}botId=${botId}&page=${page}`;
+  const liffParam = bot.liffId ? `&liffId=${encodeURIComponent(bot.liffId)}` : "";
+  return `${base}${sep}botId=${bot.botId}&page=${page}${liffParam}`;
 }
 
 // 判斷是否為「查日報」關鍵字 · 支援中英 · 前後空白容錯

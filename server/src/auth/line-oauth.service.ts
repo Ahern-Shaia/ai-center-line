@@ -146,7 +146,9 @@ export class LineOauthService {
   // 一人綁多個租戶時，才不會像舊版那樣拿「最近綁定」的別家帳號（2026-08-03 實際踩到：
   // Patrick 的 LINE 綁台灣福祉在先、綁鮮湧在後 → 從台灣福祉 bot 開卻登入成鮮湧林乙坤）。
   async handleLiffToken(accessToken: string, botId?: string): Promise<LineLoginResult> {
-    const lineUserId = await verifyLiffAccessToken(accessToken);
+    // 0060 · 有 botId 就用該 bot 自己的 login_channel_id 驗 token，擋掉跨 provider 的憑證
+    const expectedChannelId = botId ? await this.loginChannelIdOf(botId) : null;
+    const lineUserId = await verifyLiffAccessToken(accessToken, expectedChannelId);
     const bindings = await this.resolveBindings(lineUserId);
     if (bindings.length === 0) {
       throw new UnauthorizedException("此 LINE 帳號尚未綁定 aiproot · 請先加 bot 好友完成綁定");
@@ -175,6 +177,14 @@ export class LineOauthService {
     const match = bindings.find((b) => b.tenant_id === tenantId);
     if (!match) throw new UnauthorizedException("你在該組織沒有帳號");
     return this.signJwtForBinding(match);
+  }
+
+  /** 0060 · 查該 bot 綁定的 LINE Login channel · 未設回 null（退回 env 允許清單） */
+  private async loginChannelIdOf(botId: string): Promise<string | null> {
+    const res = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{
+      login_channel_id: string | null;
+    }>(sql`SELECT login_channel_id FROM line_bot WHERE bot_id = ${botId} LIMIT 1`));
+    return res.rows[0]?.login_channel_id ?? null;
   }
 
   /** 該 lineUserId 的所有 active 綁定（跨租戶）· aiproot 上下文讀 · 新到舊 */

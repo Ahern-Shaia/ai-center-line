@@ -31,7 +31,7 @@ afterEach(() => { globalThis.fetch = origFetch; });
 
 test("LIFF token · channel_id 不符 → 401（擋跨 channel 憑證）", async () => {
   mockFetch(() => ({ ok: true, json: { client_id: "9999", expires_in: 3600 } }));
-  await assert.rejects(() => svc.handleLiffToken("tok"), /channel 不符/);
+  await assert.rejects(() => svc.handleLiffToken("tok"), /不是這個組織的/);
 });
 
 test("LIFF token · 已過期 → 401", async () => {

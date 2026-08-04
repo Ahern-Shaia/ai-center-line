@@ -17,6 +17,8 @@ export interface LineBotRow {
   channelAccessToken: string;      // 解密後明碼
   status: "active" | "disabled";
   webhookVerifiedAt: string | null;
+  liffId: string | null;
+  loginChannelId: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -31,6 +33,9 @@ export interface LineBotListRow {
   channelId: string | null;
   status: "active" | "disabled";
   webhookVerifiedAt: string | null;
+  /** 0060 · 這支 bot 專屬的 LIFF（須與 messaging channel 同 provider）· null = 用 env 預設 */
+  liffId: string | null;
+  loginChannelId: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -45,6 +50,8 @@ export interface LineBotInsertInput {
   channelId: string | null;
   channelSecret: string;
   channelAccessToken: string;
+  liffId: string | null;
+  loginChannelId: string | null;
   createdBy: string;
 }
 
@@ -65,11 +72,13 @@ export class LineBotRepository {
     const key = this.encKey();
     const res = await tx.execute<{ bot_id: string }>(sql`
       INSERT INTO line_bot
-        (tenant_id, kind, name, bot_user_id, channel_id, channel_secret_enc, channel_access_token_enc, created_by)
+        (tenant_id, kind, name, bot_user_id, channel_id, channel_secret_enc, channel_access_token_enc,
+         liff_id, login_channel_id, created_by)
       VALUES
         (${input.tenantId}, ${input.kind}, ${input.name}, ${input.botUserId}, ${input.channelId},
          pgp_sym_encrypt(${input.channelSecret}, ${key}),
          pgp_sym_encrypt(${input.channelAccessToken}, ${key}),
+         ${input.liffId}, ${input.loginChannelId},
          ${input.createdBy})
       RETURNING bot_id
     `);
@@ -85,11 +94,19 @@ export class LineBotRepository {
     channelAccessToken?: string;
     status?: "active" | "disabled";
     tenantId?: string;
+    liffId?: string | null;
+    loginChannelId?: string | null;
   }): Promise<void> {
     const key = this.encKey();
     await tx.execute(sql`
       UPDATE line_bot SET
         name = COALESCE(${patch.name ?? null}, name),
+        -- 0060 · 用 CASE 而非 COALESCE：這兩欄要能被「清空回 null」（退回 env 預設），
+        -- COALESCE 分不出「沒帶這個欄位」與「明確設成 null」
+        liff_id = CASE WHEN ${patch.liffId !== undefined}::boolean
+          THEN ${patch.liffId ?? null} ELSE liff_id END,
+        login_channel_id = CASE WHEN ${patch.loginChannelId !== undefined}::boolean
+          THEN ${patch.loginChannelId ?? null} ELSE login_channel_id END,
         channel_id = COALESCE(${patch.channelId ?? null}, channel_id),
         channel_secret_enc = CASE WHEN ${patch.channelSecret ?? null}::text IS NULL
           THEN channel_secret_enc ELSE pgp_sym_encrypt(${patch.channelSecret ?? null}, ${key}) END,
@@ -126,12 +143,13 @@ export class LineBotRepository {
       bot_id: string; tenant_id: string | null; kind: "analysis" | "utility"; name: string; bot_user_id: string;
       channel_id: string | null; channel_secret: string; channel_access_token: string;
       status: "active" | "disabled"; webhook_verified_at: string | null;
+      liff_id: string | null; login_channel_id: string | null;
       created_by: string | null; created_at: string; updated_at: string;
     }>(sql`
       SELECT bot_id, tenant_id, kind, name, bot_user_id, channel_id,
              pgp_sym_decrypt(channel_secret_enc, ${key})::text AS channel_secret,
              pgp_sym_decrypt(channel_access_token_enc, ${key})::text AS channel_access_token,
-             status, webhook_verified_at::text, created_by,
+             status, webhook_verified_at::text, liff_id, login_channel_id, created_by,
              created_at::text, updated_at::text
       FROM line_bot
       WHERE bot_id = ${botId}
@@ -150,6 +168,8 @@ export class LineBotRepository {
       channelAccessToken: r.channel_access_token,
       status: r.status,
       webhookVerifiedAt: r.webhook_verified_at,
+      liffId: r.liff_id,
+      loginChannelId: r.login_channel_id,
       createdBy: r.created_by,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
@@ -165,18 +185,19 @@ export class LineBotRepository {
   //    排查時會被導向「密鑰或設定壞了」的方向。
   //    （2026-07-28 鮮湧 bot 就是這樣被誤判的）
   async getByBotUserIdWithSecret(tx: Db, botUserId: string): Promise<{
-    botId: string; tenantId: string; kind: string; channelSecret: string; channelAccessToken: string; status: string;
+    botId: string; tenantId: string; kind: string; channelSecret: string; channelAccessToken: string;
+    status: string; liffId: string | null;
   } | null> {
     const key = this.encKey();
     const res = await tx.execute<{
       bot_id: string; tenant_id: string; kind: string;
       channel_secret: string; channel_access_token: string;
-      status: string;
+      status: string; liff_id: string | null;
     }>(sql`
       SELECT bot_id, tenant_id, kind,
              pgp_sym_decrypt(channel_secret_enc, ${key})::text AS channel_secret,
              pgp_sym_decrypt(channel_access_token_enc, ${key})::text AS channel_access_token,
-             status
+             status, liff_id
       FROM line_bot
       WHERE bot_user_id = ${botUserId}
       LIMIT 1
@@ -192,6 +213,7 @@ export class LineBotRepository {
       channelSecret: r.channel_secret,
       channelAccessToken: r.channel_access_token,
       status: r.status,
+      liffId: r.liff_id,
     };
   }
 
@@ -201,10 +223,11 @@ export class LineBotRepository {
       bot_id: string; tenant_id: string | null; kind: "analysis" | "utility"; name: string; bot_user_id: string;
       channel_id: string | null; status: "active" | "disabled";
       webhook_verified_at: string | null; created_by: string | null;
+      liff_id: string | null; login_channel_id: string | null;
       created_at: string; updated_at: string; group_count: string;
     }>(sql`
       SELECT b.bot_id, b.tenant_id, b.kind, b.name, b.bot_user_id, b.channel_id, b.status,
-             b.webhook_verified_at::text, b.created_by,
+             b.webhook_verified_at::text, b.created_by, b.liff_id, b.login_channel_id,
              b.created_at::text, b.updated_at::text,
              (SELECT COUNT(*) FROM line_group WHERE bot_id = b.bot_id AND status = 'active')::text AS group_count
       FROM line_bot b
@@ -219,6 +242,8 @@ export class LineBotRepository {
       channelId: r.channel_id,
       status: r.status,
       webhookVerifiedAt: r.webhook_verified_at,
+      liffId: r.liff_id,
+      loginChannelId: r.login_channel_id,
       createdBy: r.created_by,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
@@ -232,10 +257,11 @@ export class LineBotRepository {
       bot_id: string; tenant_id: string | null; kind: "analysis" | "utility"; name: string; bot_user_id: string;
       channel_id: string | null; status: "active" | "disabled";
       webhook_verified_at: string | null; created_by: string | null;
+      liff_id: string | null; login_channel_id: string | null;
       created_at: string; updated_at: string; group_count: string;
     }>(sql`
       SELECT b.bot_id, b.tenant_id, b.kind, b.name, b.bot_user_id, b.channel_id, b.status,
-             b.webhook_verified_at::text, b.created_by,
+             b.webhook_verified_at::text, b.created_by, b.liff_id, b.login_channel_id,
              b.created_at::text, b.updated_at::text,
              (SELECT COUNT(*) FROM line_group WHERE bot_id = b.bot_id AND status = 'active')::text AS group_count
       FROM line_bot b
@@ -253,6 +279,8 @@ export class LineBotRepository {
       channelId: r.channel_id,
       status: r.status,
       webhookVerifiedAt: r.webhook_verified_at,
+      liffId: r.liff_id,
+      loginChannelId: r.login_channel_id,
       createdBy: r.created_by,
       createdAt: r.created_at,
       updatedAt: r.updated_at,

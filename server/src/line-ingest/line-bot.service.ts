@@ -16,6 +16,9 @@ export interface LineBotDto {
   channelAccessTokenMasked: string;
   status: "active" | "disabled";
   webhookVerifiedAt: string | null;
+  /** 0060 · per-bot LIFF · null = 用 env 預設（見 docs/modules/liff-multi-provider.md）*/
+  liffId: string | null;
+  loginChannelId: string | null;
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -29,6 +32,8 @@ export interface LineBotCreateInput {
   channelId?: string;
   channelSecret: string;
   channelAccessToken: string;
+  liffId?: string;
+  loginChannelId?: string;
   createdBy: string;
 }
 
@@ -78,6 +83,8 @@ export class LineBotService {
       channelId: input.channelId ?? null,
       channelSecret: input.channelSecret,
       channelAccessToken: input.channelAccessToken,
+      liffId: input.liffId ?? null,
+      loginChannelId: input.loginChannelId ?? null,
       createdBy: input.createdBy,
     });
 
@@ -109,6 +116,8 @@ export class LineBotService {
     channelAccessToken?: string;
     status?: "active" | "disabled";
     tenantId?: string;
+    liffId?: string | null;
+    loginChannelId?: string | null;
   }): Promise<LineBotDto & { movedTenant?: boolean; clearedGroupDepartments?: number }> {
     const tx = currentTx();
     if (patch.channelAccessToken) {
@@ -246,6 +255,8 @@ export class LineBotService {
       channelAccessTokenMasked: tokenPlain ? LineBotRepository.mask(tokenPlain) : "●●●●●●●●●●",
       status: row.status,
       webhookVerifiedAt: row.webhookVerifiedAt,
+      liffId: row.liffId,
+      loginChannelId: row.loginChannelId,
       createdBy: row.createdBy,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

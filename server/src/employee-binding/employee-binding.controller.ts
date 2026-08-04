@@ -5,6 +5,7 @@ import { Roles } from "../auth/roles.decorator.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
+import { sql } from "drizzle-orm";
 import { withTenant } from "../db/client.js";
 import { EmployeeBindingService } from "./employee-binding.service.js";
 import { UserLineBindingRepository } from "./user-line-binding.repository.js";
@@ -95,7 +96,7 @@ export class EmployeeBindingController {
     if (!isValidUuid(body.botId)) {
       throw new BadRequestException("botId 格式錯 · 需為 UUID");
     }
-    const lineUserId = await this.resolveLiffUserId(body);
+    const lineUserId = await this.resolveLiffUserId(body, body.botId);
     return this.svc.completeLiffBinding({
       botId: body.botId,
       lineUserId,
@@ -105,10 +106,24 @@ export class EmployeeBindingController {
   }
 
   // 寫入操作取可信 lineUserId：優先驗 access token（新 React LIFF · 修 IDOR）· 無則 legacy lineUserId（舊 binding.html · 過渡）
-  private async resolveLiffUserId(body: { accessToken?: string; lineUserId?: string }): Promise<string> {
-    if (body.accessToken) return verifyLiffAccessToken(body.accessToken);
+  //
+  // 0060 · 帶 botId 進來驗該 bot 自己的 Login channel。這裡是綁定真正落庫的地方，
+  // 也是 2026-08-04 寫出「跨 provider、永遠對不上 webhook」那筆髒資料的位置。
+  private async resolveLiffUserId(body: { accessToken?: string; lineUserId?: string }, botId?: string): Promise<string> {
+    if (body.accessToken) {
+      const expected = botId ? await this.loginChannelIdOf(botId) : null;
+      return verifyLiffAccessToken(body.accessToken, expected);
+    }
     if (body.lineUserId) return body.lineUserId;
     throw new BadRequestException("需 accessToken 或 lineUserId");
+  }
+
+  /** 0060 · 該 bot 綁定的 LINE Login channel · 未設回 null（退回 env 允許清單） */
+  private async loginChannelIdOf(botId: string): Promise<string | null> {
+    const res = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{
+      login_channel_id: string | null;
+    }>(sql`SELECT login_channel_id FROM line_bot WHERE bot_id = ${botId} LIMIT 1`));
+    return res.rows[0]?.login_channel_id ?? null;
   }
 
   /**
