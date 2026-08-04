@@ -46,11 +46,30 @@ Use a LINE Login channel instead.
 - 這是 LIFF 拿到的 `liff.getProfile().userId` 能對到 webhook `event.source.userId` 的技術命脈
 - **必然條件**：LINE Login channel 跟 Messaging API bot **同 Provider**
 
-### 2.3 一個 LIFF app 服務所有租戶
+### 2.3 一個 LIFF app 服務「同一個 provider 底下」的所有租戶
 
-- aiproot 只需**一個 LINE Login channel + 一個 LIFF app**（不需要 per-tenant）
-- 靠 `?botId=<uuid>` query param 路由到正確 tenant
-- 未來若 tenant 有客製化需求（e.g. 品牌 UI）· 才考慮 per-tenant LIFF
+- 同一 Provider 內：**一個 LINE Login channel + 一個 LIFF app 就夠**，
+  靠 `?botId=<uuid>` query param 路由到正確 tenant，不需要 per-tenant LIFF
+- **但跨 Provider 就必須另開一支**（§2.2 的必然條件）——
+  provider 換了，同一個人拿到的 `userId` 就是另一組，共用 LIFF 會讓員工
+  「綁定成功」卻永遠對不上 webhook，而且**沒有任何錯誤訊息**
+
+> 2026-08-04 實際踩過：aiproot 在自己的 provider 開了 messaging channel（2004733504），
+> 員工透過舊 provider 的共用 LIFF 綁定，寫進去的 `line_user_id` 與 webhook 看到的不同，
+> bot 持續回「看起來還沒完成綁定」。詳見 [`../modules/liff-multi-provider.md`](../modules/liff-multi-provider.md)。
+
+### 2.4 第二個 Provider 的 bot 要怎麼設定（0060 起）
+
+`line_bot` 有 `liff_id` / `login_channel_id` 兩欄，**per-bot** 指定要用哪支 LIFF：
+
+1. 在**該 bot 的 channel 所屬 provider** 底下，照 §3–§6 再走一次（Login channel + LIFF app）
+2. LIFF 的 Endpoint URL 指向同一份 `liff.html`（前端不用另外部署）
+3. 後台 → LINE 機器人管理 → 該 bot → 編輯 → 填 **LIFF ID** 與 **LINE Login Channel ID**
+4. 兩欄留空 = 沿用 §7.1 的 env 預設（既有客戶維持原行為）
+
+填了 `login_channel_id` 之後，後端會**只認**這支 Login channel 的 token；
+從別的 provider 開啟的綁定連結會直接被擋下並提示「這個綁定連結不是這個組織的」，
+不會再默默寫入一筆對不上的綁定。
 
 ---
 

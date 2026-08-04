@@ -121,7 +121,11 @@ ALTER TABLE line_bot
 
 aiproot bot 上有 1 筆錯的綁定（柏淵 → `Ua5a8923f...`，`liff_self_service`，2026-08-04）。
 唯一鍵是 `(bot_id, line_user_id)`，所以它**不會阻擋**正確綁定寫入，
-但會讓後台顯示「已綁」而 bot 說「未綁」，是典型的誤導狀態 → 應刪除。
+但會讓後台顯示「已綁」而 bot 說「未綁」，是典型的誤導狀態 → 應撤銷。
+
+**不需要手寫 SQL** —— 後台「LINE 綁定稽核」頁已有撤銷功能
+（`web/src/aiproot-console/BindingAudit.tsx` / `settings/TenantBindingAudit.tsx`）。
+撤銷是把 `status` 設為 `revoked`，`resolveBindings` 只取 `active`，所以不影響之後重新綁定。
 
 ---
 
@@ -157,11 +161,18 @@ aiproot bot 上有 1 筆錯的綁定（柏淵 → `Ua5a8923f...`，`liff_self_se
 
 | 里程碑 | 內容 |
 |---|---|
-| **M0** | 本文件 · 待裁定 OQ-LMP-1..7 |
-| **M1** | migration（三欄 nullable）+ `buildLiffUrl` 依 bot 取 `liff_id` + 前端 `liffId` 走 query |
-| **M2** | `line-oauth.service` 依 bot 取 Login channel 憑證 + 後台 UI 三欄位 |
-| **M3** | LINE Console 建 aiproot 的 Login channel / LIFF（人工）+ 填設定 + 清掉錯綁定 |
-| **M4** | 回歸：台灣福祉 / 鮮湧 各實測一筆綁定不受影響；aiproot 實測綁定 + 我的日報可開 |
+| **M0** | ✅ 本文件 · OQ 已裁定 |
+| **M1** | ✅ migration 0060（`liff_id` / `login_channel_id`，皆 nullable）+ `buildLiffUrl` 依 bot 取 `liff_id` + 前端 `liffId` 走 query（commit 92983b3 / 565622e）|
+| **M2** | ✅ `verifyLiffAccessToken` 收 `expectedChannelId` + 兩個呼叫端帶入 + 後台 UI 兩欄位 |
+| **M3** | ⏳ LINE Console 建 aiproot 的 Login channel / LIFF（人工 · R10）+ 後台填設定 + 撤銷錯綁定 |
+| **M4** | ⏳ 回歸：台灣福祉 / 鮮湧 各實測一筆綁定不受影響；aiproot 實測綁定 + 我的日報可開 |
+
+### 實作時的修正
+
+原文 §3.1 規劃三欄（含 `login_channel_secret_enc`），實作時發現**不需要 secret**：
+LIFF access token 的驗證走 `https://api.line.me/oauth2/v2.1/verify`，只比對回傳的
+`client_id`，不需要 channel secret。secret 只有網頁版 OAuth 才要，而那條路已由
+OQ-LMP-6 裁定延後。故只加兩欄，不預留用不到的加密欄位。
 
 ---
 
