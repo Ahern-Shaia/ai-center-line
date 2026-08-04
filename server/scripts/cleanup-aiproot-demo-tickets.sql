@@ -50,16 +50,26 @@ DELETE FROM tickets WHERE tenant_id = '77777777-0000-0000-0000-000000000001'::uu
 -- 驗收 1：aiproot 任務歸零
 SELECT count(*) AS 剩餘任務 FROM tickets WHERE tenant_id = '77777777-0000-0000-0000-000000000001'::uuid;
 
--- 驗收 2：三個 demo 使用者已無任何任務引用（接下來才刪得掉）
+-- 驗收 2：三個 demo 使用者已無任務引用（接下來才刪得掉）
+-- ⚠️ 這個計數同樣受 RLS 限制，只看得到 aiproot 的任務。
+--    外鍵本身是全域的 —— 若別的租戶有任務引用到他們，這裡照樣顯示 0，但刪除仍會被擋。
+--    真正的判準是「後台刪得掉」，這裡只是先排除 aiproot 自己的引用。
 SELECT u.display_name AS 使用者,
-       (SELECT count(*) FROM tickets t WHERE t.confirmed_by = u.user_id) AS 仍被簽核引用,
-       (SELECT count(*) FROM tickets t WHERE t.assigned_by  = u.user_id) AS 仍被指派引用
+       (SELECT count(*) FROM tickets t WHERE t.confirmed_by = u.user_id) AS aiproot內簽核引用,
+       (SELECT count(*) FROM tickets t WHERE t.assigned_by  = u.user_id) AS aiproot內指派引用
 FROM users u
 WHERE u.tenant_id = '77777777-0000-0000-0000-000000000001'::uuid
   AND u.email IN ('rd-zonghan@taiwanhomecare.demo','sales-jianguo@taiwanhomecare.demo','owner-d2@taiwanhomecare.demo');
 
--- 驗收 3：台灣福祉的任務數不可變（確認沒有跨租戶誤刪）· 應為 141
-SELECT count(*) AS 台灣福祉任務數 FROM tickets WHERE tenant_id = '4d97eced-64c5-4a38-952b-dfce9588ab7c'::uuid;
+-- 驗收 3：台灣福祉的任務數不可變（跨租戶誤刪的偵測線）
+--
+-- ⚠️ 必須先把 current_tenant 切成台灣福祉才數得到。
+--    tickets 的 policy 是 AND-only（tenant_id = app.current_tenant），
+--    在 aiproot 的上下文下數台灣福祉的任務**永遠回 0** —— 那不是資料被刪，是看不到。
+--    本檔第一版就是這樣寫的，跑出來的 0 看起來像災難，實際上什麼事都沒有。
+SET LOCAL app.current_tenant = '4d97eced-64c5-4a38-952b-dfce9588ab7c';
+SELECT count(*) AS 台灣福祉任務數_應維持不變 FROM tickets
+WHERE tenant_id = '4d97eced-64c5-4a38-952b-dfce9588ab7c'::uuid;
 
 -- 數字對了就把這行改成 COMMIT
 ROLLBACK;
