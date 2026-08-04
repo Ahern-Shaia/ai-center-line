@@ -17,7 +17,7 @@ export interface LineGroupRow {
   firstSeenAt: string;
   lastEventAt: string;
   eventCount: number;
-  status: "active" | "left";
+  status: "active" | "left" | "hidden";
 }
 
 @Injectable()
@@ -62,7 +62,7 @@ export class LineGroupRepository {
       display_name: string | null; department_id: string | null;
       department_name: string | null; analyze_enabled: boolean; reply_enabled: boolean;
       first_seen_at: string; last_event_at: string; event_count: number;
-      status: "active" | "left";
+      status: "active" | "left" | "hidden";
     }>(sql`
       SELECT g.group_registry_id, g.bot_id, g.group_id, g.display_name,
              g.department_id, d.department_name, g.analyze_enabled, g.reply_enabled,
@@ -99,7 +99,7 @@ export class LineGroupRepository {
       display_name: string | null; department_id: string | null;
       department_name: string | null; analyze_enabled: boolean; reply_enabled: boolean;
       first_seen_at: string; last_event_at: string; event_count: number;
-      status: "active" | "left";
+      status: "active" | "left" | "hidden";
     }>(sql`
       SELECT g.group_registry_id, g.bot_id, g.group_id, g.display_name,
              g.department_id, d.department_name, g.analyze_enabled, g.reply_enabled,
@@ -132,7 +132,7 @@ export class LineGroupRepository {
       display_name: string | null; department_id: string | null;
       department_name: string | null; analyze_enabled: boolean; reply_enabled: boolean;
       first_seen_at: string; last_event_at: string; event_count: number;
-      status: "active" | "left";
+      status: "active" | "left" | "hidden";
     }>(sql`
       SELECT g.group_registry_id, g.bot_id, g.group_id, g.display_name,
              g.department_id, d.department_name, g.analyze_enabled, g.reply_enabled,
@@ -187,6 +187,7 @@ export class LineGroupRepository {
     displayName?: string;
     analyzeEnabled?: boolean;
     replyEnabled?: boolean;
+    hidden?: boolean;
   }): Promise<void> {
     await tx.execute(sql`
       UPDATE line_group SET
@@ -194,7 +195,15 @@ export class LineGroupRepository {
           THEN ${patch.departmentId ?? null} ELSE department_id END,
         display_name = COALESCE(${patch.displayName ?? null}, display_name),
         analyze_enabled = COALESCE(${patch.analyzeEnabled ?? null}, analyze_enabled),
-        reply_enabled = COALESCE(${patch.replyEnabled ?? null}, reply_enabled)
+        reply_enabled = COALESCE(${patch.replyEnabled ?? null}, reply_enabled),
+        -- 0059 · 只在有帶 hidden 時動 status，且**只能在 left ↔ hidden 之間切**：
+        -- 不可把還在群內的（active）藏起來 —— 那會讓正在分析的群憑空消失
+        status = CASE
+          WHEN ${patch.hidden === undefined}::boolean THEN status
+          WHEN ${patch.hidden === true}::boolean AND status = 'left' THEN 'hidden'
+          WHEN ${patch.hidden === false}::boolean AND status = 'hidden' THEN 'left'
+          ELSE status
+        END
       WHERE group_registry_id = ${groupRegistryId}
     `);
   }

@@ -31,6 +31,12 @@ export const LineGroupPatchSchema = z.object({
   analyzeEnabled: z.boolean().optional(),
   /** bot 在這個群要不要回話 · 與 analyzeEnabled 是兩件事（0040）*/
   replyEnabled: z.boolean().optional(),
+  /**
+   * 0059 · 把「已離開的群」移出清單（true=hidden／false=還原成 left）。
+   * ⚠️ 只是隱藏不是刪除：歷史 analysis_upload / line_message 靠這一列保留群名。
+   *    bot 若重新被加入該群，webhook 收到 join 事件會自動改回 active。
+   */
+  hidden: z.boolean().optional(),
 });
 
 export type LineBotCreateDto = z.infer<typeof LineBotCreateSchema>;
