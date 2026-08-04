@@ -206,15 +206,6 @@ export default function LineGroupsPage() {
                   />
                   <td style={{ textAlign: "right", fontFamily: "var(--mono, ui-monospace, monospace)", fontSize: 12 }}>{g.eventCount}</td>
                   <td style={{ fontSize: 12, color: "var(--ink-3)" }}>{formatDateTime(g.lastEventAt)}</td>
-                  <td style={{ textAlign: "right" }}>
-                    {canAssign && (
-                      <button
-                        className="btn btn-sm btn-ghost"
-                        onClick={() => setConfirmHide({ id: g.groupRegistryId, name: g.displayName ?? g.groupId.slice(0, 16) })}
-                        disabled={savingIds.has(g.groupRegistryId)}
-                      >移除</button>
-                    )}
-                  </td>
                 </tr>
               );
             })}
@@ -246,6 +237,15 @@ export default function LineGroupsPage() {
                   </td>
                   <td>{g.departmentName ?? "(未分派)"}</td>
                   <td style={{ fontSize: 12, color: "var(--ink-3)" }}>{formatDateTime(g.lastEventAt)}</td>
+                  <td style={{ textAlign: "right" }}>
+                    {canAssign && (
+                      <button
+                        className="btn btn-sm btn-ghost"
+                        onClick={() => setConfirmHide({ id: g.groupRegistryId, name: g.displayName ?? g.groupId.slice(0, 16) })}
+                        disabled={savingIds.has(g.groupRegistryId)}
+                      >移除</button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
