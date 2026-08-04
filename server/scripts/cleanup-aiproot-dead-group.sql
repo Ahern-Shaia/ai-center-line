@@ -26,7 +26,7 @@ SET LOCAL app.current_tenant = '77777777-0000-0000-0000-000000000001';
 -- 守衛：確認這個群真的是「aiproot 的、已離開的、沒有分析資料的」那一個。
 -- 條件不符就中止 —— 避免手滑刪到現役的測試群 C0179efb。
 DO $$
-DECLARE n_group int; n_upload int;
+DECLARE n_group int; n_ticket int;
 BEGIN
   SELECT count(*) INTO n_group FROM line_group
   WHERE group_id = 'Cbc84f7a46975988b41ffdcad370f094d'
@@ -36,13 +36,23 @@ BEGIN
     RAISE EXCEPTION '守衛失敗：預期 1 列 left 狀態的群，實得 % 列', n_group;
   END IF;
 
-  SELECT count(*) INTO n_upload FROM analysis_upload
-  WHERE group_id = 'Cbc84f7a46975988b41ffdcad370f094d';
-  IF n_upload <> 0 THEN
-    RAISE EXCEPTION '守衛失敗：這個群有 % 個分析批次，不是預期的死資料，請先確認', n_upload;
+  -- 2026-08-04 19:16 的批次把這個死群也掃了一次（1 則訊息、0 張任務）。
+  -- 所以守衛從「不可以有批次」放寬成「不可以有任務」——
+  -- 有任務代表它產出過內容，那就不是純死資料，要停下來人工確認。
+  SELECT count(*) INTO n_ticket FROM tickets t
+  JOIN analysis_upload a ON a.id = t.source_upload_id
+  WHERE a.group_id = 'Cbc84f7a46975988b41ffdcad370f094d';
+  IF n_ticket <> 0 THEN
+    RAISE EXCEPTION '守衛失敗：這個群產出過 % 張任務，不是預期的死資料，請先確認', n_ticket;
   END IF;
 END $$;
 
+-- 批次先刪（analysis_batch.upload_id 是 ON DELETE SET NULL，先刪 upload 會留下孤兒列）
+DELETE FROM analysis_batch WHERE upload_id IN (
+  SELECT id FROM analysis_upload WHERE group_id = 'Cbc84f7a46975988b41ffdcad370f094d'
+                                   AND tenant_id = '77777777-0000-0000-0000-000000000001'::uuid);
+DELETE FROM analysis_upload WHERE group_id = 'Cbc84f7a46975988b41ffdcad370f094d'   -- 連帶 result / label
+                              AND tenant_id = '77777777-0000-0000-0000-000000000001'::uuid;
 DELETE FROM line_message WHERE group_id = 'Cbc84f7a46975988b41ffdcad370f094d'   -- 連帶 line_media
                            AND bot_id   = '99142261-c99d-4aac-9256-67158382c700';
 DELETE FROM line_member  WHERE group_id = 'Cbc84f7a46975988b41ffdcad370f094d'
