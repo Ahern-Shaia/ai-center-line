@@ -207,7 +207,9 @@ export default function MyDailyReport() {
         ) : (
           <div className="dm-empty">
             <div>今日尚未有記錄</div>
-            <div className="dm-empty-hint">私訊台灣福祉 bot 幾則今日工作 · AI 會自動整理{aiRunAt ? ` · ${aiRunAt} 也會自動觸發` : ""}</div>
+            {/* 不寫租戶名 —— 這頁是從各租戶自己的 bot 開的，寫死一家的名字對其他租戶就是錯的。
+                頁首副標也是用「私訊 bot」，維持一致。 */}
+            <div className="dm-empty-hint">私訊 bot 幾則今日工作 · AI 會自動整理{aiRunAt ? ` · ${aiRunAt} 也會自動觸發` : ""}</div>
           </div>
         )
       )}
