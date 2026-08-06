@@ -4,6 +4,7 @@ import {
   ApiError,
   listTenantBindingAudit,
   revokeBindingTenant,
+  deleteBindingTenant,
   getTenantUnboundStats,
   type BindingAuditRow,
   type UnboundStats,
@@ -22,6 +23,7 @@ export default function TenantBindingAudit() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [confirmRevoke, setConfirmRevoke] = useState<BindingAuditRow | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<BindingAuditRow | null>(null);
 
   useEffect(() => {
     void refresh();
@@ -59,6 +61,21 @@ export default function TenantBindingAudit() {
       void refresh();
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "撤銷失敗", "danger");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function doDelete() {
+    if (!confirmDelete) return;
+    setBusy(true);
+    try {
+      await deleteBindingTenant(confirmDelete.bindingId);
+      toast.show(`已刪除 ${confirmDelete.userDisplayName ?? "紀錄"}`, "ok");
+      setConfirmDelete(null);
+      void refresh();
+    } catch (err) {
+      toast.show(err instanceof ApiError ? err.message : "刪除失敗", "danger");
     } finally {
       setBusy(false);
     }
@@ -114,9 +131,9 @@ export default function TenantBindingAudit() {
                       : <span style={{ color: "var(--ink-3)" }}>○ 已撤銷</span>}
                   </td>
                   <td>
-                    {b.status === "active" && (
-                      <button className="btn small" onClick={() => setConfirmRevoke(b)} disabled={busy}>撤銷</button>
-                    )}
+                    {b.status === "active"
+                      ? <button className="btn small" onClick={() => setConfirmRevoke(b)} disabled={busy}>撤銷</button>
+                      : <button className="btn small" onClick={() => setConfirmDelete(b)} disabled={busy}>刪除</button>}
                   </td>
                 </tr>
               ))}
@@ -139,6 +156,24 @@ export default function TenantBindingAudit() {
           </>
         )}
         confirmLabel="撤銷"
+        tone="danger"
+      />
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onClose={() => !busy && setConfirmDelete(null)}
+        onConfirm={() => void doDelete()}
+        busy={busy}
+        title="刪除綁定紀錄"
+        body={confirmDelete && (
+          <>
+            即將刪除 <b>{confirmDelete.userDisplayName ?? "此員工"}</b> 的已撤銷綁定紀錄<br />
+            LINE UserId · <code className="mono">{confirmDelete.lineUserId}</code><br /><br />
+            這只是把這一列從清單移除，<b>不影響該員工重新綁定</b>；
+            誰在何時撤銷的紀錄仍留在稽核記錄裡。
+          </>
+        )}
+        confirmLabel="刪除"
         tone="danger"
       />
     </div>

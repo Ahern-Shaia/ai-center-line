@@ -1397,6 +1397,9 @@ export const listBindingAudit = (tenantId: string, status?: "active" | "revoked"
 };
 export const revokeBindingAiproot = (bindingId: string) =>
   req<{ success: boolean }>(`/binding/aiproot/revoke/${bindingId}`, { method: "POST", body: "{}" });
+/** 永久刪除已撤銷的綁定紀錄 · 後端只放行 status='revoked' */
+export const deleteBindingAiproot = (bindingId: string) =>
+  req<{ success: boolean }>(`/binding/aiproot/${bindingId}`, { method: "DELETE" });
 
 export interface UnboundStats {
   tenantId: string;
@@ -1414,6 +1417,9 @@ export const listTenantBindingAudit = (status?: "active" | "revoked") => {
 };
 export const revokeBindingTenant = (bindingId: string) =>
   req<{ success: boolean }>(`/binding/tenant/revoke/${bindingId}`, { method: "POST", body: "{}" });
+/** 永久刪除已撤銷的綁定紀錄 · 後端只放行 status='revoked' */
+export const deleteBindingTenant = (bindingId: string) =>
+  req<{ success: boolean }>(`/binding/tenant/${bindingId}`, { method: "DELETE" });
 export const getTenantUnboundStats = () =>
   req<{ stats: UnboundStats }>("/binding/tenant/unbound-stats");
 
