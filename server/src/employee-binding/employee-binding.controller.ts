@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { resolveTenantId } from "../auth/resolve-tenant-id.js";
 import { Public } from "../auth/public.decorator.js";
 import { Roles } from "../auth/roles.decorator.js";
@@ -175,6 +175,29 @@ export class EmployeeBindingController {
     if (!user.tenant_id) throw new BadRequestException("缺租戶識別");
     if (!isValidUuid(bindingId)) throw new BadRequestException("bindingId 格式錯 · 需為 UUID");
     await this.svc.revokeBindingForTenant(bindingId, user.tenant_id, user.user_id);
+    return { success: true };
+  }
+
+  /**
+   * Tenant 自治 · 永久刪除已撤銷的綁定（清稽核頁雜訊）
+   * · 只能刪 status='revoked'（repo 層護欄）· active 的刪不掉
+   * · 跨租戶由 RLS 擋（service 在 tenant 上下文執行）
+   */
+  @Delete("tenant/:bindingId")
+  @Roles("tenant_admin")
+  async tenantDeleteRevoked(@Param("bindingId") bindingId: string, @CurrentUser() user: JwtUser) {
+    if (!user.tenant_id) throw new BadRequestException("缺租戶識別");
+    if (!isValidUuid(bindingId)) throw new BadRequestException("bindingId 格式錯 · 需為 UUID");
+    await this.svc.deleteRevokedBindingForTenant(bindingId, user.tenant_id, user.user_id);
+    return { success: true };
+  }
+
+  /** Aiproot 平台端 · 永久刪除已撤銷的綁定（跨租戶） */
+  @Delete("aiproot/:bindingId")
+  @RequirePermission("binding:aiproot-manage")
+  async aiprootDeleteRevoked(@Param("bindingId") bindingId: string, @CurrentUser() user: JwtUser) {
+    if (!isValidUuid(bindingId)) throw new BadRequestException("bindingId 格式錯 · 需為 UUID");
+    await this.svc.deleteRevokedBinding(bindingId, user.user_id);
     return { success: true };
   }
 

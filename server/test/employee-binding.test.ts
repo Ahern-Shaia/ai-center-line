@@ -181,6 +181,53 @@ test("ELB · revoke 保留 audit · revoked_at/by/reason 都填", async () => {
   assert.equal(row.revoked_reason, "aiproot_revoke");
 });
 
+// 3-bis. deleteRevoked · 清稽核頁雜訊（2026-08-06 · 客戶反映撤銷後的列留著只是干擾）
+test("⭐⭐ ELB · deleteRevoked 不可刪 active（刪到等於默默解綁 · 畫面看不出異狀）", async () => {
+  // 先確保有一筆 active
+  await asAiproot((tx) => bindingRepo.create(tx, {
+    userId: USER_ELB_A1,
+    botId: BOT_ELB_A,
+    lineUserId: LINE_USER_A1,
+    boundBy: USER_ELB_A1,
+    bindingMethod: "aiproot_manual",
+    metadata: null,
+  }));
+  const active = await asAiproot((tx) => bindingRepo.getActiveByLineUserId(tx, BOT_ELB_A, LINE_USER_A1));
+  assert.ok(active, "前置：應有 active binding");
+
+  const res = await asAiproot((tx) => bindingRepo.deleteRevoked(tx, active!.bindingId));
+  assert.equal(res.deleted, false, "active 的不可刪");
+
+  const still = await asAiproot((tx) => bindingRepo.getActiveByLineUserId(tx, BOT_ELB_A, LINE_USER_A1));
+  assert.ok(still, "人還綁著");
+});
+
+test("⭐ ELB · deleteRevoked 刪得掉 revoked · 且本人仍可重新綁定", async () => {
+  const active = await asAiproot((tx) => bindingRepo.getActiveByLineUserId(tx, BOT_ELB_A, LINE_USER_A1));
+  assert.ok(active);
+  await asAiproot((tx) => bindingRepo.revoke(tx, active!.bindingId, {
+    revokedBy: USER_ELB_A1, reason: "tenant_admin_revoke",
+  }));
+
+  const res = await asAiproot((tx) => bindingRepo.deleteRevoked(tx, active!.bindingId));
+  assert.equal(res.deleted, true);
+
+  const gone = await asAiproot((tx) => tx.execute(
+    sql`SELECT 1 FROM user_line_binding WHERE binding_id = ${active!.bindingId}::uuid`));
+  assert.equal(gone.rows.length, 0, "列真的不見了");
+
+  // 刪掉不該擋住重新綁定 —— insert 走 ON CONFLICT，沒列就新增
+  const again = await asAiproot((tx) => bindingRepo.create(tx, {
+    userId: USER_ELB_A1,
+    botId: BOT_ELB_A,
+    lineUserId: LINE_USER_A1,
+    boundBy: USER_ELB_A1,
+    bindingMethod: "liff_self_service",
+    metadata: null,
+  }));
+  assert.ok(again.bindingId, "刪除後仍可重新綁定");
+});
+
 // 4. listByTenant · 對應 JOIN users · 只回同 tenant
 test("ELB · listByTenant 只回同 tenant · RLS 不會 leak", async () => {
   // A tenant 有 revoked binding (剛剛 revoke) · 加一個 active

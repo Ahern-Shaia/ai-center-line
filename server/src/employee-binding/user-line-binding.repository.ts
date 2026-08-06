@@ -128,6 +128,26 @@ export class UserLineBindingRepository {
   }
 
   /**
+   * 永久刪除一筆**已撤銷**的綁定（清掉稽核頁上的雜訊列）。
+   *
+   * ⚠️ `AND status = 'revoked'` 不可拿掉 —— 刪到 active 的等於把人默默解綁，
+   *    而且畫面上不會有任何異狀：他只是從此收不到日報、打卡也對不到人。
+   *
+   * 刪掉不影響本人重新綁定：insert 走 `ON CONFLICT (bot_id, line_user_id) DO UPDATE`，
+   * 有列就救活、沒列就新增，兩條路都通。
+   *
+   * 撤銷的歷史仍留在 `audit_log`（誰在何時呼叫 revoke 端點），不會因此消失。
+   */
+  async deleteRevoked(tx: Db, bindingId: string): Promise<{ deleted: boolean }> {
+    const res = await tx.execute<{ id: string }>(sql`
+      DELETE FROM user_line_binding
+      WHERE binding_id = ${bindingId}::uuid AND status = 'revoked'
+      RETURNING binding_id AS id
+    `);
+    return { deleted: res.rows.length > 0 };
+  }
+
+  /**
    * 列 · aiproot audit 頁 · filter by tenantId (JOIN users)
    */
   async listByTenant(tx: Db, tenantId: string, args: { status?: "active" | "revoked"; limit?: number } = {}): Promise<Array<{

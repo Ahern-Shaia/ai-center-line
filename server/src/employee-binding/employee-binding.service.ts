@@ -289,4 +289,30 @@ export class EmployeeBindingService {
     }
     this.logger.log(`Binding revoked by tenant_admin · bindingId=${bindingId} · tenant=${tenantId}`);
   }
+
+  /**
+   * 永久刪除已撤銷的綁定 · 清稽核頁雜訊。
+   * · 跨租戶 IDOR 同樣由 RLS 擋（在該 tenant 上下文執行 → 別家的 binding_id 命中 0 列）
+   * · repo 層另有 `status = 'revoked'` 護欄，active 的刪不掉
+   */
+  async deleteRevokedBindingForTenant(bindingId: string, tenantId: string, actorId: string): Promise<void> {
+    const { deleted } = await withTenant({ tenantId, role: "tenant_admin" }, (tx) =>
+      this.bindingRepo.deleteRevoked(tx, bindingId),
+    );
+    if (!deleted) {
+      throw new NotFoundException("找不到可刪除的紀錄 · 只有「已撤銷」的綁定可以刪除");
+    }
+    this.logger.log(`Revoked binding deleted · bindingId=${bindingId} · tenant=${tenantId} · by=${actorId}`);
+  }
+
+  /** aiproot 平台端刪除已撤銷綁定（跨租戶） */
+  async deleteRevokedBinding(bindingId: string, actorId: string): Promise<void> {
+    const { deleted } = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) =>
+      this.bindingRepo.deleteRevoked(tx, bindingId),
+    );
+    if (!deleted) {
+      throw new NotFoundException("找不到可刪除的紀錄 · 只有「已撤銷」的綁定可以刪除");
+    }
+    this.logger.log(`Revoked binding deleted by aiproot · bindingId=${bindingId} · by=${actorId}`);
+  }
 }
