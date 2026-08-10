@@ -22,7 +22,7 @@
 |---|---|
 | Messaging API channel 已建 | 對應 [LINE Messaging API 串接 SOP](./line-messaging-api-setup.md) §3-§4 完成 · bot 可推群組訊息 |
 | Backend 已部署 · webhook 已 connect | 加好友 → follow event 能收到 |
-| Web static site 部署可用 | `binding.html` 可從 `<web-url>/liff/binding.html` 存取 |
+| Web static site 部署可用 | `liff.html` 可從 `<web-url>/liff.html` 存取（React 版入口；`liff/binding.html` 是 legacy）|
 | DB migration 0016 已跑 | `user_line_binding` 表存在 |
 | LINE Business ID 有 admin 權限 | 可管 aiproot Provider 底下所有 channel |
 
@@ -122,10 +122,16 @@ Linked 成功後：Alice 用 LINE 帳號 A 加 bot 好友 → 開 LIFF → `liff
 |---|---|---|
 | **LIFF app name** | `binding` | 內部識別用 |
 | **Size** | **Full** | 滿版 · 藍領大字體友善 |
-| **Endpoint URL** | `https://<web-static-url>/liff/binding.html` | 你的 web static 位置 · e.g. `https://ai-center-line-demo.onrender.com/liff/binding.html` |
+| **Endpoint URL** | `https://<web-static-url>/liff.html` | e.g. `https://ai-center-line-demo.onrender.com/liff.html` |
 | **Scopes** | ✓ **profile** | 拿 UserId / displayName / pictureUrl · openid / chat_message.write 不用勾 |
 | **Add friend option** | **On (normal)** | 若使用者未加 bot 好友 · LIFF 內提示加。Aggressive 太強迫 · Off 錯過提示機會 |
 | **Scan QR** | 不勾 | 不用 |
+
+> ⚠️ **Endpoint URL 是 `/liff.html`（根目錄），不是 `/liff/binding.html`。**
+> 後者是 M2 收斂前的 legacy 靜態頁，只有綁定與設密碼兩個視圖，
+> **沒有打卡／我的行程／我的日報**。現行入口是 React 版 `liff.html`
+> （vite 多入口，見 `web/vite.config.ts`），五個頁面都靠 `?page=` 切。
+> 填錯的症狀：選單點得開，但打卡與日報是空白。
 
 4. Add · 拿到 **LIFF ID**（形如 `2010801742-WBQkAv5t`）· 記下來
 
@@ -171,20 +177,18 @@ LIFF_URL=https://liff.line.me/<你的 LIFF ID>
 
 儲存 → 觸發 backend redeploy。
 
-### 7.2 Frontend · 注入 LIFF ID 到 binding.html
+### 7.2 Frontend · **不用改任何程式碼**（0060 起）
 
-編輯 `web/public/liff/binding.html`：
+~~編輯 `web/public/liff/binding.html` 注入 LIFF ID~~ —— **這一步已廢除，別做。**
 
-```html
-<script>
-  const LIFF_ID = "2010801742-WBQkAv5t";   // 更新這裡
-  // ...
-</script>
-```
+migration 0060 之後，LIFF ID 是 `line_bot.liff_id` 這個**每支 bot 各自的欄位**，
+在後台「LINE 機器人管理 → 該 bot → 編輯」填即可。
 
-Commit + push · 觸發 web static site redeploy。
+- bot 發出的連結由 `buildLiffUrl()` 依該 bot 的 `liff_id` 組出，並把 `liffId` 帶進 query
+- 前端 `web/src/liff/main.tsx` 的 `DEFAULT_LIFF_ID` **只是 fallback**，
+  給還沒設 `liff_id` 的舊 bot 用；不要為了新 bot 去改它
 
-**未來若切 per-tenant LIFF**：改成 build-time env 注入 · 或 backend server-render binding.html。
+→ 新增一支 provider 不同的 bot 時，**前端零改動、不用 redeploy**。
 
 ---
 
@@ -196,7 +200,7 @@ Commit + push · 觸發 web static site redeploy。
 - [ ] LIFF app 已 Add · LIFF ID 記錄
 - [ ] Channel 已 Publish（或測試員工加為 Developer role）
 - [ ] Render env `LIFF_URL` 已設 · backend 已 redeploy
-- [ ] `binding.html` 已注入 LIFF ID · web 已 redeploy
+- [ ] 後台已填該 bot 的 LIFF ID 與 Login Channel ID（不需改 code、不需 redeploy）
 - [ ] DB migration 0016 已跑 · `user_line_binding` 表存在
 
 ### 8.2 端到端測試步驟
@@ -215,7 +219,7 @@ Commit + push · 觸發 web static site redeploy。
    - 若沒收到 → 對照 §9 troubleshooting「follow event 沒觸發」
 
 3. **點「開始綁定」按鈕**
-   - LIFF 在 LINE App 內開啟 binding.html
+   - LIFF 在 LINE App 內開啟 liff.html
    - 顯示：載入中 → pre-fill 確認頁
 
 4. **確認 pre-fill 資料**
@@ -301,7 +305,7 @@ LIFF binding complete · user=Alice (uuid) · botId=... · lineUserId=xxx
 
 **檢查**：
 - 瀏覽器 devtools console log · 看 LIFF SDK error
-- 常見：`liff.init()` failed · 因 LIFF ID 錯（`binding.html` 沒注入正確）
+- 常見：`liff.init()` failed / `Invalid LIFF ID` · 因選單網址漏帶 `&liffId=`，頁面退回預設 LIFF ID 去 init
 - 常見：`/binding/liff/prefill` 500 error · 對應 backend 問題
 
 ### 9.7 端到端流程走完但 aiproot audit 沒看到
