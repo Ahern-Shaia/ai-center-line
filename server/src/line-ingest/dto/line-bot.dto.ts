@@ -22,6 +22,12 @@ export const LineBotCreateSchema = z.object({
   if (v.liffId && !v.loginChannelId) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["loginChannelId"], message: "填了 LIFF ID 就必須填對應的 LINE Login channel ID" });
   }
+  // 反過來也不行，而且更糟：連結會退回 env 預設的 LIFF（別的 provider），
+  // 但驗證只認這支 login channel → 兩邊永遠對不上，綁定必定失敗。
+  // 2026-08-10 聞訊測試助手就是這個狀態（只填了 login channel、liff_id 留空）。
+  if (v.loginChannelId && !v.liffId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["liffId"], message: "填了 LINE Login channel ID 就必須填該 channel 底下的 LIFF ID，否則綁定連結會指向別的 provider" });
+  }
 });
 
 export const LineBotUpdateSchema = z.object({

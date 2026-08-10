@@ -146,6 +146,23 @@ export class LineBotService {
       }
     }
 
+    // 0060 · 檢查**合併後**的狀態，不是 patch 本身 ——
+    // 部分更新時，光看 patch 看不出最終會不會變成「有 login channel 但沒 LIFF」，
+    // 而那個組合必定失敗：連結退回 env 預設的 LIFF（別的 provider），
+    // 但驗證只認這支 login channel，兩邊永遠對不上。
+    if (patch.liffId !== undefined || patch.loginChannelId !== undefined) {
+      const cur = await this.botRepo.getById(tx, botId);
+      if (!cur) throw new NotFoundException("找不到 bot");
+      const nextLiff = patch.liffId !== undefined ? patch.liffId : cur.liffId;
+      const nextLogin = patch.loginChannelId !== undefined ? patch.loginChannelId : cur.loginChannelId;
+      if (!!nextLiff !== !!nextLogin) {
+        throw new BadRequestException(
+          "LIFF ID 與 LINE Login Channel ID 必須成對設定（要嘛都填、要嘛都留空）"
+          + " · 只填一個會讓綁定連結與驗證對不上，員工一律綁不了",
+        );
+      }
+    }
+
     await this.botRepo.update(tx, botId, patch);
 
     if (movedTenant) {
