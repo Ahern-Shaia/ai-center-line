@@ -69,7 +69,7 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
       const res = await listAnalysisBatches(tenantId || undefined);
       setRows(res.batches);
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入批次歷程失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : "載入分析歷程失敗", "danger");
     } finally {
       setLoading(false);
     }
@@ -100,7 +100,7 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
       setTenants((prev) => prev.map((t) =>
         t.tenantId === res.tenantId ? { ...t, batchEnabled: res.batchEnabled } : t));
       toast.show(
-        `${selectedTenant.tenantName} · 每日 batch 已${res.batchEnabled ? "啟用" : "停用"}`,
+        `${selectedTenant.tenantName} · 每日自動分析已${res.batchEnabled ? "啟用" : "停用"}`,
         "ok",
       );
     } catch (err) {
@@ -154,7 +154,7 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
           tenantId: selectedTenantId,
         });
         toast.show(
-          `${scope} · 回溯 ${lookbackDays} 天 · 共 ${res.total.toLocaleString()} 個 · 完成 ${res.completed} · 空群 ${res.empty} · 失敗 ${res.failed}`,
+          `${scope} · 回溯 ${lookbackDays} 天 · 找到 ${res.total.toLocaleString()} 天 · 已排入 ${res.completed} · 無訊息 ${res.empty} · 失敗 ${res.failed}`,
           "ok",
         );
       }
@@ -173,7 +173,7 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
       onClose={() => !busy && setConfirm(null)}
       onConfirm={() => void executeConfirm()}
       busy={busy}
-      title={confirm.type === "rerun" ? "重跑 Batch" : "掃 pending 全跑"}
+      title={confirm.type === "rerun" ? "重新分析" : "補跑未分析的日子"}
       body={confirm.type === "rerun" ? (
         <>
           即將重跑：<br />
@@ -183,11 +183,11 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
         </>
       ) : (
         <>
-          即將掃過去 <b>{lookbackDays}</b> 天所有未跑 batch：<br />
+          即將補跑過去 <b>{lookbackDays}</b> 天還沒分析過的日子：<br />
           租戶 <b>{selectedTenantId ? tenantName(selectedTenantId) : ""}</b><br />
-          併發 3 · 依訊息量決定耗時。<br /><br />
+          同時最多 3 個一起跑 · 依訊息量決定耗時。<br /><br />
           已跑過的日期不會重跑，<b>只補沒跑過的</b>。回溯天數拉大只會多花掃描時間，
-          不會重複產生批次或重複計費。
+          不會重複分析或重複計費。
         </>
       )}
       confirmLabel={confirm.type === "rerun" ? "重跑" : "開始"}
@@ -204,7 +204,7 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
         <div>
           <h1 style={{ margin: 0, fontSize: 20 }}>對話分析歷程</h1>
           <div style={{ fontSize: 13, color: "var(--ink-3)", marginTop: 4 }}>
-            LINE 訊息 → 每日 08:00 (台北) 自動 batch → analysis_upload · 也可手動重跑
+            每個群組每天的對話，由 AI 整理成一次分析 · 每日 08:00（台北）自動執行，也可手動補跑
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -219,8 +219,8 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
             <AriaButton className="llm-select-btn" style={{ minWidth: 240 }}>
               <SelectValue className="llm-select-value">
                 {() => selectedTenantId
-                  ? `${tenantName(selectedTenantId)} · ${countByTenant.get(selectedTenantId) ?? 0} 筆 batch`
-                  : `全部租戶 · 共 ${rows.length.toLocaleString()} 筆 batch`}
+                  ? `${tenantName(selectedTenantId)} · ${countByTenant.get(selectedTenantId) ?? 0} 次分析`
+                  : `全部租戶 · 共 ${rows.length.toLocaleString()} 次分析`}
               </SelectValue>
               <svg className="llm-select-chev" width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
                 <path d="M1 1l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -229,9 +229,9 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
             <Popover className="llm-select-pop" offset={4}>
               <ListBox
                 className="llm-select-list"
-                items={[{ id: "__all__", name: `全部租戶 · 共 ${rows.length.toLocaleString()} 筆 batch` }, ...tenants.map((t) => ({
+                items={[{ id: "__all__", name: `全部租戶 · 共 ${rows.length.toLocaleString()} 次分析` }, ...tenants.map((t) => ({
                   id: t.tenantId,
-                  name: `${t.tenantName} · ${countByTenant.get(t.tenantId) ?? 0} 筆 batch`,
+                  name: `${t.tenantName} · ${countByTenant.get(t.tenantId) ?? 0} 次分析`,
                 }))]}
               >
                 {(item) => (
@@ -251,10 +251,10 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
               onClick={() => void onToggleBatchEnabled()}
               disabled={busy}
               title={selectedTenant.batchEnabled
-                ? "點擊 · 停用此租戶每天 08:00 的自動分析（仍可手動觸發）"
+                ? "點擊 · 停用此租戶每天 08:00 的自動分析（關掉後仍可用右邊按鈕手動補跑）"
                 : "點擊 · 恢復此租戶每天 08:00 的自動分析"}
             >
-              每日 batch · <b style={{ color: selectedTenant.batchEnabled ? "var(--ok-600)" : "var(--rose-600)" }}>
+              每日自動分析 · <b style={{ color: selectedTenant.batchEnabled ? "var(--ok-600)" : "var(--rose-600)" }}>
                 {selectedTenant.batchEnabled ? "啟用中" : "已停用"}
               </b>
             </button>
@@ -271,7 +271,7 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
             onChange={(e) => setLookbackDays(Math.min(90, Math.max(1, Number(e.target.value) || 1)))}
             disabled={busy}
             aria-label="回溯天數"
-            title="要掃幾天內未跑的 batch · 補歷史時調大（N 天＝今天往前算 N 天，共 N+1 天）"
+            title="要往前找幾天內「還沒分析過」的日子 · 補歷史時調大（N 天＝今天往前算 N 天，共 N+1 天）"
           />
           <span style={{ fontSize: 13.5, color: "var(--ink-2)" }}>天</span>
           <button
@@ -279,12 +279,12 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
             onClick={() => setConfirm({ type: "run-pending" })}
             disabled={busy || !selectedTenantId}
             title={selectedTenantId
-              ? `掃「${tenantName(selectedTenantId)}」過去 ${lookbackDays} 天所有未跑 batch`
+              ? `補跑「${tenantName(selectedTenantId)}」過去 ${lookbackDays} 天還沒分析的日子`
               : "請先於上方下拉選擇租戶 · 對話分析只能按單一租戶執行"}
           >
             {selectedTenantId
-              ? `掃「${tenantName(selectedTenantId)}」pending`
-              : "掃 pending（請先選租戶）"}
+              ? `補跑「${tenantName(selectedTenantId)}」未分析`
+              : "補跑未分析（請先選租戶）"}
           </button>
         </div>
       </div>
@@ -294,8 +294,8 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
       ) : rows.length === 0 ? (
         <div className="dm-empty">
           {selectedTenantId
-            ? "該租戶目前無批次記錄 · 待訊息累積後由排程 / 手動觸發"
-            : "尚無批次記錄 · 待第一筆訊息接入 + 排程觸發或手動掃"}
+            ? "這個租戶還沒有任何分析 · 等訊息累積後由排程自動執行，也可手動補跑"
+            : "還沒有任何分析 · 等第一批訊息接入後，由排程自動執行或手動補跑"}
           <div className="dm-empty-hint">排程時間：每日 08:00（台北）</div>
         </div>
       ) : (
@@ -307,7 +307,7 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
               <tr>
                 <th>日期</th>
                 <th>租戶</th>
-                <th>Group</th>
+                <th>群組</th>
                 <th className="num">訊息數</th>
                 <th>分析結果</th>
                 <th>觸發</th>

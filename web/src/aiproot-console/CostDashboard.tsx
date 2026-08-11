@@ -174,7 +174,7 @@ export default function CostDashboard({ onOpenAnalysis }: Props = {}) {
         <section className="cost-section">
           <div className="cost-section-hdr">
             <div className="cost-section-title">按 LINE 群組</div>
-            <div className="cost-section-mark">{data.byGroup.length} 個群 · 只含 webhook batch</div>
+            <div className="cost-section-mark">{data.byGroup.length} 個群 · 只含群組對話分析</div>
           </div>
           <table className="cost-tbl">
             <thead>
