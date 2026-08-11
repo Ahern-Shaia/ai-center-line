@@ -6,6 +6,7 @@ import {
   type PersonalDailyReportRow,
 } from "../api";
 import StyledSelect from "../shared/StyledSelect";
+import { useTenantPicker } from "../shared/TenantPicker";
 import { useToast } from "../Toast";
 
 // 部門日報 · 主管（group_owner / tenant_admin）看下屬送出的個人日報
@@ -45,6 +46,8 @@ function weekdayOf(date: string): string {
 
 export default function TeamDailyReport() {
   const toast = useToast();
+  // 平台角色要指定看哪一家；租戶角色回 undefined（後端用 JWT 的 tenant_id）
+  const [pickedTenantId, tenantPicker, tenantReady] = useTenantPicker();
   const [days, setDays] = useState<7 | 30>(7);
   const [filter, setFilter] = useState<Filter>("content");
   const [dept, setDept] = useState<string>("");   // "" = 全部部門
@@ -54,6 +57,9 @@ export default function TeamDailyReport() {
   const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set());
 
   const refresh = useCallback(async () => {
+    // 平台角色要等租戶清單載回來才查 —— 否則會帶著空 tenantId 送出，
+    // 後端回「請先選擇要查看的租戶」，使用者一進頁面就看到紅色錯誤
+    if (!tenantReady) return;
     setLoading(true);
     try {
       const from = new Date();
@@ -61,6 +67,7 @@ export default function TeamDailyReport() {
       const r = await getTeamPersonalReports({
         from: from.toISOString().slice(0, 10),
         to: new Date().toISOString().slice(0, 10),
+        tenantId: pickedTenantId,
       });
       setRows(r.reports);
     } catch (e) {
@@ -68,7 +75,7 @@ export default function TeamDailyReport() {
     } finally {
       setLoading(false);
     }
-  }, [days, toast]);
+  }, [days, toast, pickedTenantId, tenantReady]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -117,6 +124,7 @@ export default function TeamDailyReport() {
           <div className="sub">部門成員送出的每日工作日報 · 點一列展開看內容</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {tenantPicker}
           <div className="seg">
             {FILTERS.map((f) => (
               <button

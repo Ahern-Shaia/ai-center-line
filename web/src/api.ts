@@ -687,10 +687,13 @@ export const regeneratePersonalReport = (date?: string) =>
     body: JSON.stringify({ date }),
   });
 
-export const getTeamPersonalReports = (opts: { from?: string; to?: string } = {}) => {
+// tenantId：平台角色必須指定要看哪一家 —— 不指定會多家混在一起，
+// 且 departments 因 RLS 而 JOIN 不到，部門一律顯示「未分派」
+export const getTeamPersonalReports = (opts: { from?: string; to?: string; tenantId?: string } = {}) => {
   const p = new URLSearchParams();
   if (opts.from) p.set("from", opts.from);
   if (opts.to) p.set("to", opts.to);
+  if (opts.tenantId) p.set("tenantId", opts.tenantId);
   const q = p.toString();
   return req<{ reports: PersonalDailyReportRow[]; from: string; to: string }>(`/personal-daily-report/team${q ? `?${q}` : ""}`);
 };
