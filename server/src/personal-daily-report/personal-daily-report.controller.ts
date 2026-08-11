@@ -356,6 +356,24 @@ export class PersonalDailyReportController {
     return { reports: rows, from, to };
   }
 
+  /**
+   * 補跑個人日報（平台端）· 對應「對話分析歷程」頁的補跑按鈕。
+   * 只補空缺、不重跑已存在的（見 scheduler.runPendingForTenant 的說明）。
+   */
+  @Post("aiproot/run-pending")
+  @RequirePermission("personal-report:trigger")
+  async runPendingPersonal(
+    @CurrentUser() user: JwtUser,
+    @Body() body: { tenantId?: string; lookbackDays?: number } = {},
+  ) {
+    const scope = resolveTenantFilter(user, body.tenantId);
+    if (!scope) {
+      throw new BadRequestException({ status: "tenant_id_required", message: "請先選擇要補跑的租戶" });
+    }
+    const lookback = Math.min(90, Math.max(1, body.lookbackDays ?? 2));
+    return this.scheduler.runPendingForTenant(scope, lookback);
+  }
+
   @Post("aiproot/run-scheduler")
   @RequirePermission("personal-report:trigger")
   async runScheduler(@Body() body: { date?: string } = {}) {
