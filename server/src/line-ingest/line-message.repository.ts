@@ -48,6 +48,27 @@ export class LineMessageRepository {
   }
 
   /**
+   * 這是這個人今天私訊 bot 的第一則嗎？（決定 ack 要不要附「傳日報可查」的提示）
+   *
+   * ⚠️ 呼叫時機在 insertOnEvent **之後**，當下這一則已經在表裡 ——
+   *    所以第一則的 count 是 1 不是 0，判斷用 `<= 1`。
+   *
+   * 用 `sender_line_id` 而不是 `sender_user_id`：後者要綁定成功才有值，
+   * 而這句提示對「剛綁完、還在摸索」的人最有用，不能因為對不到帳號就漏掉。
+   */
+  async isFirstPersonalMessageToday(tx: Db, botId: string, lineUserId: string): Promise<boolean> {
+    const res = await tx.execute<{ n: number }>(sql`
+      SELECT count(*)::int AS n FROM line_message
+      WHERE bot_id = ${botId}::uuid
+        AND sender_line_id = ${lineUserId}
+        AND chat_context = 'personal'
+        AND (sent_at AT TIME ZONE 'Asia/Taipei')::date
+            = (now() AT TIME ZONE 'Asia/Taipei')::date
+    `);
+    return (res.rows[0]?.n ?? 0) <= 1;
+  }
+
+  /**
    * 拉某 aiproot user 某天私訊 · 個人日報 pipeline 用
    * batchDate 格式: "YYYY-MM-DD" (Asia/Taipei)
    */

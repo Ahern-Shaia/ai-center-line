@@ -209,3 +209,46 @@ test("⭐⭐ 關掉之後 replyEnabled 為 false，且與 AI 分析是兩個獨�
     await c.end();
   }
 });
+
+// 2026-08-11 用戶回報：bot 每則私訊都附「傳日報可查…」，連傳五則就看到五次同一句。
+// 提示改成只在當天第一則附上；程式碼註解本來就寫「首則額外提示」，只是沒實作。
+test("⭐ 提示句只在當天第一則附上（每則都附＝噪音）", async () => {
+  const LINE_UID = "Utestfirstmsgtoday00000000000001";
+  const c = new pg.Client({ connectionString: process.env.MIGRATION_DATABASE_URL });
+  await c.connect();
+  await c.query(`DELETE FROM line_message WHERE sender_line_id = $1`, [LINE_UID]);
+  await c.end();
+
+  const insert = (id: string, offsetMs: number) => withSystemTx((tx) => messageRepo.insertOnEvent(tx, {
+    messageId: id,
+    tenantId: T_A,
+    botId: BOT_A,
+    groupId: `__personal__${LINE_UID}`,
+    departmentId: null,
+    senderLineId: LINE_UID,
+    chatContext: "personal",
+    messageType: "text",
+    textContent: "測試",
+    stickerRef: null,
+    sentAtMs: Date.now() + offsetMs,
+    rawEvent: {},
+  }));
+  const isFirst = () => withSystemTx((tx) =>
+    messageRepo.isFirstPersonalMessageToday(tx, BOT_A, LINE_UID));
+
+  try {
+    await insert("msgtest-first-today-000000000001", 0);
+    assert.equal(await isFirst(), true, "第一則要附提示（呼叫時該則已落庫，count=1）");
+
+    await insert("msgtest-first-today-000000000002", 1000);
+    assert.equal(await isFirst(), false, "第二則起只回「已記錄」");
+
+    await insert("msgtest-first-today-000000000003", 2000);
+    assert.equal(await isFirst(), false, "之後都不再附");
+  } finally {
+    const c2 = new pg.Client({ connectionString: process.env.MIGRATION_DATABASE_URL });
+    await c2.connect();
+    await c2.query(`DELETE FROM line_message WHERE sender_line_id = $1`, [LINE_UID]);
+    await c2.end();
+  }
+});

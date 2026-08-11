@@ -528,15 +528,24 @@ export class LineWebhookService {
           }
         }
 
-        // bot 輕回應 · 讓 Alice 知道已收到 · 首則額外提示可用「日報」查
+        // bot 輕回應 · 讓 Alice 知道已收到。
+        //
+        // 提示句只在**當天第一則**附上 —— 原本每則都附，使用者連傳五則就看到五次同一句，
+        // 變成純噪音（2026-08-11 用戶回報）。註解本來就寫「首則額外提示」，只是沒實作。
+        // 之後每則就只回「✓ 已記錄」。
         if (event.replyToken) {
           try {
-            // ⚠️ 時間不可寫死 · 每家自己設（prod 實例：台灣福祉把批次改成 18:00）
-            const at = await schedulerTimeLabel(tx, bot.tenantId, "pdr");
-            const tail = at ? `${at} 由 AI 整理成日報` : "AI 會整理成日報";
-            await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
+            const isFirstToday = await this.messageRepo.isFirstPersonalMessageToday(tx, bot.botId, userId);
+            let text = "✓ 已記錄";
+            if (isFirstToday) {
+              // ⚠️ 時間不可寫死 · 每家自己設（prod 實例：台灣福祉把批次改成 18:00）
+              const at = await schedulerTimeLabel(tx, bot.tenantId, "pdr");
+              const tail = at ? `${at} 由 AI 整理成日報` : "AI 會整理成日報";
               // 文案要誠實：訊息是「立刻記錄、立刻看得到」；AI 整理是另一件事
-              { type: "text", text: `✓ 已記錄\n\n傳「日報」可隨時查看今日記錄 · ${tail}` },
+              text = `✓ 已記錄\n\n傳「日報」可隨時查看今日記錄 · ${tail}`;
+            }
+            await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
+              { type: "text", text },
             ]);
           } catch (err) {
             this.logger.warn(`personal msg ack reply 失敗 · ${(err as Error).message}`);
