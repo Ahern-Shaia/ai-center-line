@@ -188,6 +188,15 @@ export class PersonalDailyReportRepository {
   }
 
   /**
+   * 設 RLS 上下文 · 平台角色看指定租戶時必須先設。
+   * `departments` 的 policy 是 AND-only（沒有 aiproot_admin 逃生門），
+   * 不設的話 listByRange 的 LEFT JOIN 會整個被濾掉 → 部門一律顯示未分派。
+   */
+  async setTenantContext(tx: Db, tenantId: string): Promise<void> {
+    await tx.execute(sql`SELECT set_config('app.current_tenant', ${tenantId}, true)`);
+  }
+
+  /**
    * 主管看部門日報 / tenant_admin 看全 tenant · RLS 已處理
    */
   async listByRange(tx: Db, args: {

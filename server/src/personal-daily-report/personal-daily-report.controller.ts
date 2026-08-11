@@ -5,6 +5,7 @@ import { CurrentUser } from "../auth/current-user.decorator.js";
 import { Public } from "../auth/public.decorator.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
+import { resolveTenantFilter } from "../auth/resolve-tenant-id.js";
 import { sql as sql_import } from "drizzle-orm";
 import { currentTx, withTenant } from "../db/client.js";
 import { EmployeeBindingService } from "../employee-binding/employee-binding.service.js";
@@ -321,13 +322,36 @@ export class PersonalDailyReportController {
     return { ...res, errorMessage: friendlyAiError(res.errorMessage) ?? undefined };
   }
 
+  /**
+   * 部門日報清單。
+   *
+   * tenantId：平台角色指定要看哪一家；租戶角色一律鎖自己家（resolveTenantFilter 把關）。
+   *
+   * ⚠️ 平台角色**必須**指定租戶，理由有兩個（2026-08-11 用戶回報）：
+   *   1. `departments` 的 policy 是 AND-only、**沒有 aiproot_admin 逃生門**。
+   *      `app.current_tenant` 空著時 LEFT JOIN 整個被濾掉 → 部門一律顯示「未分派」，
+   *      而那跟「真的沒分派」在畫面上長得一模一樣，看不出是 bug。
+   *   2. 不指定的話多家租戶的人混在同一張表，同名的人
+   *      （洪鈺仙Sandy 在鮮湧與 aiproot 都有）根本分不出來。
+   */
   @Get("team")
   @RequirePermission("personal-report:team")
-  async team(@Query("from") fromDate?: string, @Query("to") toDate?: string) {
+  async team(
+    @CurrentUser() user: JwtUser,
+    @Query("from") fromDate?: string,
+    @Query("to") toDate?: string,
+    @Query("tenantId") tenantId?: string,
+  ) {
     const to = toDate ?? getTaipeiDate();
     const from = fromDate ?? subtractDays(to, 7);
     if (!isValidDate(from) || !isValidDate(to)) throw new BadRequestException("from/to 格式錯");
+    const scope = resolveTenantFilter(user, tenantId);
+    if (!scope) {
+      throw new BadRequestException({ status: "tenant_id_required", message: "請先選擇要查看的租戶" });
+    }
     const tx = currentTx();
+    // 設好 current_tenant，departments 才 JOIN 得到（見上方說明）
+    await this.repo.setTenantContext(tx, scope);
     const rows = await this.repo.listByRange(tx, { fromDate: from, toDate: to, limit: 200 });
     return { reports: rows, from, to };
   }
