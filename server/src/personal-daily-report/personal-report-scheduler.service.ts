@@ -53,13 +53,19 @@ export class PersonalReportSchedulerService {
       WHERE b.status = 'active' AND u.tenant_id = ${tenantId}::uuid
     `));
 
+    // ⚠️ 用區間而非 ANY(array)：drizzle 的 sql 模板會把 JS 陣列展開成 record，
+    //    寫成 ANY(<陣列>::date[]) 會炸「cannot cast type record to date[]」(42846)。
+    //    dates 本來就是連續區間（索引 0 是今天、末端最舊），BETWEEN 更直接。
+    //    ⚠️ 這段註解**不可以搬進 sql 模板裡** —— 反引號與 ${} 會被當成模板語法解析。
+    const oldest = dates[dates.length - 1];
+    const newest = dates[0];
     const existing = await withTenant({ tenantId, role: "tenant_admin" }, (tx) => tx.execute<{
       k: string;
     }>(sql`
       SELECT user_id::text || '|' || report_date::text AS k
       FROM personal_daily_report
       WHERE tenant_id = ${tenantId}::uuid
-        AND report_date = ANY(${dates}::date[])
+        AND report_date BETWEEN ${oldest}::date AND ${newest}::date
     `));
     const had = new Set(existing.rows.map((r) => r.k));
 
