@@ -1321,6 +1321,13 @@ export const rerunAnalysisBatch = (body: { tenantId: string; groupId: string; ba
     "/aiproot-console/batches/rerun", { method: "POST", body: JSON.stringify(body) },
   );
 
+/** 補跑個人日報 · 只補空缺，不重跑已存在的 */
+export const runPendingPersonalReports = (opts: { lookbackDays?: number; tenantId?: string }) =>
+  req<{ scanned: number; generated: number; empty: number; failed: number; alreadyHad: number }>(
+    "/personal-daily-report/aiproot/run-pending",
+    { method: "POST", body: JSON.stringify(opts) },
+  );
+
 export const runPendingBatches = (opts?: { lookbackDays?: number; tenantId?: string }) =>
   req<{ total: number; completed: number; empty: number; failed: number }>(
     "/aiproot-console/batches/run-pending",

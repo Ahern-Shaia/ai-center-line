@@ -14,6 +14,7 @@ import {
   listAiprootTenants,
   rerunAnalysisBatch,
   runPendingBatches,
+  runPendingPersonalReports,
   setTenantBatchEnabled,
   type AnalysisBatchRow,
   type AiprootTenantOption,
@@ -43,6 +44,7 @@ const RAW_STATUS_LABEL: Record<AnalysisBatchRow["status"], string> = {
 type PendingConfirm =
   | { type: "rerun"; row: AnalysisBatchRow }
   | { type: "run-pending" }
+  | { type: "run-pending-pdr" }
   | null;
 
 interface Props {
@@ -142,6 +144,21 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
             : `已排入分析 · ${res.messageCount.toLocaleString()} 則訊息 · 在背景進行，稍後重新整理看結果`,
           res.status === "failed" ? "danger" : "ok",
         );
+      } else if (confirm.type === "run-pending-pdr") {
+        if (!selectedTenantId) {
+          toast.show("請先選擇租戶", "danger");
+          return;
+        }
+        const res = await runPendingPersonalReports({
+          lookbackDays,
+          tenantId: selectedTenantId,
+        });
+        toast.show(
+          `${tenantName(selectedTenantId)} · 回溯 ${lookbackDays} 天 · 補了 ${res.generated} 份`
+          + ` · 當日無私訊 ${res.empty} · 失敗 ${res.failed}`
+          + `（已有的 ${res.alreadyHad} 份未動）`,
+          "ok",
+        );
       } else {
         // batch 永遠 tenant-scoped · 沒選租戶就不執行 (UI 按鈕已 disable · 這裡加保底)
         if (!selectedTenantId) {
@@ -173,13 +190,21 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
       onClose={() => !busy && setConfirm(null)}
       onConfirm={() => void executeConfirm()}
       busy={busy}
-      title={confirm.type === "rerun" ? "重新分析" : "補跑未分析的日子"}
+      title={confirm.type === "rerun" ? "重新分析" : confirm.type === "run-pending-pdr" ? "補跑個人日報" : "補跑未分析的日子"}
       body={confirm.type === "rerun" ? (
         <>
           即將重跑：<br />
           租戶 <b>{tenantName(confirm.row.tenantId)}</b><br />
           群組 <code className="mono">{confirm.row.groupId.slice(0, 24)}…</code><br />
           日期 <b>{confirm.row.batchDate}</b>
+        </>
+      ) : confirm.type === "run-pending-pdr" ? (
+        <>
+          即將補跑過去 <b>{lookbackDays}</b> 天還沒產生的<b>個人日報</b>：<br />
+          租戶 <b>{selectedTenantId ? tenantName(selectedTenantId) : ""}</b><br /><br />
+          對象是已綁定 LINE 的成員，來源是他們<b>私訊機器人</b>的內容
+          （群組對話不算，那走上面的「補跑未分析」）。<br /><br />
+          <b>已經有日報的日子一律跳過</b> —— 重跑會把成員已確認的日報退回未確認。
         </>
       ) : (
         <>
@@ -285,6 +310,16 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
             {selectedTenantId
               ? `補跑「${tenantName(selectedTenantId)}」未分析`
               : "補跑未分析（請先選租戶）"}
+          </button>
+          <button
+            className="btn"
+            onClick={() => setConfirm({ type: "run-pending-pdr" })}
+            disabled={busy || !selectedTenantId}
+            title={selectedTenantId
+              ? `補跑「${tenantName(selectedTenantId)}」過去 ${lookbackDays} 天還沒產生的個人日報`
+              : "請先於上方下拉選擇租戶"}
+          >
+            補跑個人日報
           </button>
         </div>
       </div>
