@@ -58,6 +58,10 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<PendingConfirm>(null);
   const [onlyAttention, setOnlyAttention] = useState(false);
+  // 回溯天數 · 預設 2 對齊排程設定；補歷史時調大
+  // 2026-08-11：aiproot 因 batch_enabled=false 累積 7 天沒被分析，
+  // 而這裡原本寫死 2 —— 補不回來。任何一次「排程沒跑到」都會再撞到同一面牆。
+  const [lookbackDays, setLookbackDays] = useState(2);
 
   async function refresh(tenantId: string = selectedTenantId) {
     setLoading(true);
@@ -146,11 +150,11 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
         }
         const scope = tenantName(selectedTenantId);
         const res = await runPendingBatches({
-          lookbackDays: 2,
+          lookbackDays,
           tenantId: selectedTenantId,
         });
         toast.show(
-          `${scope} · 共 ${res.total.toLocaleString()} 個 · 完成 ${res.completed} · 空群 ${res.empty} · 失敗 ${res.failed}`,
+          `${scope} · 回溯 ${lookbackDays} 天 · 共 ${res.total.toLocaleString()} 個 · 完成 ${res.completed} · 空群 ${res.empty} · 失敗 ${res.failed}`,
           "ok",
         );
       }
@@ -179,9 +183,11 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
         </>
       ) : (
         <>
-          即將掃過去 2 天所有未跑 batch：<br />
+          即將掃過去 <b>{lookbackDays}</b> 天所有未跑 batch：<br />
           租戶 <b>{selectedTenantId ? tenantName(selectedTenantId) : ""}</b><br />
-          併發 3 · 依訊息量決定耗時。
+          併發 3 · 依訊息量決定耗時。<br /><br />
+          已跑過的日期不會重跑，<b>只補沒跑過的</b>。回溯天數拉大只會多花掃描時間，
+          不會重複產生批次或重複計費。
         </>
       )}
       confirmLabel={confirm.type === "rerun" ? "重跑" : "開始"}
@@ -254,12 +260,26 @@ export default function BatchHistory({ onOpenAnalysis }: Props = {}) {
             </button>
           )}
           <button className="btn" onClick={() => void refresh()} disabled={loading || busy}>重新整理</button>
+          <span style={{ fontSize: 13.5, color: "var(--ink-2)" }}>回溯</span>
+          <input
+            className="tf"
+            type="number"
+            min={1}
+            max={90}
+            style={{ width: 68 }}
+            value={lookbackDays}
+            onChange={(e) => setLookbackDays(Math.min(90, Math.max(1, Number(e.target.value) || 1)))}
+            disabled={busy}
+            aria-label="回溯天數"
+            title="要掃幾天內未跑的 batch · 補歷史時調大（N 天＝今天往前算 N 天，共 N+1 天）"
+          />
+          <span style={{ fontSize: 13.5, color: "var(--ink-2)" }}>天</span>
           <button
             className="btn primary"
             onClick={() => setConfirm({ type: "run-pending" })}
             disabled={busy || !selectedTenantId}
             title={selectedTenantId
-              ? `掃「${tenantName(selectedTenantId)}」過去 2 天所有未跑 batch`
+              ? `掃「${tenantName(selectedTenantId)}」過去 ${lookbackDays} 天所有未跑 batch`
               : "請先於上方下拉選擇租戶 · 對話分析只能按單一租戶執行"}
           >
             {selectedTenantId
