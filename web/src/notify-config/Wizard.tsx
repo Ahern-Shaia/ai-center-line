@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError, ncCreateAccount, ncCreateRule, ncEventCatalog, ncFetchFields, ncGetRule, ncAllLineGroups,
   ncSendableTargets, type NcSendableTarget,
-  ncListAccounts, ncNotifiableUsers, ncUpdateRule, notifyWebhookUrl,
+  ncListAccounts, ncNotifiableUsers, ncRenameAccount, ncUpdateRule, notifyWebhookUrl,
   type EventDef, type NcLineGroup, type NotifiableUser, type NotifyChannelType,
   type NotifySourceType, type RagicAccountRow,
 } from "../api";
@@ -34,6 +34,8 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
   const [accounts, setAccounts] = useState<RagicAccountRow[]>([]);
   const [accountId, setAccountId] = useState("");
   const [addingAccount, setAddingAccount] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameName, setRenameName] = useState("");
   const [naServer, setNaServer] = useState("ap16");
   const [naApname, setNaApname] = useState("");
   const [naName, setNaName] = useState("");
@@ -149,6 +151,23 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
       setAccountId(id); setAddingAccount(false);
       setNaApname(""); setNaName(""); setNaKey("");
     } catch (e) { toast.show(e instanceof ApiError ? e.message : "新增失敗", "danger"); }
+  }
+
+  function startRename() {
+    const cur = accounts.find((a) => a.accountId === accountId);
+    if (!cur) { toast.show("請先選一個 Ragic 帳號", "danger"); return; }
+    setRenameName(cur.displayName);
+    setAddingAccount(false);
+    setRenaming(true);
+  }
+
+  async function saveRename() {
+    try {
+      await ncRenameAccount(accountId, renameName);
+      toast.show("已更新名稱", "ok");
+      await loadAccounts();
+      setRenaming(false);
+    } catch (e) { toast.show(e instanceof ApiError ? e.message : "更新失敗", "danger"); }
   }
 
   async function fetchRagicFields() {
@@ -310,8 +329,31 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
                 <label>Ragic 帳號</label>
                 <StyledSelect ariaLabel="Ragic 帳號" items={accountItems} value={accountId} onChange={setAccountId} placeholder="選擇帳號" />
               </div>
-              <button className="btn" onClick={() => setAddingAccount((v) => !v)}>{addingAccount ? "收合" : "＋ 新增帳號"}</button>
+              {accountId && (
+                <button className="btn" onClick={() => (renaming ? setRenaming(false) : startRename())}>
+                  {renaming ? "收合" : "重新命名"}
+                </button>
+              )}
+              <button className="btn" onClick={() => { setRenaming(false); setAddingAccount((v) => !v); }}>
+                {addingAccount ? "收合" : "＋ 新增帳號"}
+              </button>
             </div>
+            {renaming && (
+              <div style={{ marginTop: 14, padding: 14, background: "var(--well)", borderRadius: 6 }}>
+                <div className="field" style={{ margin: 0 }}>
+                  <label>顯示名稱</label>
+                  <input className="tf" value={renameName} autoFocus
+                    onChange={(e) => setRenameName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") void saveRename(); }}
+                    placeholder="例：台灣福祉" />
+                </div>
+                <div className="nc-card-sub" style={{ marginTop: 8 }}>
+                  只改這裡顯示的名稱。伺服器與帳號名（{accounts.find((a) => a.accountId === accountId)?.server} ·{" "}
+                  {accounts.find((a) => a.accountId === accountId)?.apname}）是連線用的識別，不能改。
+                </div>
+                <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => void saveRename()}>儲存名稱</button>
+              </div>
+            )}
             {addingAccount && (
               <div style={{ marginTop: 14, padding: 14, background: "var(--well)", borderRadius: 6 }}>
                 <div className="nc-row" style={{ marginBottom: 12 }}>

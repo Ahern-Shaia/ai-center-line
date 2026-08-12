@@ -414,6 +414,8 @@ export const ncCreateAccount = (body: { tenantId?: string | null; server: string
   req<{ accountId: string }>("/notify-config/accounts", { method: "POST", body: JSON.stringify(body) });
 export const ncUpdateKey = (accountId: string, apiKey: string) =>
   req<{ status: string }>(`/notify-config/accounts/${accountId}/key`, { method: "POST", body: JSON.stringify({ apiKey }) });
+export const ncRenameAccount = (accountId: string, displayName: string) =>
+  req<{ status: string }>(`/notify-config/accounts/${accountId}/name`, { method: "POST", body: JSON.stringify({ displayName }) });
 export interface RagicSchemaResult { sheetName: string; fields: RagicSchemaField[] }
 export const ncFetchFields = (accountId: string, sheetPath: string) =>
   req<RagicSchemaResult>(`/notify-config/accounts/${accountId}/fields?sheetPath=${encodeURIComponent(sheetPath)}`);
