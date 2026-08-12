@@ -383,6 +383,8 @@ export interface NotifyRuleRow {
   sourceType: NotifySourceType; sourceLabel: string;
   channelType: NotifyChannelType; channelTarget: string | null; channelLabel: string;
   fieldCount: number; webhookToken: string | null; accountDisplayName: string | null; eventsLabel: string;
+  /** 通知欄位的中文名 · 搜尋要搜得到「哪條規則會通知『客戶簽回』」 */
+  fieldLabels: string[];
 }
 export interface EventFieldDef { path: string; label: string; numeric?: boolean }
 export interface EventDef { eventType: string; label: string; description: string; fields: EventFieldDef[] }

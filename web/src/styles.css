@@ -2172,13 +2172,16 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
    ⚠️ 刻意做成修飾類別而非直接加在 .nc-tbl：租戶管理頁也用 .nc-tbl，
    那頁沒有截斷處理，改成 fixed 只會讓長 email 換行，不是這次要動的東西。*/
 .nc-tbl.fixed { table-layout:fixed; }
+/* 八個欄位 × 左右各 16px，光 padding 就吃掉整張表 23% 的寬度 ——
+   實測 980px 下「Ragic 表單」「啟用」「編輯」全被折成兩行。收窄到 10px。*/
+.nc-tbl.fixed th, .nc-tbl.fixed td { padding-left:10px; padding-right:10px; }
 .nc-tbl th { text-align:left; font-size:11px; color:var(--ink-3); font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding:11px 16px; border-bottom:1px solid var(--line); background:var(--well); }
 .nc-tbl td { padding:13px 16px; border-bottom:1px solid var(--line-2); font-size:13.5px; vertical-align:middle; }
 .nc-tbl tr:last-child td { border-bottom:none; }
 .nc-t-name { font-weight:600; color:var(--ink); }
 .nc-t-sub { font-size:11.5px; color:var(--ink-3); margin-top:2px; }
 .nc-t-mono { font-family:var(--mono, monospace); }
-.nc-pill { display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:2px 8px; border-radius:999px; font-weight:600; }
+.nc-pill { display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:2px 8px; border-radius:999px; font-weight:600; white-space:nowrap; }
 .nc-pill.on { background:var(--ok-tint); color:var(--ok); }
 .nc-pill.off { background:var(--well); color:var(--ink-3); }
 .nc-pill.ev { background:var(--primary-tint); color:var(--primary-2); margin-right:4px; }
@@ -2204,6 +2207,34 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .nc-pg { min-width:28px; height:28px; border:1px solid var(--line); background:var(--surface); border-radius:var(--r); color:var(--ink-2); font-size:12.5px; font-family:inherit; cursor:pointer; }
 .nc-pg:disabled { color:#C3C8D0; cursor:default; }
 .nc-pg-at { font-variant-numeric:tabular-nums; }
+.nc-clip.warn { color:var(--warn); }
+
+/* 規則清單的篩選列 */
+.nc-tb { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+.nc-tb-search { flex:1; min-width:240px; }
+.nc-tb-search .tf { width:100%; }
+
+/* 已套用的條件 · 查證的 Datadog / Grafana / Zapier / Make / GitHub 都沒有做這件事，
+   但「為什麼只剩三筆」是最常見的困惑來源 */
+.nc-chips { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:12px; font-size:12px; }
+.nc-chips-lbl { color:var(--ink-3); }
+.nc-chip { display:inline-flex; align-items:center; gap:4px; background:var(--primary-tint); color:var(--primary-2); border-radius:999px; padding:3px 6px 3px 10px; font-weight:600; }
+.nc-chip-x { background:none; border:0; color:inherit; opacity:.55; font-size:12px; line-height:1; cursor:pointer; padding:2px 3px; font-family:inherit; border-radius:999px; }
+.nc-chip-x:hover { opacity:1; background:rgba(79,70,229,.12); }
+.nc-chips-clear { background:none; border:0; font-family:inherit; font-size:12px; color:var(--ink-3); text-decoration:underline; cursor:pointer; padding:2px 4px; }
+
+/* 次要操作收進 ⋯ · 原本四個文字按鈕吃掉 18% 欄寬，視窗一窄就斷成「複製網 址」 */
+.nc-act { position:relative; display:flex; gap:2px; align-items:center; justify-content:flex-end; }
+.nc-kebab { border:1px solid var(--line); background:var(--surface); border-radius:var(--r); width:26px; height:26px; line-height:1; color:var(--ink-3); cursor:pointer; font-size:14px; font-family:inherit; }
+.nc-kebab:hover { border-color:var(--primary); color:var(--primary-2); }
+/* 透明遮罩 · 點外面關選單（沒有它就得點兩次 ⋯ 才關得掉）*/
+.nc-menu-veil { position:fixed; inset:0; background:none; border:0; cursor:default; z-index:20; }
+.nc-menu { position:absolute; right:0; top:30px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 6px 20px rgba(17,24,39,.12); width:170px; padding:4px; z-index:21; text-align:left; }
+.nc-menu button { display:block; width:100%; text-align:left; background:none; border:0; font-family:inherit; font-size:12.5px; color:var(--ink-2); padding:7px 9px; border-radius:4px; cursor:pointer; white-space:nowrap; }
+.nc-menu button:hover { background:var(--well); }
+.nc-menu button.danger { color:var(--danger); }
+.nc-menu button.danger:hover { background:var(--danger-tint); }
+.nc-menu-sep { height:1px; background:var(--line-2); margin:4px 0; }
 /* 租戶管理 · 左租戶清單 / 右帳號明細 */
 .tm-split { display:grid; grid-template-columns:220px 1fr; gap:20px; align-items:start; }
 .tm-list { display:flex; flex-direction:column; gap:2px; border-right:1px solid var(--line); padding-right:12px; }
@@ -2222,8 +2253,7 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .nc-log-diag { margin-top:6px; padding:8px 10px; border:1px dashed var(--line); border-radius:var(--r); font-size:11.5px; color:var(--ink-3); line-height:1.7; word-break:break-all; }
 .nc-log-diag-verdict { color:var(--ink); font-weight:600; margin-bottom:4px; }
 .nc-log-msg { margin-top:6px; padding:8px 10px; background:var(--well); border-radius:var(--r); font-size:12px; color:var(--ink-2); white-space:pre-wrap; line-height:1.6; }
-.nc-act { display:flex; gap:10px; }
-.nc-lnk { color:var(--primary-2); font-size:12.5px; cursor:pointer; background:none; border:none; padding:0; font:inherit; }
+.nc-lnk { color:var(--primary-2); font-size:12.5px; cursor:pointer; background:none; border:none; padding:0; font:inherit; white-space:nowrap; }
 .nc-lnk.mut { color:var(--ink-3); }
 .nc-lnk.danger { color:var(--danger); }
 
