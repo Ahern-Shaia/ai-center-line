@@ -52,13 +52,8 @@ export class LineClient {
       const requestId = res.headers.get("x-line-request-id") ?? undefined;
       if (res.ok) return { ok: true, requestId };
       // LINE 4xx/5xx：不 retry（OQ-NOT-4 A）；body 可能含 JSON error details
-      let message = `HTTP ${res.status}`;
-      try {
-        const body = (await res.json()) as { message?: string };
-        if (body?.message) message = `${message}: ${body.message}`;
-      } catch {
-        // 忽略非 JSON body
-      }
+      // 真正的原因在 details[] —— 見 notification-hub/channels/line.sender.ts 的說明
+      const message = `HTTP ${res.status}: ${await describeLineError(res)}`;
       return { ok: false, status: res.status, message };
     } catch (e: unknown) {
       const err = e as { name?: string; message?: string };
@@ -70,4 +65,30 @@ export class LineClient {
       clearTimeout(timeout);
     }
   }
+}
+
+/** 與 LineSender 同一套解析 · LINE 的 400 真正原因在 details[]，只取 message 等於沒說 */
+async function describeLineError(res: Response): Promise<string> {
+  let body: LineErrorBody | null = null;
+  try {
+    body = (await res.json()) as LineErrorBody;
+  } catch {
+    const text = await res.text().catch(() => "");
+    return text.slice(0, 200) || "（LINE 未回傳內容）";
+  }
+  const parts: string[] = [];
+  if (body?.message) parts.push(body.message);
+  for (const d of body?.details ?? []) {
+    parts.push(d.property ? `${d.property} → ${d.message ?? ""}` : (d.message ?? ""));
+  }
+  if (parts.length === 0) parts.push("（LINE 未說明原因）");
+  if (res.status === 400 && !(body?.details?.length)) {
+    parts.push("常見原因：機器人已不在該群組／該對象未加好友 · 請確認機器人仍在群裡");
+  }
+  return parts.filter(Boolean).join(" · ");
+}
+
+interface LineErrorBody {
+  message?: string;
+  details?: Array<{ message?: string; property?: string }>;
 }

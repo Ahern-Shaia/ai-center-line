@@ -105,3 +105,32 @@ test("line-client: cfg.groupId 空 → ok=false（不打真 API）", async () =>
   assert.equal(res.ok, false);
   if (!res.ok) assert.match(res.message, /groupId/);
 });
+
+// ── 2026-08-12 · LINE 的 400 真正原因在 details[] ────────────────────
+// 鮮湧報價單推送失敗，畫面只有「400 HTTP 400: Failed to send messages」——
+// 那句話等於沒說，而 LINE 明明在 details[] 講了原因，被我方丟掉了。
+test("⭐⭐ 400 的 details[] 要帶出來（只給 message 等於沒說）", async () => {
+  const client = new LineClient();
+  client.setFetchImpl(fakeFetch({
+    status: 400,
+    body: {
+      message: "Failed to send messages",
+      details: [{ message: "May not be empty", property: "messages[0].text" }],
+    },
+  }));
+  const res = await client.pushText({ token: "t", groupId: "g" }, "x");
+  assert.equal(res.ok, false);
+  if (!res.ok) {
+    assert.match(res.message, /Failed to send messages/, "保留 LINE 原文");
+    assert.match(res.message, /May not be empty/, "details 的原因要出現");
+    assert.match(res.message, /messages\[0\]\.text/, "出問題的欄位要出現");
+  }
+});
+
+test("⭐ 400 但 LINE 沒給 details → 附常見成因（不是憑空猜，是列出要先確認什麼）", async () => {
+  const client = new LineClient();
+  client.setFetchImpl(fakeFetch({ status: 400, body: { message: "Failed to send messages" } }));
+  const res = await client.pushText({ token: "t", groupId: "g" }, "x");
+  assert.equal(res.ok, false);
+  if (!res.ok) assert.match(res.message, /機器人已不在該群組/);
+});
