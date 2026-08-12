@@ -1,6 +1,6 @@
 # 設計文件 · 通知設定兩頁清單改版（M0）
 
-> 狀態：📋 **M0 DRAFT v0.1**（2026-08-12）· **待裁定 OQ-NLX-1..9**
+> 狀態：✅ **M1–M3 已實作**（2026-08-12）· OQ 全採建議 · 待部署驗證
 > 對象：`web/src/notify-config/Page.tsx`（規則清單）、`web/src/notify-config/LogsTab.tsx`（通知紀錄）、
 > `server/src/notify-config/notify-config.controller.ts`、`server/src/notification-hub/audit.repository.ts`
 > 相關：[`notify.md`](notify.md)、[`notify-selfserve-platform.md`](notify-selfserve-platform.md)、[`notify-bot-scoped-target.md`](notify-bot-scoped-target.md)
@@ -154,6 +154,21 @@ Datadog 要學 `key:value`、Grafana 的 label 篩選要寫 Prometheus matcher�
 | **M3** | 規則清單前端：工具列篩選、操作收 ⋯、截斷、client-side 分頁、未登錄群組顯示 | 前端 |
 | **M4** | 文件收尾 · `MODULES.md` 標 ✅ · pre-PR checklist | — |
 
+### 實作紀錄（2026-08-12）
+
+| 里程碑 | commit | 備註 |
+|---|---|---|
+| M1 | `6f9cb6a` | `listRecent` → `list()`；9 條真實 DB 測試 |
+| M2 | `f1a3120` | 紀錄頁前端 |
+| M3a | `52fbb7c` | 清單回傳 `fieldLabels`（搜尋要搜得到通知欄位名，原本 M3 說不動後端，這是必要的例外）|
+| M3 | `8a910aa` | 規則清單前端 + `RuleFilters.tsx` |
+
+**§7 之外實際抓到的問題**（都是「看畫面」才發現的，型別與 build 全綠）：
+- `from` 直接比 `::date` → DB 跑 UTC，「今天」會從台北早上 8 點才開始（已改成轉換邊界；反向驗證過會紅）
+- 八欄的 cell padding 吃掉 23% 寬度 → 「Ragic 表單」「啟用」「編輯」全折成兩行
+- 紀錄頁耗時欄 8% 太窄 →「412 ms」折成兩行
+- `.nc-act` 有重複定義，後者蓋掉選單定位需要的 `position:relative`
+
 > M1 與 M2 必須是**兩個 commit**（前後端分開，見 `feedback_separate_frontend_backend`）。
 > M3 完全不動後端，所以可以與 M1 並行。
 
@@ -179,8 +194,8 @@ Datadog 要學 `key:value`、Grafana 的 label 篩選要寫 Prometheus matcher�
 | **OQ-NLX-2** | 規則清單每頁預設幾筆？ | 10 / 20 / 50 | **20** —— 目前 10 條會落在單頁，等於現況；成長後才分頁 |
 | **OQ-NLX-3** | 紀錄頁時間範圍預設？ | (a) 近 7 天 (b) 近 30 天 (c) 全部 | **(a) 近 7 天** —— 這頁多半是「剛剛那筆為什麼沒通知」；但**空結果時要提示「換更長的範圍看看」**，否則像壞掉 |
 | **OQ-NLX-4** | `statusCounts` 要不要受時間範圍影響？ | (a) 受 (b) 不受 | **(a) 受** —— 「近 7 天有 6 筆失敗」才有意義；不受時間影響的話數字永遠在漲 |
-| **OQ-NLX-5** | 篩選條件要不要寫進網址（可分享／可重整保留）？ | (a) 要 (b) 不要 | **(a)** —— 成本低，且「把這個畫面貼給人看」是真實需求 |
-| **OQ-NLX-6** | 規則清單的「⋯」選單要放哪些？ | —— | 複製 Webhook 網址／停用／**以此為範本新增**／刪除。「以此為範本新增」是新功能，要不要進 M3？ |
+| **OQ-NLX-5** | 篩選條件要不要寫進網址？ | (a) 要 (b) 不要 | ⛔ **撤回建議 · 做不成立**。這個 app 的路由是 React state 不是網址（只有 Login 用過 query 參數且立刻清掉）。把篩選寫進網址的話，重整會回到預設頁面而網址還掛著別頁的參數 —— 比不做更糟。要做得先把整個 app 換成網址路由，那是另一個案子。我提這條建議時沒有先查 app 怎麼路由 |
+| **OQ-NLX-6** | 規則清單的「⋯」選單要放哪些？ | —— | 已做：複製 Webhook 網址／停用／刪除。**「以此為範本新增」未做** —— 它需要 wizard 支援「從既有規則預填但走建立流程」，是新功能不是改版，另開 task |
 | **OQ-NLX-7** | 未登錄的群組要不要提供「查這是哪支機器人的群」入口？ | (a) 要 (b) 不要 | **(b) 這次不做** —— 那是 task #83（註冊 AI-TWBRAUN）的事，混進來會擴大 scope |
 | **OQ-NLX-8** | 紀錄頁要不要保留「重新整理」按鈕，或改自動輪詢？ | (a) 保留手動 (b) 自動 | **(a) 保留手動** —— 自動輪詢會讓正在讀展開列的人被洗掉 |
 | **OQ-NLX-9** | `pageSize` 後端上限？ | 100 / 200 | **100** —— 現行 controller 是 200，但那是「最近 N 筆」語意；有了分頁就不需要一次 200 |
