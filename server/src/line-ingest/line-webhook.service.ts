@@ -8,7 +8,6 @@ import { LineMessageRepository } from "./line-message.repository.js";
 import { MediaDownloadService } from "./media-download.service.js";
 import { MemberFetchService } from "./member-fetch.service.js";
 import { CompletionSignalService } from "../task-completion/completion-signal.service.js";
-import { OpenTaskReminderService } from "../task-completion/open-task-reminder.service.js";
 import { PrivateCompletionService } from "../task-completion/private-completion.service.js";
 import { LineApiClient } from "./line-api.client.js";
 import { EmployeeBindingService } from "../employee-binding/employee-binding.service.js";
@@ -73,7 +72,6 @@ export class LineWebhookService {
     private readonly bindingService: EmployeeBindingService,
     private readonly lineApi: LineApiClient,
     private readonly completionSignal: CompletionSignalService,
-    private readonly openTaskReminder: OpenTaskReminderService,
     private readonly privateCompletion: PrivateCompletionService,
   ) {}
 
@@ -113,11 +111,6 @@ export class LineWebhookService {
     }> = [];
     // 0036 · 引用回覆的即時回饋 · 累到 tx 結束才送（reply token 在 tx 內送會拖住交易）
     const replyTasks: Array<{ replyToken: string; accessToken: string; text: string }> = [];
-    // 0036 · M3.5 · 每日回報的未確認清單 · 查詢要在 tx 外做（tickets RLS 需 tenant 上下文）
-    const reminderTasks: Array<{
-      tenantId: string; groupId: string; senderLineUserId: string;
-      text: string; replyToken: string; accessToken: string;
-    }> = [];
 
     await withSystemTx(async (tx) => {
       const bot = await this.botRepo.getByBotUserIdWithSecret(tx, destination);
@@ -242,7 +235,7 @@ export class LineWebhookService {
           // ⚠️ 只認 inserted：webhook 會重送，重複處理會重複回話洗版
           if (inserted && msg.type === "text" && msg.quotedMessageId && senderUid) {
             try {
-              const r = await this.completionSignal.capture(tx, {
+              await this.completionSignal.capture(tx, {
                 tenantId: ref.tenantId,
                 groupId,
                 replyMessageId: msg.id,
@@ -251,29 +244,27 @@ export class LineWebhookService {
                 replierDisplayName: null,          // member profile 另有 cache · 這裡不擋
                 text: textContent ?? "",
               });
-              // 客戶把這個群的回話關掉了 —— 訊號照樣落地，只是 bot 不出聲（0040）
-              if (r.reply && event.replyToken && ref.replyEnabled) {
-                replyTasks.push({ replyToken: event.replyToken, accessToken: bot.channelAccessToken, text: r.reply });
-              }
+
+              // ⛔ 2026-08-12 用戶裁定：**LINE 群組一律不出聲**。
+              //
+              // LINE 的 reply 是回在群裡，整群的人都看得到 —— 不是只有當事人。
+              // 同一天先移除了「每日回報 → 尚未確認完成清單」（M3.5，整支服務已刪），
+              // 這一條保留程式碼但停用，因為它是對「使用者自己剛做的動作」的回饋，
+              // 之後若改走私訊或 LIFF 就會用到同一份文案與判斷。
+              //
+              // 訊號照樣落地（capture 仍執行），只是不回話 ——
+              // 引用回覆仍然會被接住並在批次回掃時對應到任務，
+              // **但當事人不會收到任何確認**。那是這個決定的代價，不是 bug。
+              //
+              // 要恢復的話：把下面三行取消註解即可（r 要改回 const r = await ...）。
+              // 恢復前請先想清楚「整群 14 個人都會看到這句」是否可接受。
+              // if (r.reply && event.replyToken && ref.replyEnabled) {
+              //   replyTasks.push({ replyToken: event.replyToken, accessToken: bot.channelAccessToken, text: r.reply });
+              // }
             } catch (err) {
               // 訊號沒收到不影響訊息本身已經落庫 —— 分析照跑，只是少一筆完成訊號
               this.logger.warn(`[completion] 訊號落地失敗 · messageId=${msg.id} · ${(err as Error).message}`);
             }
-          }
-
-          // 0036 · M3.5 · 他自己發的每日回報 → 回一份「尚未確認完成」清單
-          // ⚠️ 這裡只收集，實際查詢在 tx 結束後做 ——
-          //    要讀 tickets，而 tickets 的 RLS 在 systemTx 底下會靜默回 0 筆。
-          if (inserted && msg.type === "text" && !msg.quotedMessageId && senderUid && event.replyToken
-              && ref.replyEnabled) {
-            reminderTasks.push({
-              tenantId: ref.tenantId,
-              groupId,
-              senderLineUserId: senderUid,
-              text: textContent ?? "",
-              replyToken: event.replyToken,
-              accessToken: bot.channelAccessToken,
-            });
           }
 
           if (inserted && MEDIA_MESSAGE_TYPES.has(msg.type)) {
@@ -302,19 +293,6 @@ export class LineWebhookService {
         }
       }
     });
-
-    // M3.5 · tx 結束後才查（tickets 要 tenant 上下文）· 有清單才排回話
-    for (const r of reminderTasks) {
-      try {
-        const text = await this.openTaskReminder.replyForDailyReport({
-          tenantId: r.tenantId, groupId: r.groupId,
-          senderLineUserId: r.senderLineUserId, text: r.text,
-        });
-        if (text) replyTasks.push({ replyToken: r.replyToken, accessToken: r.accessToken, text });
-      } catch (err) {
-        this.logger.warn(`[reminder] 清單失敗 · group=${r.groupId} · ${(err as Error).message}`);
-      }
-    }
 
     // Tx 結束才回話 · reply token 有時效但不長，先讓 tx 落定再送
     for (const r of replyTasks) {
