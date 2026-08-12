@@ -473,8 +473,12 @@ export const ncCreateRule = (body: {
   eventType?: string; filters?: Array<{ path: string; op: "eq" | "gte" | "lte"; value: string | number }>;
   title: string | null; fields: NotifyFieldSel[];
   channelType: NotifyChannelType; channelTarget: string;
-  /** 用哪支 bot 發送 · line_group 必填（群組 ID 依 bot 發放）*/
-  botId?: string;
+  /**
+   * 用哪支 bot 發送 · line_group 必填（群組 ID 依 bot 發放）。
+   * ⚠️ 刻意寫成「必填但可為 undefined」而非 `botId?:` —— 這個 key 曾經在建立路徑被整個漏掉
+   * （更新路徑有、建立路徑沒有），選填型別讓 tsc 抓不到，要到後端才回「請選擇機器人」。
+   */
+  botId: string | undefined;
 }) => req<{ ruleId: string; webhookToken: string | null }>("/notify-config", { method: "POST", body: JSON.stringify(body) });
 export const ncSetEnabled = (ruleId: string, enabled: boolean) =>
   req<{ status: string }>(`/notify-config/${ruleId}/enabled`, { method: "PATCH", body: JSON.stringify({ enabled }) });

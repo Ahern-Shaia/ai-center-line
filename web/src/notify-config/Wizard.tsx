@@ -244,7 +244,7 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
         filters: sourceType === "internal_event" ? filters : undefined,
         title: title.trim() || null,
         fields: payloadFields,
-        channelType, channelTarget,
+        channelType, channelTarget, botId: channelType === "line_group" ? botId : undefined,
       });
       if (res.webhookToken) setSavedToken(res.webhookToken);
       else setSavedNoWebhook(true);
