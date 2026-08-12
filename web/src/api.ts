@@ -400,13 +400,25 @@ export interface NotifyLogRow {
   ruleId: string | null; ruleName: string | null; audit: Record<string, unknown> | null;
 }
 // 通知紀錄（排查「改了為什麼沒通知」）
-export const ncListLogs = (params?: { limit?: number; ruleId?: string; status?: string }) => {
+export interface NotifyLogPage {
+  rows: NotifyLogRow[];
+  total: number;
+  /** 各狀態筆數 · 不受 status 篩選影響（受時間範圍與規則影響）*/
+  statusCounts: Record<string, number>;
+}
+export const ncListLogs = (params: {
+  page: number; pageSize: number;
+  ruleId: string | undefined; status: string | undefined;
+  /** YYYY-MM-DD（台北）· undefined＝不限 */
+  from: string | undefined;
+}) => {
   const q = new URLSearchParams();
-  if (params?.limit) q.set("limit", String(params.limit));
-  if (params?.ruleId) q.set("ruleId", params.ruleId);
-  if (params?.status) q.set("status", params.status);
-  const s = q.toString();
-  return req<NotifyLogRow[]>(`/notify-config/logs${s ? `?${s}` : ""}`);
+  q.set("page", String(params.page));
+  q.set("pageSize", String(params.pageSize));
+  if (params.ruleId) q.set("ruleId", params.ruleId);
+  if (params.status) q.set("status", params.status);
+  if (params.from) q.set("from", params.from);
+  return req<NotifyLogPage>(`/notify-config/logs?${q.toString()}`);
 };
 
 export const ncListAccounts = () => req<RagicAccountRow[]>("/notify-config/accounts");

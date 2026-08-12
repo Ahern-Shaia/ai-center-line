@@ -1,6 +1,7 @@
 import Spinner from "../shared/Spinner";
-import { useCallback, useEffect, useState } from "react";
-import { ApiError, ncListLogs, type NotifyLogRow } from "../api";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ApiError, ncListLogs, ncListRules, type NotifyLogPage, type NotifyLogRow, type NotifyRuleRow } from "../api";
+import StyledSelect from "../shared/StyledSelect";
 import { useToast } from "../Toast";
 
 // 通知紀錄 · 回答「Ragic 改了為什麼沒通知」
@@ -22,42 +23,100 @@ const FILTERS: Array<{ key: string; label: string }> = [
   { key: "line_failed", label: "推送失敗" },
   { key: "skipped_event", label: "未訂閱此異動" },
   { key: "skipped_dedup", label: "重複略過" },
+  { key: "invalid_body", label: "內容不符" },
 ];
+
+// 時間範圍 · 人是用時間找事情的（「上週三那筆」），不是用序號
+const RANGES = [
+  { id: "today", label: "今天", days: 0 },
+  { id: "7d", label: "近 7 天", days: 6 },
+  { id: "30d", label: "近 30 天", days: 29 },
+  { id: "all", label: "全部", days: null },
+] as const;
+
+const PAGE_SIZE = 25;
+
+/** 使用者講的日期是台北的 · DB 跑 UTC，後端會把邊界轉回台北 00:00 */
+function taipeiDateBefore(days: number): string {
+  const now = new Date();
+  const shifted = new Date(now.getTime() - days * 86_400_000);
+  return shifted.toLocaleDateString("sv-SE", { timeZone: "Asia/Taipei" });
+}
 
 export default function LogsTab() {
   const toast = useToast();
-  const [rows, setRows] = useState<NotifyLogRow[]>([]);
+  const [data, setData] = useState<NotifyLogPage>({ rows: [], total: 0, statusCounts: {} });
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
+  const [range, setRange] = useState<string>("7d");
+  const [ruleId, setRuleId] = useState("");
+  const [page, setPage] = useState(1);
+  const [rules, setRules] = useState<NotifyRuleRow[]>([]);
   const [open, setOpen] = useState<number | null>(null);
+
+  const from = useMemo(() => {
+    const r = RANGES.find((x) => x.id === range);
+    return r?.days == null ? undefined : taipeiDateBefore(r.days);
+  }, [range]);
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setRows(await ncListLogs({ limit: 100, status: status || undefined })); }
-    catch (e) { toast.show(e instanceof ApiError ? e.message : "載入失敗", "danger"); }
+    try {
+      setData(await ncListLogs({
+        page, pageSize: PAGE_SIZE, status: status || undefined, ruleId: ruleId || undefined, from,
+      }));
+    } catch (e) { toast.show(e instanceof ApiError ? e.message : "載入失敗", "danger"); }
     finally { setLoading(false); }
-  }, [status, toast]);
+  }, [page, status, ruleId, from, toast]);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { ncListRules().then(setRules).catch(() => undefined); }, []);
+
+  // ⚠️ 篩選一變就回第 1 頁。停在第 3 頁時改篩選 → 結果只剩 1 頁 → 空白畫面，
+  //    看起來像沒資料。這是分頁最典型的 bug。
+  const changeFilter = (fn: () => void) => { fn(); setPage(1); setOpen(null); };
+
+  const { rows, total, statusCounts } = data;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const rangeLabel = RANGES.find((x) => x.id === range)?.label ?? "";
+  const filtered = status !== "" || ruleId !== "" || range !== "all";
 
   return (
     <>
       <div className="nc-log-bar">
         <div className="nc-log-filters">
-          {FILTERS.map((f) => (
-            <button key={f.key} className={`nc-lnk${status === f.key ? " active" : ""}`} onClick={() => setStatus(f.key)}>
-              {f.label}
-            </button>
-          ))}
+          {FILTERS.map((f) => {
+            const n = f.key === "" ? Object.values(statusCounts).reduce((a, b) => a + b, 0) : statusCounts[f.key] ?? 0;
+            return (
+              <button key={f.key} className={`nc-lnk${status === f.key ? " active" : ""}`}
+                onClick={() => changeFilter(() => setStatus(f.key))}>
+                {f.label}
+                <span className={`nc-log-n${f.key === "line_failed" && n > 0 ? " bad" : ""}`}>{n}</span>
+              </button>
+            );
+          })}
         </div>
-        <button className="btn btn-sm" onClick={() => void load()} disabled={loading}>重新整理</button>
+        <div className="nc-log-right">
+          <StyledSelect ariaLabel="時間範圍" value={range} onChange={(v) => changeFilter(() => setRange(v))}
+            items={RANGES.map((r) => ({ id: r.id, label: r.label }))} />
+          <StyledSelect ariaLabel="規則" value={ruleId} onChange={(v) => changeFilter(() => setRuleId(v))}
+            allowEmpty emptyLabel="全部規則" placeholder="全部規則"
+            items={rules.map((r) => ({ id: r.ruleId, label: r.name }))} />
+          <button className="btn btn-sm" onClick={() => void load()} disabled={loading}>重新整理</button>
+        </div>
       </div>
 
       {loading ? (
         <Spinner block />
       ) : rows.length === 0 ? (
         <div className="dm-empty">
-          {status ? "這個狀態沒有紀錄" : "還沒有任何通知紀錄"}
-          {!status && (
+          {filtered ? `${rangeLabel}內沒有符合的紀錄` : "還沒有任何通知紀錄"}
+          {/* 預設只看近 7 天 · 找不到時要明說可以放寬，否則看起來像紀錄不見了 */}
+          {filtered && (
+            <div className="dm-empty-hint">
+              找的是更早以前的事？把時間範圍改成<b>近 30 天</b>或<b>全部</b>再看一次。
+            </div>
+          )}
+          {!filtered && (
             <div className="dm-empty-hint">
               一筆都沒有＝<b>事件從來沒有進到我們這裡</b>。若是 Ragic 規則，代表 Webhook 網址沒貼進該表單：
               到規則列表按「複製網址」→ Ragic 該表單 → 上方「工具」→ 展開後<b>右下角「同步與通知」區 → Webhook</b> → 貼上儲存 →
@@ -66,11 +125,11 @@ export default function LogsTab() {
           )}
         </div>
       ) : (
-        <table className="nc-tbl">
+        <table className="nc-tbl fixed">
           <thead><tr>
-            <th style={{ width: "16%" }}>時間</th><th style={{ width: "24%" }}>規則</th>
-            <th style={{ width: "14%" }}>結果</th><th style={{ width: "18%" }}>來源對象</th>
-            <th style={{ width: "20%" }}>說明</th><th style={{ width: "8%" }}>耗時</th>
+            <th style={{ width: "15%" }}>時間</th><th style={{ width: "23%" }}>規則</th>
+            <th style={{ width: "13%" }}>結果</th><th style={{ width: "18%" }}>來源對象</th>
+            <th style={{ width: "21%" }}>說明</th><th style={{ width: "10%" }}>耗時</th>
           </tr></thead>
           <tbody>
             {rows.map((r, i) => {
@@ -84,25 +143,37 @@ export default function LogsTab() {
                     {open === i && <Diagnostics audit={r.audit} />}
                   </td>
                   <td><span className={`nc-pill ${s.tone}`}>{s.label}</span></td>
-                  <td className="nc-t-mono" style={{ fontSize: 12 }}>
-                    {r.sourceRef || "—"}{r.recordId ? ` · #${r.recordId}` : ""}
-                  </td>
-                  <td style={{ fontSize: 12, color: "var(--ink-2)" }}>
-                    {r.lineMessage ? `${r.lineStatus ?? ""} ${r.lineMessage}`.trim() : s.why}
-                  </td>
-                  <td className="nc-t-mono" style={{ fontSize: 12 }}>{r.latencyMs != null ? `${r.latencyMs} ms` : "—"}</td>
+                  {/* 截斷一律配 title —— 截斷但沒有提示等於資訊消失 */}
+                  <td><div className="nc-clip nc-t-mono" title={sourceLabel(r)}>{sourceLabel(r)}</div></td>
+                  <td><div className="nc-clip" title={whyText(r, s.why)}>{whyText(r, s.why)}</div></td>
+                  <td className="nc-t-mono" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{r.latencyMs != null ? `${r.latencyMs} ms` : "—"}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       )}
-      <div className="login-hint" style={{ marginTop: 12 }}>
-        最近 100 筆 · 點任一列可展開實際送出的訊息內容。
-      </div>
+
+      {!loading && rows.length > 0 && (
+        <div className="nc-pager">
+          <div>第 {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} 筆，共 <b>{total}</b> 筆（{rangeLabel}）</div>
+          <div className="nc-pages">
+            <button className="nc-pg" disabled={page <= 1} onClick={() => { setPage(page - 1); setOpen(null); }}>‹</button>
+            <span className="nc-pg-at">第 {page} / {pageCount} 頁</span>
+            <button className="nc-pg" disabled={page >= pageCount} onClick={() => { setPage(page + 1); setOpen(null); }}>›</button>
+          </div>
+          <div>點任一列可展開實際送出的訊息與診斷</div>
+        </div>
+      )}
     </>
   );
 }
+
+const sourceLabel = (r: NotifyLogRow): string =>
+  `${r.sourceRef || "—"}${r.recordId ? ` · #${r.recordId}` : ""}`;
+
+const whyText = (r: NotifyLogRow, fallback: string): string =>
+  r.lineMessage ? `${r.lineStatus ?? ""} ${r.lineMessage}`.trim() : fallback;
 
 // 「欄位全是（未填）」的診斷：分辨是抓不到 record、key 對不上、還是資料本來就空
 function Diagnostics({ audit }: { audit: Record<string, unknown> | null }) {

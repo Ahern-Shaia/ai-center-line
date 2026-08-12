@@ -2167,6 +2167,11 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .nc-callout { background:var(--warn-tint); border:1px solid #FDE68A; border-radius:var(--r); padding:10px 14px; font-size:12.5px; color:#92400E; line-height:1.6; margin-top:12px; }
 /* 列表 */
 .nc-tbl { width:100%; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden; border-collapse:collapse; }
+/* 沒有 fixed，th 的百分比寬度只是建議值 —— 長內容（33 碼群組 ID、整句失敗原因）
+   會把欄位撐開去擠壓其他欄。配 .nc-clip 才成立。
+   ⚠️ 刻意做成修飾類別而非直接加在 .nc-tbl：租戶管理頁也用 .nc-tbl，
+   那頁沒有截斷處理，改成 fixed 只會讓長 email 換行，不是這次要動的東西。*/
+.nc-tbl.fixed { table-layout:fixed; }
 .nc-tbl th { text-align:left; font-size:11px; color:var(--ink-3); font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding:11px 16px; border-bottom:1px solid var(--line); background:var(--well); }
 .nc-tbl td { padding:13px 16px; border-bottom:1px solid var(--line-2); font-size:13.5px; vertical-align:middle; }
 .nc-tbl tr:last-child td { border-bottom:none; }
@@ -2181,9 +2186,24 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .nc-pill.warn { background:var(--warn-tint); color:var(--warn); }
 .nc-pill.danger { background:var(--danger-tint); color:var(--danger); }
 .nc-pill.mut { background:var(--well); color:var(--ink-3); }
-.nc-log-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
-.nc-log-filters { display:flex; gap:12px; flex-wrap:wrap; }
-.nc-log-filters .nc-lnk.active { color:var(--ink); font-weight:600; }
+.nc-log-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+.nc-log-filters { display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+.nc-log-filters .nc-lnk.active { color:var(--ink); font-weight:600; box-shadow:inset 0 -2px 0 var(--primary); }
+.nc-log-right { display:flex; gap:8px; align-items:center; }
+/* 狀態筆數 · 查證的競品（Datadog / Grafana / Zapier）狀態篩選都沒顯示各狀態幾筆 */
+.nc-log-n { font-size:11px; color:var(--ink-3); margin-left:4px; font-variant-numeric:tabular-nums; }
+.nc-lnk.active .nc-log-n { color:var(--primary-2); }
+.nc-log-n.bad { color:var(--danger); font-weight:700; }
+
+/* 單行截斷 · 一律配 title —— 截斷但沒有提示等於資訊消失（GitHub Actions 的反例）*/
+.nc-clip { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; color:var(--ink-2); cursor:help; }
+
+.nc-pager { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; font-size:12.5px; color:var(--ink-3); flex-wrap:wrap; }
+.nc-pager b { color:var(--ink); }
+.nc-pages { display:flex; gap:8px; align-items:center; }
+.nc-pg { min-width:28px; height:28px; border:1px solid var(--line); background:var(--surface); border-radius:var(--r); color:var(--ink-2); font-size:12.5px; font-family:inherit; cursor:pointer; }
+.nc-pg:disabled { color:#C3C8D0; cursor:default; }
+.nc-pg-at { font-variant-numeric:tabular-nums; }
 /* 租戶管理 · 左租戶清單 / 右帳號明細 */
 .tm-split { display:grid; grid-template-columns:220px 1fr; gap:20px; align-items:start; }
 .tm-list { display:flex; flex-direction:column; gap:2px; border-right:1px solid var(--line); padding-right:12px; }
