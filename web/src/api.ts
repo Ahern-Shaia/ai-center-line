@@ -420,6 +420,24 @@ export const ncFetchFields = (accountId: string, sheetPath: string) =>
 // 目標群下拉 · 不經 ragic 帳號（prod 上那些帳號的 tenant_id 是 NULL，走帳號會永遠回空）
 export interface NcLineGroup { groupId: string; displayName: string | null; tenantName: string | null }
 export const ncAllLineGroups = () => req<NcLineGroup[]>("/notify-config/line-groups");
+
+/**
+ * 可選的「發送機器人 + 該機器人所在的群組」。
+ * 群組依 bot 過濾 —— LINE 的群組 ID 依 bot 發放，挑到別支的群就是 400 且看不出原因。
+ */
+export interface NcSendableTarget {
+  botId: string;
+  botName: string;
+  tenantId: string | null;
+  tenantName: string | null;
+  groups: Array<{ groupId: string; displayName: string | null }>;
+}
+export const ncSendableTargets = () => req<NcSendableTarget[]>("/notify-config/sendable-targets");
+
+/** 這個群組屬於哪支 bot（逐支問 LINE）· 補既有規則用 */
+export const ncWhichBotInGroup = (groupId: string) =>
+  req<Array<{ botId: string; botName: string; tenantName: string | null; groupName: string | null }>>(
+    `/notify-config/which-bot-in-group?groupId=${encodeURIComponent(groupId)}`);
 export const ncEventCatalog = () => req<EventDef[]>("/notify-config/event-catalog");
 export const ncNotifiableUsers = (tenantId?: string) =>
   req<NotifiableUser[]>(`/notify-config/notifiable-users${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
@@ -428,6 +446,8 @@ export const ncListRules = () => req<NotifyRuleRow[]>("/notify-config");
 /** 單條規則完整內容 · 編輯畫面預填用 */
 export interface NotifyRuleDetail {
   ruleId: string; name: string; sourceType: NotifySourceType;
+  /** 用哪支 bot 發送（0061）· 舊規則為 null */
+  botId?: string | null;
   ragicAccountId: string | null; sheetPath: string | null; sheetName: string | null;
   eventType: string | null;
   notifyCreate: boolean; notifyUpdate: boolean; notifyDelete: boolean;
@@ -441,6 +461,8 @@ export const ncUpdateRule = (ruleId: string, body: {
   notifyCreate?: boolean; notifyUpdate?: boolean; notifyDelete?: boolean;
   fields?: Array<{ path: string; label: string; order: number }>;
   channelType?: string; channelTarget?: string;
+  /** 用哪支 bot 發送（0061）*/
+  botId?: string;
 }) => req<{ status: string }>(`/notify-config/${ruleId}`, { method: "PATCH", body: JSON.stringify(body) });
 export const ncCreateRule = (body: {
   name: string; sourceType: NotifySourceType;
@@ -449,6 +471,8 @@ export const ncCreateRule = (body: {
   eventType?: string; filters?: Array<{ path: string; op: "eq" | "gte" | "lte"; value: string | number }>;
   title: string | null; fields: NotifyFieldSel[];
   channelType: NotifyChannelType; channelTarget: string;
+  /** 用哪支 bot 發送 · line_group 必填（群組 ID 依 bot 發放）*/
+  botId?: string;
 }) => req<{ ruleId: string; webhookToken: string | null }>("/notify-config", { method: "POST", body: JSON.stringify(body) });
 export const ncSetEnabled = (ruleId: string, enabled: boolean) =>
   req<{ status: string }>(`/notify-config/${ruleId}/enabled`, { method: "PATCH", body: JSON.stringify({ enabled }) });

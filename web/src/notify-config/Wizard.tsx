@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError, ncCreateAccount, ncCreateRule, ncEventCatalog, ncFetchFields, ncGetRule, ncAllLineGroups,
+  ncSendableTargets, type NcSendableTarget,
   ncListAccounts, ncNotifiableUsers, ncUpdateRule, notifyWebhookUrl,
   type EventDef, type NcLineGroup, type NotifiableUser, type NotifyChannelType,
   type NotifySourceType, type RagicAccountRow,
@@ -59,6 +60,11 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
   const [manualTarget, setManualTarget] = useState(false);
   const [users, setUsers] = useState<NotifiableUser[]>([]);
   const [channelTarget, setChannelTarget] = useState("");
+  // 0061 · 先選「用哪支機器人發」，群組清單再依它過濾。
+  // LINE 的群組 ID 是各機器人各自一套，挑到別支的群就是 400 而且畫面看不出原因
+  // （2026-08-12 鮮湧事故）。把錯誤消滅在選項裡，不是靠使用者填對。
+  const [sendable, setSendable] = useState<NcSendableTarget[]>([]);
+  const [botId, setBotId] = useState("");
   const [saving, setSaving] = useState(false);
   // 編輯時抓不到 Ragic 的完整欄位 —— 此時可勾選的只有規則已存的那幾個，
   // 取消勾選再存檔就永久拿不回來。必須明講，不能讓人在不知情下弄丟欄位。
@@ -85,6 +91,9 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
         setTitle(r.title ?? "");
         setChannelType(r.channelType);
         setChannelTarget(r.channelTarget ?? "");
+        // 舊規則沒有 botId —— 留空會強迫使用者重選，那正是我們要的：
+        // 沒選過 bot 的規則本來就處於「靠猜」的狀態，存檔時順便修正
+        setBotId(r.botId ?? "");
         // 先用規則裡存的欄位讓畫面立刻有東西
         setFields(r.fields.map((f) => ({ path: f.path, label: f.label })));
         setSelected(r.fields.slice().sort((a, b) => a.order - b.order).map((f) => f.path));
@@ -117,6 +126,7 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
   //    join 到租戶，而 prod 上帳號的 tenant_id 全是 NULL → 永遠回空陣列 →
   //    下拉永遠不出現、使用者永遠得手貼 group id。而且系統事件那條路沒有帳號。
   useEffect(() => { ncAllLineGroups().then(setLineGroups).catch(() => setLineGroups([])); }, []);
+  useEffect(() => { ncSendableTargets().then(setSendable).catch(() => setSendable([])); }, []);
 
   // 切來源 → 清空欄位選擇
   useEffect(() => { setFields([]); setSelected([]); }, [sourceType]);
@@ -183,6 +193,7 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
   async function save() {
     if (selected.length === 0) { toast.show("請至少勾選一個欄位", "danger"); return; }
     if (!channelTarget) { toast.show("請選擇通知對象", "danger"); return; }
+    if (channelType === "line_group" && !botId) { toast.show("請先選擇要用哪支機器人發送", "danger"); return; }
     setSaving(true);
     try {
       const payloadFields = selected.map((p, i) => ({
@@ -197,7 +208,7 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
           title: title.trim() || null,
           notifyCreate: evCreate, notifyUpdate: evUpdate, notifyDelete: evDelete,
           fields: payloadFields,
-          channelType, channelTarget,
+          channelType, channelTarget, botId: channelType === "line_group" ? botId : undefined,
         });
         toast.show("已更新", "ok");
         onDone();
@@ -416,46 +427,43 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
           {/* 已存的對象若不在可選清單裡（群改名、bot 被移出、跨帳號），下面會把它補成一個選項 ——
               否則下拉只顯示空的 placeholder，看起來像從沒設定過。*/}
           {channelType === "line_group" ? (
-            <div className="field" style={{ margin: 0 }}><label>LINE 目標群</label>
-              {/*
-                下拉為主、手動輸入為輔。
-                ⚠️ 不做成「只能手動輸入」——群組 ID 在 LINE App 裡看不到，
-                   而我們自己的畫面上也是截斷顯示的，那樣等於逼人去問工程師查資料庫。
-                ⚠️ 也不做成「只能下拉」——line_group 是 webhook 驅動的登錄表，
-                   群裡沒人發過話就不會有列（prod 現有 3 條規則指的群就不在裡面）。
-              */}
-              {manualTarget || lineGroups.length === 0 ? (
-                <>
-                  <input className="tf" value={channelTarget} onChange={(e) => setChannelTarget(e.target.value)}
-                    placeholder="貼上 LINE 群組 ID（Cxxxx…）" />
-                  <div className="hint" style={{ marginTop: 6, fontSize: 12, color: "var(--ink-3)" }}>
-                    {lineGroups.length > 0
-                      ? <>群組 ID 可在「通訊管道」頁複製。<button type="button" className="nc-lnk"
-                          onClick={() => setManualTarget(false)}>改回從清單挑</button></>
-                      : <>看不到群組清單有兩個可能：這個帳號沒有檢視 LINE 群組的權限，
-                         或該 bot 還沒在任何群裡收過訊息（群組是收到訊息才會登錄）。</>}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <StyledSelect ariaLabel="LINE 目標群" value={channelTarget} onChange={setChannelTarget} placeholder="選擇 LINE 群"
-                    items={[
-                      ...lineGroups.map((g) => ({
-                        id: g.groupId,
-                        // 帶租戶名：aiproot 一個人管多家，只看群名分不出是哪家的
-                        label: [g.tenantName, g.displayName || g.groupId].filter(Boolean).join(" · "),
-                      })),
-                      ...(channelTarget && !lineGroups.some((g) => g.groupId === channelTarget)
-                        ? [{ id: channelTarget, label: `${channelTarget}（目前設定 · 清單中查無此群）` }]
-                        : []),
-                    ]} />
-                  <div className="hint" style={{ marginTop: 6, fontSize: 12, color: "var(--ink-3)" }}>
-                    清單裡找不到？<button type="button" className="nc-lnk"
-                      onClick={() => setManualTarget(true)}>改成手動輸入群組 ID</button>
-                  </div>
-                </>
-              )}
-            </div>
+            <>
+              <div className="field" style={{ marginBottom: 14 }}><label>用哪支機器人發送</label>
+                <StyledSelect ariaLabel="發送機器人" value={botId}
+                  onChange={(v) => { setBotId(v); setChannelTarget(""); }}
+                  placeholder="選擇機器人"
+                  items={sendable.map((b) => ({
+                    id: b.botId,
+                    // 帶租戶名：aiproot 一個人管多家，只看 bot 名分不出是哪家的
+                    label: [b.tenantName, b.botName].filter(Boolean).join(" · "),
+                  }))} />
+                <div className="hint" style={{ marginTop: 6, fontSize: 12, color: "var(--ink-3)" }}>
+                  選好之後，下面只會列出<b>這支機器人所在的群組</b>。
+                  LINE 的群組編號是各機器人各自一套，不能互用。
+                </div>
+              </div>
+              <div className="field" style={{ margin: 0 }}><label>LINE 目標群</label>
+                <StyledSelect ariaLabel="LINE 目標群" value={channelTarget} onChange={setChannelTarget}
+                  placeholder={botId ? "選擇 LINE 群" : "請先選機器人"}
+                  disabled={!botId}
+                  items={[
+                    ...(sendable.find((b) => b.botId === botId)?.groups ?? []).map((g) => ({
+                      id: g.groupId, label: g.displayName || g.groupId,
+                    })),
+                    // 編輯既有規則時，原本的群可能不在清單裡（群名未同步、或該群從沒收過訊息）。
+                    // 不補這一項的話下拉會空白，看起來像從沒設定過。
+                    ...(channelTarget && !(sendable.find((b) => b.botId === botId)?.groups ?? [])
+                      .some((g) => g.groupId === channelTarget)
+                      ? [{ id: channelTarget, label: `${channelTarget}（目前設定）` }]
+                      : []),
+                  ]} />
+                <div className="hint" style={{ marginTop: 6, fontSize: 12, color: "var(--ink-3)" }}>
+                  {botId && (sendable.find((b) => b.botId === botId)?.groups.length ?? 0) === 0
+                    ? "這支機器人目前沒有任何群組 · 把它拉進群、並在群裡發一則訊息後就會出現"
+                    : "找不到群組？把機器人拉進該群，然後在群裡隨便發一則訊息，這裡就會出現。"}
+                </div>
+              </div>
+            </>
           ) : (
             <div className="field" style={{ margin: 0 }}><label>私訊對象（需已綁定 LINE）</label>
               <StyledSelect ariaLabel="私訊對象" value={channelTarget} onChange={setChannelTarget} placeholder="選擇成員"
