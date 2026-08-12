@@ -43,8 +43,13 @@ export interface CreateRuleInput {
   fields: Array<{ path: string; label: string; order: number }>;
   channelType: NotificationChannelType;
   channelTarget: string;
-  /** 0061 · 用哪支 bot 發送 · 精靈強制選（群組清單依它過濾）*/
-  botId?: string;
+  /**
+   * 0061 · 用哪支 bot 發送 · line_group 必填（群組清單依它過濾）。
+   * ⚠️ 刻意寫成「必填但可為 undefined」而非 `botId?:` —— controller 的 create
+   * 是逐欄位重組 body，選填型別讓它整個漏掉 botId 也編譯得過（2026-08-12 真的漏了，
+   * 前端送了、後端卻回「請選擇要用哪支機器人發送」）。
+   */
+  botId: string | undefined;
 }
 
 @Injectable()

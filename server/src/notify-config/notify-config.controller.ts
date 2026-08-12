@@ -159,6 +159,7 @@ export class NotifyConfigController {
       fields: body.fields ?? [],
       channelType: body.channelType,
       channelTarget: body.channelTarget ?? "",
+      botId: body.botId,
     });
   }
 
