@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>通知規則清單 · A 依客戶分組（推薦）</title>
+<style>
+:root{--canvas:#F7F8FA;--surface:#FFFFFF;--well:#F1F3F6;--line:#E5E7EB;--line-2:#F0F2F5;--ink:#111827;--ink-2:#4B5563;--ink-3:#6B7280;--primary:#4F46E5;--primary-2:#4338CA;--primary-tint:#EEF2FF;--ok:#059669;--ok-tint:#ECFDF5;--warn:#D97706;--warn-tint:#FFFBEB;--danger:#E11D48;--danger-tint:#FFF1F2;--sans:'Inter','Noto Sans TC',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;--r:6px;--r-lg:8px;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+.wrap{max-width:1240px;margin:0 auto;padding:26px 24px 60px;}
+.doc-h{font-size:20px;font-weight:700;margin:0 0 3px;}
+.doc-sub{color:var(--ink-3);font-size:12.5px;margin:0 0 12px;}
+.legend{font-size:12.5px;color:var(--ink-2);margin:0 0 18px;padding:11px 14px;background:var(--surface);border:1px solid var(--line);border-radius:7px;line-height:1.75;}
+.legend b{color:var(--primary-2);}
+.legend .k{display:inline-block;min-width:16px;font-weight:700;color:var(--primary-2);}
+
+.app{border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:0 2px 14px rgba(17,24,39,.05);overflow:hidden;}
+.pane{padding:20px 22px 26px;}
+.pane-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px;}
+.pane-hdr h1{font-size:18px;font-weight:700;margin:0 0 3px;}
+.pane-hdr .sub{color:var(--ink-3);font-size:12px;margin:0;}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:7px 12px;font-size:13px;font-family:inherit;color:var(--ink-2);cursor:pointer;white-space:nowrap;}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600;}
+.tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.tab{padding:9px 1px;font-size:13.5px;color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;}
+.tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--primary);}
+
+/* ── 工具列 ───────────────────────────── */
+.tb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+.tb-search{flex:1;min-width:260px;position:relative;}
+.tb-search input{width:100%;border:1px solid var(--line);background:var(--surface);padding:8px 12px 8px 32px;border-radius:var(--r);font-size:13.5px;font-family:inherit;outline:none;color:var(--ink);}
+.tb-search .ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:13px;}
+.sel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:8px 11px;font-size:13px;color:var(--ink-2);cursor:pointer;white-space:nowrap;}
+.sel .cv{color:var(--ink-3);font-size:11px;}
+.sel.on{border-color:var(--primary);color:var(--primary-2);background:var(--primary-tint);}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
+.seg button{background:var(--surface);border:0;font-family:inherit;font-size:12.5px;color:var(--ink-3);padding:8px 12px;cursor:pointer;}
+.seg button.on{background:var(--primary-tint);color:var(--primary-2);font-weight:600;}
+.seg button+button{border-left:1px solid var(--line);}
+.hint-sm{font-size:11.5px;color:var(--ink-3);margin:-2px 0 10px;}
+
+.chips{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:12px;}
+.chips .lbl{color:var(--ink-3);}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--primary-tint);color:var(--primary-2);border-radius:999px;padding:3px 6px 3px 10px;font-size:12px;font-weight:600;}
+.chip .x{opacity:.55;font-size:13px;line-height:1;cursor:pointer;padding:0 2px;}
+.chips .clear{color:var(--ink-3);text-decoration:underline;cursor:pointer;margin-left:2px;}
+
+/* ── 分組 ───────────────────────────── */
+.grp{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;margin-bottom:12px;background:var(--surface);}
+.grp-h{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--well);border-bottom:1px solid var(--line);cursor:pointer;}
+.grp-h .car{color:var(--ink-3);font-size:11px;width:10px;}
+.grp-h .nm{font-weight:700;font-size:13.5px;}
+.grp-h .ap{font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+.grp-h .cnt{margin-left:auto;font-size:12px;color:var(--ink-3);}
+.grp-h .cnt b{color:var(--ok);}
+.grp.closed .grp-h{border-bottom:0;}
+
+table{width:100%;border-collapse:collapse;table-layout:fixed;}
+th{text-align:left;font-size:10.5px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:8px 14px;border-bottom:1px solid var(--line-2);white-space:nowrap;}
+td{padding:10px 14px;border-bottom:1px solid var(--line-2);font-size:13.5px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#FCFCFD;}
+.t-name{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 兩行式：把來源／觸發／欄位數收進副標，省掉三個欄位 */
+.t-meta{font-size:11.5px;color:var(--ink-3);margin-top:3px;display:flex;align-items:center;gap:6px;overflow:hidden;white-space:nowrap;}
+.t-meta .mono{font-family:var(--mono);}
+.t-meta .sep{color:#D5D9E0;}
+.t-meta .fc{border-bottom:1px dotted var(--ink-3);cursor:help;}
+.trig{display:inline-flex;gap:2px;}
+.trig i{font-style:normal;font-size:10px;font-weight:700;width:16px;height:16px;line-height:16px;text-align:center;border-radius:3px;background:var(--primary-tint);color:var(--primary-2);}
+.trig i.no{background:var(--well);color:#CFD4DC;}
+
+.tgt{display:flex;align-items:center;gap:6px;min-width:0;}
+.tgt .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;}
+.tgt .unreg{color:var(--warn);font-size:12.5px;white-space:nowrap;}
+.tgt .id{font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+.t-sub{font-size:11.5px;color:var(--ink-3);margin-top:2px;}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex:none;}
+.dot.ok{background:var(--ok);}.dot.off{background:#C3C8D0;}.dot.warn{background:var(--warn);}
+
+/* 列內開關（Zapier）· 0 次跳轉 */
+.sw{width:34px;height:20px;border-radius:999px;background:var(--ok);position:relative;display:inline-block;cursor:pointer;}
+.sw::after{content:"";position:absolute;top:2px;left:16px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+.sw.off{background:#CBD0D8;}
+.sw.off::after{left:2px;}
+.sw-w{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-3);}
+
+.act{display:flex;gap:2px;justify-content:flex-end;align-items:center;}
+.lnk{background:none;border:0;font-family:inherit;font-size:12.5px;color:var(--primary-2);cursor:pointer;padding:3px 6px;border-radius:4px;white-space:nowrap;}
+.kebab{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);width:26px;height:26px;line-height:1;color:var(--ink-3);cursor:pointer;font-size:14px;}
+.menu{position:absolute;right:14px;top:34px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 6px 20px rgba(17,24,39,.12);width:150px;padding:4px;z-index:5;}
+.menu button{display:block;width:100%;text-align:left;background:none;border:0;font-family:inherit;font-size:12.5px;color:var(--ink-2);padding:7px 9px;border-radius:4px;cursor:pointer;}
+.menu button.danger{color:var(--danger);}
+.menu .sep{height:1px;background:var(--line-2);margin:4px 0;}
+.pop{position:absolute;left:0;top:26px;background:var(--ink);color:#fff;font-size:11.5px;border-radius:6px;padding:8px 10px;width:210px;line-height:1.7;z-index:6;box-shadow:0 6px 20px rgba(17,24,39,.2);}
+.pop b{color:#fff;}
+
+.foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;font-size:12.5px;color:var(--ink-3);flex-wrap:wrap;}
+.note{margin-top:22px;font-size:12.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--primary);border-radius:7px;padding:12px 14px;line-height:1.8;}
+.note h3{margin:0 0 6px;font-size:13px;color:var(--ink);}
+.note.ref{border-left-color:var(--ok);}
+</style></head><body>
+<div class="wrap">
+  <div class="doc-h">通知規則清單 · A 依客戶分組<span style="color:var(--ok);font-size:13px;font-weight:600;">（推薦）</span></div>
+  <p class="doc-sub">profile：observability-light · 對標 Grafana Alert rules（分組）／Zapier Zaps（列內開關）／Make（搜到內部）／Datadog（facet）· 資料為假名化示意</p>
+
+  <div class="legend">
+    <div><span class="k">1</span> <b>「無限往下」先用分組解決，翻頁是後備</b> —— 依客戶分組並可收合，組頭直接寫「7 條 · 6 條啟用」。查證的五個產品裡，Grafana 就是用這招取代分頁；規則真的多到一頁放不下時，右上切「清單」檢視才出現分頁（見 B 方案）。</div>
+    <div><span class="k">2</span> <b>篩選：四個下拉，不做查詢語法</b> —— 搜尋框會搜進「規則名／表單路徑／群組名／通知欄位名」（抄 Make）。已套用的條件變成可單獨移除的標籤 —— <b>查證的五個產品沒有一個做這件事</b>，卻是「為什麼只剩三筆」最常見的困惑來源。</div>
+    <div><span class="k">3</span> <b>不再擠壓：八欄砍成四欄</b> —— 來源路徑、觸發時機、欄位數全收進規則名下方的副標一行；啟用改成列內開關（不用跳頁）；操作只留「編輯 ＋ ⋯」。所有會過長的內容單行截斷並附滑過提示。</div>
+  </div>
+
+  <div class="app"><div class="pane">
+    <div class="pane-hdr">
+      <div>
+        <h1>通知設定</h1>
+        <p class="sub">一條規則 ＝ 什麼事發生（來源）→ 通知誰（管道）· 支援 Ragic 表單異動與系統內部事件</p>
+      </div>
+      <button class="btn btn-primary">＋ 新增通知規則</button>
+    </div>
+
+    <div class="tabs"><div class="tab on">通知規則</div><div class="tab">通知紀錄</div></div>
+
+    <div class="tb">
+      <div class="tb-search"><span class="ic">⌕</span><input value="" placeholder="搜尋規則名稱、表單路徑、群組名稱或通知欄位"/></div>
+      <div class="sel">客戶 <span class="cv">全部</span> ▾</div>
+      <div class="sel">來源 <span class="cv">全部</span> ▾</div>
+      <div class="sel">觸發 <span class="cv">全部</span> ▾</div>
+      <div class="sel on">狀態 <span class="cv">啟用</span> ▾</div>
+      <div class="seg"><button class="on">分組</button><button>清單</button></div>
+    </div>
+
+    <div class="chips">
+      <span class="lbl">已套用</span>
+      <span class="chip">狀態：啟用 <span class="x">✕</span></span>
+      <span class="clear">清除全部</span>
+    </div>
+
+    <!-- 群組 1 -->
+    <div class="grp">
+      <div class="grp-h"><span class="car">▾</span><span class="nm">昇泰</span><span class="ap">ap16 · shengtai</span>
+        <span class="cnt">7 條規則 · <b>6 條啟用</b></span></div>
+      <table>
+        <colgroup><col style="width:44%"/><col style="width:28%"/><col style="width:14%"/><col style="width:14%"/></colgroup>
+        <thead><tr><th>規則</th><th>通知對象</th><th>啟用</th><th style="text-align:right">操作</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><div class="t-name">特採單（上游-5b）</div>
+              <div class="t-meta"><span class="mono">/erp/16</span><span class="sep">·</span>
+                <span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span><span class="sep">·</span>
+                <span class="fc" title="客戶名稱、單號、需求數量…（共 8 個）">8 個欄位</span></div></td>
+            <td><div class="tgt"><span class="dot ok"></span><span class="nm">昇泰AI客服測試群</span></div><div class="t-sub">LINE 群組</div></td>
+            <td><div class="sw-w"><span class="sw"></span></div></td>
+            <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+          </tr>
+          <tr style="position:relative">
+            <td><div class="t-name">報價單（下游-1）</div>
+              <div class="t-meta"><span class="mono">/erp/1</span><span class="sep">·</span>
+                <span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span><span class="sep">·</span>
+                <span class="fc">16 個欄位</span></div></td>
+            <td><div class="tgt"><span class="dot ok"></span><span class="nm">昇泰AI客服測試群</span></div><div class="t-sub">LINE 群組</div></td>
+            <td><div class="sw-w"><span class="sw"></span></div></td>
+            <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+          </tr>
+          <tr style="position:relative">
+            <td><div class="t-name">生產需求單（下游-3）</div>
+              <div class="t-meta"><span class="mono">/mes/1</span><span class="sep">·</span>
+                <span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span><span class="sep">·</span><span class="fc">8 個欄位</span></div></td>
+            <td><div class="tgt"><span class="dot ok"></span><span class="nm">昇泰AI客服測試群</span></div><div class="t-sub">LINE 群組</div></td>
+            <td><div class="sw-w"><span class="sw"></span></div></td>
+            <td>
+              <div class="act"><button class="lnk">編輯</button><button class="kebab" style="border-color:var(--primary);color:var(--primary-2)">⋯</button></div>
+              <div class="menu">
+                <button>複製 Webhook 網址</button>
+                <button>以此為範本新增</button>
+                <button>檢視發送紀錄</button>
+                <div class="sep"></div>
+                <button class="danger">刪除</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><div class="t-name">業務日誌填寫 2026</div>
+              <div class="t-meta"><span class="mono">/forms4/18</span><span class="sep">·</span>
+                <span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span><span class="sep">·</span><span class="fc">7 個欄位</span></div></td>
+            <td><div class="tgt"><span class="dot ok"></span><span class="nm">昇泰AI客服測試群</span></div><div class="t-sub">LINE 群組</div></td>
+            <td><div class="sw-w"><span class="sw"></span></div></td>
+            <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+          </tr>
+          <tr>
+            <td><div class="t-name">收貨單（上游-4）</div>
+              <div class="t-meta"><span class="mono">/erp/15</span><span class="sep">·</span>
+                <span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span><span class="sep">·</span><span class="fc">28 個欄位</span></div></td>
+            <td><div class="tgt"><span class="dot off"></span><span class="nm">昇泰AI客服測試群</span></div><div class="t-sub">LINE 群組</div></td>
+            <td><div class="sw-w"><span class="sw off"></span><span>已停用</span></div></td>
+            <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 群組 2 -->
+    <div class="grp">
+      <div class="grp-h"><span class="car">▾</span><span class="nm">宏遠</span><span class="ap">ap16 · hongyuan</span>
+        <span class="cnt">3 條規則 · <b>3 條啟用</b> · <span style="color:var(--warn)">⚠ 3 條指到未登錄的群組</span></span></div>
+      <table>
+        <colgroup><col style="width:44%"/><col style="width:28%"/><col style="width:14%"/><col style="width:14%"/></colgroup>
+        <thead><tr><th>規則</th><th>通知對象</th><th>啟用</th><th style="text-align:right">操作</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><div class="t-name">訂購憑單（v）</div>
+              <div class="t-meta"><span class="mono">/order-operation/4</span><span class="sep">·</span>
+                <span class="trig"><i>新</i><i>更</i><i>刪</i></span><span class="sep">·</span><span class="fc">13 個欄位</span></div></td>
+            <td><div class="tgt"><span class="dot warn"></span><span class="unreg">未登錄的群組</span><span class="id">…7890</span></div><div class="t-sub">LINE 群組</div></td>
+            <td><div class="sw-w"><span class="sw"></span></div></td>
+            <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+          </tr>
+          <tr>
+            <td><div class="t-name">顧客產品需求通知單</div>
+              <div class="t-meta"><span class="mono">/order-operation/36</span><span class="sep">·</span>
+                <span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span><span class="sep">·</span><span class="fc">2 個欄位</span></div></td>
+            <td><div class="tgt"><span class="dot warn"></span><span class="unreg">未登錄的群組</span><span class="id">…7890</span></div><div class="t-sub">LINE 群組</div></td>
+            <td><div class="sw-w"><span class="sw"></span></div></td>
+            <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+          </tr>
+          <tr style="position:relative">
+            <td><div class="t-name">分析表</div>
+              <div class="t-meta"><span class="mono">/order-operation/11</span><span class="sep">·</span>
+                <span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span><span class="sep">·</span>
+                <span class="fc" style="color:var(--primary-2);border-bottom-color:var(--primary-2)">61 個欄位</span></div>
+              <div class="pop" style="top:42px;left:150px;"><b>通知欄位（61）</b><br/>單號、客戶名稱、品名、規格、數量、單價、交期… <span style="opacity:.7">＋54 項</span><br/><span style="opacity:.7;font-size:11px">欄位太多時，訊息會很長 —— 這裡先看得到</span></div></td>
+            <td><div class="tgt"><span class="dot warn"></span><span class="unreg">未登錄的群組</span><span class="id">…7890</span></div><div class="t-sub">LINE 群組</div></td>
+            <td><div class="sw-w"><span class="sw"></span></div></td>
+            <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 收合起來的組 -->
+    <div class="grp closed">
+      <div class="grp-h"><span class="car">▸</span><span class="nm">台灣示範</span><span class="ap">ap16 · twdemo</span>
+        <span class="cnt">2 條規則 · <b>2 條啟用</b></span></div>
+    </div>
+
+    <div class="foot">
+      <div>共 <b style="color:var(--ink)">12</b> 條規則 · 3 個客戶</div>
+      <div>僅具「通知設定」權限的 aiproot 員工可見與管理</div>
+    </div>
+  </div></div>
+
+  <div class="note">
+    <h3>幾個刻意的決定（以及為什麼）</h3>
+    <div>· <b>分組優先於分頁。</b>查證的五個產品沒有一個做「每頁筆數」選擇器 —— 主流答案是用篩選和分組收斂。Grafana 的 Alert rules 就是用可收合的階層取代分頁。規則真的爆量時才切「清單」檢視吃分頁。<br/>
+    · <b>兩行式列（抄 Zapier）。</b>來源路徑、觸發時機、欄位數都是「確認用」而非「掃視用」的資訊，收進副標就少三個欄位在搶寬度 —— 擠壓問題從根上消失，而不是靠調百分比。<br/>
+    · <b>啟用改列內開關。</b>Zapier 的做法：0 次跳轉、0 次確認。原本「停用」是文字按鈕，跟「刪除」並排容易誤點。<br/>
+    · <b>「未登錄的群組」取代 33 碼原始 ID。</b>ID 對人沒有意義，但「這條規則指到我們沒有紀錄的群」是要處理的狀態，用琥珀燈點＋組頭彙總標示，滑過看完整 ID。<br/>
+    · <b>欄位數可滑過看清單。</b>「61 個欄位」現在只是個數字，看不出通知裡會出現什麼。<br/>
+    · <b>不做查詢語法。</b>Datadog 與 Grafana 都要求學 `key:value` 或 Prometheus matcher —— 對業助這個 persona 是廢的。四個下拉 + 一個全文搜尋就夠。</div>
+  </div>
+
+  <div class="note ref">
+    <h3>§A5 對標與向上設計</h3>
+    <div>· <b>Grafana Alert rules</b> — 對：用 folder→group→rule 可收合階層取代分頁，還能把篩選存成具名檢視。錯：label 篩選要用 Prometheus matcher（RE2、大小寫敏感），非工程背景直接卡死。<br/>
+    · <b>Zapier Zaps</b> — 對：列內 status toggle；app 用 icon 不用文字，省最多寬度。錯：搜尋只比對 Zap 名稱，找不到「用了哪張表」。<br/>
+    · <b>Datadog Monitors</b> — 對：facet 側欄與搜尋列雙向同步，新手用點的、老手用打的共用同一份狀態。錯：多選邏輯不一致（同 facet 內 OR、部分 tag 卻是 AND），UI 上看不出來。<br/>
+    · <b>Make Scenarios</b> — 對：搜尋會搜進流程內部（模組欄位值、URL）。錯：視覺化 Grid 規模一大就變麵條。<br/>
+    · <b>GitHub Actions</b>（反面）— 名稱固定欄寬硬截斷且無 tooltip，monorepo 使用者根本找不到 workflow。<br/>
+    <b>我們的向上點</b>：① 取 Grafana 的分組但拿掉查詢語法 ② 取 Make 的「搜到內部」（搜得到通知欄位名）③ 補上所有人都沒做的<b>已套用條件標籤列</b> ④ 所有截斷一律配滑過提示（避開 GitHub 的坑）。</div>
+  </div>
+</div>
+</body></html>

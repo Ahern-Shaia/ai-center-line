@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>通知規則清單 · B 平面表格＋分頁（推薦）</title>
+<style>
+:root{--canvas:#F7F8FA;--surface:#FFFFFF;--well:#F1F3F6;--line:#E5E7EB;--line-2:#F0F2F5;--ink:#111827;--ink-2:#4B5563;--ink-3:#6B7280;--primary:#4F46E5;--primary-2:#4338CA;--primary-tint:#EEF2FF;--ok:#059669;--ok-tint:#ECFDF5;--warn:#D97706;--warn-tint:#FFFBEB;--danger:#E11D48;--danger-tint:#FFF1F2;--sans:'Inter','Noto Sans TC',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;--r:6px;--r-lg:8px;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+.wrap{max-width:1240px;margin:0 auto;padding:26px 24px 60px;}
+.doc-h{font-size:20px;font-weight:700;margin:0 0 3px;}
+.doc-sub{color:var(--ink-3);font-size:12.5px;margin:0 0 12px;}
+.legend{font-size:12.5px;color:var(--ink-2);margin:0 0 18px;padding:11px 14px;background:var(--surface);border:1px solid var(--line);border-radius:7px;line-height:1.75;}
+.legend b{color:var(--primary-2);}
+.legend .k{display:inline-block;min-width:16px;font-weight:700;color:var(--primary-2);}
+
+.app{border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:0 2px 14px rgba(17,24,39,.05);overflow:hidden;}
+.pane{padding:20px 22px 26px;}
+.pane-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px;}
+.pane-hdr h1{font-size:18px;font-weight:700;margin:0 0 3px;}
+.pane-hdr .sub{color:var(--ink-3);font-size:12px;margin:0;}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:7px 12px;font-size:13px;font-family:inherit;color:var(--ink-2);cursor:pointer;white-space:nowrap;}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600;}
+
+.tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.tab{padding:9px 1px;font-size:13.5px;color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;}
+.tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--primary);}
+
+/* ── 工具列（新）───────────────────────────── */
+.tb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+.tb-search{flex:1;min-width:240px;position:relative;}
+.tb-search input{width:100%;border:1px solid var(--line);background:var(--surface);padding:8px 12px 8px 32px;border-radius:var(--r);font-size:13.5px;font-family:inherit;outline:none;color:var(--ink);}
+.tb-search .ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:13px;}
+.sel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:8px 11px;font-size:13px;color:var(--ink-2);cursor:pointer;white-space:nowrap;}
+.sel .cnt{background:var(--primary-tint);color:var(--primary-2);font-weight:700;font-size:11px;border-radius:999px;padding:0 6px;line-height:16px;}
+.sel .cv{color:var(--ink-3);font-size:11px;}
+.sel.on{border-color:var(--primary);color:var(--primary-2);background:var(--primary-tint);}
+
+/* 已套用的篩選 */
+.chips{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:12px;}
+.chips .lbl{color:var(--ink-3);}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--primary-tint);color:var(--primary-2);border-radius:999px;padding:3px 6px 3px 10px;font-size:12px;font-weight:600;}
+.chip .x{color:var(--primary-2);opacity:.55;font-size:13px;line-height:1;cursor:pointer;padding:0 2px;}
+.chips .clear{color:var(--ink-3);text-decoration:underline;cursor:pointer;margin-left:2px;}
+
+/* ── 表格 ───────────────────────────── */
+table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;table-layout:fixed;}
+th{text-align:left;font-size:11px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--well);white-space:nowrap;}
+td{padding:11px 14px;border-bottom:1px solid var(--line-2);font-size:13.5px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#FCFCFD;}
+.t-name{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.t-sub{font-size:11.5px;color:var(--ink-3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mono{font-family:var(--mono);font-size:12px;}
+.num{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2);}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;}
+.pill.on{background:var(--ok-tint);color:var(--ok);}
+.pill.off{background:var(--well);color:var(--ink-3);}
+.pill.src{background:var(--primary-tint);color:var(--primary-2);}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;}
+.dot.ok{background:var(--ok);}.dot.off{background:#C3C8D0;}.dot.warn{background:var(--warn);}
+
+/* 觸發：三格固定寬 · 關掉的變灰而不是消失 → 掃視時位置一致 */
+.trig{display:inline-flex;gap:3px;}
+.trig i{font-style:normal;font-size:11px;font-weight:600;width:20px;height:20px;line-height:20px;text-align:center;border-radius:4px;background:var(--primary-tint);color:var(--primary-2);}
+.trig i.no{background:var(--well);color:#C3C8D0;}
+
+/* 通知對象：群名優先；沒登錄的群不再吐 33 碼原始 ID */
+.tgt{display:flex;align-items:center;gap:6px;min-width:0;}
+.tgt .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;}
+.tgt .unreg{color:var(--warn);font-size:12.5px;white-space:nowrap;}
+.tgt .id{font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+
+.act{display:flex;gap:2px;justify-content:flex-end;align-items:center;}
+.lnk{background:none;border:0;font-family:inherit;font-size:12.5px;color:var(--primary-2);cursor:pointer;padding:3px 6px;border-radius:4px;white-space:nowrap;}
+.kebab{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);width:26px;height:26px;line-height:1;color:var(--ink-3);cursor:pointer;font-size:14px;}
+
+/* 選單（示意展開） */
+.menu{position:absolute;right:0;top:30px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 6px 20px rgba(17,24,39,.12);width:132px;padding:4px;z-index:5;}
+.menu button{display:block;width:100%;text-align:left;background:none;border:0;font-family:inherit;font-size:12.5px;color:var(--ink-2);padding:7px 9px;border-radius:4px;cursor:pointer;}
+.menu button.danger{color:var(--danger);}
+.menu .sep{height:1px;background:var(--line-2);margin:4px 0;}
+
+/* ── 分頁 ───────────────────────────── */
+.pager{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;font-size:12.5px;color:var(--ink-3);flex-wrap:wrap;}
+.pager .pages{display:flex;gap:4px;align-items:center;}
+.pg{min-width:28px;height:28px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);color:var(--ink-2);font-size:12.5px;font-family:inherit;cursor:pointer;}
+.pg.on{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:700;}
+.pg:disabled{color:#C3C8D0;cursor:default;}
+.psize{display:inline-flex;align-items:center;gap:6px;}
+.psize select{border:1px solid var(--line);border-radius:var(--r);padding:4px 6px;font-family:inherit;font-size:12.5px;color:var(--ink-2);background:var(--surface);}
+
+.note{margin-top:22px;font-size:12.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--primary);border-radius:7px;padding:12px 14px;line-height:1.8;}
+.note h3{margin:0 0 6px;font-size:13px;color:var(--ink);}
+.before{background:var(--danger-tint);border-left-color:var(--danger);}
+.before h3{color:var(--danger);}
+</style></head><body>
+<div class="wrap">
+  <div class="doc-h">通知規則清單 · B 平面表格＋分頁</div>
+  <p class="doc-sub">profile：observability-light · 對標 Datadog Monitors / Grafana Alert rules / Zapier Zaps · 資料為假名化示意</p>
+
+  <div class="legend">
+    <div><span class="k">1</span> <b>分頁</b> —— 底部固定分頁列，可選每頁 20 / 50 / 100 筆；左側永遠顯示「第 X–Y 筆，共 N 筆」，不用自己數。</div>
+    <div><span class="k">2</span> <b>篩選</b> —— 搜尋框（規則名／表單路徑／群名）＋ 客戶／來源／觸發／狀態四個下拉，可同時套用；已套用的條件變成可單獨移除的標籤。</div>
+    <div><span class="k">3</span> <b>不再擠壓</b> —— 欄位 8 → 7 且改用固定佈局；四個操作按鈕收成「編輯 ＋ ⋯」，省下 12% 寬度分給名稱與通知對象；過長內容一律單行截斷，不換行。</div>
+  </div>
+
+  <div class="app"><div class="pane">
+    <div class="pane-hdr">
+      <div>
+        <h1>通知設定</h1>
+        <p class="sub">一條規則 ＝ 什麼事發生（來源）→ 通知誰（管道）· 支援 Ragic 表單異動與系統內部事件</p>
+      </div>
+      <button class="btn btn-primary">＋ 新增通知規則</button>
+    </div>
+
+    <div class="tabs"><div class="tab on">通知規則</div><div class="tab">通知紀錄</div></div>
+
+    <!-- 工具列 -->
+    <div class="tb">
+      <div class="tb-search"><span class="ic">⌕</span><input value="" placeholder="搜尋規則名稱、表單路徑或群組名稱"/></div>
+      <div class="sel on">客戶 <span class="cnt">1</span> ▾</div>
+      <div class="sel">來源 <span class="cv">全部</span> ▾</div>
+      <div class="sel">觸發 <span class="cv">全部</span> ▾</div>
+      <div class="sel on">狀態 <span class="cv">啟用</span> ▾</div>
+    </div>
+
+    <div class="chips">
+      <span class="lbl">已套用</span>
+      <span class="chip">客戶：昇泰 <span class="x">✕</span></span>
+      <span class="chip">狀態：啟用 <span class="x">✕</span></span>
+      <span class="clear">清除全部</span>
+    </div>
+
+    <table>
+      <colgroup>
+        <col style="width:23%"/><col style="width:18%"/><col style="width:11%"/><col style="width:7%"/>
+        <col style="width:21%"/><col style="width:8%"/><col style="width:12%"/>
+      </colgroup>
+      <thead><tr>
+        <th>規則</th><th>來源表單</th><th>觸發</th><th style="text-align:right">欄位</th>
+        <th>通知對象</th><th>狀態</th><th style="text-align:right">操作</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td><div class="t-name">特採單（上游-5b）</div><div class="t-sub">昇泰</div></td>
+          <td><span class="pill src">Ragic</span> <span class="mono">/erp/16</span></td>
+          <td><span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span></td>
+          <td class="num">8</td>
+          <td><div class="tgt"><span class="dot ok"></span><span class="nm">昇泰AI客服測試群</span></div><div class="t-sub">LINE 群組</div></td>
+          <td><span class="pill on">啟用</span></td>
+          <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+        </tr>
+        <tr>
+          <td><div class="t-name">請購單（上游-1）</div><div class="t-sub">昇泰</div></td>
+          <td><span class="pill src">Ragic</span> <span class="mono">/erp/54</span></td>
+          <td><span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span></td>
+          <td class="num">7</td>
+          <td><div class="tgt"><span class="dot ok"></span><span class="nm">昇泰AI客服測試群</span></div><div class="t-sub">LINE 群組</div></td>
+          <td><span class="pill on">啟用</span></td>
+          <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+        </tr>
+        <tr style="position:relative">
+          <td><div class="t-name">訂購單（下游-2）</div><div class="t-sub">昇泰</div></td>
+          <td><span class="pill src">Ragic</span> <span class="mono">/erp/2</span></td>
+          <td><span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span></td>
+          <td class="num">6</td>
+          <td><div class="tgt"><span class="dot ok"></span><span class="nm">昇泰AI客服測試群</span></div><div class="t-sub">LINE 群組</div></td>
+          <td><span class="pill on">啟用</span></td>
+          <td style="position:relative">
+            <div class="act"><button class="lnk">編輯</button><button class="kebab" style="border-color:var(--primary);color:var(--primary-2)">⋯</button></div>
+            <div class="menu">
+              <button>複製 Webhook 網址</button>
+              <button>複製規則</button>
+              <button>停用</button>
+              <div class="sep"></div>
+              <button class="danger">刪除</button>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><div class="t-name">生產需求單（下游-3）</div><div class="t-sub">昇泰</div></td>
+          <td><span class="pill src">Ragic</span> <span class="mono">/mes/1</span></td>
+          <td><span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span></td>
+          <td class="num">8</td>
+          <td><div class="tgt"><span class="dot ok"></span><span class="nm">昇泰AI客服測試群</span></div><div class="t-sub">LINE 群組</div></td>
+          <td><span class="pill on">啟用</span></td>
+          <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+        </tr>
+        <tr>
+          <td><div class="t-name">業務日誌填寫2026</div><div class="t-sub">昇泰</div></td>
+          <td><span class="pill src">Ragic</span> <span class="mono">/forms4/18</span></td>
+          <td><span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span></td>
+          <td class="num">7</td>
+          <td><div class="tgt"><span class="dot ok"></span><span class="nm">昇泰AI客服測試群</span></div><div class="t-sub">LINE 群組</div></td>
+          <td><span class="pill on">啟用</span></td>
+          <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+        </tr>
+        <tr>
+          <td><div class="t-name">報價單（下游-1）</div><div class="t-sub">昇泰</div></td>
+          <td><span class="pill src">Ragic</span> <span class="mono">/erp/1</span></td>
+          <td><span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span></td>
+          <td class="num">16</td>
+          <td><div class="tgt"><span class="dot ok"></span><span class="nm">昇泰AI客服測試群</span></div><div class="t-sub">LINE 群組</div></td>
+          <td><span class="pill on">啟用</span></td>
+          <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+        </tr>
+        <tr>
+          <td><div class="t-name">訂購憑單(v)</div><div class="t-sub">宏遠</div></td>
+          <td><span class="pill src">Ragic</span> <span class="mono">/order-operation/4</span></td>
+          <td><span class="trig"><i>新</i><i>更</i><i>刪</i></span></td>
+          <td class="num">13</td>
+          <td><div class="tgt"><span class="dot warn"></span><span class="unreg">未登錄的群組</span><span class="id">…6768f6c</span></div><div class="t-sub">LINE 群組</div></td>
+          <td><span class="pill on">啟用</span></td>
+          <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+        </tr>
+        <tr>
+          <td><div class="t-name">顧客產品需求通知單</div><div class="t-sub">宏遠</div></td>
+          <td><span class="pill src">Ragic</span> <span class="mono">/order-operation/36</span></td>
+          <td><span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span></td>
+          <td class="num">2</td>
+          <td><div class="tgt"><span class="dot warn"></span><span class="unreg">未登錄的群組</span><span class="id">…6768f6c</span></div><div class="t-sub">LINE 群組</div></td>
+          <td><span class="pill on">啟用</span></td>
+          <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+        </tr>
+        <tr>
+          <td><div class="t-name">分析表</div><div class="t-sub">宏遠</div></td>
+          <td><span class="pill src">Ragic</span> <span class="mono">/order-operation/11</span></td>
+          <td><span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span></td>
+          <td class="num">61</td>
+          <td><div class="tgt"><span class="dot warn"></span><span class="unreg">未登錄的群組</span><span class="id">…6768f6c</span></div><div class="t-sub">LINE 群組</div></td>
+          <td><span class="pill on">啟用</span></td>
+          <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+        </tr>
+        <tr>
+          <td><div class="t-name">收貨單（上游-4）</div><div class="t-sub">昇泰</div></td>
+          <td><span class="pill src">Ragic</span> <span class="mono">/erp/15</span></td>
+          <td><span class="trig"><i>新</i><i>更</i><i class="no">刪</i></span></td>
+          <td class="num">28</td>
+          <td><div class="tgt"><span class="dot off"></span><span class="nm">昇泰AI客服測試群</span></div><div class="t-sub">LINE 群組</div></td>
+          <td><span class="pill off">停用</span></td>
+          <td><div class="act"><button class="lnk">編輯</button><button class="kebab">⋯</button></div></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pager">
+      <div>第 1–10 筆，共 <b style="color:var(--ink)">34</b> 筆</div>
+      <div class="pages">
+        <button class="pg" disabled>‹</button>
+        <button class="pg on">1</button><button class="pg">2</button><button class="pg">3</button><button class="pg">4</button>
+        <button class="pg">›</button>
+      </div>
+      <div class="psize">每頁 <select><option>10</option><option selected>20</option><option>50</option><option>100</option></select> 筆</div>
+    </div>
+  </div></div>
+
+  <div class="note before">
+    <h3>現況的三個擠壓點（為什麼要改）</h3>
+    <div>· <b>操作欄佔 18% 寬</b>放四個文字按鈕 —— 視窗一窄就斷成「複製網 址／編 輯」。<br/>
+    · <b>通知對象欄只有 14%</b>，但沒登錄的群會吐出 33 碼原始 ID，撐爆欄寬且無法斷行。<br/>
+    · <b>八個欄位用百分比寬度</b>互相搶空間，「8 個欄位」被折成兩行。</div>
+  </div>
+
+  <div class="note">
+    <h3>幾個刻意的決定</h3>
+    <div>· <b>觸發用三格固定位置</b>（新／更／刪），沒開的變灰而不是消失 —— 位置一致才能整欄快速掃視，這是 Grafana / Datadog 的做法。<br/>
+    · <b>「未登錄的群組」取代原始 ID</b>：ID 對人沒有意義，但「這條規則指到我們沒有紀錄的群」是要處理的狀態，用琥珀燈點標示，滑過看完整 ID。<br/>
+    · <b>「編輯」留在外面</b>，其餘收進 ⋯ —— 編輯是最常用的；「刪除」藏一層可以少一點誤點。<br/>
+    · <b>篩選條件變成可移除的標籤</b>：只靠下拉的話，「為什麼只剩 3 筆」會找不到原因。<br/>
+    · <b>每頁筆數可選</b>：規則少的客戶不想翻頁，規則多的想一次看完。</div>
+  </div>
+</div>
+</body></html>
