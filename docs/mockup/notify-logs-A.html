@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>通知紀錄 · A（配合規則清單改版）</title>
+<style>
+:root{--canvas:#F7F8FA;--surface:#FFFFFF;--well:#F1F3F6;--line:#E5E7EB;--line-2:#F0F2F5;--ink:#111827;--ink-2:#4B5563;--ink-3:#6B7280;--primary:#4F46E5;--primary-2:#4338CA;--primary-tint:#EEF2FF;--ok:#059669;--ok-tint:#ECFDF5;--warn:#D97706;--warn-tint:#FFFBEB;--danger:#E11D48;--danger-tint:#FFF1F2;--sans:'Inter','Noto Sans TC',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;--r:6px;--r-lg:8px;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+.wrap{max-width:1240px;margin:0 auto;padding:26px 24px 60px;}
+.doc-h{font-size:20px;font-weight:700;margin:0 0 3px;}
+.doc-sub{color:var(--ink-3);font-size:12.5px;margin:0 0 12px;}
+.legend{font-size:12.5px;color:var(--ink-2);margin:0 0 18px;padding:11px 14px;background:var(--surface);border:1px solid var(--line);border-radius:7px;line-height:1.75;}
+.legend b{color:var(--primary-2);}
+.legend .k{display:inline-block;min-width:16px;font-weight:700;color:var(--primary-2);}
+
+.app{border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:0 2px 14px rgba(17,24,39,.05);overflow:hidden;}
+.pane{padding:20px 22px 26px;}
+.pane-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px;}
+.pane-hdr h1{font-size:18px;font-weight:700;margin:0 0 3px;}
+.pane-hdr .sub{color:var(--ink-3);font-size:12px;margin:0;}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:7px 12px;font-size:13px;font-family:inherit;color:var(--ink-2);cursor:pointer;white-space:nowrap;}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600;}
+.tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.tab{padding:9px 1px;font-size:13.5px;color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;}
+.tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--primary);}
+
+/* ── 摘要條（新）· 一眼看出有沒有事 ───────── */
+.sum{display:flex;gap:0;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;margin-bottom:12px;background:var(--surface);}
+.sum-c{flex:1;padding:11px 14px;cursor:pointer;border-right:1px solid var(--line-2);}
+.sum-c:last-child{border-right:0;}
+.sum-c .lb{font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:5px;}
+.sum-c .vl{font-size:22px;font-weight:700;margin-top:2px;letter-spacing:-.01em;}
+.sum-c.sel{background:var(--primary-tint);box-shadow:inset 0 -2px 0 var(--primary);}
+.sum-c.danger .vl{color:var(--danger);}
+.sum-c.warn .vl{color:var(--warn);}
+.sum-c.ok .vl{color:var(--ok);}
+.sum-c.mut .vl{color:var(--ink-3);}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex:none;}
+.dot.ok{background:var(--ok);}.dot.warn{background:var(--warn);}.dot.danger{background:var(--danger);}.dot.mut{background:#C3C8D0;}
+
+/* ── 工具列 ───────────────────────────── */
+.tb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+.tb-search{flex:1;min-width:230px;position:relative;}
+.tb-search input{width:100%;border:1px solid var(--line);background:var(--surface);padding:8px 12px 8px 32px;border-radius:var(--r);font-size:13.5px;font-family:inherit;outline:none;color:var(--ink);}
+.tb-search .ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:13px;}
+.sel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:8px 11px;font-size:13px;color:var(--ink-2);cursor:pointer;white-space:nowrap;}
+.sel .cv{color:var(--ink-3);font-size:11px;}
+.sel.on{border-color:var(--primary);color:var(--primary-2);background:var(--primary-tint);}
+.chips{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:12px;}
+.chips .lbl{color:var(--ink-3);}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--primary-tint);color:var(--primary-2);border-radius:999px;padding:3px 6px 3px 10px;font-size:12px;font-weight:600;}
+.chip .x{opacity:.55;font-size:13px;line-height:1;cursor:pointer;padding:0 2px;}
+.chips .clear{color:var(--ink-3);text-decoration:underline;cursor:pointer;margin-left:2px;}
+
+/* ── 表格 ───────────────────────────── */
+table{width:100%;border-collapse:collapse;table-layout:fixed;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;}
+th{text-align:left;font-size:10.5px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--well);white-space:nowrap;}
+td{padding:10px 14px;border-bottom:1px solid var(--line-2);font-size:13.5px;vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+tr.row:hover td{background:#FCFCFD;cursor:pointer;}
+.mono{font-family:var(--mono);font-size:12px;}
+.t-name{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.t-meta{font-size:11.5px;color:var(--ink-3);margin-top:3px;display:flex;align-items:center;gap:6px;overflow:hidden;white-space:nowrap;}
+.t-meta .sep{color:#D5D9E0;}
+/* 只有「需要處理」的列才印原因 —— 已送出的不佔版面 */
+.why{font-size:12px;margin-top:4px;line-height:1.55;}
+.why.danger{color:var(--danger);}
+.why.warn{color:var(--warn);}
+.why b{font-weight:600;}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:2px 9px;border-radius:999px;font-weight:600;white-space:nowrap;}
+.pill.ok{background:var(--ok-tint);color:var(--ok);}
+.pill.danger{background:var(--danger-tint);color:var(--danger);}
+.pill.warn{background:var(--warn-tint);color:var(--warn);}
+.pill.mut{background:var(--well);color:var(--ink-3);}
+.car{color:var(--ink-3);font-size:11px;}
+.num{text-align:right;color:var(--ink-2);font-family:var(--mono);font-size:12px;}
+
+/* 展開列 */
+.exp td{background:#FAFBFC;border-bottom:1px solid var(--line);padding:0 14px 14px;}
+.exp-in{border-left:2px solid var(--primary);padding:2px 0 2px 12px;}
+.exp-h{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 5px;font-weight:600;}
+.msg{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;font-size:12.5px;line-height:1.75;white-space:pre-wrap;color:var(--ink-2);}
+.diag{display:flex;gap:8px;flex-wrap:wrap;font-size:11.5px;}
+.diag span{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:2px 9px;color:var(--ink-2);}
+.diag span b{color:var(--ink);}
+.diag span.bad{border-color:#F3C6CF;background:var(--danger-tint);color:var(--danger);}
+.fix{margin-top:8px;font-size:12px;color:var(--ink-2);background:var(--warn-tint);border:1px solid #F6E4BE;border-radius:var(--r);padding:9px 11px;line-height:1.7;}
+.fix b{color:var(--ink);}
+.fix .go{color:var(--primary-2);text-decoration:underline;cursor:pointer;}
+
+.pager{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;font-size:12.5px;color:var(--ink-3);flex-wrap:wrap;}
+.pages{display:flex;gap:4px;align-items:center;}
+.pg{min-width:28px;height:28px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);color:var(--ink-2);font-size:12.5px;font-family:inherit;cursor:pointer;}
+.pg.on{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:700;}
+.pg:disabled{color:#C3C8D0;cursor:default;}
+
+.note{margin-top:22px;font-size:12.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--primary);border-radius:7px;padding:12px 14px;line-height:1.8;}
+.note h3{margin:0 0 6px;font-size:13px;color:var(--ink);}
+.note.bad{border-left-color:var(--danger);background:var(--danger-tint);}
+.note.bad h3{color:var(--danger);}
+</style></head><body>
+<div class="wrap">
+  <div class="doc-h">通知紀錄 · A（配合規則清單改版）</div>
+  <p class="doc-sub">profile：observability-light · 對標 Datadog Events／Grafana state history／Stripe Events · 資料為假名化示意</p>
+
+  <div class="legend">
+    <div><span class="k">1</span> <b>分頁</b> —— 現況是硬寫「最近 100 筆」，<b>第 101 筆之後根本看不到</b>；那比清單太長更嚴重，是查不到就查不到。改成時間範圍 ＋ 分頁。</div>
+    <div><span class="k">2</span> <b>篩選</b> —— 頂部摘要條的每一格都可以點（＝依結果篩選），另加時間範圍／規則／客戶三個下拉與全文搜尋；已套用的條件同樣是可單獨移除的標籤。</div>
+    <div><span class="k">3</span> <b>不再擠壓</b> —— 失敗原因原本擠在 20% 寬的欄位裡（那是一整個句子）。改成<b>只有需要處理的列才印原因</b>，而且印在規則名下方整行寬 —— 已送出的列不佔版面。</div>
+  </div>
+
+  <div class="app"><div class="pane">
+    <div class="pane-hdr">
+      <div>
+        <h1>通知設定</h1>
+        <p class="sub">一條規則 ＝ 什麼事發生（來源）→ 通知誰（管道）· 支援 Ragic 表單異動與系統內部事件</p>
+      </div>
+      <button class="btn btn-primary">＋ 新增通知規則</button>
+    </div>
+
+    <div class="tabs"><div class="tab">通知規則</div><div class="tab on">通知紀錄</div></div>
+
+    <!-- 摘要條：一眼看出有沒有事 · 每格可點＝篩選 -->
+    <div class="sum">
+      <div class="sum-c sel"><div class="lb">全部</div><div class="vl">248</div></div>
+      <div class="sum-c ok"><div class="lb"><span class="dot ok"></span>已送出</div><div class="vl">231</div></div>
+      <div class="sum-c danger"><div class="lb"><span class="dot danger"></span>推送失敗</div><div class="vl">6</div></div>
+      <div class="sum-c warn"><div class="lb"><span class="dot warn"></span>未訂閱此異動</div><div class="vl">7</div></div>
+      <div class="sum-c mut"><div class="lb"><span class="dot mut"></span>重複略過</div><div class="vl">4</div></div>
+    </div>
+
+    <div class="tb">
+      <div class="tb-search"><span class="ic">⌕</span><input placeholder="搜尋規則名稱、表單路徑、單號或訊息內容"/></div>
+      <div class="sel on">近 7 天 ▾</div>
+      <div class="sel">規則 <span class="cv">全部</span> ▾</div>
+      <div class="sel">客戶 <span class="cv">全部</span> ▾</div>
+      <button class="btn">重新整理</button>
+    </div>
+
+    <div class="chips">
+      <span class="lbl">已套用</span>
+      <span class="chip">時間：近 7 天 <span class="x">✕</span></span>
+      <span class="clear">清除全部</span>
+    </div>
+
+    <table>
+      <colgroup><col style="width:15%"/><col style="width:53%"/><col style="width:16%"/><col style="width:10%"/><col style="width:6%"/></colgroup>
+      <thead><tr>
+        <th>時間</th><th>規則 · 來源</th><th>結果</th><th style="text-align:right">耗時</th><th></th>
+      </tr></thead>
+      <tbody>
+        <tr class="row">
+          <td class="mono">08/12 11:34:42</td>
+          <td><div class="t-name">報價單（下游-1）</div>
+            <div class="t-meta">昇泰<span class="sep">·</span><span class="mono">/erp/1</span><span class="sep">·</span><span class="mono">#1035175</span></div></td>
+          <td><span class="pill ok">已送出</span></td>
+          <td class="num">412 ms</td>
+          <td class="car">⌄</td>
+        </tr>
+
+        <!-- 失敗列：原因直接印出來，整行寬度可讀 -->
+        <tr class="row">
+          <td class="mono">08/12 11:15:54</td>
+          <td><div class="t-name">報價單（下游-1）</div>
+            <div class="t-meta">昇泰<span class="sep">·</span><span class="mono">/erp/1</span><span class="sep">·</span><span class="mono">#1035174</span></div>
+            <div class="why danger"><b>LINE 拒絕（400）</b>：這條規則用的機器人不在目標群組裡。群組編號是各機器人各自一套，不能互用。</div></td>
+          <td><span class="pill danger">推送失敗</span></td>
+          <td class="num">288 ms</td>
+          <td class="car">⌄</td>
+        </tr>
+
+        <!-- 展開狀態 -->
+        <tr class="row" style="background:#FAFBFC">
+          <td class="mono">08/12 10:02:11</td>
+          <td><div class="t-name">分析表</div>
+            <div class="t-meta">宏遠<span class="sep">·</span><span class="mono">/order-operation/11</span><span class="sep">·</span><span class="mono">#88214</span></div>
+            <div class="why warn"><b>61 個欄位全部是（未填）</b>：抓得到這筆資料，但範本設定的欄位對不上實際的欄位名稱。</div></td>
+          <td><span class="pill warn">內容不符</span></td>
+          <td class="num">1,204 ms</td>
+          <td class="car">⌃</td>
+        </tr>
+        <tr class="exp">
+          <td></td>
+          <td colspan="4"><div class="exp-in">
+            <div class="exp-h">實際送出的訊息</div>
+            <div class="msg">【分析表｜已更新】
+單號：（未填）
+客戶名稱：（未填）
+品名：（未填）
+數量：（未填）</div>
+
+            <div class="exp-h">診斷</div>
+            <div class="diag">
+              <span>抓取 Ragic 資料 <b>成功</b></span>
+              <span>回傳欄位數 <b>61</b></span>
+              <span class="bad">範本欄位對上 <b>0 / 61</b></span>
+              <span>單號 <b>#88214</b></span>
+            </div>
+
+            <div class="fix"><b>怎麼修：</b>Ragic 回傳的鍵值是「欄位名稱」而不是欄位編號。到規則按
+              <span class="go">重新讀取欄位</span> 讓系統重抓一次對應表，再重新勾選要通知的欄位即可。</div>
+          </div></td>
+        </tr>
+
+        <tr class="row">
+          <td class="mono">08/12 09:41:07</td>
+          <td><div class="t-name">收貨單（上游-4）</div>
+            <div class="t-meta">昇泰<span class="sep">·</span><span class="mono">/erp/15</span><span class="sep">·</span><span class="mono">#77120</span></div>
+            <div class="why warn">事件有進來，但這條規則沒有勾選「刪除」這種異動。</div></td>
+          <td><span class="pill warn">未訂閱此異動</span></td>
+          <td class="num">18 ms</td>
+          <td class="car">⌄</td>
+        </tr>
+        <tr class="row">
+          <td class="mono">08/12 09:40:58</td>
+          <td><div class="t-name">收貨單（上游-4）</div>
+            <div class="t-meta">昇泰<span class="sep">·</span><span class="mono">/erp/15</span><span class="sep">·</span><span class="mono">#77120</span></div></td>
+          <td><span class="pill mut">重複略過</span></td>
+          <td class="num">6 ms</td>
+          <td class="car">⌄</td>
+        </tr>
+        <tr class="row">
+          <td class="mono">08/12 09:12:30</td>
+          <td><div class="t-name">請購單（上游-1）</div>
+            <div class="t-meta">昇泰<span class="sep">·</span><span class="mono">/erp/54</span><span class="sep">·</span><span class="mono">#66031</span></div></td>
+          <td><span class="pill ok">已送出</span></td>
+          <td class="num">377 ms</td>
+          <td class="car">⌄</td>
+        </tr>
+        <tr class="row">
+          <td class="mono">08/11 17:55:02</td>
+          <td><div class="t-name">業務日誌填寫 2026</div>
+            <div class="t-meta">昇泰<span class="sep">·</span><span class="mono">/forms4/18</span><span class="sep">·</span><span class="mono">#4412</span></div></td>
+          <td><span class="pill ok">已送出</span></td>
+          <td class="num">455 ms</td>
+          <td class="car">⌄</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pager">
+      <div>第 1–25 筆，共 <b style="color:var(--ink)">248</b> 筆（近 7 天）</div>
+      <div class="pages">
+        <button class="pg" disabled>‹</button>
+        <button class="pg on">1</button><button class="pg">2</button><button class="pg">3</button>
+        <button class="pg">…</button><button class="pg">10</button><button class="pg">›</button>
+      </div>
+      <div>點任一列可展開實際送出的訊息與診斷</div>
+    </div>
+  </div></div>
+
+  <div class="note bad">
+    <h3>現況的問題（為什麼要改）</h3>
+    <div>· <b>「最近 100 筆」是硬上限</b> —— 沒有分頁也沒有時間範圍，第 101 筆之後查不到。客戶問「上週三那筆為什麼沒通知」時無解。<br/>
+    · <b>失敗原因擠在 20% 寬的欄位</b>，但它是一整個句子（「我們收到了，但 LINE 拒絕——多半是機器人金鑰失效，或機器人已離開該群組」），必然折成好幾行。<br/>
+    · <b>看不出「現在到底有沒有事」</b> —— 要自己一列一列掃才知道有幾筆失敗。</div>
+  </div>
+
+  <div class="note">
+    <h3>幾個刻意的決定</h3>
+    <div>· <b>摘要條放最上面，而且可以點。</b>這頁的第一個問題永遠是「有沒有出事」，不是「第一筆是什麼」。數字本身就是篩選入口 —— 看到「推送失敗 6」直接點進去。<br/>
+    · <b>只有需要處理的列才印原因。</b>「已送出」不需要解釋；把原因放在規則名下方、佔整行寬度，就不必再為了塞句子而壓縮欄位。<br/>
+    · <b>診斷裡放「怎麼修」而不只是「哪裡錯」。</b>「範本欄位對上 0/61」對工程師夠了，但操作的人需要下一步動作 —— 而且那個動作要能直接點過去。<br/>
+    · <b>時間範圍取代「最近 N 筆」。</b>人是用時間找事情的（「上週三那筆」），不是用序號。<br/>
+    · <b>耗時保留但靠右、用等寬字。</b>它平常沒用，但「都是 30 秒才送出」是判斷 Ragic 那側慢還是我們慢的唯一線索。</div>
+  </div>
+</div>
+</body></html>
