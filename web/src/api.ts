@@ -573,7 +573,7 @@ export interface WarroomKanbanTicket {
   confirmedByName: string | null;
   confirmedAt: string | null;
   // 第四條軸 · 擁有者是當責人本人（前三條是 AI／主管／歸屬）
-  workStatus: "open" | "closed";
+  workStatus: "open" | "closed" | "record";
   workOutcome: string | null;
   workClosedVia: "line_reply" | "web" | "system" | null;
   /** 有值代表是別人代結的 · UI 要明示（doc F-5） */
