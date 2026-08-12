@@ -21,6 +21,13 @@ interface SelectableField { path: string; label: string; numeric?: boolean }
  * 網址已經貼在客戶的 Ragic 那一側，改了通知會悄悄停掉，而客戶不會知道。
  * 要換表單請新增一條規則。
  */
+/**
+ * 機器人下拉的「維持現有設定」哨兵值。
+ * 0061 之前建的規則沒有 bot，而它們的目標群往往不屬於任何已註冊的 bot ——
+ * 少了這個選項，使用者為了存檔只能改掉目的地（2026-08-12 真的發生過）。
+ */
+const KEEP = "__keep__";
+
 export default function Wizard({ ruleId, onDone, onCancel }: {
   ruleId?: string; onDone: () => void; onCancel: () => void;
 }) {
@@ -67,6 +74,9 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
   // （2026-08-12 鮮湧事故）。把錯誤消滅在選項裡，不是靠使用者填對。
   const [sendable, setSendable] = useState<NcSendableTarget[]>([]);
   const [botId, setBotId] = useState("");
+  // 舊規則的原始設定 · 用來提供「維持現狀」這條路（見 KEEP）
+  const [origBotId, setOrigBotId] = useState("");
+  const [origTarget, setOrigTarget] = useState("");
   const [saving, setSaving] = useState(false);
   // 編輯時抓不到 Ragic 的完整欄位 —— 此時可勾選的只有規則已存的那幾個，
   // 取消勾選再存檔就永久拿不回來。必須明講，不能讓人在不知情下弄丟欄位。
@@ -93,9 +103,12 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
         setTitle(r.title ?? "");
         setChannelType(r.channelType);
         setChannelTarget(r.channelTarget ?? "");
-        // 舊規則沒有 botId —— 留空會強迫使用者重選，那正是我們要的：
-        // 沒選過 bot 的規則本來就處於「靠猜」的狀態，存檔時順便修正
-        setBotId(r.botId ?? "");
+        setOrigBotId(r.botId ?? "");
+        setOrigTarget(r.channelTarget ?? "");
+        // 舊規則沒有 botId。曾經是留空強迫重選 —— 但那些規則的目標群通常不屬於任何
+        // 已註冊的 bot，選了 bot 就得換掉目的地才存得下去。2026-08-12 因此把兩條
+        // 正常運作的規則改指到別家的群。改成預設 KEEP：不選就是不動。
+        setBotId(r.botId || KEEP);
         // 先用規則裡存的欄位讓畫面立刻有東西
         setFields(r.fields.map((f) => ({ path: f.path, label: f.label })));
         setSelected(r.fields.slice().sort((a, b) => a.order - b.order).map((f) => f.path));
@@ -132,6 +145,9 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
 
   // 切來源 → 清空欄位選擇
   useEffect(() => { setFields([]); setSelected([]); }, [sourceType]);
+
+  // 只有「原本就沒指定機器人」的舊規則給這條退路 —— 新規則一律要明確選一支
+  const canKeep = editing && !origBotId;
 
   const accountItems = useMemo(
     () => accounts.map((a) => ({ id: a.accountId, label: `${a.displayName}（${a.server} · ${a.apname}）` })),
@@ -227,7 +243,8 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
           title: title.trim() || null,
           notifyCreate: evCreate, notifyUpdate: evUpdate, notifyDelete: evDelete,
           fields: payloadFields,
-          channelType, channelTarget, botId: channelType === "line_group" ? botId : undefined,
+          channelType, channelTarget,
+          botId: channelType === "line_group" && botId !== KEEP ? botId : undefined,
         });
         toast.show("已更新", "ok");
         onDone();
@@ -244,7 +261,8 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
         filters: sourceType === "internal_event" ? filters : undefined,
         title: title.trim() || null,
         fields: payloadFields,
-        channelType, channelTarget, botId: channelType === "line_group" ? botId : undefined,
+        channelType, channelTarget,
+          botId: channelType === "line_group" && botId !== KEEP ? botId : undefined,
       });
       if (res.webhookToken) setSavedToken(res.webhookToken);
       else setSavedNoWebhook(true);
@@ -472,22 +490,30 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
             <>
               <div className="field" style={{ marginBottom: 14 }}><label>用哪支機器人發送</label>
                 <StyledSelect ariaLabel="發送機器人" value={botId}
-                  onChange={(v) => { setBotId(v); setChannelTarget(""); }}
+                  onChange={(v) => { setBotId(v); setChannelTarget(v === KEEP ? origTarget : ""); }}
                   placeholder="選擇機器人"
-                  items={sendable.map((b) => ({
-                    id: b.botId,
-                    // 帶租戶名：aiproot 一個人管多家，只看 bot 名分不出是哪家的
-                    label: [b.tenantName, b.botName].filter(Boolean).join(" · "),
-                  }))} />
+                  items={[
+                    // 舊規則專屬 · 讓「不動它」是一個看得見的選擇，而不是死路
+                    ...(canKeep ? [{ id: KEEP, label: "維持現有設定（尚未指定機器人）" }] : []),
+                    ...sendable.map((b) => ({
+                      id: b.botId,
+                      // 帶租戶名：aiproot 一個人管多家，只看 bot 名分不出是哪家的
+                      label: [b.tenantName, b.botName].filter(Boolean).join(" · "),
+                    })),
+                  ]} />
                 <div className="hint" style={{ marginTop: 6, fontSize: 12, color: "var(--ink-3)" }}>
-                  選好之後，下面只會列出<b>這支機器人所在的群組</b>。
-                  LINE 的群組編號是各機器人各自一套，不能互用。
+                  {botId === KEEP
+                    ? <>這條規則是舊的，還沒指定機器人，目前靠系統預設的那一支發送。
+                        <b>改選機器人會一併換掉下面的目標群</b> —— 現在的目標群不屬於任何已註冊的機器人。
+                        除非你確定要換發送對象，否則維持現狀即可。</>
+                    : <>選好之後，下面只會列出<b>這支機器人所在的群組</b>。
+                        LINE 的群組編號是各機器人各自一套，不能互用。</>}
                 </div>
               </div>
               <div className="field" style={{ margin: 0 }}><label>LINE 目標群</label>
                 <StyledSelect ariaLabel="LINE 目標群" value={channelTarget} onChange={setChannelTarget}
                   placeholder={botId ? "選擇 LINE 群" : "請先選機器人"}
-                  disabled={!botId}
+                  disabled={!botId || botId === KEEP}
                   items={[
                     ...(sendable.find((b) => b.botId === botId)?.groups ?? []).map((g) => ({
                       id: g.groupId, label: g.displayName || g.groupId,
