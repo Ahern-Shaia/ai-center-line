@@ -81,11 +81,23 @@ export class RagicAccountRepository {
     return r ? { server: r.server, apname: r.apname, apiKey: r.api_key } : null;
   }
 
-  async updateKey(tx: Db, accountId: string, apiKey: string): Promise<void> {
+  // 回傳是否真的改到 · id 不存在或被 RLS 擋掉都是 0 列，不回報就會靜默成功
+  async updateKey(tx: Db, accountId: string, apiKey: string): Promise<boolean> {
     const key = this.encKey();
-    await tx.execute(sql`
+    const res = await tx.execute(sql`
       UPDATE ragic_account SET api_key_enc = pgp_sym_encrypt(${apiKey}, ${key}), updated_at = now()
       WHERE account_id = ${accountId}::uuid
+      RETURNING account_id
     `);
+    return res.rows.length > 0;
+  }
+
+  async updateDisplayName(tx: Db, accountId: string, displayName: string): Promise<boolean> {
+    const res = await tx.execute(sql`
+      UPDATE ragic_account SET display_name = ${displayName}, updated_at = now()
+      WHERE account_id = ${accountId}::uuid
+      RETURNING account_id
+    `);
+    return res.rows.length > 0;
   }
 }

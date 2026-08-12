@@ -45,6 +45,13 @@ export class NotifyConfigController {
     return this.accounts.updateKey(user, id, body.apiKey ?? "");
   }
 
+  /** 只改顯示名稱 · server / apname 是連線識別，改了等於換一個帳號，不開放 */
+  @Post("accounts/:id/name")
+  @RequirePermission("notify-config:manage")
+  renameAccount(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { displayName?: string }) {
+    return this.accounts.rename(user, id, body.displayName ?? "");
+  }
+
   /** Ragic 表單欄位（勾選用）· 同時驗 key */
   @Get("accounts/:id/fields")
   @RequirePermission("notify-config:manage")

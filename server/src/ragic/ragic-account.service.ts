@@ -35,7 +35,17 @@ export class RagicAccountService {
 
   async updateKey(_user: JwtUser, accountId: string, apiKey: string): Promise<{ status: string }> {
     if (!apiKey?.trim()) throw new BadRequestException("apiKey 必填");
-    await this.repo.updateKey(currentTx(), accountId, apiKey.trim());
+    const ok = await this.repo.updateKey(currentTx(), accountId, apiKey.trim());
+    if (!ok) throw new NotFoundException("Ragic 帳號不存在");
+    return { status: "ok" };
+  }
+
+  async rename(_user: JwtUser, accountId: string, displayName: string): Promise<{ status: string }> {
+    const name = displayName?.trim();
+    if (!name) throw new BadRequestException("顯示名稱不可空白");
+    if (name.length > 60) throw new BadRequestException("顯示名稱請控制在 60 字以內");
+    const ok = await this.repo.updateDisplayName(currentTx(), accountId, name);
+    if (!ok) throw new NotFoundException("Ragic 帳號不存在");
     return { status: "ok" };
   }
 
