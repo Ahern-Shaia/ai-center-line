@@ -119,12 +119,25 @@ export class NotifyConfigController {
   /** 最近通知紀錄 · 用來回答「Ragic 改了為什麼沒通知」——有沒有進來、進來後被什麼擋掉 */
   @Get("logs")
   @RequirePermission("notify-config:view")
-  logs(@Query("limit") limit?: string, @Query("ruleId") ruleId?: string, @Query("status") status?: string) {
-    const n = Number(limit);
-    return this.audit.listRecent({
-      limit: Number.isFinite(n) && n > 0 ? Math.min(n, 200) : 50,
+  logs(
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+    @Query("ruleId") ruleId?: string,
+    @Query("status") status?: string,
+    @Query("from") from?: string,
+  ) {
+    // 一律鉗制，不信前端 —— pageSize 沒有上限就等於「一次撈全表」的入口
+    const p = Math.max(1, Math.trunc(Number(page)) || 1);
+    const ps = Math.min(100, Math.max(1, Math.trunc(Number(pageSize)) || 25));
+    if (from && !/^\d{4}-\d{2}-\d{2}$/.test(from)) {
+      throw new BadRequestException("from 需為 YYYY-MM-DD");
+    }
+    return this.audit.list({
+      page: p,
+      pageSize: ps,
       ruleId: ruleId || null,
       status: status || null,
+      from: from || null,
     });
   }
 
