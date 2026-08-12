@@ -20,6 +20,9 @@ export interface RuleView {
   channelTarget: string | null;
   channelLabel: string;      // 群名 / 成員名 / 原值
   fieldCount: number;
+  /** 通知欄位的中文名 · 讓清單的搜尋能搜到「哪條規則會通知『客戶簽回』」，
+   *  而不是只能搜規則名（Zapier 的搜尋只比對名稱，找不到用了哪張表）*/
+  fieldLabels: string[];
   webhookToken: string | null;
   accountDisplayName: string | null;
   eventsLabel: string;       // ragic_form：新增/更新/刪除；internal_event：過濾摘要
@@ -189,6 +192,7 @@ export class NotifyConfigService {
               ? userNames[r.channelTarget ?? ""] ?? r.channelTarget ?? ""
               : r.channelTarget ?? "",
         fieldCount: r.template?.items?.length ?? 0,
+        fieldLabels: (r.template?.items ?? []).map((i) => i.label),
         webhookToken: r.webhookToken,
         accountDisplayName: r.accountDisplayName,
         eventsLabel,
