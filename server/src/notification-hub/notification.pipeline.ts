@@ -65,9 +65,30 @@ export class NotificationPipeline {
       this.logger.warn(`管道尚未支援：${rule.channelType}（rule=${rule.ruleId}）`);
       return { status: "unsupported_channel" };
     }
-    const token = rule.tenantId
-      ? await withSystemTx((tx) => this.rules.getLineTokenForTenant(tx, rule.tenantId as string))
-      : null;
+    // 取 token 的優先序 —— 前兩層是正解，第三層是待拆的過渡
+    //   ① rule.botId：規則明確指定用哪支 bot 發（0061 起，精靈強制選）
+    //   ② rule.tenantId：⚠️ 猜「該租戶最新建立的 bot」· 只給 0061 之前的舊規則用
+    //   ③ env：⚠️ 全域單一 token · 2026-08-12 鮮湧事故的成因（拿甲的 token 推乙的群）
+    // 資料補完（所有規則都有 botId）後，②③ 應一併刪除 —— 見
+    // docs/modules/notify-bot-scoped-target.md §7 OQ-NBT-5 / §8 M4
+    let token: string | null = null;
+    if (rule.botId) {
+      token = await withSystemTx((tx) => this.rules.getLineTokenForBot(tx, rule.botId as string));
+      if (!token) {
+        this.logger.warn(`規則指定的 bot 取不到 token（已停用？）· rule=${rule.ruleId} bot=${rule.botId}`);
+      }
+    } else if (rule.tenantId) {
+      token = await withSystemTx((tx) => this.rules.getLineTokenForTenant(tx, rule.tenantId as string));
+      this.logger.warn(
+        `⚠️ 規則未指定 bot · 退回「該租戶最新建立的 bot」（猜的）· rule=${rule.ruleId} tenant=${rule.tenantId}`
+        + " · 請到通知設定重新選擇要用哪支機器人發送",
+      );
+    } else {
+      this.logger.warn(
+        `⚠️ 規則既無 bot 也無租戶 · 退回全域 env token（猜的）· rule=${rule.ruleId}`
+        + " · 這是 2026-08-12 鮮湧推送失敗的成因，請到通知設定補上機器人",
+      );
+    }
     // line_group → channel_target 即 groupId；line_user → channel_target 為本系統 user_id，需解析成 LINE userId
     let to = rule.channelTarget ?? "";
     if (rule.channelType === "line_user" && to) {

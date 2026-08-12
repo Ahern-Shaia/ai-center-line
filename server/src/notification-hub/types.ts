@@ -38,6 +38,8 @@ export interface RuleRow {
   template: NotificationTemplate;
   channelType: NotificationChannelType;
   channelTarget: string | null;
+  /** 0061 · 用哪支 bot 發送 · null=舊資料（會退回猜測，見 migration 說明）*/
+  botId: string | null;
 }
 
 /** ragic_form 規則的 source_config 形狀 */

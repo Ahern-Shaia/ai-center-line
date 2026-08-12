@@ -52,6 +52,28 @@ export class NotifyConfigController {
     return this.accounts.fetchSheetFields(id, sheetPath ?? "");
   }
 
+  /**
+   * 可選的「發送機器人 + 該機器人所在的群組」· 精靈第 3 步的資料來源。
+   * 群組依 bot 過濾 → 使用者挑不到別支 bot 的群（LINE 群組 ID 依 bot 發放）。
+   */
+  @Get("sendable-targets")
+  @RequirePermission("notify-config:view")
+  sendableTargets() {
+    return this.configs.listSendableTargets();
+  }
+
+  /**
+   * 這個群組屬於哪支 bot？逐支 active bot 問 LINE。
+   * 用於補既有規則：`line_group` 只在收過 webhook 事件時才有紀錄，
+   * bot 若在 webhook 設好前就進群，我方完全沒有那個群的資料。
+   */
+  @Get("which-bot-in-group")
+  @RequirePermission("notify-config:manage")
+  whichBot(@Query("groupId") groupId?: string) {
+    if (!groupId?.trim()) throw new BadRequestException("需帶 groupId");
+    return this.configs.whichBotIsInGroup(groupId.trim());
+  }
+
   // ===== 來源：內部事件型錄 =====
   @Get("event-catalog")
   @RequirePermission("notify-config:view")
@@ -151,6 +173,7 @@ export class NotifyConfigController {
     notifyCreate?: boolean; notifyUpdate?: boolean; notifyDelete?: boolean;
     fields?: Array<{ path: string | number; label: string; order: number }>;
     channelType?: string; channelTarget?: string;
+    botId?: string;
   }) {
     return this.configs.updateRule(id, body);
   }

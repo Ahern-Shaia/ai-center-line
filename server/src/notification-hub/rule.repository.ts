@@ -6,7 +6,7 @@ import type { RuleRow } from "./types.js";
 
 const SELECT_COLS = sql`
   rule_id, tenant_id, name, enabled, source_type, source_config, webhook_token,
-  template, channel_type, channel_target
+  template, channel_type, channel_target, bot_id
 `;
 
 // 用 type alias（非 interface）· drizzle execute<T> 需要隱式 index signature
@@ -15,6 +15,7 @@ type RawRule = {
   source_type: RuleRow["sourceType"]; source_config: Record<string, unknown>;
   webhook_token: string | null; template: NotificationTemplate;
   channel_type: RuleRow["channelType"]; channel_target: string | null;
+  bot_id: string | null;
 };
 
 function toRow(r: RawRule): RuleRow {
@@ -23,6 +24,7 @@ function toRow(r: RawRule): RuleRow {
     sourceType: r.source_type, sourceConfig: r.source_config ?? {},
     webhookToken: r.webhook_token, template: r.template,
     channelType: r.channel_type, channelTarget: r.channel_target,
+    botId: r.bot_id ?? null,
   };
 }
 
@@ -72,14 +74,15 @@ export class RuleRepository {
     sourceConfig: Record<string, unknown>; webhookToken: string | null;
     template: NotificationTemplate; channelType: RuleRow["channelType"];
     channelTarget: string | null; createdBy: string;
+    botId?: string | null;
   }): Promise<{ ruleId: string }> {
     const res = await tx.execute<{ rule_id: string }>(sql`
       INSERT INTO notification_rule
-        (tenant_id, name, source_type, source_config, webhook_token, template, channel_type, channel_target, created_by)
+        (tenant_id, name, source_type, source_config, webhook_token, template, channel_type, channel_target, bot_id, created_by)
       VALUES
         (${input.tenantId}, ${input.name}, ${input.sourceType}, ${JSON.stringify(input.sourceConfig)}::jsonb,
          ${input.webhookToken}, ${JSON.stringify(input.template)}::jsonb,
-         ${input.channelType}, ${input.channelTarget}, ${input.createdBy}::uuid)
+         ${input.channelType}, ${input.channelTarget}, ${input.botId ?? null}, ${input.createdBy}::uuid)
       RETURNING rule_id
     `);
     return { ruleId: res.rows[0].rule_id };
@@ -98,6 +101,8 @@ export class RuleRepository {
     template: unknown;
     channelType: string;
     channelTarget: string;
+    /** undefined = 不動；string = 設定 */
+    botId?: string | null;
   }): Promise<boolean> {
     const res = await tx.execute<{ rule_id: string }>(sql`
       UPDATE notification_rule
@@ -109,6 +114,8 @@ export class RuleRepository {
              template = ${JSON.stringify(a.template)}::jsonb,
              channel_type = ${a.channelType},
              channel_target = ${a.channelTarget},
+             bot_id = CASE WHEN ${a.botId !== undefined}::boolean
+                      THEN ${a.botId ?? null}::uuid ELSE bot_id END,
              updated_at = now()
        WHERE rule_id = ${ruleId}::uuid
       RETURNING rule_id::text
@@ -132,6 +139,28 @@ export class RuleRepository {
   }
 
   /** 該租戶的 LINE push token（line_bot 加密欄位 · 同 LINE_CONFIG_ENC_KEY）*/
+  /**
+   * 依規則指定的 bot 取 token —— **這是正確的取法**。
+   *
+   * LINE 的群組 ID 依 bot 發放，所以「用哪支 bot 發」必須跟「目標群屬於哪支 bot」一致。
+   * 用租戶去猜（見下面的 getLineTokenForTenant）在單一 bot 時碰巧會對，多一支就靜默送錯家。
+   */
+  async getLineTokenForBot(tx: Db, botId: string): Promise<string | null> {
+    const key = this.encKey();
+    const res = await tx.execute<{ token: string | null }>(sql`
+      SELECT pgp_sym_decrypt(channel_access_token_enc, ${key})::text AS token
+      FROM line_bot WHERE bot_id = ${botId}::uuid AND status = 'active'
+      LIMIT 1
+    `);
+    return res.rows[0]?.token ?? null;
+  }
+
+  /**
+   * ⚠️ **過渡用 · 這是猜的。** 取「該租戶最新建立的 active bot」——
+   * 租戶只有一支時碰巧正確，多一支就會靜默送到錯的地方。
+   * 只在規則還沒有 bot_id（0061 之前建立的）時才走這裡；資料補完後應刪除。
+   * 見 docs/modules/notify-bot-scoped-target.md §2.2
+   */
   async getLineTokenForTenant(tx: Db, tenantId: string): Promise<string | null> {
     const key = this.encKey();
     const res = await tx.execute<{ token: string | null }>(sql`

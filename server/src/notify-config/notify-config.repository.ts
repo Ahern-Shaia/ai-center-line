@@ -56,6 +56,19 @@ export class NotifyConfigRepository {
   }
 
   /** 建規則時由帳號帶出 tenant（不信任前端）*/
+  /**
+   * 這個群組真的屬於這支 bot 嗎？—— 存規則前的最後一道閘。
+   * LINE 的群組 ID 依 bot 發放，跨 bot 使用會在真實事件發生時才 400，
+   * 那時使用者已經忘了自己設過什麼（2026-08-12 鮮湧事故）。
+   */
+  async groupBelongsToBot(tx: Db, botId: string, groupId: string): Promise<boolean> {
+    const res = await tx.execute<{ n: number }>(sql`
+      SELECT count(*)::int AS n FROM line_group
+      WHERE bot_id = ${botId}::uuid AND group_id = ${groupId} AND status = 'active'
+    `);
+    return (res.rows[0]?.n ?? 0) > 0;
+  }
+
   async getAccountTenantId(tx: Db, accountId: string): Promise<string | null> {
     const res = await tx.execute<{ tenant_id: string | null }>(sql`
       SELECT tenant_id FROM ragic_account WHERE account_id = ${accountId}::uuid LIMIT 1

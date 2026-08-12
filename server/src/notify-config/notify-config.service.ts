@@ -4,6 +4,8 @@ import { currentTx } from "../db/client.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { NotifyConfigRepository } from "./notify-config.repository.js";
 import { RuleRepository } from "../notification-hub/rule.repository.js";
+import { LineApiClient } from "../line-ingest/line-api.client.js";
+import { sql } from "drizzle-orm";
 import { EVENT_CATALOG, findEvent } from "../notification-hub/event-catalog.js";
 import type { NotificationTemplate } from "../db/schema.js";
 import type { NotificationChannelType, NotificationSourceType } from "../db/schema.js";
@@ -41,6 +43,8 @@ export interface CreateRuleInput {
   fields: Array<{ path: string; label: string; order: number }>;
   channelType: NotificationChannelType;
   channelTarget: string;
+  /** 0061 · 用哪支 bot 發送 · 精靈強制選（群組清單依它過濾）*/
+  botId?: string;
 }
 
 @Injectable()
@@ -48,6 +52,7 @@ export class NotifyConfigService {
   constructor(
     private readonly repo: NotifyConfigRepository,
     private readonly rules: RuleRepository,
+    private readonly lineApi: LineApiClient,
   ) {}
 
   private newToken(): string {
@@ -65,6 +70,85 @@ export class NotifyConfigService {
 
   listNotifiableUsers(tenantId: string) {
     return this.rules.listNotifiableUsers(currentTx(), tenantId);
+  }
+
+  /**
+   * 可選的「發送機器人 + 該機器人所在的群組」。
+   *
+   * 這是精靈第 3 步的資料來源。**群組清單依 bot 過濾**，所以使用者不可能挑到
+   * 別支 bot 的群 —— LINE 的群組 ID 依 bot 發放，挑錯就是 400 而且看不出原因
+   * （2026-08-12 鮮湧事故）。把錯誤消滅在選項裡，不是靠使用者填對。
+   *
+   * 只列 active 的 bot 與 active 的群：已離開的群送過去也是 400。
+   */
+  async listSendableTargets(): Promise<Array<{
+    botId: string;
+    botName: string;
+    tenantId: string | null;
+    tenantName: string | null;
+    groups: Array<{ groupId: string; displayName: string | null }>;
+  }>> {
+    const tx = currentTx();
+    const bots = await tx.execute<{
+      bot_id: string; bot_name: string; tenant_id: string | null; tenant_name: string | null;
+    }>(sql`
+      SELECT b.bot_id::text AS bot_id, b.name AS bot_name,
+             b.tenant_id::text AS tenant_id, t.tenant_name
+      FROM line_bot b LEFT JOIN tenants t ON t.tenant_id = b.tenant_id
+      WHERE b.status = 'active' AND b.kind = 'analysis'
+      ORDER BY t.tenant_name NULLS LAST, b.name
+    `);
+    const groups = await tx.execute<{ bot_id: string; group_id: string; display_name: string | null }>(sql`
+      SELECT bot_id::text AS bot_id, group_id, display_name
+      FROM line_group WHERE status = 'active'
+      ORDER BY display_name NULLS LAST, group_id
+    `);
+    const byBot = new Map<string, Array<{ groupId: string; displayName: string | null }>>();
+    for (const g of groups.rows) {
+      const arr = byBot.get(g.bot_id) ?? [];
+      arr.push({ groupId: g.group_id, displayName: g.display_name });
+      byBot.set(g.bot_id, arr);
+    }
+    return bots.rows.map((b) => ({
+      botId: b.bot_id,
+      botName: b.bot_name,
+      tenantId: b.tenant_id,
+      tenantName: b.tenant_name,
+      groups: byBot.get(b.bot_id) ?? [],
+    }));
+  }
+
+  /**
+   * 這個群組 ID 屬於哪支 bot？—— 逐支 active bot 拿 token 問 LINE。
+   *
+   * 為什麼需要：`line_group` 只在收到 webhook 事件時才有紀錄，
+   * bot 若在 webhook 設定完成前就進群，我方就完全沒有那個群的資料
+   * （2026-08-12：四條規則的目標群 C452bb99… 就是這種）。
+   * 補既有規則的 bot_id 前必須先查清楚 —— **不可以用「現在能送成功」反推**，
+   * 那只證明全域 token 那支在裡面，而全域 token 指向誰正是要拆掉的東西。
+   */
+  async whichBotIsInGroup(groupId: string): Promise<Array<{
+    botId: string; botName: string; tenantName: string | null; groupName: string | null;
+  }>> {
+    const tx = currentTx();
+    const bots = await tx.execute<{ bot_id: string; bot_name: string; tenant_name: string | null }>(sql`
+      SELECT b.bot_id::text AS bot_id, b.name AS bot_name, t.tenant_name
+      FROM line_bot b LEFT JOIN tenants t ON t.tenant_id = b.tenant_id
+      WHERE b.status = 'active'
+    `);
+    const hits: Array<{ botId: string; botName: string; tenantName: string | null; groupName: string | null }> = [];
+    for (const b of bots.rows) {
+      const token = await this.rules.getLineTokenForBot(tx, b.bot_id);
+      if (!token) continue;
+      const summary = await this.lineApi.getGroupSummary(token, groupId);
+      if (summary) {
+        hits.push({
+          botId: b.bot_id, botName: b.bot_name, tenantName: b.tenant_name,
+          groupName: summary.groupName ?? null,
+        });
+      }
+    }
+    return hits;
   }
 
   async listRules(): Promise<RuleView[]> {
@@ -110,8 +194,20 @@ export class NotifyConfigService {
   async createRule(user: JwtUser, input: CreateRuleInput): Promise<{ ruleId: string; webhookToken: string | null }> {
     if (!input.fields?.length) throw new BadRequestException("至少勾選一個通知欄位");
     if (!input.channelTarget?.trim()) throw new BadRequestException("請選擇通知對象");
-
     const tx = currentTx();
+
+    // 0061 · LINE 的群組 ID 依 bot 發放 —— 沒指定 bot 就只能猜，猜錯就是 400 且看不出原因。
+    // 群組必須真的屬於那支 bot，否則存進去只是把錯誤延後到真實事件發生時才爆。
+    if (input.channelType === "line_group") {
+      if (!input.botId) throw new BadRequestException("請選擇要用哪支機器人發送");
+      const owns = await this.repo.groupBelongsToBot(tx, input.botId, input.channelTarget.trim());
+      if (!owns) {
+        throw new BadRequestException(
+          "這個群組不屬於所選的機器人 · 請改從清單挑選（LINE 的群組編號是各機器人各自一套，不能互用）",
+        );
+      }
+    }
+
     const template: NotificationTemplate = {
       title: input.title?.trim() || input.name,
       items: input.fields.map((f) => ({ path: String(f.path), label: f.label, order: f.order })),
@@ -141,6 +237,7 @@ export class NotifyConfigService {
         template,
         channelType: input.channelType,
         channelTarget: input.channelTarget.trim(),
+        botId: input.botId ?? null,
         createdBy: user.user_id,
       });
       return { ruleId, webhookToken };
@@ -159,6 +256,7 @@ export class NotifyConfigService {
       template,
       channelType: input.channelType,
       channelTarget: input.channelTarget.trim(),
+      botId: input.botId ?? null,
       createdBy: user.user_id,
     });
     return { ruleId, webhookToken: null };
@@ -187,6 +285,7 @@ export class NotifyConfigService {
       fields: (tpl?.items ?? []).map((i) => ({ path: i.path, label: i.label, order: i.order })),
       channelType: cur.channelType,
       channelTarget: cur.channelTarget,
+      botId: cur.botId,
     };
   }
 
@@ -200,12 +299,23 @@ export class NotifyConfigService {
     notifyCreate?: boolean; notifyUpdate?: boolean; notifyDelete?: boolean;
     fields?: Array<{ path: string | number; label: string; order: number }>;
     channelType?: string; channelTarget?: string;
+    botId?: string;
   }): Promise<{ status: string }> {
     const tx = currentTx();
     const cur = await this.rules.getById(tx, ruleId);
     if (!cur) throw new NotFoundException("找不到這條規則");
     if (!input.fields?.length) throw new BadRequestException("至少勾選一個通知欄位");
     if (!input.channelTarget?.trim()) throw new BadRequestException("請選擇通知對象");
+    // 與 createRule 同一道閘 —— 編輯時一樣不可以指到別支 bot 的群
+    const nextChannelType = input.channelType ?? cur.channelType;
+    if (nextChannelType === "line_group" && input.botId) {
+      const owns = await this.repo.groupBelongsToBot(tx, input.botId, input.channelTarget.trim());
+      if (!owns) {
+        throw new BadRequestException(
+          "這個群組不屬於所選的機器人 · 請改從清單挑選（LINE 的群組編號是各機器人各自一套，不能互用）",
+        );
+      }
+    }
 
     const name = input.name?.trim() || cur.name;
     const template: NotificationTemplate = {
@@ -224,6 +334,7 @@ export class NotifyConfigService {
       name, events, template,
       channelType: input.channelType ?? cur.channelType,
       channelTarget: input.channelTarget.trim(),
+      botId: input.botId,
     });
     if (!ok) throw new NotFoundException("找不到這條規則");
     return { status: "ok" };
