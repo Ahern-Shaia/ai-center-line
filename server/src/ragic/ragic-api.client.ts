@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { BadGatewayException, BadRequestException, Injectable, Logger } from "@nestjs/common";
 
 // Ragic HTTP API 呼叫（Basic auth：Authorization: Basic <API_KEY>，key 當帳號免密碼）
 // 對照 docs/ragic-http-api-手冊.md §1 §3 §13
@@ -23,9 +23,21 @@ const FETCH_TIMEOUT_MS = 10_000;
 export class RagicApiClient {
   private readonly logger = new Logger(RagicApiClient.name);
 
+  /**
+   * 使用者從瀏覽器網址列複製表單路徑時，一定會帶上 `?PAGEID=xxx` 之類的 UI 參數
+   * （2026-08-12 實際回報：填了 `/erp/1?PAGEID=WiL`）。那是 Ragic 網頁的參數、
+   * 不屬於 API 路徑，帶著會讓 Ragic 回錯誤碼 102。
+   *
+   * 與其要求使用者自己看懂「不要帶問號後面的內容」，不如**直接幫他清掉** ——
+   * 這裡沒有任何需要使用者判斷的東西，那一刀我方替他切。
+   */
+  static normalizeSheetPath(raw: string): string {
+    const noQuery = raw.trim().split("?")[0].split("#")[0].replace(/\/+$/, "");
+    return noQuery.startsWith("/") ? noQuery : `/${noQuery}`;
+  }
+
   private baseUrl(acc: RagicAccountRef, sheetPath: string): string {
-    const p = sheetPath.startsWith("/") ? sheetPath : `/${sheetPath}`;
-    return `https://${acc.server}.ragic.com/${acc.apname}${p}`;
+    return `https://${acc.server}.ragic.com/${acc.apname}${RagicApiClient.normalizeSheetPath(sheetPath)}`;
   }
 
   private async fetchJson(url: string, apiKey: string): Promise<unknown> {
@@ -34,7 +46,8 @@ export class RagicApiClient {
     try {
       const res = await fetch(url, { headers: { Authorization: `Basic ${apiKey}` }, signal: ctrl.signal });
       if (!res.ok) {
-        throw new Error(`Ragic ${res.status} ${(await res.text().catch(() => "")).slice(0, 160)}`);
+        const body = (await res.text().catch(() => "")).slice(0, 160);
+        throw new BadGatewayException(`Ragic 連線失敗（HTTP ${res.status}）· 回應：${body || "（空）"}`);
       }
       const body = await res.json();
 
@@ -45,7 +58,7 @@ export class RagicApiClient {
       //    而 Ragic 明明講了真正的原因（路徑錯 / 帳號名錯 / 金鑰過期…）。
       //    2026-07-29 prod 實際發生：使用者照著那句猜測換了帳號管理者金鑰，還是失敗。
       const e = body as { status?: string; code?: number; msg?: string };
-      if (e?.status === "ERROR") throw new Error(ragicErrorMessage(e.code, e.msg));
+      if (e?.status === "ERROR") throw new BadRequestException(ragicErrorMessage(e.code, e.msg));
       return body;
     } finally {
       clearTimeout(t);
@@ -64,7 +77,7 @@ export class RagicApiClient {
       // ⚠️ **不要再猜原因**（舊版寫「API key 權限不足？需帳號管理者」，
       //    使用者照做換了金鑰還是失敗）。把實際收到什麼講出來，讓人自己判斷。
       const keys = Object.keys(d ?? {}).slice(0, 8).join(", ") || "（空的）";
-      throw new Error(`Ragic 沒有回傳欄位定義 · 實際收到的內容是：${keys}`);
+      throw new BadRequestException(`Ragic 沒有回傳欄位定義 · 實際收到的內容是：${keys}`);
     }
     const fields = d.fields
       .filter((f) => typeof f.fieldId === "number" && typeof f.fieldName === "string")
@@ -81,7 +94,7 @@ export class RagicApiClient {
     const url = `${this.baseUrl(acc, sheetPath)}/${recordId}?api&naming=EID`;
     const d = (await this.fetchJson(url, acc.apiKey)) as Record<string, unknown>;
     const rec = (d[String(recordId)] ?? Object.values(d)[0]) as Record<string, unknown> | undefined;
-    if (!rec || typeof rec !== "object") throw new Error(`Ragic record ${recordId} 找不到`);
+    if (!rec || typeof rec !== "object") throw new BadRequestException(`Ragic 找不到編號 ${recordId} 的資料`);
     return rec;
   }
 }

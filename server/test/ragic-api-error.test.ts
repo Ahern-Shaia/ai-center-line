@@ -76,3 +76,39 @@ test("正常回應照常解析", async () => {
     assert.equal(r.fields.length, 1);
   } finally { restore(); }
 });
+
+// ── 2026-08-12 · 兩個讓好訊息到不了使用者眼前的問題 ──────────────────
+//
+// 用戶回報：填了 `/erp/1?PAGEID=WiL`（從瀏覽器網址列複製必然會帶的參數），
+// 按「抓取欄位」只看到「系統目前忙碌，請稍後再試」。
+//
+// 真相是兩件事疊在一起：
+//   ① 路徑帶了 query → Ragic 回錯誤碼 102
+//   ② 那個錯誤 `throw new Error(...)` 是普通 Error → Nest 轉 500 且**把訊息換掉** →
+//      前端把 500 一律譯成「系統目前忙碌」。於是 102 那句「不要帶問號後面的內容」
+//      根本到不了使用者眼前。
+
+test("⭐⭐ 表單路徑自動去掉 ?query —— 從網址列複製一定會帶，不該要使用者自己看懂", () => {
+  const n = RagicApiClient.normalizeSheetPath;
+  assert.equal(n("/erp/1?PAGEID=WiL"), "/erp/1", "問號後面一律砍掉");
+  assert.equal(n("erp/1"), "/erp/1", "沒有開頭斜線要補");
+  assert.equal(n("  /erp/1  "), "/erp/1", "前後空白要去掉");
+  assert.equal(n("/erp/1/"), "/erp/1", "結尾斜線要去掉");
+  assert.equal(n("/erp/1#top"), "/erp/1", "錨點也砍掉");
+  assert.equal(n("/service-tickets/10"), "/service-tickets/10", "正常路徑不動");
+});
+
+test("⭐⭐ Ragic 錯誤要用 HttpException 丟 —— 普通 Error 會被 Nest 換成「系統目前忙碌」", async () => {
+  const restore = stubFetch({ status: "ERROR", code: 102, msg: "invalid path" });
+  try {
+    const client = new RagicApiClient();
+    await client.fetchSchemaFields(ACC, "/erp/1").then(
+      () => assert.fail("應該要拋錯"),
+      (err: { status?: number; message?: string; getStatus?: () => number }) => {
+        const code = typeof err.getStatus === "function" ? err.getStatus() : err.status;
+        assert.equal(code, 400, "要是 4xx —— 500 的訊息會被 Nest 吃掉，前端只剩「系統目前忙碌」");
+        assert.match(String(err.message), /表單路徑無效/, "要保留可行動的原因");
+      },
+    );
+  } finally { restore(); }
+});
