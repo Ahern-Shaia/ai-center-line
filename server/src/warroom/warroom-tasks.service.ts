@@ -51,7 +51,7 @@ export interface WarroomTicket {
   categoryName: string | null;
   confirmedByName: string | null;
   // 0036 · 第四條軸（當責人本人回報）· displayState 是四軸投影後的對外單一狀態
-  workStatus: "open" | "closed";
+  workStatus: "open" | "closed" | "record";
   workOutcome: string | null;
   workClosedVia: string | null;
   workClosedByName: string | null;      // 代結案時 UI 要顯示「由 ○○ 代為結束」
@@ -149,7 +149,7 @@ export class WarroomTasksService {
       category_name: string | null;
       confirmed_by_name: string | null;
       confirmed_at: string | null;
-      work_status: "open" | "closed";
+      work_status: "open" | "closed" | "record";
       work_outcome: string | null;
       work_closed_via: string | null;
       work_closed_by_name: string | null;

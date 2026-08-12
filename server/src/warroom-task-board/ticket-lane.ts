@@ -58,7 +58,8 @@ export const RECOMPUTABLE_LANES: readonly ConfirmStatus[] = ["待簽核", "待�
 // docs/modules/task-completion-tracking.md §4.3
 
 /** 工作狀態 · 擁有者是當責人本人 · DB 的 tickets.work_status */
-export type WorkStatus = "open" | "closed";
+/** record = 紀錄類（日報／出勤／閒聊）· 不進工作生命週期（0063）*/
+export type WorkStatus = "open" | "closed" | "record";
 
 /** 為什麼結束 · DB 的 tickets.work_outcome（Jira 的 resolution 模型） */
 export type WorkOutcome = "完成" | "不用做了" | "轉他人" | "做不到";

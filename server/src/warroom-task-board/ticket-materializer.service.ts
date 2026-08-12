@@ -5,6 +5,18 @@ import { withTenant } from "../db/client.js";
 import { laneFor, RECOMPUTABLE_LANES } from "./ticket-lane.js";
 
 /**
+ * 紀錄類分類 —— 這些是「已經發生的事」，不是「該做的事」（0063）。
+ *
+ * 日報、出勤／外出、閒聊都不該進工作生命週期：把日報當待辦追蹤，
+ * 機器人就會對一份日報說「尚未確認完成」—— 讀不通的清單，人第二次就不看了。
+ *
+ * ⚠️ 表達在資料本身（work_status='record'）而不是在每個查詢加 category 過濾：
+ *    消費端有提醒／結案率／任務看板三處，各自加過濾的話，
+ *    第四個消費端出現時一定會漏。
+ */
+const RECORD_CATEGORIES = new Set(["daily_report", "attendance", "chitchat"]);
+
+/**
  * TicketMaterializerService · WTB-M1
  * 對照 docs/modules/warroom-task-board.md §4
  *
@@ -110,6 +122,9 @@ export class TicketMaterializerService {
         const summary = truncate(rec.title || rec.detail || "（無摘要）", 500);
         const assignee = rec.person ? truncate(rec.person, 100) : null;
         const category = rec.category ? truncate(rec.category, 100) : null;
+        // 紀錄類不進工作生命週期（0063）· 日報是「已經做完的紀錄」不是待辦，
+        // 把它當任務追蹤，機器人就會對一份日報說「尚未確認完成」—— 讀不通的話沒人會再信
+        const workStatus = RECORD_CATEGORIES.has(category ?? "") ? "record" : "open";
         // 對到系統帳號才自動歸屬；對不到一律 unclaimed 由主管手動派（doc §2 寧可不歸屬不可歸錯人）
         //
         // ⚠️ 對到之後**刻意不發 LINE 通知**（2026-07-29 用戶裁定）。不是漏接，不要「修好」它 ——
@@ -139,14 +154,14 @@ export class TicketMaterializerService {
             confirm_status, needs_review, assignee_display_name,
             assignee_user_id, assign_status,
             source_upload_id, source_record_index, message_count,
-            source_message_ids
+            source_message_ids, work_status
           ) VALUES (
             ${bundle.tenantId}::uuid, ${bundle.departmentId}::uuid,
             ${category}, ${summary}, ${rec.confidence}, ${rec.status ?? null},
             ${lane}, false, ${assignee},
             ${resolved.userId}::uuid, ${resolved.status},
             ${uploadId}, ${idx}, ${rec.source_ids?.length ?? null},
-            ${textArray(srcMsgIds)}
+            ${textArray(srcMsgIds)}, ${workStatus}
           )
           ON CONFLICT (source_upload_id, source_record_index)
           WHERE source_upload_id IS NOT NULL AND source_record_index IS NOT NULL
@@ -168,6 +183,10 @@ export class TicketMaterializerService {
                                     THEN EXCLUDED.assignee_user_id ELSE tickets.assignee_user_id END,
             assign_status    = CASE WHEN tickets.assigned_by IS NULL
                                     THEN EXCLUDED.assign_status ELSE tickets.assign_status END,
+            -- 重算分類時 work_status 要跟著走（分類從 maintenance 改成 daily_report 就不該再是待辦），
+            -- 但**人動過的不翻案**：有 work_outcome 代表有人標過完成／不用做了，那是人的決定
+            work_status = CASE WHEN tickets.work_outcome IS NULL
+                               THEN EXCLUDED.work_status ELSE tickets.work_status END,
             message_count = EXCLUDED.message_count,
             -- 翻不出來時（EXCLUDED 為 null）保留舊值，不要把已經有的溯源洗掉
             source_message_ids = COALESCE(EXCLUDED.source_message_ids, tickets.source_message_ids),

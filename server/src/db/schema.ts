@@ -79,7 +79,7 @@ export const tickets = pgTable("tickets", {
   messageCount: integer("message_count"),
   // 0036 · 第四條軸 · 擁有者是當責人本人（前三條分別是 AI／主管／歸屬）
   // ⚠️ AI 永遠不得寫 work_*；materializer 重跑也不覆寫
-  workStatus: text("work_status").notNull().default("open").$type<"open" | "closed">(),
+  workStatus: text("work_status").notNull().default("open").$type<"open" | "closed" | "record">(),
   workOutcome: text("work_outcome").$type<"完成" | "不用做了" | "轉他人" | "做不到">(),
   workClosedBy: uuid("work_closed_by").references(() => users.userId),   // 常為 null（當責人多半沒帳號）
   workClosedAt: timestamp("work_closed_at", { withTimezone: true }),
