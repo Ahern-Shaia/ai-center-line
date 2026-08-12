@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>通知紀錄 · B 保留現有表格（改動最小）</title>
+<style>
+:root{--canvas:#F7F8FA;--surface:#FFFFFF;--well:#F1F3F6;--line:#E5E7EB;--line-2:#F0F2F5;--ink:#111827;--ink-2:#4B5563;--ink-3:#6B7280;--primary:#4F46E5;--primary-2:#4338CA;--primary-tint:#EEF2FF;--ok:#059669;--ok-tint:#ECFDF5;--warn:#D97706;--warn-tint:#FFFBEB;--danger:#E11D48;--danger-tint:#FFF1F2;--sans:'Inter','Noto Sans TC',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;--r:6px;--r-lg:8px;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+.wrap{max-width:1240px;margin:0 auto;padding:26px 24px 60px;}
+.doc-h{font-size:20px;font-weight:700;margin:0 0 3px;}
+.doc-sub{color:var(--ink-3);font-size:12.5px;margin:0 0 12px;}
+.legend{font-size:12.5px;color:var(--ink-2);margin:0 0 18px;padding:11px 14px;background:var(--surface);border:1px solid var(--line);border-radius:7px;line-height:1.75;}
+.legend b{color:var(--primary-2);}
+.legend .k{display:inline-block;min-width:16px;font-weight:700;color:var(--primary-2);}
+.legend .neg{color:var(--danger);}
+
+.app{border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:0 2px 14px rgba(17,24,39,.05);overflow:hidden;}
+.pane{padding:20px 22px 26px;}
+.pane-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px;}
+.pane-hdr h1{font-size:18px;font-weight:700;margin:0 0 3px;}
+.pane-hdr .sub{color:var(--ink-3);font-size:12px;margin:0;}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:7px 12px;font-size:13px;font-family:inherit;color:var(--ink-2);cursor:pointer;white-space:nowrap;}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600;}
+.tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.tab{padding:9px 1px;font-size:13.5px;color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;}
+.tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--primary);}
+
+/* ── 現有的 filter bar，只加「計數」與時間範圍 ───── */
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+.filters{display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
+.lnk{background:none;border:0;font-family:inherit;font-size:13px;color:var(--ink-3);cursor:pointer;padding:2px 0;}
+.lnk.active{color:var(--ink);font-weight:600;box-shadow:inset 0 -2px 0 var(--primary);}
+.lnk .n{font-size:11px;color:var(--ink-3);margin-left:3px;font-variant-numeric:tabular-nums;}
+.lnk.active .n{color:var(--primary-2);}
+.lnk .n.bad{color:var(--danger);font-weight:700;}
+.right{display:flex;gap:8px;align-items:center;}
+.sel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:7px 11px;font-size:13px;color:var(--ink-2);cursor:pointer;white-space:nowrap;}
+.sel.on{border-color:var(--primary);color:var(--primary-2);background:var(--primary-tint);}
+
+/* ── 表格：欄位與現況相同（6 欄）───────────── */
+table{width:100%;border-collapse:collapse;table-layout:fixed;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;}
+th{text-align:left;font-size:10.5px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--well);white-space:nowrap;}
+td{padding:10px 14px;border-bottom:1px solid var(--line-2);font-size:13.5px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr.row:hover td{background:#FCFCFD;cursor:pointer;}
+.mono{font-family:var(--mono);font-size:12px;}
+.t-name{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 唯一的擠壓對策：單行截斷＋滑過看全文（GitHub 的反例：截斷但沒有 tooltip）*/
+.clip.mono{font-family:var(--mono);}
+.clip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--ink-2);cursor:help;}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:2px 9px;border-radius:999px;font-weight:600;white-space:nowrap;}
+.pill.ok{background:var(--ok-tint);color:var(--ok);}
+.pill.danger{background:var(--danger-tint);color:var(--danger);}
+.pill.warn{background:var(--warn-tint);color:var(--warn);}
+.pill.mut{background:var(--well);color:var(--ink-3);}
+.num{text-align:right;color:var(--ink-2);font-family:var(--mono);font-size:12px;}
+
+.exp td{background:#FAFBFC;border-bottom:1px solid var(--line);padding:0 14px 14px;}
+.exp-in{border-left:2px solid var(--primary);padding:2px 0 2px 12px;}
+.exp-h{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 5px;font-weight:600;}
+.msg{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;font-size:12.5px;line-height:1.75;white-space:pre-wrap;color:var(--ink-2);}
+.diag{display:flex;gap:8px;flex-wrap:wrap;font-size:11.5px;}
+.diag span{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:2px 9px;color:var(--ink-2);}
+.diag span b{color:var(--ink);}
+.diag span.bad{border-color:#F3C6CF;background:var(--danger-tint);color:var(--danger);}
+
+.pager{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;font-size:12.5px;color:var(--ink-3);flex-wrap:wrap;}
+.pages{display:flex;gap:4px;align-items:center;}
+.pg{min-width:28px;height:28px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);color:var(--ink-2);font-size:12.5px;font-family:inherit;cursor:pointer;}
+.pg.on{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:700;}
+.pg:disabled{color:#C3C8D0;cursor:default;}
+
+.note{margin-top:22px;font-size:12.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--primary);border-radius:7px;padding:12px 14px;line-height:1.8;}
+.note h3{margin:0 0 6px;font-size:13px;color:var(--ink);}
+.note.warn2{border-left-color:var(--warn);background:var(--warn-tint);}
+.note.warn2 h3{color:var(--warn);}
+</style></head><body>
+<div class="wrap">
+  <div class="doc-h">通知紀錄 · B 保留現有表格（改動最小）</div>
+  <p class="doc-sub">profile：observability-light · 與「規則清單 B」成對 —— 選 B 就是兩頁都只做必要的修補 · 資料為假名化示意</p>
+
+  <div class="legend">
+    <div><span class="k">1</span> <b>分頁</b> —— 拿掉寫死的「最近 100 筆」，改成時間範圍 ＋ 分頁。這一條 A / B 相同，因為它不是美觀問題，是<b>查不到就是查不到</b>。</div>
+    <div><span class="k">2</span> <b>篩選</b> —— 沿用現有那排文字連結，只在每個狀態後面加上筆數（「推送失敗 <b>6</b>」）；另加時間範圍與規則兩個下拉。<span class="neg">不做摘要條、不做已套用標籤列。</span></div>
+    <div><span class="k">3</span> <b>擠壓</b> —— 六個欄位全部保留，說明欄改成<b>單行截斷＋滑過看全文</b>。<span class="neg">句子還是塞在 20% 寬的欄位裡，只是不再折行 —— 這是折衷，不是解決。</span></div>
+  </div>
+
+  <div class="app"><div class="pane">
+    <div class="pane-hdr">
+      <div>
+        <h1>通知設定</h1>
+        <p class="sub">一條規則 ＝ 什麼事發生（來源）→ 通知誰（管道）· 支援 Ragic 表單異動與系統內部事件</p>
+      </div>
+      <button class="btn btn-primary">＋ 新增通知規則</button>
+    </div>
+
+    <div class="tabs"><div class="tab">通知規則</div><div class="tab on">通知紀錄</div></div>
+
+    <div class="bar">
+      <div class="filters">
+        <button class="lnk active">全部<span class="n">248</span></button>
+        <button class="lnk">已送出<span class="n">231</span></button>
+        <button class="lnk">推送失敗<span class="n bad">6</span></button>
+        <button class="lnk">未訂閱此異動<span class="n">7</span></button>
+        <button class="lnk">重複略過<span class="n">4</span></button>
+        <button class="lnk">內容不符<span class="n">0</span></button>
+      </div>
+      <div class="right">
+        <div class="sel on">近 7 天 ▾</div>
+        <div class="sel">規則 ▾</div>
+        <button class="btn">重新整理</button>
+      </div>
+    </div>
+
+    <table>
+      <colgroup><col style="width:15%"/><col style="width:23%"/><col style="width:13%"/><col style="width:19%"/><col style="width:22%"/><col style="width:8%"/></colgroup>
+      <thead><tr>
+        <th>時間</th><th>規則</th><th>結果</th><th>來源對象</th><th>說明</th><th style="text-align:right">耗時</th>
+      </tr></thead>
+      <tbody>
+        <tr class="row">
+          <td class="mono">08/12 11:34:42</td>
+          <td><div class="t-name">報價單（下游-1）</div></td>
+          <td><span class="pill ok">已送出</span></td>
+          <td><div class="clip mono" title="/erp/1 · #1035175">/erp/1 · #1035175</div></td>
+          <td><div class="clip" title="訊息已推送到 LINE">訊息已推送到 LINE</div></td>
+          <td class="num">412 ms</td>
+        </tr>
+        <tr class="row">
+          <td class="mono">08/12 11:15:54</td>
+          <td><div class="t-name">報價單（下游-1）</div></td>
+          <td><span class="pill danger">推送失敗</span></td>
+          <td><div class="clip mono" title="/erp/1 · #1035174">/erp/1 · #1035174</div></td>
+          <td><div class="clip" title="400 這條規則用的機器人不在目標群組裡。群組編號是各機器人各自一套，不能互用。">400 這條規則用的機器人不在目標群組裡。群組編號是…</div></td>
+          <td class="num">288 ms</td>
+        </tr>
+        <tr class="row" style="background:#FAFBFC">
+          <td class="mono">08/12 10:02:11</td>
+          <td><div class="t-name">分析表</div></td>
+          <td><span class="pill warn">內容不符</span></td>
+          <td><div class="clip mono" title="/order-operation/11 · #88214">/order-operation/11 · #88214</div></td>
+          <td><div class="clip" title="61 個欄位全部是（未填）：抓得到這筆資料，但範本設定的欄位對不上實際的欄位名稱。">61 個欄位全部是（未填）：抓得到這筆資料，但範本…</div></td>
+          <td class="num">1,204 ms</td>
+        </tr>
+        <tr class="exp">
+          <td></td>
+          <td colspan="5"><div class="exp-in">
+            <div class="exp-h">實際送出的訊息</div>
+            <div class="msg">【分析表｜已更新】
+單號：（未填）
+客戶名稱：（未填）
+品名：（未填）
+數量：（未填）</div>
+            <div class="exp-h">診斷</div>
+            <div class="diag">
+              <span>抓取 Ragic 資料 <b>成功</b></span>
+              <span>回傳欄位數 <b>61</b></span>
+              <span class="bad">範本欄位對上 <b>0 / 61</b></span>
+              <span>單號 <b>#88214</b></span>
+            </div>
+          </div></td>
+        </tr>
+        <tr class="row">
+          <td class="mono">08/12 09:41:07</td>
+          <td><div class="t-name">收貨單（上游-4）</div></td>
+          <td><span class="pill warn">未訂閱此異動</span></td>
+          <td><div class="clip mono" title="/erp/15 · #77120">/erp/15 · #77120</div></td>
+          <td><div class="clip" title="事件有進來，但這條規則沒勾選這種異動（新增／更新／刪除）">事件有進來，但這條規則沒勾選這種異動（新增／…</div></td>
+          <td class="num">18 ms</td>
+        </tr>
+        <tr class="row">
+          <td class="mono">08/12 09:40:58</td>
+          <td><div class="t-name">收貨單（上游-4）</div></td>
+          <td><span class="pill mut">重複略過</span></td>
+          <td><div class="clip mono" title="/erp/15 · #77120">/erp/15 · #77120</div></td>
+          <td><div class="clip" title="30 秒內同一筆重複觸發，只送第一次">30 秒內同一筆重複觸發，只送第一次</div></td>
+          <td class="num">6 ms</td>
+        </tr>
+        <tr class="row">
+          <td class="mono">08/12 09:12:30</td>
+          <td><div class="t-name">請購單（上游-1）</div></td>
+          <td><span class="pill ok">已送出</span></td>
+          <td><div class="clip mono" title="/erp/54 · #66031">/erp/54 · #66031</div></td>
+          <td><div class="clip" title="訊息已推送到 LINE">訊息已推送到 LINE</div></td>
+          <td class="num">377 ms</td>
+        </tr>
+        <tr class="row">
+          <td class="mono">08/11 17:55:02</td>
+          <td><div class="t-name">業務日誌填寫 2026</div></td>
+          <td><span class="pill ok">已送出</span></td>
+          <td><div class="clip mono" title="/forms4/18 · #4412">/forms4/18 · #4412</div></td>
+          <td><div class="clip" title="訊息已推送到 LINE">訊息已推送到 LINE</div></td>
+          <td class="num">455 ms</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pager">
+      <div>第 1–25 筆，共 <b style="color:var(--ink)">248</b> 筆（近 7 天）</div>
+      <div class="pages">
+        <button class="pg" disabled>‹</button>
+        <button class="pg on">1</button><button class="pg">2</button><button class="pg">3</button>
+        <button class="pg">…</button><button class="pg">10</button><button class="pg">›</button>
+      </div>
+      <div>點任一列可展開實際送出的訊息內容</div>
+    </div>
+  </div></div>
+
+  <div class="note warn2">
+    <h3>B 沒有解掉的事（選 B 要接受的）</h3>
+    <div>· <b>連來源路徑都得截斷。</b>六欄都保留的代價是每欄都不夠寬，`/order-operation/11 · #88214` 這種也要靠滑過才看得全。<br/>
+    · <b>說明欄還是塞在 20% 寬裡。</b>截斷＋滑過提示讓它不再折行，但「400 這條規則用的機器人不在目標群組裡…」你還是得把滑鼠停上去才讀得完 —— 而那正是你最需要讀的一行。<br/>
+    · <b>看不出「現在有沒有事」的第一眼。</b>狀態後面加了筆數（推送失敗 6）已經好很多，但那排文字連結的視覺重量很輕，容易滑過去。<br/>
+    · <b>沒有已套用條件的標籤列。</b>同時套了時間範圍＋規則＋狀態時，畫面上看不出來現在被什麼條件限制著。</div>
+  </div>
+
+  <div class="note">
+    <h3>A / B 差在哪（兩頁一起看）</h3>
+    <div>· <b>兩者相同</b>：拿掉「最近 100 筆」硬上限、加時間範圍與分頁、狀態加筆數、展開列保留訊息與診斷。<br/>
+    · <b>A 多做的</b>：可點的摘要條、失敗原因印在整行寬（只有需要處理的列才印）、診斷加「怎麼修」且可直接點過去、已套用條件標籤列。<br/>
+    · <b>取捨</b>：B 的改動大約是 A 的一半，風險低；代價是「失敗時能不能一眼讀懂並知道下一步」這件事只做了一半 —— 而這頁存在的理由就是那件事。</div>
+  </div>
+</div>
+</body></html>
