@@ -117,6 +117,10 @@ function ragicErrorMessage(code: number | undefined, msg: string | undefined): s
     case 204: return `呼叫太頻繁被 Ragic 擋下 —— 等一下再試${tail}`;
     case 301: return `Ragic 連線階段逾時 —— 重試一次；持續發生請重新產生金鑰${tail}`;
     case 303: return `這個 Ragic 帳號已過期${tail}`;
+    // Ragic 對「資料庫訂閱到期」回的是 403 而不是 303（2026-08-14 aitode 帳號實測）。
+    // 掉到 default 的話只會顯示「錯誤代碼 403」，看的人不會知道要去續訂。
+    case 403: return `這個 Ragic 帳號的訂閱已到期 —— 需以 SYSadmin 登入 Ragic 續訂，或改用免費方案；`
+      + `在那之前這個帳號底下的通知都抓不到欄位內容${tail}`;
     case 304: return `金鑰無效 —— 可能已被重新產生而失效，請到 Ragic 個人設定重新產生並更新${tail}`;
     case 404: return `找不到資料${tail}`;
     default:  return `Ragic 回報錯誤（代碼 ${code ?? "未知"}）${tail}`;

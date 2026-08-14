@@ -11,7 +11,7 @@ export interface HubLogInput {
   tenantId: string | null;
   sourceRef: string | null;   // Ragic sheetPath / 事件型別 → 存 sheet_path 欄
   recordId: number;
-  status: "sent" | "skipped_dedup" | "line_failed" | "skipped_event" | "skipped_filter";
+  status: "sent" | "skipped_dedup" | "line_failed" | "skipped_event" | "skipped_filter" | "invalid_body";
   lineStatus?: number;
   lineMessage?: string;
   latencyMs: number;

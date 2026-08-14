@@ -17,6 +17,22 @@ export function getByPath(payload: Record<string, unknown>, path: string): unkno
   return cur;
 }
 
+/**
+ * 有幾個欄位真的取得到值（＝渲染出來不會是「（未填）」）。
+ *
+ * ⚠️ 一定要走 getByPath，不可以用 `path in payload` —— 後者對 dot-path
+ * （internal_event 的 "trip.distanceKm"）一律回 false，會把正常的通知誤判成全空。
+ */
+export function countFilledItems(
+  template: NotificationTemplate,
+  payload: Record<string, unknown>,
+): number {
+  return (template.items ?? []).filter((it) => {
+    const v = getByPath(payload, it.path);
+    return v != null && String(v).trim() !== "";
+  }).length;
+}
+
 function s(v: unknown): string {
   if (v == null || v === "") return "（未填）";
   const cleaned = String(v).replace(/[\r\n\t]+/g, " ").slice(0, MAX_LINE_LENGTH).trim();

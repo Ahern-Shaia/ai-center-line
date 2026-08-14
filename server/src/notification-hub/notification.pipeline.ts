@@ -4,10 +4,10 @@ import { MemoryDedupCache, type DedupCache } from "../notify/dedup.js";
 import { LineSender } from "./channels/line.sender.js";
 import { RuleRepository } from "./rule.repository.js";
 import { HubAuditRepository } from "./audit.repository.js";
-import { matchFilters, renderTemplate } from "./template.renderer.js";
+import { countFilledItems, matchFilters, renderTemplate } from "./template.renderer.js";
 import type { InternalSourceConfig, NotificationEvent, RuleRow } from "./types.js";
 
-export type DeliverStatus = "sent" | "skipped_dedup" | "skipped_filter" | "line_failed" | "unsupported_channel" | "disabled";
+export type DeliverStatus = "sent" | "skipped_dedup" | "skipped_filter" | "line_failed" | "unsupported_channel" | "disabled" | "invalid_body";
 
 export interface DeliverResult {
   status: DeliverStatus;
@@ -59,6 +59,34 @@ export class NotificationPipeline {
 
     // 3) render
     const text = renderTemplate(rule.template, event.payload, event.eventLabel, event.link);
+
+    // 3.5) 每一欄都取不到值 → 不送。
+    //
+    // 這種訊息長得跟正常通知一樣，但十幾行全是「（未填）」，對收件的人是純噪音，
+    // 而且一次 Ragic 批次修改就會洗滿整個群（2026-08-13 那 80 筆就是這樣來的）。
+    // 最常見成因是「抓不到完整資料」——例如 Ragic 帳號到期、金鑰失效——
+    // 此時 payload 會退回 webhook 帶的內容，一個欄位都對不上。
+    //
+    // 記成 invalid_body（畫面顯示「內容不符」）而不是新增狀態：DB 對 status 有 CHECK，
+    // 加值要 migration，而 code 先上線就會 insert 失敗、整個 webhook handler 炸掉 ——
+    // 比原本的問題更糟。「內容不符」本來就是核准的 mockup 給這個情境的標籤。
+    const itemCount = (rule.template.items ?? []).length;
+    if (itemCount > 0 && countFilledItems(rule.template, event.payload) === 0) {
+      const fetchError = (event.diagnostics ?? {}).fetchError;
+      const why = fetchError
+        ? `取不到完整資料，${itemCount} 個欄位全部是空的 · 未送出 · 原因：${String(fetchError)}`
+        : `模板設定的 ${itemCount} 個欄位在這筆資料裡一個都取不到 · 未送出`
+          + `（欄位設定與這張表單不符，或這筆資料本來就整筆是空的）`;
+      await this.audit.write({
+        ruleId: rule.ruleId, sourceType: rule.sourceType, channel: rule.channelType,
+        tenantId: rule.tenantId, sourceRef: event.sourceRef ?? null, recordId: event.recordId ?? 0,
+        status: "invalid_body", lineMessage: why,
+        latencyMs: Date.now() - startedAt, messageText: text,
+        audit: { eventLabel: event.eventLabel, eventType: event.eventType ?? null, ...(event.diagnostics ?? {}) },
+      });
+      this.logger.warn(`全欄位取不到值 · 不送出 · rule=${rule.ruleId} · ${why}`);
+      return { status: "invalid_body", lineMessage: why };
+    }
 
     // 4) send（管道可插拔 · Phase 1 支援 LINE 群/私訊）
     if (rule.channelType !== "line_group" && rule.channelType !== "line_user") {

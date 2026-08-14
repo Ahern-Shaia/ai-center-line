@@ -5,6 +5,7 @@ import { parseRagicWebhook } from "../../notify-config/ragic-webhook.parser.js";
 import { NotificationPipeline, type DeliverResult } from "../notification.pipeline.js";
 import { RuleRepository } from "../rule.repository.js";
 import type { NotificationEvent, RagicSourceConfig } from "../types.js";
+import { countFilledItems } from "../template.renderer.js";
 
 export type RagicWebhookStatus = DeliverResult["status"] | "not_found" | "skipped_event";
 
@@ -80,7 +81,9 @@ export class RagicWebhookService {
     diagnostics.payloadKeys = payloadKeys.slice(0, 20);
     diagnostics.payloadKeyCount = payloadKeys.length;
     diagnostics.templatePaths = (rule.template.items ?? []).map((i) => i.path).slice(0, 20);
-    diagnostics.matchedPaths = (rule.template.items ?? []).filter((i) => i.path in payload).length;
+    // 用 countFilledItems（走 getByPath）而不是 `path in payload`：後者對 dot-path 一律回 false，
+    // 診斷會顯示「對上 0 個」但訊息其實有值，看的人被指往錯的方向。
+    diagnostics.matchedPaths = countFilledItems(rule.template, payload);
 
     const event: NotificationEvent = {
       sourceType: "ragic_form",
