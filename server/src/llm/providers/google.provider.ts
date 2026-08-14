@@ -11,10 +11,12 @@ import type {
 export class GoogleProvider implements LLMProvider {
   readonly name = "google" as const;
   private readonly client: GoogleGenerativeAI;
+  readonly model: string;
   private readonly cfg: LLMProviderConfig;
 
   constructor(cfg: LLMProviderConfig) {
     this.cfg = cfg;
+    this.model = cfg.model;
     this.client = new GoogleGenerativeAI(cfg.apiKey);
   }
 

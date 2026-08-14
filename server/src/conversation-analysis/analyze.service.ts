@@ -173,11 +173,9 @@ export class AnalyzeService {
         extractionTemplate: result.template,
         records: result.records,
       });
-      // 補進 provider / model 給 cost service 用 · runtime 讀 provider 物件
-      const providerName = (provider as unknown as { name?: string }).name ?? "anthropic";
-      const modelName = (provider as unknown as { model?: string; cfg?: { model?: string } }).cfg?.model
-        ?? (provider as unknown as { model?: string }).model
-        ?? "claude-opus-4-7";
+      // 補進 provider / model 給 cost service 定價用（LLMProvider 介面明列這兩個欄位）
+      const providerName = provider.name;
+      const modelName = provider.model;
       await db
         .update(analysisUpload)
         .set({

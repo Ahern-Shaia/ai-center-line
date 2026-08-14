@@ -30,10 +30,12 @@ export function supportsAdaptiveThinking(model: string): boolean {
 export class AnthropicProvider implements LLMProvider {
   readonly name = "anthropic" as const;
   private readonly client: Anthropic;
+  readonly model: string;
   private readonly cfg: LLMProviderConfig;
 
   constructor(cfg: LLMProviderConfig) {
     this.cfg = cfg;
+    this.model = cfg.model;
     this.client = new Anthropic({ apiKey: cfg.apiKey });
   }
 

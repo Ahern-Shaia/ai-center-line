@@ -12,11 +12,13 @@ import type {
 // DeepSeek: baseUrl='https://api.deepseek.com/v1' · 其餘同 OpenAI
 export class OpenAIProvider implements LLMProvider {
   readonly name: LLMProviderName;
+  readonly model: string;
   private readonly client: OpenAI;
   private readonly cfg: LLMProviderConfig;
 
   constructor(cfg: LLMProviderConfig, name: LLMProviderName = "openai") {
     this.cfg = cfg;
+    this.model = cfg.model;
     this.name = name;
     this.client = new OpenAI({ apiKey: cfg.apiKey, baseURL: cfg.baseUrl });
   }

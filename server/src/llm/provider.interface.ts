@@ -37,6 +37,8 @@ export interface ChatOutput {
 
 export interface LLMProvider {
   readonly name: LLMProviderName;
+  /** 實際採用的模型 · 成本統計要靠它定價（見 aiproot-console/llm-pricing.ts）· 別再從 private cfg 硬撬 */
+  readonly model: string;
   chat(input: ChatInput): Promise<ChatOutput>;
 }
 

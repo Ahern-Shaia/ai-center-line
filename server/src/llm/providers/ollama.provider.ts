@@ -12,10 +12,12 @@ const REQUEST_TIMEOUT_MS = 120_000;
 
 export class OllamaProvider implements LLMProvider {
   readonly name = "ollama" as const;
+  readonly model: string;
   private readonly cfg: LLMProviderConfig;
 
   constructor(cfg: LLMProviderConfig) {
     this.cfg = cfg;
+    this.model = cfg.model;
   }
 
   async chat(input: ChatInput): Promise<ChatOutput> {
