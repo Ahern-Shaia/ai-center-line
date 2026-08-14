@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError, ncCreateAccount, ncCreateRule, ncEventCatalog, ncFetchFields, ncGetRule, ncAllLineGroups,
   ncSendableTargets, type NcSendableTarget,
-  ncListAccounts, ncNotifiableUsers, ncRenameAccount, ncUpdateRule, notifyWebhookUrl,
+  ncListAccounts, ncNotifiableUsers, ncRenameAccount, ncUpdateKey, ncUpdateRule, notifyWebhookUrl,
   type EventDef, type NcLineGroup, type NotifiableUser, type NotifyChannelType,
   type NotifySourceType, type RagicAccountRow,
 } from "../api";
@@ -49,6 +49,10 @@ export default function Wizard({ ruleId, copyFrom, onDone, onCancel }: {
   const [addingAccount, setAddingAccount] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameName, setRenameName] = useState("");
+  // 換金鑰（Ragic 金鑰過期／權限不足時唯一該做的事）
+  const [rekeying, setRekeying] = useState(false);
+  const [rekeyValue, setRekeyValue] = useState("");
+  const [rekeySaving, setRekeySaving] = useState(false);
   const [naServer, setNaServer] = useState("ap16");
   const [naApname, setNaApname] = useState("");
   const [naName, setNaName] = useState("");
@@ -192,6 +196,20 @@ export default function Wizard({ ruleId, copyFrom, onDone, onCancel }: {
       await loadAccounts();
       setRenaming(false);
     } catch (e) { toast.show(e instanceof ApiError ? e.message : "更新失敗", "danger"); }
+  }
+
+  async function saveRekey() {
+    if (!rekeyValue.trim()) { toast.show("請貼上新的 API 金鑰", "danger"); return; }
+    setRekeySaving(true);
+    try {
+      await ncUpdateKey(accountId, rekeyValue.trim());
+      toast.show("已更新金鑰 · 可以按「重新讀取欄位」驗證", "ok");
+      setRekeyValue("");
+      setRekeying(false);
+      await loadAccounts();
+    } catch (e) {
+      toast.show(e instanceof ApiError ? e.message : "更新金鑰失敗", "danger");
+    } finally { setRekeySaving(false); }
   }
 
   async function fetchRagicFields() {
@@ -365,10 +383,38 @@ export default function Wizard({ ruleId, copyFrom, onDone, onCancel }: {
                   {renaming ? "收合" : "重新命名"}
                 </button>
               )}
+              {/* 沒有這顆按鈕時，想換金鑰的人只能去重新「新增帳號」，然後撞上
+                  (server, apname) 的唯一索引 —— 而換金鑰正是 Ragic 金鑰過期／權限不足時
+                  唯一該做的事。入口原本只存在於另一個頁面（主檔資料來源），沒人找得到。*/}
+              {accountId && (
+                <button className="btn" onClick={() => { setRenaming(false); setAddingAccount(false); setRekeying((v) => !v); }}>
+                  {rekeying ? "收合" : "更新金鑰"}
+                </button>
+              )}
               <button className="btn" onClick={() => { setRenaming(false); setAddingAccount((v) => !v); }}>
                 {addingAccount ? "收合" : "＋ 新增帳號"}
               </button>
             </div>
+            {rekeying && (
+              <div style={{ marginTop: 14, padding: 14, background: "var(--well)", borderRadius: 6 }}>
+                <div className="field" style={{ margin: 0 }}>
+                  <label>新的 API 金鑰</label>
+                  <input className="tf" type="password" value={rekeyValue} autoFocus autoComplete="new-password"
+                    onChange={(e) => setRekeyValue(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") void saveRekey(); }}
+                    placeholder="貼上 Ragic 產生的 API 金鑰" />
+                </div>
+                <div className="nc-card-sub" style={{ marginTop: 8 }}>
+                  只換金鑰，伺服器與帳號名不動 · 既有規則不受影響。
+                  <br />
+                  讀「欄位定義」需要<b>帳號管理者（SYSAdmin）</b>的金鑰；讀「資料」需要對該表單<b>有存取權</b>的使用者金鑰 ——
+                  用 SYSAdmin 產生的金鑰兩者都涵蓋。
+                </div>
+                <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => void saveRekey()} disabled={rekeySaving}>
+                  {rekeySaving ? "儲存中…" : "儲存金鑰"}
+                </button>
+              </div>
+            )}
             {renaming && (
               <div style={{ marginTop: 14, padding: 14, background: "var(--well)", borderRadius: 6 }}>
                 <div className="field" style={{ margin: 0 }}>
