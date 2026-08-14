@@ -12,6 +12,8 @@ export interface DepartmentDto {
   ragicTable: string | null;
   memberCount: number;
   groupBindingCount: number;
+  /** 綁在此部門的 LINE 群名 · 前端要能指名是哪一群，不然使用者得在十幾群裡自己找 */
+  boundGroupNames: string[];
 }
 
 @Injectable()
@@ -56,16 +58,24 @@ export class DepartmentService {
     await this.repo.setTenantContext(tx, tenantId);
     const existing = await this.repo.getById(tx, departmentId);
     if (!existing) throw new NotFoundException("找不到部門");
+    // 兩道檢查一次講完，而且要指出「去哪裡、按什麼」。
+    // 原本一次只回一道：使用者解完群綁定回來，再撞一次成員那道牆。
+    // 而且「解除綁定」在 LINE 機器人管理頁根本不是這個字 —— 那裡叫「分派部門」選「未分派」。
+    const blockers: string[] = [];
     if (existing.memberCount > 0) {
-      throw new ConflictException({
-        status: "department_has_members",
-        message: `部門有 ${existing.memberCount} 名成員 · 需先移除或轉移成員才能刪除`,
-      });
+      blockers.push(`成員 ${existing.memberCount} 人（到「部門 / 成員」的「成員」分頁改分派或移除）`);
     }
     if (existing.groupBindingCount > 0) {
+      const names = existing.boundGroupNames.join("、");
+      blockers.push(
+        `綁定 LINE 群 ${existing.groupBindingCount} 個${names ? `：${names}` : ""}`
+        + `（到「LINE 機器人管理」把該群的「分派部門」改成「未分派」）`,
+      );
+    }
+    if (blockers.length > 0) {
       throw new ConflictException({
-        status: "department_has_group_bindings",
-        message: `部門已綁定 ${existing.groupBindingCount} 個 LINE 群組 · 需先移除綁定才能刪除`,
+        status: existing.memberCount > 0 ? "department_has_members" : "department_has_group_bindings",
+        message: `部門「${existing.departmentName}」目前不可刪除 —— ${blockers.join("；")}`,
       });
     }
     await this.repo.delete(tx, departmentId);
@@ -82,6 +92,7 @@ export class DepartmentService {
       ragicTable: row.ragicTable,
       memberCount: row.memberCount,
       groupBindingCount: row.groupBindingCount,
+      boundGroupNames: row.boundGroupNames,
     };
   }
 }

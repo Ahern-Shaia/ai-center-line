@@ -15,6 +15,8 @@ export interface DepartmentRow {
   ragicTable: string | null;
   memberCount: number;
   groupBindingCount: number;
+  /** 綁在這個部門的 LINE 群名 · 刪不掉時要講「是哪一群」而不是只講「1 個」*/
+  boundGroupNames: string[];
 }
 
 export interface DepartmentInsertInput {
@@ -38,12 +40,14 @@ export class DepartmentRepository {
       department_id: string; tenant_id: string; department_name: string;
       display_name: string | null; line_group_id: string | null;
       extraction_schema: string | null; ragic_table: string | null;
-      member_count: string; group_binding_count: string;
+      member_count: string; group_binding_count: string; bound_group_names: string[] | null;
     }>(sql`
       SELECT d.department_id, d.tenant_id, d.department_name, d.display_name,
              d.line_group_id, d.extraction_schema, d.ragic_table,
              (SELECT COUNT(*)::text FROM users WHERE department_id = d.department_id) AS member_count,
-             (SELECT COUNT(*)::text FROM line_group WHERE department_id = d.department_id) AS group_binding_count
+             (SELECT COUNT(*)::text FROM line_group WHERE department_id = d.department_id) AS group_binding_count,
+             COALESCE((SELECT array_agg(COALESCE(NULLIF(btrim(g.display_name), ''), g.group_id) ORDER BY g.display_name)
+                         FROM line_group g WHERE g.department_id = d.department_id), '{}') AS bound_group_names
       FROM departments d
       ORDER BY d.department_name
     `);
@@ -57,6 +61,7 @@ export class DepartmentRepository {
       ragicTable: r.ragic_table,
       memberCount: Number(r.member_count),
       groupBindingCount: Number(r.group_binding_count),
+      boundGroupNames: r.bound_group_names ?? [],
     }));
   }
 
@@ -65,12 +70,14 @@ export class DepartmentRepository {
       department_id: string; tenant_id: string; department_name: string;
       display_name: string | null; line_group_id: string | null;
       extraction_schema: string | null; ragic_table: string | null;
-      member_count: string; group_binding_count: string;
+      member_count: string; group_binding_count: string; bound_group_names: string[] | null;
     }>(sql`
       SELECT d.department_id, d.tenant_id, d.department_name, d.display_name,
              d.line_group_id, d.extraction_schema, d.ragic_table,
              (SELECT COUNT(*)::text FROM users WHERE department_id = d.department_id) AS member_count,
-             (SELECT COUNT(*)::text FROM line_group WHERE department_id = d.department_id) AS group_binding_count
+             (SELECT COUNT(*)::text FROM line_group WHERE department_id = d.department_id) AS group_binding_count,
+             COALESCE((SELECT array_agg(COALESCE(NULLIF(btrim(g.display_name), ''), g.group_id) ORDER BY g.display_name)
+                         FROM line_group g WHERE g.department_id = d.department_id), '{}') AS bound_group_names
       FROM departments d
       WHERE d.department_id = ${departmentId}
       LIMIT 1
@@ -87,6 +94,7 @@ export class DepartmentRepository {
       ragicTable: r.ragic_table,
       memberCount: Number(r.member_count),
       groupBindingCount: Number(r.group_binding_count),
+      boundGroupNames: r.bound_group_names ?? [],
     };
   }
 

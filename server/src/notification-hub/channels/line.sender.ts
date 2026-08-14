@@ -59,13 +59,21 @@ export class LineSender {
  * 另外附上常見成因的提示：400 + 目標是群組時，最常見是 **bot 已不在該群**
  * （我方的 line_group.status 只在收到 leave 事件時才更新，可能是舊的）。
  */
-async function describeLineError(res: Response): Promise<string> {
+export async function describeLineError(res: Response): Promise<string> {
   let body: LineErrorBody | null = null;
   try {
     body = (await res.json()) as LineErrorBody;
   } catch {
     const text = await res.text().catch(() => "");
     return text.slice(0, 200) || "（LINE 未回傳內容）";
+  }
+  // 429 有兩種，靠 body 文字分辨：打太快 vs 當月推播則數用完。
+  // 後者直接把英文原句丟給使用者等於沒講 —— 看的人不會知道那是 LINE 的方案額度、
+  // 更不會知道 1 號才會恢復，也不會知道這支帳號的**所有**通知都會一起停。
+  if (res.status === 429 && /monthly limit/i.test(body?.message ?? "")) {
+    return "LINE 官方帳號本月推播則數已用完 · 這支帳號的所有通知都會失敗，每月 1 日重置"
+      + " · 要提前恢復需到 LINE Official Account Manager 升級方案"
+      + "（免費方案每月額度很小，一次 Ragic 批次修改就可能用完）";
   }
   const parts: string[] = [];
   if (body?.message) parts.push(body.message);

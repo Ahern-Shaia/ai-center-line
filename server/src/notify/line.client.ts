@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { describeLineError } from "../notification-hub/channels/line.sender.js";
 
 // LINE Messaging API Push Message wrapper（stateless；per-tenant config 由 caller 傳入）。
 // 對應 docs/modules/notify-multi-tenant.md §5.1（M2 stateless 改造）+ notify.md §7-bis.3。
@@ -67,28 +68,6 @@ export class LineClient {
   }
 }
 
-/** 與 LineSender 同一套解析 · LINE 的 400 真正原因在 details[]，只取 message 等於沒說 */
-async function describeLineError(res: Response): Promise<string> {
-  let body: LineErrorBody | null = null;
-  try {
-    body = (await res.json()) as LineErrorBody;
-  } catch {
-    const text = await res.text().catch(() => "");
-    return text.slice(0, 200) || "（LINE 未回傳內容）";
-  }
-  const parts: string[] = [];
-  if (body?.message) parts.push(body.message);
-  for (const d of body?.details ?? []) {
-    parts.push(d.property ? `${d.property} → ${d.message ?? ""}` : (d.message ?? ""));
-  }
-  if (parts.length === 0) parts.push("（LINE 未說明原因）");
-  if (res.status === 400 && !(body?.details?.length)) {
-    parts.push("常見原因：機器人已不在該群組／該對象未加好友 · 請確認機器人仍在群裡");
-  }
-  return parts.filter(Boolean).join(" · ");
-}
-
-interface LineErrorBody {
-  message?: string;
-  details?: Array<{ message?: string; property?: string }>;
-}
+// 解析改用 LineSender 那份（本檔原本有一份逐字複製的）。
+// 兩份會各自長大：429 月額度的中文說明先加在 LineSender，這邊就跟不上了。
+// LineSender 本來就宣告自己是「收斂重複」的那一份，所以往那邊靠。
