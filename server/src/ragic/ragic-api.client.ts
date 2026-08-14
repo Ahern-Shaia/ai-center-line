@@ -106,21 +106,38 @@ export class RagicApiClient {
  * 對照手冊 §15。使用者看到的是這句話，所以它必須直接可行動 ——
  * 「無權限」三個字沒有用，「你填的帳號名不存在」才有用。
  */
-function ragicErrorMessage(code: number | undefined, msg: string | undefined): string {
+export function ragicErrorMessage(code: number | undefined, msg: string | undefined): string {
   const tail = msg ? ` · Ragic 原文：${msg}` : "";
   switch (code) {
     case 101: return `帳號名不存在 —— 檢查「帳號名」那格（網址裡 ragic.com/ 後面那一段）${tail}`;
     case 102: return `表單路徑無效 —— 檢查「表單路徑」，要含開頭的斜線、且不要帶問號後面的內容${tail}`;
     case 103: return `表單索引無效 —— 路徑最後那個數字不對（例 /service-tickets/10 的 10）${tail}`;
     case 105: return `這個請求需要登入驗證 —— 多半是金鑰沒被帶上或格式不對${tail}`;
-    case 106: return `這把金鑰沒有權限 —— 讀取欄位定義需要**帳號管理者**的金鑰${tail}`;
+    // 106 有兩種：讀「欄位定義」權限不足，以及讀「資料」時那張表有存取權限保護。
+    // Ragic 原文會直說是哪一種（"access right protected ... accessing as: guest account"），
+    // 所以照原文分辨，不要用代碼猜。
+    case 106: return /access right/i.test(msg ?? "")
+      ? `這張表單有存取權限保護，目前這把金鑰被當成 guest —— 需要改用「對這張表單有存取權的使用者」所產生的 API 金鑰${tail}`
+      : `這把金鑰沒有權限 —— 讀取欄位定義需要**帳號管理者**的金鑰${tail}`;
     case 204: return `呼叫太頻繁被 Ragic 擋下 —— 等一下再試${tail}`;
     case 301: return `Ragic 連線階段逾時 —— 重試一次；持續發生請重新產生金鑰${tail}`;
     case 303: return `這個 Ragic 帳號已過期${tail}`;
-    // Ragic 對「資料庫訂閱到期」回的是 403 而不是 303（2026-08-14 aitode 帳號實測）。
-    // 掉到 default 的話只會顯示「錯誤代碼 403」，看的人不會知道要去續訂。
-    case 403: return `這個 Ragic 帳號的訂閱已到期 —— 需以 SYSadmin 登入 Ragic 續訂，或改用免費方案；`
-      + `在那之前這個帳號底下的通知都抓不到欄位內容${tail}`;
+    // ⚠️ 403 至少有兩種原因，**必須看 Ragic 原文才知道是哪一種**（2026-08-14 實測）：
+    //   · aitode        → "This Ragic account has expired..."  訂閱到期
+    //   · 2026carhouse  → "no right"                            金鑰不是帳號管理者
+    // 上一版一律翻成「訂閱已到期」，結果權限問題被指去續訂 —— 錯的方向會讓人白花好幾小時。
+    // 認不出來的原文一律不猜，直接把原文丟出來讓看的人判斷。
+    case 403: {
+      if (/expired/i.test(msg ?? "")) {
+        return `這個 Ragic 帳號的訂閱已到期 —— 需以 SYSadmin 登入 Ragic 續訂，或改用免費方案；`
+          + `在那之前這個帳號底下的通知都抓不到欄位內容${tail}`;
+      }
+      if (/no right/i.test(msg ?? "")) {
+        return `這把金鑰的權限不足 —— 讀取欄位定義需要**帳號管理者（SYSAdmin）**產生的 API 金鑰；`
+          + `一般使用者的金鑰讀得到資料、但讀不到欄位定義${tail}`;
+      }
+      return `Ragic 拒絕這個請求（403）—— 依原文判斷是帳號或金鑰的權限問題${tail}`;
+    }
     case 304: return `金鑰無效 —— 可能已被重新產生而失效，請到 Ragic 個人設定重新產生並更新${tail}`;
     case 404: return `找不到資料${tail}`;
     default:  return `Ragic 回報錯誤（代碼 ${code ?? "未知"}）${tail}`;
