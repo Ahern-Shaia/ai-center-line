@@ -479,6 +479,8 @@ export const ncUpdateRule = (ruleId: string, body: {
   channelType?: string; channelTarget?: string;
   /** 用哪支 bot 發送（0061）*/
   botId?: string;
+  /** 換 Ragic 帳號（同一張表單改讀另一個 Ragic 資料庫）· webhook 網址不變 */
+  ragicAccountId?: string;
 }) => req<{ status: string }>(`/notify-config/${ruleId}`, { method: "PATCH", body: JSON.stringify(body) });
 export const ncCreateRule = (body: {
   name: string; sourceType: NotifySourceType;

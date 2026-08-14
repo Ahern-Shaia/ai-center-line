@@ -248,6 +248,10 @@ export default function Wizard({ ruleId, copyFrom, onDone, onCancel }: {
       if (editing) {
         await ncUpdateRule(ruleId!, {
           name: sourceType === "ragic_form" ? sheetName : (selectedEvent?.label ?? ""),
+          // 沒送 ragicAccountId 的話，畫面上換了帳號、存檔成功、實際沒換 —— 使用者只會看到「怎麼沒生效」。
+          // 表單路徑固定不能改（webhook 已貼在 Ragic 那側），但換帳號＝同一張表單改讀另一個 Ragic 庫，
+          // 這是帳號到期／搬庫時唯一不用刪掉重建的路（重建會換 webhook 網址）。
+          ragicAccountId: sourceType === "ragic_form" ? accountId : undefined,
           title: title.trim() || null,
           notifyCreate: evCreate, notifyUpdate: evUpdate, notifyDelete: evDelete,
           fields: payloadFields,
