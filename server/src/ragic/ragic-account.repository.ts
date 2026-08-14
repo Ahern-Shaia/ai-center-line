@@ -60,7 +60,7 @@ export class RagicAccountRepository {
     tenantId: string | null; server: string; apname: string; displayName: string; apiKey: string | null; createdBy: string;
   }): Promise<{ accountId: string }> {
     const key = this.encKey();
-    const encExpr = a.apiKey ? sql`pgp_sym_encrypt(${a.apiKey}, ${key})` : sql`NULL`;
+    const encExpr = a.apiKey ? sql`pgp_sym_encrypt(${a.apiKey}, ${key}, 'cipher-algo=aes256')` : sql`NULL`;
     const res = await tx.execute<{ account_id: string }>(sql`
       INSERT INTO ragic_account (tenant_id, server, apname, display_name, api_key_enc, created_by)
       VALUES (${a.tenantId}, ${a.server}, ${a.apname}, ${a.displayName}, ${encExpr}, ${a.createdBy}::uuid)
@@ -85,7 +85,7 @@ export class RagicAccountRepository {
   async updateKey(tx: Db, accountId: string, apiKey: string): Promise<boolean> {
     const key = this.encKey();
     const res = await tx.execute(sql`
-      UPDATE ragic_account SET api_key_enc = pgp_sym_encrypt(${apiKey}, ${key}), updated_at = now()
+      UPDATE ragic_account SET api_key_enc = pgp_sym_encrypt(${apiKey}, ${key}, 'cipher-algo=aes256'), updated_at = now()
       WHERE account_id = ${accountId}::uuid
       RETURNING account_id
     `);

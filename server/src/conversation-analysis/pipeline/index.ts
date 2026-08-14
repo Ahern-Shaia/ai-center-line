@@ -7,7 +7,7 @@ import { TWH_TENANT, type Tenant } from "./tenant-twh.js";
 import { DEFAULT_CATEGORIES, type AnalysisResultT } from "./schemas.js";
 import { TEMPLATE_REGISTRY, resolveTemplate, DEFAULT_TEMPLATE, type ExtractionTemplate } from "./templates.js";
 import type { LLMProvider } from "../../llm/provider.interface.js";
-import { createLLMProvider } from "../../llm/provider.factory.js";
+import { createLLMProvider, platformDefaultModel } from "../../llm/provider.factory.js";
 import { withTenant } from "../../db/client.js";
 
 export type EnrichedMessage = ChatMessage & {
@@ -37,7 +37,7 @@ export function resolveTenant(slug: string): Tenant {
   throw new Error(`unknown tenant slug: ${slug}（pilot 階段只支援 twh / batch · M6 才擴充）`);
 }
 
-// Fallback provider · 若 tenant 沒 llm-config · 用 env ANTHROPIC_API_KEY
+// Fallback provider · 若 tenant 沒 llm-config · 用 env ANTHROPIC_API_KEY + env LLM_DEFAULT_MODEL
 export function defaultAnthropicProvider(): LLMProvider {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -45,7 +45,7 @@ export function defaultAnthropicProvider(): LLMProvider {
   }
   return createLLMProvider({
     provider: "anthropic",
-    model: "claude-opus-4-7",
+    model: platformDefaultModel(),
     apiKey,
   });
 }

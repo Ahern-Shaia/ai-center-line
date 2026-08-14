@@ -76,8 +76,8 @@ export class LineBotRepository {
          liff_id, login_channel_id, created_by)
       VALUES
         (${input.tenantId}, ${input.kind}, ${input.name}, ${input.botUserId}, ${input.channelId},
-         pgp_sym_encrypt(${input.channelSecret}, ${key}),
-         pgp_sym_encrypt(${input.channelAccessToken}, ${key}),
+         pgp_sym_encrypt(${input.channelSecret}, ${key}, 'cipher-algo=aes256'),
+         pgp_sym_encrypt(${input.channelAccessToken}, ${key}, 'cipher-algo=aes256'),
          ${input.liffId}, ${input.loginChannelId},
          ${input.createdBy})
       RETURNING bot_id
@@ -109,9 +109,9 @@ export class LineBotRepository {
           THEN ${patch.loginChannelId ?? null} ELSE login_channel_id END,
         channel_id = COALESCE(${patch.channelId ?? null}, channel_id),
         channel_secret_enc = CASE WHEN ${patch.channelSecret ?? null}::text IS NULL
-          THEN channel_secret_enc ELSE pgp_sym_encrypt(${patch.channelSecret ?? null}, ${key}) END,
+          THEN channel_secret_enc ELSE pgp_sym_encrypt(${patch.channelSecret ?? null}, ${key}, 'cipher-algo=aes256') END,
         channel_access_token_enc = CASE WHEN ${patch.channelAccessToken ?? null}::text IS NULL
-          THEN channel_access_token_enc ELSE pgp_sym_encrypt(${patch.channelAccessToken ?? null}, ${key}) END,
+          THEN channel_access_token_enc ELSE pgp_sym_encrypt(${patch.channelAccessToken ?? null}, ${key}, 'cipher-algo=aes256') END,
         status = COALESCE(${patch.status ?? null}, status),
         tenant_id = COALESCE(${patch.tenantId ?? null}, tenant_id),
         updated_at = now()

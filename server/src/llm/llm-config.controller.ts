@@ -5,7 +5,7 @@ import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { LlmConfigUpsertSchema } from "./dto/llm-config.dto.js";
 import { LlmConfigService } from "./llm-config.service.js";
-import { PROVIDER_DEFAULT_MODELS } from "./provider.factory.js";
+import { PROVIDER_DEFAULT_MODELS, platformDefaultModel } from "./provider.factory.js";
 
 /**
  * LLM config · aiproot 統管 · 客戶端看不到
@@ -16,7 +16,8 @@ import { PROVIDER_DEFAULT_MODELS } from "./provider.factory.js";
  *
  * Fallback 順序（AnalyzeService.resolveProvider）：
  *   1. tenant_llm_config 有 row → 用該 provider/model/key
- *   2. 無 → 走 env ANTHROPIC_API_KEY（平台預設 · aiproot 自付 API 費）
+ *   2. 無 → 走 env ANTHROPIC_API_KEY + env LLM_DEFAULT_MODEL（平台預設 · aiproot 自付 API 費）
+ *      LLM_DEFAULT_MODEL 未設時沿用 provider.factory 的 fallback 常數
  */
 @Controller("llm-config")
 export class LlmConfigController {
@@ -30,6 +31,12 @@ export class LlmConfigController {
     return {
       config: cfg,
       providerModels: PROVIDER_DEFAULT_MODELS,
+      // 前端顯示「此租戶未設定時實際會用什麼」· 不要在 UI 寫死模型名（會跟 env 脫節）
+      platformDefault: {
+        provider: "anthropic" as const,
+        model: platformDefaultModel(),
+        apiKeyConfigured: Boolean(process.env.ANTHROPIC_API_KEY),
+      },
     };
   }
 

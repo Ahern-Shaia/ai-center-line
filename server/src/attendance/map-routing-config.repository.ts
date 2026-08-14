@@ -37,7 +37,7 @@ export class MapRoutingConfigRepository {
     const key = this.encKey();
     await tx.execute(sql`
       INSERT INTO map_routing_config (singleton, provider, api_key_enc, updated_by, updated_at)
-      VALUES (true, ${provider}, pgp_sym_encrypt(${apiKey}, ${key}), ${updatedBy}::uuid, now())
+      VALUES (true, ${provider}, pgp_sym_encrypt(${apiKey}, ${key}, 'cipher-algo=aes256'), ${updatedBy}::uuid, now())
       ON CONFLICT (singleton) DO UPDATE SET
         provider = EXCLUDED.provider,
         api_key_enc = EXCLUDED.api_key_enc,
@@ -85,7 +85,7 @@ export class MapRoutingConfigRepository {
   // 設 tile provider（+ 選填 key · null = 保留既有 key · osm 不需 key）
   async upsertTile(tx: Db, tileProvider: string, tileApiKey: string | null, updatedBy: string): Promise<void> {
     const key = this.encKey();
-    const encExpr = tileApiKey != null ? sql`pgp_sym_encrypt(${tileApiKey}, ${key})` : sql`NULL`;
+    const encExpr = tileApiKey != null ? sql`pgp_sym_encrypt(${tileApiKey}, ${key}, 'cipher-algo=aes256')` : sql`NULL`;
     await tx.execute(sql`
       INSERT INTO map_routing_config (singleton, tile_provider, tile_api_key_enc, updated_by, updated_at)
       VALUES (true, ${tileProvider}, ${encExpr}, ${updatedBy}::uuid, now())

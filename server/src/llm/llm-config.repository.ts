@@ -5,6 +5,8 @@ import type { LLMProviderName } from "./provider.interface.js";
 
 // LLM config repository · 走 raw sql 用 pgcrypto 加解密 apiKey
 // LLM_CONFIG_ENC_KEY env 提供加密 key（32+ chars）· 缺 crash on 使用（fail-loud）
+// 加密演算法明寫 cipher-algo=aes256（pgcrypto 預設是 aes128）· 解密不需指定，
+// PGP 封包自帶演算法標記，所以既有 aes128 舊資料照樣解得開
 
 export interface LlmConfigRow {
   tenantId: string;
@@ -48,7 +50,7 @@ export class LlmConfigRepository {
         (tenant_id, provider, model, api_key_enc, base_url, temperature, max_tokens, updated_at, updated_by)
       VALUES
         (${input.tenantId}, ${input.provider}, ${input.model},
-         pgp_sym_encrypt(${input.apiKey}, ${key}),
+         pgp_sym_encrypt(${input.apiKey}, ${key}, 'cipher-algo=aes256'),
          ${input.baseUrl ?? null},
          ${input.temperature ?? null},
          ${input.maxTokens ?? null},

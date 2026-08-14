@@ -43,9 +43,25 @@ export function createLLMProvider(cfg: LLMProviderConfig): LLMProvider {
   }
 }
 
-// Provider default model · 給 frontend dropdown 提示（也是 fallback default）
+// 平台預設模型 · 租戶沒設 llm-config 時採用（見 pipeline/index.ts defaultAnthropicProvider）
+// 不寫死的理由：換代（例 Opus 4.7 → Opus 5）會改變抽取行為 · 屬資料契約層級變更，
+// 應由部署端在跑過樣本回歸後於 env 決定，而不是改 code 才能換。
+// env 未設時沿用 Opus 4.7 = 維持現狀，不會因為部署而靜默換模型。
+const PLATFORM_DEFAULT_MODEL_FALLBACK = "claude-opus-4-7";
+
+export function platformDefaultModel(): string {
+  return process.env.LLM_DEFAULT_MODEL?.trim() || PLATFORM_DEFAULT_MODEL_FALLBACK;
+}
+
+// Provider 建議模型 · 給 frontend dropdown 當預選清單（不是白名單 · 前端可自訂輸入）
 export const PROVIDER_DEFAULT_MODELS: Record<LLMProviderConfig["provider"], string[]> = {
-  anthropic: ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"],
+  anthropic: [
+    "claude-opus-5",
+    "claude-sonnet-5",
+    "claude-opus-4-7",
+    "claude-sonnet-4-6",
+    "claude-haiku-4-5-20251001",
+  ],
   openai: ["gpt-5", "gpt-5-mini", "gpt-4o", "gpt-4o-mini"],
   google: ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
   ollama: ["llama3.3", "llama3.1", "qwen2.5", "deepseek-r1"],

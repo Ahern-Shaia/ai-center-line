@@ -8,6 +8,25 @@ import type {
 } from "../provider.interface.js";
 
 // Anthropic Claude · 現有 pipeline pattern · 支援 prompt caching + adaptive thinking + zod structured output
+//
+// adaptive thinking 不是全系列都吃 · 送給不支援的模型（Haiku 4.5 / 4.5 世代）API 會回 400。
+// 這裡以模型前綴判斷 · 不支援者整個 thinking 參數不送（＝不思考，仍可正常結構化輸出）。
+// 新增模型到 PROVIDER_DEFAULT_MODELS 時 · 若它支援 adaptive 記得補進這個清單。
+const ADAPTIVE_THINKING_MODEL_PREFIXES = [
+  "claude-fable-5",
+  "claude-mythos-5",
+  "claude-opus-5",
+  "claude-opus-4-8",
+  "claude-opus-4-7",
+  "claude-opus-4-6",
+  "claude-sonnet-5",
+  "claude-sonnet-4-6",
+];
+
+export function supportsAdaptiveThinking(model: string): boolean {
+  return ADAPTIVE_THINKING_MODEL_PREFIXES.some((p) => model.startsWith(p));
+}
+
 export class AnthropicProvider implements LLMProvider {
   readonly name = "anthropic" as const;
   private readonly client: Anthropic;
@@ -32,7 +51,7 @@ export class AnthropicProvider implements LLMProvider {
     const res = await this.client.messages.parse({
       model: this.cfg.model,
       max_tokens: input.maxTokens ?? this.cfg.maxTokens ?? 16000,
-      thinking: { type: "adaptive" },
+      ...(supportsAdaptiveThinking(this.cfg.model) ? { thinking: { type: "adaptive" as const } } : {}),
       system,
       messages: [{ role: "user", content: input.userMessage }],
       output_config: { format: zodOutputFormat(input.outputSchema) },
