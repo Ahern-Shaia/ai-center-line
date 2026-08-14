@@ -16,6 +16,7 @@ import {
   deleteLlmConfig,
   listAiprootTenants,
   type LlmConfigMasked,
+  type LlmConfigGetResponse,
   type LlmProviderName,
   type AiprootTenantOption,
   ApiError,
@@ -45,6 +46,9 @@ const PROVIDER_BY_NAME: Record<LlmProviderName, ProviderDef> = Object.fromEntrie
   PROVIDERS.map((p) => [p.name, p]),
 ) as Record<LlmProviderName, ProviderDef>;
 
+// 下拉最後一項 · 選了才出現手動輸入框（微調模型 / 清單還沒收錄的新版本）
+const CUSTOM_MODEL_KEY = "__custom__";
+
 function ModelSelect({
   value,
   options,
@@ -56,6 +60,10 @@ function ModelSelect({
   onChange: (v: string) => void;
   disabled?: boolean;
 }) {
+  const items = [
+    ...options.map((o) => ({ id: o, name: o })),
+    { id: CUSTOM_MODEL_KEY, name: "自訂模型…" },
+  ];
   return (
     <Select
       className="llm-select"
@@ -73,7 +81,7 @@ function ModelSelect({
         </svg>
       </AriaButton>
       <Popover className="llm-select-pop" offset={4}>
-        <ListBox className="llm-select-list" items={options.map((o) => ({ id: o, name: o }))}>
+        <ListBox className="llm-select-list" items={items}>
           {(item) => (
             <ListBoxItem id={item.id} textValue={item.name} className="llm-select-item">
               <span>{item.name}</span>
@@ -100,9 +108,11 @@ export default function LlmSettings() {
   const [providerModels, setProviderModels] = useState<Record<LlmProviderName, string[]>>({
     anthropic: [], openai: [], google: [], ollama: [], deepseek: [],
   });
+  const [platformDefault, setPlatformDefault] = useState<LlmConfigGetResponse["platformDefault"] | null>(null);
 
   const [provider, setProvider] = useState<LlmProviderName>("anthropic");
   const [model, setModel] = useState("");
+  const [customModel, setCustomModel] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
 
@@ -115,16 +125,20 @@ export default function LlmSettings() {
     try {
       const res = await getLlmConfig(tenantId);
       setProviderModels(res.providerModels);
+      setPlatformDefault(res.platformDefault);
       if (res.config) {
         setCurrent(res.config);
         setProvider(res.config.provider);
         setModel(res.config.model);
+        // 已存的模型不在建議清單裡（自訂 / 微調）· 直接進自訂模式，不要被下拉洗掉
+        setCustomModel(!(res.providerModels[res.config.provider] ?? []).includes(res.config.model));
         setBaseUrl(res.config.baseUrl ?? "");
         setApiKey("");
       } else {
         setCurrent(null);
         setProvider("anthropic");
         setModel(res.providerModels.anthropic[0] ?? "");
+        setCustomModel(false);
         setBaseUrl("");
         setApiKey("");
       }
@@ -142,14 +156,19 @@ export default function LlmSettings() {
   useEffect(() => { void fetchConfig(selectedTenantId); }, [fetchConfig, selectedTenantId]);
 
   useEffect(() => {
+    if (customModel) return;                       // 自訂模式下不要把使用者打的字改掉
     const models = providerModels[provider];
     if (models?.length > 0 && !models.includes(model)) setModel(models[0]);
-  }, [provider, providerModels, model]);
+  }, [provider, providerModels, model, customModel]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedTenantId) {
       toast.show("請先於上方選擇租戶", "danger");
+      return;
+    }
+    if (!model.trim()) {
+      toast.show("請選擇模型 · 或於自訂欄位輸入模型名稱", "danger");
       return;
     }
     if (providerCfg.needsKey && !apiKey.trim() && !current) {
@@ -231,7 +250,7 @@ export default function LlmSettings() {
       <div className="llm-page">
       <h1>語言模型設定</h1>
       <p style={{ color: "var(--ink-3)", marginTop: 4, marginBottom: 20, fontSize: 13 }}>
-        由 aiproot 統一管理 · 為 <b>{selectedTenant?.tenantName ?? "當前租戶"}</b> 設定 AI 對話分析採用的模型。API 金鑰加密保存，僅在分析當下解密使用。
+        由 aiproot 統一管理 · 為 <b>{selectedTenant?.tenantName ?? "當前租戶"}</b> 設定 AI 對話分析採用的模型。API 金鑰以 AES-256 加密存放，介面只顯示遮罩。
       </p>
 
       <TenantPicker tenants={tenants} value={selectedTenantId} onChange={setSelectedTenantId} />
@@ -248,8 +267,15 @@ export default function LlmSettings() {
         </div>
       ) : (
         <div className="dm-empty" style={{ marginTop: 16 }}>
-          此租戶尚未設定 · <b>使用平台預設</b>（env <code>ANTHROPIC_API_KEY</code> · Anthropic Opus 4.7）
-          <div className="dm-empty-hint">如要為此租戶客製 provider / model · 於下方填表儲存</div>
+          此租戶尚未設定 · <b>使用平台預設</b>
+          {platformDefault && (
+            <>（{PROVIDER_BY_NAME[platformDefault.provider]?.label ?? platformDefault.provider} <code>{platformDefault.model}</code>）</>
+          )}
+          <div className="dm-empty-hint">
+            {platformDefault && !platformDefault.apiKeyConfigured
+              ? "⚠ 伺服器未設定平台金鑰（env ANTHROPIC_API_KEY）· 此租戶目前無法執行分析 · 請於下方為它設定，或請維運補上 env"
+              : "如要為此租戶客製 provider / model · 於下方填表儲存"}
+          </div>
         </div>
       )}
 
@@ -258,7 +284,7 @@ export default function LlmSettings() {
           <label>供應商</label>
           <RadioGroup
             value={provider}
-            onChange={(v) => setProvider(v as LlmProviderName)}
+            onChange={(v) => { setProvider(v as LlmProviderName); setCustomModel(false); }}
             className="llm-provider-grid"
             aria-label="語言模型供應商"
           >
@@ -278,17 +304,34 @@ export default function LlmSettings() {
 
         <div className="field">
           <label>模型</label>
-          {providerModels[provider]?.length > 0 ? (
-            <ModelSelect
+          <ModelSelect
+            value={customModel ? CUSTOM_MODEL_KEY : model}
+            options={providerModels[provider] ?? []}
+            onChange={(v) => {
+              if (v === CUSTOM_MODEL_KEY) {
+                setCustomModel(true);
+                setModel("");
+              } else {
+                setCustomModel(false);
+                setModel(v);
+              }
+            }}
+            disabled={saving}
+          />
+          {customModel && (
+            <input
+              type="text"
               value={model}
-              options={providerModels[provider]}
-              onChange={setModel}
+              onChange={(e) => setModel(e.target.value)}
               disabled={saving}
+              placeholder="輸入模型名稱 · 例 claude-opus-5"
+              style={{ marginTop: 8 }}
+              autoFocus
             />
-          ) : (
-            <input type="text" value={model} onChange={(e) => setModel(e.target.value)} disabled={saving} placeholder="請輸入模型名稱" />
           )}
-          <div className="llm-hint">供應商支援的模型 · 若使用自行微調的模型可手動輸入</div>
+          <div className="llm-hint">
+            清單是常用模型 · 不是限制。微調模型或還沒收錄的新版本，選「自訂模型…」直接輸入名稱
+          </div>
         </div>
 
         {providerCfg.needsKey && (
@@ -302,7 +345,7 @@ export default function LlmSettings() {
               placeholder={current?.apiKeyMasked ? `目前 ${current.apiKeyMasked} · 若不變更請重新輸入` : "sk-..."}
               autoComplete="new-password"
             />
-            <div className="llm-hint">以 AES-256 加密存入資料庫 · 介面僅顯示遮罩內容 · 明碼永不外傳</div>
+            <div className="llm-hint">以 AES-256 加密存入資料庫 · 介面僅顯示遮罩內容 · 明碼不會回傳前端</div>
           </div>
         )}
 

@@ -896,7 +896,14 @@ export interface LlmConfigMasked {
 
 export interface LlmConfigGetResponse {
   config: LlmConfigMasked | null;
+  /** 各 provider 的建議模型 · 只是預選清單，不是白名單（可自訂輸入）*/
   providerModels: Record<LlmProviderName, string[]>;
+  /** 租戶沒設定時實際會用的平台預設（來自 server env）· 別在前端寫死 */
+  platformDefault: {
+    provider: LlmProviderName;
+    model: string;
+    apiKeyConfigured: boolean;
+  };
 }
 
 // aiproot 統管 · 需帶 tenantId · 未帶或非 aiproot_admin 都會被 backend 擋
