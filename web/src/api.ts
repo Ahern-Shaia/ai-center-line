@@ -1059,6 +1059,8 @@ export interface DepartmentDto {
   ragicTable: string | null;
   memberCount: number;
   groupBindingCount: number;
+  /** 綁在此部門的 LINE 群名 · 講「哪一群」而不是只講「1 個」（舊版本後端可能沒有這欄）*/
+  boundGroupNames?: string[];
 }
 
 export interface TenantUserDto {

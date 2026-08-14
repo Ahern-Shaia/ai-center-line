@@ -11,6 +11,20 @@ import {
 import { useToast } from "../../Toast";
 import Drawer from "../../shared/Drawer";
 
+/**
+ * 刪不掉的原因 · 兩道條件都要列。
+ * 只講第一道的話，使用者解完那道回來會再撞第二道 —— 兩次都以為快好了。
+ */
+function deleteBlockedReason(d: DepartmentDto): string {
+  const parts: string[] = [];
+  if (d.memberCount > 0) parts.push(`尚有 ${d.memberCount} 名成員（到「成員」分頁改分派或移除）`);
+  if (d.groupBindingCount > 0) {
+    const names = d.boundGroupNames?.length ? `：${d.boundGroupNames.join("、")}` : "";
+    parts.push(`尚綁 ${d.groupBindingCount} 群${names}（到「LINE 機器人管理」把該群的「分派部門」改成「未分派」）`);
+  }
+  return parts.length === 0 ? "" : `不可刪除 —— ${parts.join("；")}`;
+}
+
 export function Departments({
   tenantId, canEdit, onChanged,
 }: {
@@ -82,7 +96,7 @@ export function Departments({
                           className="btn btn-sm btn-ghost"
                           onClick={() => setConfirmDelete(d)}
                           disabled={d.memberCount > 0 || d.groupBindingCount > 0}
-                          title={d.memberCount > 0 ? `尚有 ${d.memberCount} 名成員 · 不可刪除` : d.groupBindingCount > 0 ? `尚綁 ${d.groupBindingCount} 群 · 不可刪除` : ""}
+                          title={deleteBlockedReason(d)}
                         >
                           刪除
                         </button>
@@ -196,8 +210,25 @@ function DeptDrawer({
           <div className="dm-info-note">
             <div className="dm-info-note-lbl">現況資訊</div>
             <div>成員 {dept.memberCount} 人 · 綁定 LINE 群 {dept.groupBindingCount} 個</div>
-            {dept.groupBindingCount > 0 && (
-              <div className="dm-info-note-hint">如需刪除此部門 · 需先到「LINE 機器人管理」解除群綁定</div>
+            {/* 兩道刪除條件一次講完、而且要寫出「去哪、按什麼」。
+                原本只提群綁定 → 使用者解完綁定回來，再撞一次成員那道。
+                而且「解除綁定」在 LINE 機器人管理頁不是這個字，那裡叫「分派部門」選「未分派」。*/}
+            {(dept.memberCount > 0 || dept.groupBindingCount > 0) && (
+              <div className="dm-info-note-hint">
+                此部門目前<b>不可刪除</b>，需先處理：
+                <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
+                  {dept.memberCount > 0 && (
+                    <li>成員 {dept.memberCount} 人 —— 到上方「成員」分頁改分派或移除</li>
+                  )}
+                  {dept.groupBindingCount > 0 && (
+                    <li>
+                      綁定 LINE 群 {dept.groupBindingCount} 個
+                      {dept.boundGroupNames?.length ? `：${dept.boundGroupNames.join("、")}` : ""}
+                      {" "}—— 到「LINE 機器人管理」找到該群，把「分派部門」改成<b>「未分派」</b>
+                    </li>
+                  )}
+                </ul>
+              </div>
             )}
           </div>
         )}

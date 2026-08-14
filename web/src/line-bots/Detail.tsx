@@ -115,7 +115,9 @@ export function BotDetail({
             <tr>
               <th>群顯示名稱</th>
               <th>群組 ID</th>
-              <th>分派部門</th>
+              {/* 「解除綁定」這四個字只出現在部門頁的提示裡，這頁完全沒有 ——
+                  使用者被叫來這裡解綁，卻找不到叫這個名字的東西。補一行對照詞。*/}
+              <th>分派部門<span className="lbot-th-hint">選「未分派」即解除綁定</span></th>
               <th className="num">事件</th>
               <th>最近事件</th>
               <th></th>
