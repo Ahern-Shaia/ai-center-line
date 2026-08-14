@@ -28,11 +28,17 @@ interface SelectableField { path: string; label: string; numeric?: boolean }
  */
 const KEEP = "__keep__";
 
-export default function Wizard({ ruleId, onDone, onCancel }: {
-  ruleId?: string; onDone: () => void; onCancel: () => void;
+export default function Wizard({ ruleId, copyFrom, onDone, onCancel }: {
+  ruleId?: string;
+  /** 以既有規則為範本開一條**新**規則（清單的「複製規則」）· 預填但走建立流程 */
+  copyFrom?: string;
+  onDone: () => void;
+  onCancel: () => void;
 }) {
   const toast = useToast();
   const editing = !!ruleId;
+  const copying = !ruleId && !!copyFrom;
+  const prefillId = ruleId ?? copyFrom;
 
   // 來源型別
   const [sourceType, setSourceType] = useState<NotifySourceType>("ragic_form");
@@ -88,12 +94,12 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
     try { setAccounts(await ncListAccounts()); } catch { /* ignore */ }
   }, []);
 
-  // 編輯模式 · 把既有設定填回畫面
+  // 編輯模式（或以既有規則為範本複製）· 把設定填回畫面
   useEffect(() => {
-    if (!ruleId) return;
+    if (!prefillId) return;
     void (async () => {
       try {
-        const r = await ncGetRule(ruleId);
+        const r = await ncGetRule(prefillId);
         setSourceType(r.sourceType);
         setAccountId(r.ragicAccountId ?? "");
         setSheetPath(r.sheetPath ?? "");
@@ -108,7 +114,9 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
         // 舊規則沒有 botId。曾經是留空強迫重選 —— 但那些規則的目標群通常不屬於任何
         // 已註冊的 bot，選了 bot 就得換掉目的地才存得下去。2026-08-12 因此把兩條
         // 正常運作的規則改指到別家的群。改成預設 KEEP：不選就是不動。
-        setBotId(r.botId || KEEP);
+        // 複製是「建立」· KEEP（維持現有設定）在建立流程沒有意義，會送出 botId=undefined
+        // 建出一條沒有機器人的規則。所以複製時來源沒有 botId 就留空，強迫選一支。
+        setBotId(copying ? (r.botId ?? "") : (r.botId || KEEP));
         // 先用規則裡存的欄位讓畫面立刻有東西
         setFields(r.fields.map((f) => ({ path: f.path, label: f.label })));
         setSelected(r.fields.slice().sort((a, b) => a.order - b.order).map((f) => f.path));
@@ -133,7 +141,7 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
         toast.show(e instanceof ApiError ? e.message : "載入規則失敗", "danger");
       }
     })();
-  }, [ruleId, toast]);
+  }, [prefillId, copying, toast]);
   useEffect(() => { void loadAccounts(); }, [loadAccounts]);
   useEffect(() => { ncEventCatalog().then(setCatalog).catch(() => setCatalog([])); }, []);
   useEffect(() => { ncNotifiableUsers().then(setUsers).catch(() => setUsers([])); }, []);
@@ -316,7 +324,8 @@ export default function Wizard({ ruleId, onDone, onCancel }: {
   return (
     <div className="pane">
       <div className="pane-hdr"><div>
-        <h1>{editing ? "編輯通知規則" : "新增通知規則"}</h1>
+        {/* 複製要講清楚 —— 畫面預填了別條規則的內容，寫「新增」會讓人以為是自己上次沒存完 */}
+        <h1>{editing ? "編輯通知規則" : copying ? "複製通知規則" : "新增通知規則"}</h1>
         <div className="sub">選觸發來源 → 勾要通知的欄位 → 選通知對象 · 免寫程式</div>
       </div>
       <div><button className="btn" onClick={onCancel}>取消</button></div>

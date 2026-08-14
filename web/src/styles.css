@@ -2174,12 +2174,15 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .nc-tbl.fixed { table-layout:fixed; }
 /* 八個欄位 × 左右各 16px，光 padding 就吃掉整張表 23% 的寬度 ——
    實測 980px 下「Ragic 表單」「啟用」「編輯」全被折成兩行。收窄到 10px。*/
-.nc-tbl.fixed th, .nc-tbl.fixed td { padding-left:10px; padding-right:10px; }
+/* 通知規則／紀錄表格的內距照 mockup（th 10/14、td 11/14）· 只有這兩張表用 .fixed */
+.nc-tbl.fixed th { padding:10px 14px; white-space:nowrap; }
+.nc-tbl.fixed td { padding:11px 14px; }
 .nc-tbl th { text-align:left; font-size:11px; color:var(--ink-3); font-weight:600; text-transform:uppercase; letter-spacing:.04em; padding:11px 16px; border-bottom:1px solid var(--line); background:var(--well); }
 .nc-tbl td { padding:13px 16px; border-bottom:1px solid var(--line-2); font-size:13.5px; vertical-align:middle; }
 .nc-tbl tr:last-child td { border-bottom:none; }
-.nc-t-name { font-weight:600; color:var(--ink); }
-.nc-t-sub { font-size:11.5px; color:var(--ink-3); margin-top:2px; }
+/* mockup：過長內容一律單行截斷，不換行（八欄擠壓時「8 個欄位」會被折成兩行）*/
+.nc-t-name { font-weight:600; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.nc-t-sub { font-size:11.5px; color:var(--ink-3); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .nc-t-mono { font-family:var(--mono, monospace); }
 .nc-pill { display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:2px 8px; border-radius:999px; font-weight:600; white-space:nowrap; }
 .nc-pill.on { background:var(--ok-tint); color:var(--ok); }
@@ -2211,8 +2214,11 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 
 /* 規則清單的篩選列 */
 .nc-tb { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
-.nc-tb-search { flex:1; min-width:240px; }
-.nc-tb-search .tf { width:100%; }
+.nc-tb-search { flex:1; min-width:240px; position:relative; }
+.nc-tb-search .tf { width:100%; padding-left:32px; }
+.nc-tb-search .ic { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--ink-3); font-size:13px; pointer-events:none; }
+/* 已套用的下拉要看得出來（mockup .sel.on）· 只靠下方標籤列的話，掃工具列時看不出哪個有生效 */
+.nc-tb .llm-select.on .llm-select-btn { border-color:var(--primary); color:var(--primary-2); background:var(--primary-tint); }
 
 /* 已套用的條件 · 查證的 Datadog / Grafana / Zapier / Make / GitHub 都沒有做這件事，
    但「為什麼只剩三筆」是最常見的困惑來源 */
@@ -2256,6 +2262,49 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .nc-lnk { color:var(--primary-2); font-size:12.5px; cursor:pointer; background:none; border:none; padding:0; font:inherit; white-space:nowrap; }
 .nc-lnk.mut { color:var(--ink-3); }
 .nc-lnk.danger { color:var(--danger); }
+
+/* ── 通知規則／紀錄清單 · 數值取自 docs/mockup/notify-rules-B-flat.html、notify-logs-B.html ──
+   這些不是裝飾：三格觸發要位置固定才能整欄掃視（Grafana / Datadog 的做法），
+   燈點是「這條規則指到沒登錄的群」的唯一視覺提示。改這裡前先看 mockup。 */
+
+/* 觸發：新／更／刪 三格固定位置 · 沒開的變灰而不是消失 */
+.nc-trig { display:inline-flex; gap:3px; }
+.nc-trig i { font-style:normal; font-size:11px; font-weight:600; width:20px; height:20px; line-height:20px;
+  text-align:center; border-radius:4px; background:var(--primary-tint); color:var(--primary-2); }
+.nc-trig i.no { background:var(--well); color:#C3C8D0; }
+
+/* 通知對象：燈點＋群名；沒登錄的群不吐 33 碼原始 ID，只留尾碼可對照 */
+.nc-dot { width:6px; height:6px; border-radius:50%; display:inline-block; flex-shrink:0; }
+.nc-dot.ok { background:var(--ok); }
+.nc-dot.off { background:#C3C8D0; }
+.nc-dot.warn { background:var(--warn); }
+.nc-tgt { display:flex; align-items:center; gap:6px; min-width:0; }
+.nc-tgt .nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
+.nc-tgt .unreg { color:var(--warn); font-size:12.5px; white-space:nowrap; }
+.nc-tgt .id { font-family:var(--mono, monospace); font-size:11px; color:var(--ink-3); }
+
+/* 數量欄右對齊＋等寬數字 —— 整欄才對得齊 */
+.nc-num { text-align:right; font-variant-numeric:tabular-nums; color:var(--ink-2); }
+.nc-tbl th.nc-num { text-align:right; }
+.nc-num.mono { font-family:var(--mono, monospace); font-size:12px; }
+
+/* 分頁：數字頁碼＋每頁筆數 */
+.nc-pg.on { background:var(--primary); border-color:var(--primary); color:#fff; font-weight:700; }
+.nc-pg-gap { color:var(--ink-3); padding:0 2px; }
+.nc-psize { display:inline-flex; align-items:center; gap:6px; }
+.nc-psize select { border:1px solid var(--line); border-radius:var(--r); padding:4px 6px;
+  font-family:inherit; font-size:12.5px; color:var(--ink-2); background:var(--surface); }
+
+/* 通知紀錄的展開列 · 獨立一列橫跨表格，不是塞在某個儲存格裡 */
+.nc-exp td { background:#FAFBFC; border-bottom:1px solid var(--line); padding:0 14px 14px; }
+.nc-exp-in { border-left:2px solid var(--primary); padding:2px 0 2px 12px; }
+.nc-exp-h { font-size:11px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.04em;
+  margin:10px 0 5px; font-weight:600; }
+.nc-diag { display:flex; gap:8px; flex-wrap:wrap; font-size:11.5px; }
+.nc-diag span { background:var(--surface); border:1px solid var(--line); border-radius:999px;
+  padding:2px 9px; color:var(--ink-2); }
+.nc-diag span b { color:var(--ink); }
+.nc-diag span.bad { border-color:#F3C6CF; background:var(--danger-tint); color:var(--danger); }
 
 /* ==============================================
    PE-M5 · 權限管理 UI

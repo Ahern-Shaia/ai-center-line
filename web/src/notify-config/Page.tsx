@@ -5,22 +5,34 @@ import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import Wizard from "./Wizard";
 import LogsTab from "./LogsTab";
-import RuleFilters, { matchRule, PAGE_SIZE, type RuleFilterState, EMPTY_FILTERS } from "./RuleFilters";
+import RuleFilters, { matchRule, DEFAULT_PAGE_SIZE, type RuleFilterState, EMPTY_FILTERS } from "./RuleFilters";
+import Pager from "./Pager";
 
-const SOURCE_LABEL: Record<string, string> = { ragic_form: "Ragic 表單", internal_event: "系統事件" };
+const SOURCE_LABEL: Record<string, string> = { ragic_form: "Ragic", internal_event: "系統事件" };
 const CHANNEL_LABEL: Record<string, string> = { line_group: "LINE 群組", line_user: "LINE 私訊" };
+
+/**
+ * 觸發欄的三格（新／更／刪）· 沒開的變灰而不是消失 —— 位置固定整欄才掃得動。
+ * 後端目前只回組好的 `eventsLabel` 字串，所以這裡反推。有了 API 的布林欄位就改讀那個。
+ * （「更新」不含「新增」，比對安全）
+ */
+const TRIGGERS: Array<{ key: string; short: string }> = [
+  { key: "新增", short: "新" },
+  { key: "更新", short: "更" },
+  { key: "刪除", short: "刪" },
+];
 
 /**
  * 目標群沒登錄時，後端的 channelLabel 會退回原始 channelTarget（33 碼）。
  * 那串 ID 對人沒有意義，卻會撐爆欄寬 —— 但「指到我方沒有紀錄的群」是要處理的狀態，
  * 所以不是藏起來，是講清楚並留尾碼可對照。
  */
-function targetView(r: NotifyRuleRow): { text: string; unregistered: boolean; title: string } {
+function targetView(r: NotifyRuleRow): { text: string; idSuffix: string | null; unregistered: boolean; title: string } {
   const raw = r.channelTarget ?? "";
   const unregistered = r.channelType === "line_group" && raw !== "" && r.channelLabel === raw;
   return unregistered
-    ? { text: `未登錄的群組 …${raw.slice(-7)}`, unregistered: true, title: raw }
-    : { text: r.channelLabel, unregistered: false, title: r.channelLabel };
+    ? { text: "未登錄的群組", idSuffix: `…${raw.slice(-7)}`, unregistered: true, title: raw }
+    : { text: r.channelLabel, idSuffix: null, unregistered: false, title: r.channelLabel };
 }
 
 // 通知設定（aiproot）· 規則列表 + 新增 wizard · 來源/管道無關
@@ -28,6 +40,7 @@ export default function NotifyConfigPage() {
   const toast = useToast();
   const [mode, setMode] = useState<"list" | "wizard">("list");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [copyFromId, setCopyFromId] = useState<string | null>(null);
   const [tab, setTab] = useState<"rules" | "logs">("rules");
   const [rules, setRules] = useState<NotifyRuleRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,13 +48,16 @@ export default function NotifyConfigPage() {
   const [busy, setBusy] = useState(false);
   const [filters, setFilters] = useState<RuleFilterState>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [menuFor, setMenuFor] = useState<string | null>(null);
 
   const shown = useMemo(() => rules.filter((r) => matchRule(r, filters)), [rules, filters]);
-  const pageCount = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(shown.length / pageSize));
   // ⚠️ 篩選一變就回第 1 頁 —— 停在第 2 頁時收窄篩選，結果只剩 1 頁就會是空白畫面
   const changeFilters = (next: RuleFilterState) => { setFilters(next); setPage(1); setMenuFor(null); };
-  const pageRows = shown.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // 每頁筆數變大時當前頁可能超出範圍（第 4 頁 × 10 筆 → 改成 100 筆只剩 1 頁）
+  const changePageSize = (n: number) => { setPageSize(n); setPage(1); setMenuFor(null); };
+  const pageRows = shown.slice((page - 1) * pageSize, page * pageSize);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -80,7 +96,15 @@ export default function NotifyConfigPage() {
   }
 
   if (mode === "wizard") {
-    return <Wizard ruleId={editingId ?? undefined} onDone={() => { setMode("list"); setEditingId(null); void load(); }} onCancel={() => { setMode("list"); setEditingId(null); }} />;
+    const leave = () => { setMode("list"); setEditingId(null); setCopyFromId(null); };
+    return (
+      <Wizard
+        ruleId={editingId ?? undefined}
+        copyFrom={copyFromId ?? undefined}
+        onDone={() => { leave(); void load(); }}
+        onCancel={leave}
+      />
+    );
   }
 
   return (
@@ -88,9 +112,10 @@ export default function NotifyConfigPage() {
       <div className="pane-hdr">
         <div>
           <h1>通知設定</h1>
-          <div className="sub">一條規則＝什麼事發生（來源）→ 通知誰（管道）· 支援 Ragic 表單異動與系統內部事件</div>
+          {/* 權限說明本來掛在分頁列右側，但那個位置照 mockup 改成「每頁筆數」了 —— 資訊不能因此消失 */}
+          <div className="sub">一條規則＝什麼事發生（來源）→ 通知誰（管道）· 支援 Ragic 表單異動與系統內部事件<br />僅具「通知設定」權限的 aiproot 員工可見與管理</div>
         </div>
-        <div><button className="btn btn-primary" onClick={() => { setEditingId(null); setMode("wizard"); }}>＋ 新增通知規則</button></div>
+        <div><button className="btn btn-primary" onClick={() => { setEditingId(null); setCopyFromId(null); setMode("wizard"); }}>＋ 新增通知規則</button></div>
       </div>
 
       <div className="dm-tabs">
@@ -114,11 +139,17 @@ export default function NotifyConfigPage() {
               <div className="dm-empty-hint">試著放寬篩選，或按上方「清除全部」。</div>
             </div>
           ) : (
+          // 欄寬照 mockup 的 colgroup（23/18/11/7/21/8/12）· 七欄不是八欄：
+          // 「來源表單」是一格（Ragic 標籤＋路徑），拆成兩欄會把省下來的寬度又吃回去
           <table className="nc-tbl fixed">
+            <colgroup>
+              <col style={{ width: "23%" }} /><col style={{ width: "18%" }} /><col style={{ width: "11%" }} />
+              <col style={{ width: "7%" }} /><col style={{ width: "21%" }} /><col style={{ width: "8%" }} />
+              <col style={{ width: "12%" }} />
+            </colgroup>
             <thead><tr>
-              <th style={{ width: "22%" }}>規則</th><th style={{ width: "11%" }}>來源</th><th style={{ width: "15%" }}>來源對象</th>
-              <th style={{ width: "11%" }}>觸發</th><th style={{ width: "7%" }}>欄位</th>
-              <th style={{ width: "16%" }}>通知對象</th><th style={{ width: "8%" }}>狀態</th><th style={{ width: "10%" }}>操作</th>
+              <th>規則</th><th>來源表單</th><th>觸發</th><th className="nc-num">欄位</th>
+              <th>通知對象</th><th>狀態</th><th className="nc-num">操作</th>
             </tr></thead>
             <tbody>
               {pageRows.map((r) => {
@@ -129,12 +160,26 @@ export default function NotifyConfigPage() {
                     <div className="nc-t-name" title={r.name}>{r.name}</div>
                     {r.accountDisplayName && <div className="nc-t-sub">{r.accountDisplayName}</div>}
                   </td>
-                  <td><span className="nc-pill ev">{SOURCE_LABEL[r.sourceType] ?? r.sourceType}</span></td>
-                  <td><div className="nc-clip nc-t-mono" title={r.sourceLabel}>{r.sourceLabel}</div></td>
-                  <td><div className="nc-clip" title={r.eventsLabel}>{r.eventsLabel}</div></td>
-                  <td style={{ whiteSpace: "nowrap" }} title={r.fieldLabels.join("、")}>{r.fieldCount} 欄</td>
                   <td>
-                    <div className={`nc-clip${t.unregistered ? " warn" : ""}`} title={t.title}>{t.text}</div>
+                    <span className="nc-pill ev">{SOURCE_LABEL[r.sourceType] ?? r.sourceType}</span>
+                    {/* 不加 nc-clip：nowrap 會讓整段路徑被當成一個不可斷的單位、整條掉到第二行。
+                        mockup 是讓路徑自己在 `-` 處斷（/order- / operation/4），這裡跟著它 */}
+                    <span className="nc-t-mono" style={{ fontSize: 12 }} title={r.sourceLabel}>{r.sourceLabel}</span>
+                  </td>
+                  <td>
+                    <span className="nc-trig" title={r.eventsLabel || "未選擇任何異動"}>
+                      {TRIGGERS.map((tr) => (
+                        <i key={tr.key} className={r.eventsLabel.includes(tr.key) ? undefined : "no"}>{tr.short}</i>
+                      ))}
+                    </span>
+                  </td>
+                  <td className="nc-num" title={r.fieldLabels.join("、")}>{r.fieldCount}</td>
+                  <td>
+                    <div className="nc-tgt" title={t.title}>
+                      <span className={`nc-dot ${t.unregistered ? "warn" : r.enabled ? "ok" : "off"}`} />
+                      <span className={t.unregistered ? "unreg" : "nm"}>{t.text}</span>
+                      {t.idSuffix && <span className="id">{t.idSuffix}</span>}
+                    </div>
                     <div className="nc-t-sub">{CHANNEL_LABEL[r.channelType] ?? r.channelType}</div>
                   </td>
                   <td>{r.enabled ? <span className="nc-pill on">啟用</span> : <span className="nc-pill off">停用</span>}</td>
@@ -154,6 +199,8 @@ export default function NotifyConfigPage() {
                             {r.webhookToken && (
                               <button onClick={() => { copyWebhook(r.webhookToken as string); setMenuFor(null); }}>複製 Webhook 網址</button>
                             )}
+                            {/* 同一張表單常要開好幾條只差通知對象的規則 · 從頭走一次精靈要重挑欄位 */}
+                            <button onClick={() => { setCopyFromId(r.ruleId); setEditingId(null); setMenuFor(null); setMode("wizard"); }}>複製規則</button>
                             <button onClick={() => { void toggleEnabled(r); setMenuFor(null); }}>{r.enabled ? "停用" : "啟用"}</button>
                             <div className="nc-menu-sep" />
                             <button className="danger" onClick={() => { setDelTarget(r); setMenuFor(null); }}>刪除</button>
@@ -169,20 +216,15 @@ export default function NotifyConfigPage() {
           </table>
           )}
           {shown.length > 0 && (
-            <div className="nc-pager">
-              <div>
-                第 {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, shown.length)} 筆，共 <b>{shown.length}</b> 筆
-                {shown.length !== rules.length && `（全部 ${rules.length} 筆）`}
-              </div>
-              {pageCount > 1 && (
-                <div className="nc-pages">
-                  <button className="nc-pg" disabled={page <= 1} onClick={() => { setPage(page - 1); setMenuFor(null); }}>‹</button>
-                  <span className="nc-pg-at">第 {page} / {pageCount} 頁</span>
-                  <button className="nc-pg" disabled={page >= pageCount} onClick={() => { setPage(page + 1); setMenuFor(null); }}>›</button>
-                </div>
-              )}
-              <div>僅具「通知設定」權限的 aiproot 員工可見與管理</div>
-            </div>
+            <Pager
+              page={page}
+              pageCount={pageCount}
+              total={shown.length}
+              pageSize={pageSize}
+              onPage={(p) => { setPage(p); setMenuFor(null); }}
+              onPageSize={changePageSize}
+              summarySuffix={shown.length !== rules.length ? `（全部 ${rules.length} 筆）` : undefined}
+            />
           )}
         </>
       )}

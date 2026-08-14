@@ -10,7 +10,8 @@ import type { NotifyRuleRow } from "../api";
 // 分頁做在前端：目前 10 條規則，可預見是數十到數百。後端分頁沒有收益，
 // 還會讓每次改篩選都多一次來回。紀錄頁才需要 server-side（筆數單調成長）。
 
-export const PAGE_SIZE = 20;
+/** 預設每頁筆數 · 使用者可在分頁列改（mockup 的 10/20/50/100，預設 20）*/
+export const DEFAULT_PAGE_SIZE = 20;
 
 export interface RuleFilterState {
   q: string;
@@ -44,6 +45,9 @@ export function matchRule(r: NotifyRuleRow, f: RuleFilterState): boolean {
     .some((s) => s.toLowerCase().includes(q));
 }
 
+/** 有值的下拉要標成「已套用」（mockup .sel.on）· 工具列本身就要看得出哪幾個在生效 */
+const sel = (v: string) => (v ? "llm-select on" : "llm-select");
+
 export default function RuleFilters({ rules, value, onChange }: {
   rules: NotifyRuleRow[];
   value: RuleFilterState;
@@ -62,18 +66,23 @@ export default function RuleFilters({ rules, value, onChange }: {
     <>
       <div className="nc-tb">
         <div className="nc-tb-search">
+          <span className="ic" aria-hidden>⌕</span>
           <input className="tf" value={value.q} onChange={(e) => set({ q: e.target.value })}
             placeholder="搜尋規則名稱、表單路徑、群組名稱或通知欄位" />
         </div>
         <StyledSelect ariaLabel="客戶" value={value.account} onChange={(v) => set({ account: v })}
+          className={sel(value.account)}
           allowEmpty emptyLabel="全部客戶" placeholder="全部客戶"
           items={accounts.map((a) => ({ id: a, label: a }))} />
         <StyledSelect ariaLabel="來源" value={value.sourceType} onChange={(v) => set({ sourceType: v })}
+          className={sel(value.sourceType)}
           allowEmpty emptyLabel="全部來源" placeholder="全部來源"
           items={[{ id: "ragic_form", label: "Ragic 表單" }, { id: "internal_event", label: "系統事件" }]} />
         <StyledSelect ariaLabel="觸發" value={value.event} onChange={(v) => set({ event: v })}
+          className={sel(value.event)}
           allowEmpty emptyLabel="全部觸發" placeholder="全部觸發" items={EVENTS} />
         <StyledSelect ariaLabel="狀態" value={value.enabled} onChange={(v) => set({ enabled: v })}
+          className={sel(value.enabled)}
           allowEmpty emptyLabel="全部狀態" placeholder="全部狀態"
           items={[{ id: "true", label: "啟用" }, { id: "false", label: "停用" }]} />
       </div>

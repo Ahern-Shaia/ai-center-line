@@ -2,6 +2,7 @@ import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, ncListLogs, ncListRules, type NotifyLogPage, type NotifyLogRow, type NotifyRuleRow } from "../api";
 import StyledSelect from "../shared/StyledSelect";
+import Pager from "./Pager";
 import { useToast } from "../Toast";
 
 // 通知紀錄 · 回答「Ragic 改了為什麼沒通知」
@@ -125,45 +126,62 @@ export default function LogsTab() {
           )}
         </div>
       ) : (
+        // 欄寬照 mockup 的 colgroup（15/23/13/19/22/8）
         <table className="nc-tbl fixed">
+          <colgroup>
+            <col style={{ width: "15%" }} /><col style={{ width: "23%" }} /><col style={{ width: "13%" }} />
+            <col style={{ width: "19%" }} /><col style={{ width: "22%" }} /><col style={{ width: "8%" }} />
+          </colgroup>
           <thead><tr>
-            <th style={{ width: "15%" }}>時間</th><th style={{ width: "23%" }}>規則</th>
-            <th style={{ width: "13%" }}>結果</th><th style={{ width: "18%" }}>來源對象</th>
-            <th style={{ width: "21%" }}>說明</th><th style={{ width: "10%" }}>耗時</th>
+            <th>時間</th><th>規則</th><th>結果</th><th>來源對象</th><th>說明</th><th className="nc-num">耗時</th>
           </tr></thead>
           <tbody>
             {rows.map((r, i) => {
               const s = STATUS[r.status] ?? { label: r.status, tone: "mut" as const, why: "" };
-              return (
-                <tr key={i} onClick={() => setOpen(open === i ? null : i)} style={{ cursor: "pointer" }}>
+              const expanded = open === i;
+              return [
+                <tr key={`r${i}`} onClick={() => setOpen(expanded ? null : i)} style={{ cursor: "pointer" }}>
                   <td className="nc-t-mono" style={{ fontSize: 12 }}>{formatTime(r.receivedAt)}</td>
-                  <td>
-                    <div className="nc-t-name">{ruleLabel(r.ruleId, r.ruleName)}</div>
-                    {open === i && r.messageText && <div className="nc-log-msg">{r.messageText}</div>}
-                    {open === i && <Diagnostics audit={r.audit} />}
-                  </td>
+                  <td><div className="nc-t-name">{ruleLabel(r.ruleId, r.ruleName)}</div></td>
                   <td><span className={`nc-pill ${s.tone}`}>{s.label}</span></td>
                   {/* 截斷一律配 title —— 截斷但沒有提示等於資訊消失 */}
                   <td><div className="nc-clip nc-t-mono" title={sourceLabel(r)}>{sourceLabel(r)}</div></td>
                   <td><div className="nc-clip" title={whyText(r, s.why)}>{whyText(r, s.why)}</div></td>
-                  <td className="nc-t-mono" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{r.latencyMs != null ? `${r.latencyMs} ms` : "—"}</td>
-                </tr>
-              );
+                  <td className="nc-num mono">{r.latencyMs != null ? `${r.latencyMs} ms` : "—"}</td>
+                </tr>,
+                // 展開內容自己一列橫跨表格 · 塞在「規則」儲存格裡會被 23% 欄寬夾扁
+                expanded && (r.messageText || r.audit) ? (
+                  <tr key={`x${i}`} className="nc-exp">
+                    <td />
+                    <td colSpan={5}>
+                      <div className="nc-exp-in">
+                        {r.messageText && (
+                          <>
+                            <div className="nc-exp-h">實際送出的訊息</div>
+                            <div className="nc-log-msg">{r.messageText}</div>
+                          </>
+                        )}
+                        <Diagnostics audit={r.audit} />
+                      </div>
+                    </td>
+                  </tr>
+                ) : null,
+              ];
             })}
           </tbody>
         </table>
       )}
 
       {!loading && rows.length > 0 && (
-        <div className="nc-pager">
-          <div>第 {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} 筆，共 <b>{total}</b> 筆（{rangeLabel}）</div>
-          <div className="nc-pages">
-            <button className="nc-pg" disabled={page <= 1} onClick={() => { setPage(page - 1); setOpen(null); }}>‹</button>
-            <span className="nc-pg-at">第 {page} / {pageCount} 頁</span>
-            <button className="nc-pg" disabled={page >= pageCount} onClick={() => { setPage(page + 1); setOpen(null); }}>›</button>
-          </div>
-          <div>點任一列可展開實際送出的訊息與診斷</div>
-        </div>
+        <Pager
+          page={page}
+          pageCount={pageCount}
+          total={total}
+          pageSize={PAGE_SIZE}
+          onPage={(p) => { setPage(p); setOpen(null); }}
+          summarySuffix={`（${rangeLabel}）`}
+          note="點任一列可展開實際送出的訊息與診斷"
+        />
       )}
     </>
   );
@@ -197,13 +215,25 @@ function Diagnostics({ audit }: { audit: Record<string, unknown> | null }) {
     : "欄位都對得上——顯示（未填）代表該欄位在 Ragic 本來就是空的";
 
   return (
-    <div className="nc-log-diag">
+    <>
+      <div className="nc-exp-h">診斷</div>
+      {/* mockup 只有 chips；判讀句是實作既有的 —— 它講的是「所以你該去改什麼」，
+          chips 只給數字，兩者不重複，所以留著 */}
       <div className="nc-log-diag-verdict">{verdict}</div>
-      <div>記錄編號 {String(a.parsedRecordId ?? "—")} · 抓到 {a.payloadKeyCount ?? 0} 個欄位 · 對上 {matched}/{total}</div>
-      {a.payloadKeys?.length ? <div>資料的欄位鍵：{a.payloadKeys.join(", ")}</div> : null}
-      {a.templatePaths?.length ? <div>規則設定的欄位：{a.templatePaths.join(", ")}</div> : null}
-      {a.webhookBody ? <div>Ragic 送來的原始內容：<code>{a.webhookBody}</code></div> : null}
-    </div>
+      <div className="nc-diag">
+        <span>抓取 Ragic 資料 <b>{a.fetchError ? "失敗" : a.fetchSkipped ? "未執行" : a.recordFetched ? "成功" : "—"}</b></span>
+        <span>回傳欄位數 <b>{a.payloadKeyCount ?? 0}</b></span>
+        <span className={total > 0 && matched < total ? "bad" : undefined}>
+          範本欄位對上 <b>{matched} / {total}</b>
+        </span>
+        <span>單號 <b>{a.parsedRecordId != null ? `#${a.parsedRecordId}` : "—"}</b></span>
+      </div>
+      <div className="nc-log-diag">
+        {a.payloadKeys?.length ? <div>資料的欄位鍵：{a.payloadKeys.join(", ")}</div> : null}
+        {a.templatePaths?.length ? <div>規則設定的欄位：{a.templatePaths.join(", ")}</div> : null}
+        {a.webhookBody ? <div>Ragic 送來的原始內容：<code>{a.webhookBody}</code></div> : null}
+      </div>
+    </>
   );
 }
 
