@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { currentTx } from "../db/client.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { RagicAccountRepository, type RagicAccountRow } from "./ragic-account.repository.js";
@@ -25,12 +25,28 @@ export class RagicAccountService {
     if (!server || !apname || !displayName) {
       throw new BadRequestException("server / apname / displayName 必填");
     }
-    return this.repo.create(currentTx(), {
-      tenantId: input.tenantId ?? null,
-      server, apname, displayName,
-      apiKey: input.apiKey?.trim() || null,
-      createdBy: user.user_id,
-    });
+    // (server, apname) 有唯一索引。撞到時原本會把 pg 的 23505 原樣往外丟 ——
+    // 使用者看到的是一整段英文堆疊，而他真正要做的只是「這個帳號已經有了，去換它的金鑰」。
+    // 想換金鑰的人第一直覺就是重新建一次帳號，所以這條路一定會被走到。
+    try {
+      return await this.repo.create(currentTx(), {
+        tenantId: input.tenantId ?? null,
+        server, apname, displayName,
+        apiKey: input.apiKey?.trim() || null,
+        createdBy: user.user_id,
+      });
+    } catch (e) {
+      if ((e as { code?: string }).code === "23505") {
+        const existing = (await this.repo.list(currentTx()))
+          .find((a) => a.server === server && a.apname === apname);
+        throw new ConflictException(
+          `這個 Ragic 帳號已經建過了（${server} · ${apname}`
+          + `${existing ? `，目前名稱「${existing.displayName}」` : ""}）`
+          + ` —— 不需要重建：直接在下拉選它，要換金鑰請按「更新金鑰」`,
+        );
+      }
+      throw e;
+    }
   }
 
   async updateKey(_user: JwtUser, accountId: string, apiKey: string): Promise<{ status: string }> {
