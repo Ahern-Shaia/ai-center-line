@@ -13,7 +13,9 @@ const STATUS: Record<string, { label: string; tone: "ok" | "warn" | "danger" | "
   skipped_dedup:     { label: "重複略過",     tone: "mut",    why: "30 秒內同一筆重複觸發，只送第一次" },
   skipped_event:     { label: "未訂閱此異動", tone: "warn",   why: "事件有進來，但這條規則沒勾選這種異動（新增／更新／刪除）" },
   skipped_filter:    { label: "未達門檻",     tone: "mut",    why: "內部事件被規則的數值門檻過濾掉" },
-  invalid_body:      { label: "內容不符",     tone: "warn",   why: "送進來的內容無法解析" },
+  // 兩種情況共用：webhook 內容解析不了，或欄位一個都取不到（那種訊息全是「（未填）」，
+  // 現在改成不送 —— 送出去對收件的人是純噪音）。實際原因寫在 line_message，這裡只是 fallback。
+  invalid_body:      { label: "內容不符",     tone: "warn",   why: "內容無法解析，或設定的欄位在這筆資料裡一個都取不到（未送出）" },
   invalid_secret:    { label: "驗證失敗",     tone: "danger", why: "網址中的驗證碼不正確" },
   sheet_not_allowed: { label: "表單未授權",   tone: "warn",   why: "該表單不在此規則允許範圍" },
 };
