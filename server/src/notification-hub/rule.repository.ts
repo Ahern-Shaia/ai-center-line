@@ -103,14 +103,21 @@ export class RuleRepository {
     channelTarget: string;
     /** undefined = 不動；string = 設定 */
     botId?: string | null;
+    /** undefined = 不動 · 換 Ragic 帳號＝同一張表單改讀另一個 Ragic 資料庫（webhook 網址不變）*/
+    ragicAccountId?: string;
   }): Promise<boolean> {
+    // source_config 只能在 SET 裡出現一次（同一欄位不可重複賦值），所以兩個 patch 疊起來組成一個運算式
+    const withAccount = a.ragicAccountId === undefined
+      ? sql`source_config`
+      : sql`jsonb_set(source_config, '{ragicAccountId}', to_jsonb(${a.ragicAccountId}::text))`;
+    const nextConfig = a.events === null
+      ? withAccount
+      : sql`jsonb_set(${withAccount}, '{events}', ${JSON.stringify(a.events)}::jsonb)`;
+
     const res = await tx.execute<{ rule_id: string }>(sql`
       UPDATE notification_rule
          SET name = ${a.name},
-             source_config = CASE
-               WHEN ${a.events === null} THEN source_config
-               ELSE jsonb_set(source_config, '{events}', ${JSON.stringify(a.events ?? {})}::jsonb)
-             END,
+             source_config = ${nextConfig},
              template = ${JSON.stringify(a.template)}::jsonb,
              channel_type = ${a.channelType},
              channel_target = ${a.channelTarget},

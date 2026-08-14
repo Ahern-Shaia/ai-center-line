@@ -195,6 +195,7 @@ export class NotifyConfigController {
     fields?: Array<{ path: string | number; label: string; order: number }>;
     channelType?: string; channelTarget?: string;
     botId?: string;
+    ragicAccountId?: string;
   }) {
     return this.configs.updateRule(id, body);
   }

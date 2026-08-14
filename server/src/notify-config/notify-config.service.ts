@@ -309,6 +309,8 @@ export class NotifyConfigService {
     fields?: Array<{ path: string | number; label: string; order: number }>;
     channelType?: string; channelTarget?: string;
     botId?: string;
+    /** 換 Ragic 帳號：同一張表單改讀另一個 Ragic 資料庫 · webhook 網址不變 */
+    ragicAccountId?: string;
   }): Promise<{ status: string }> {
     const tx = currentTx();
     const cur = await this.rules.getById(tx, ruleId);
@@ -344,6 +346,8 @@ export class NotifyConfigService {
       channelType: input.channelType ?? cur.channelType,
       channelTarget: input.channelTarget.trim(),
       botId: input.botId,
+      // 只有 Ragic 來源有這個欄位；內部事件傳了也沒意義
+      ragicAccountId: cur.sourceType === "ragic_form" ? input.ragicAccountId : undefined,
     });
     if (!ok) throw new NotFoundException("找不到這條規則");
     return { status: "ok" };

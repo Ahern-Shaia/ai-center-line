@@ -109,3 +109,52 @@ test("不存在的規則 → 回 false，不要靜默當成功", async () => {
   }));
   assert.equal(ok, false);
 });
+
+// ── 換 Ragic 帳號（2026-08-14）─────────────────────────────────────────
+// 精靈裡的「Ragic 帳號」下拉在編輯模式下一直是裝飾品：ragicAccountId 從前端 payload、
+// controller body、service、到 repository 全鏈都沒有這個欄位。使用者選了新帳號、
+// 按儲存、畫面回「已更新」，實際上完全沒換 —— 沒有任何錯誤，只有「怎麼沒生效」。
+//
+// 這條路在 Ragic 帳號到期／搬庫時是唯一不用刪掉重建的做法（重建會換 webhook 網址）。
+
+test("⭐⭐ 換得動 Ragic 帳號 · 且 sheetPath / webhook / events 不受影響", async () => {
+  const id = await seedRule();
+  const newAccount = randomUUID();
+  try {
+    const before = await withSystemTx((tx) => repo.getById(tx, id));
+    await withSystemTx((tx) => repo.update(tx, id, {
+      name: "x",
+      events: { create: true, update: true, delete: false },
+      template: { title: "t", items: [{ path: "1", label: "A", order: 0 }] },
+      channelType: "line_group", channelTarget: "Cx",
+      ragicAccountId: newAccount,
+    }));
+    const after = await withSystemTx((tx) => repo.getById(tx, id));
+    const cfg = after!.sourceConfig as {
+      ragicAccountId: string; sheetPath: string; sheetName: string;
+      events: { create: boolean; delete: boolean };
+    };
+    assert.equal(cfg.ragicAccountId, newAccount, "帳號要真的換掉");
+    assert.equal(cfg.sheetPath, "/erp/15", "換帳號不可動到表單路徑");
+    assert.equal(cfg.sheetName, "收貨單", "換帳號不可把 source_config 其他欄位弄丟");
+    assert.equal(cfg.events.create, true, "events 與帳號兩個 patch 要能同時生效");
+    assert.equal(after!.webhookToken, before!.webhookToken, "webhook 網址不可被動");
+  } finally { await drop(id); }
+});
+
+test("⭐ 沒傳 ragicAccountId → 維持原帳號（不可被清成 null）", async () => {
+  const id = await seedRule();
+  try {
+    const before = await withSystemTx((tx) => repo.getById(tx, id));
+    await withSystemTx((tx) => repo.update(tx, id, {
+      name: "x", events: null,
+      template: { title: "t", items: [{ path: "1", label: "A", order: 0 }] },
+      channelType: "line_group", channelTarget: "Cx",
+    }));
+    const after = await withSystemTx((tx) => repo.getById(tx, id));
+    assert.equal(
+      (after!.sourceConfig as { ragicAccountId: string }).ragicAccountId,
+      (before!.sourceConfig as { ragicAccountId: string }).ragicAccountId,
+    );
+  } finally { await drop(id); }
+});
