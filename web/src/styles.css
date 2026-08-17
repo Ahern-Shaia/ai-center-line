@@ -2237,7 +2237,10 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .nc-kebab:hover { border-color:var(--primary); color:var(--primary-2); }
 /* 透明遮罩 · 點外面關選單（沒有它就得點兩次 ⋯ 才關得掉）*/
 .nc-menu-veil { position:fixed; inset:0; background:none; border:0; cursor:default; z-index:20; }
-.nc-menu { position:absolute; right:0; top:30px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 6px 20px rgba(17,24,39,.12); width:170px; padding:4px; z-index:21; text-align:left; }
+/* position:fixed 不是為了美觀 —— .nc-tbl 為圓角設了 overflow:hidden，
+   absolute 的選單掛在儲存格裡會被表格裁掉，最後一列的「刪除」完全按不到。
+   座標由 JS 依按鈕位置算（見 Page.tsx openMenu），空間不夠就往上開。 */
+.nc-menu { position:fixed; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); box-shadow:0 6px 20px rgba(17,24,39,.12); width:170px; padding:4px; z-index:21; text-align:left; }
 .nc-menu button { display:block; width:100%; text-align:left; background:none; border:0; font-family:inherit; font-size:12.5px; color:var(--ink-2); padding:7px 9px; border-radius:4px; cursor:pointer; white-space:nowrap; }
 .nc-menu button:hover { background:var(--well); }
 .nc-menu button.danger { color:var(--danger); }

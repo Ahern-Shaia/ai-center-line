@@ -1,5 +1,5 @@
 import Spinner from "../shared/Spinner";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ApiError, ncListRules, ncRemove, ncSetEnabled, notifyWebhookUrl, type NotifyRuleRow } from "../api";
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
@@ -49,14 +49,30 @@ export default function NotifyConfigPage() {
   const [filters, setFilters] = useState<RuleFilterState>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [menuFor, setMenuFor] = useState<string | null>(null);
+  // 選單改用 fixed 定位（表格 overflow:hidden 會裁掉 absolute 的選單）· 座標開啟當下算
+  const [menu, setMenu] = useState<{ ruleId: string; style: CSSProperties } | null>(null);
+  const menuFor = menu?.ruleId ?? null;
+  const closeMenu = () => setMenu(null);
+
+  /** 依 ⋯ 按鈕的實際位置決定往下或往上開 —— 最後一列往下開會超出畫面 */
+  function openMenu(ruleId: string, btn: HTMLElement) {
+    const r = btn.getBoundingClientRect();
+    const MENU_MAX_H = 190;                       // 四個項目 + 分隔線的概估高度
+    const openUp = window.innerHeight - r.bottom < MENU_MAX_H;
+    setMenu({
+      ruleId,
+      style: openUp
+        ? { bottom: window.innerHeight - r.top + 4, right: window.innerWidth - r.right }
+        : { top: r.bottom + 4, right: window.innerWidth - r.right },
+    });
+  }
 
   const shown = useMemo(() => rules.filter((r) => matchRule(r, filters)), [rules, filters]);
   const pageCount = Math.max(1, Math.ceil(shown.length / pageSize));
   // ⚠️ 篩選一變就回第 1 頁 —— 停在第 2 頁時收窄篩選，結果只剩 1 頁就會是空白畫面
-  const changeFilters = (next: RuleFilterState) => { setFilters(next); setPage(1); setMenuFor(null); };
+  const changeFilters = (next: RuleFilterState) => { setFilters(next); setPage(1); closeMenu(); };
   // 每頁筆數變大時當前頁可能超出範圍（第 4 頁 × 10 筆 → 改成 100 筆只剩 1 頁）
-  const changePageSize = (n: number) => { setPageSize(n); setPage(1); setMenuFor(null); };
+  const changePageSize = (n: number) => { setPageSize(n); setPage(1); closeMenu(); };
   const pageRows = shown.slice((page - 1) * pageSize, page * pageSize);
 
   const load = useCallback(async () => {
@@ -66,6 +82,18 @@ export default function NotifyConfigPage() {
     finally { setLoading(false); }
   }, [toast]);
   useEffect(() => { void load(); }, [load]);
+
+  // fixed 座標是開啟當下算的 · 捲動或改視窗大小後會跟按鈕脫節，直接關掉最誠實
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [menu]);
 
   async function toggleEnabled(r: NotifyRuleRow) {
     try {
@@ -189,21 +217,21 @@ export default function NotifyConfigPage() {
                           客戶還得回 Ragic 重貼一次。所以「編輯」留在外面，其餘收進 ⋯。*/}
                       <button className="nc-lnk" onClick={() => { setEditingId(r.ruleId); setMode("wizard"); }}>編輯</button>
                       <button className="nc-kebab" aria-label="更多操作"
-                        onClick={() => setMenuFor(menuFor === r.ruleId ? null : r.ruleId)}>⋯</button>
+                        onClick={(e) => (menuFor === r.ruleId ? closeMenu() : openMenu(r.ruleId, e.currentTarget))}>⋯</button>
                       {menuFor === r.ruleId && (
                         <>
-                          <button className="nc-menu-veil" aria-label="關閉選單" onClick={() => setMenuFor(null)} />
-                          <div className="nc-menu">
+                          <button className="nc-menu-veil" aria-label="關閉選單" onClick={closeMenu} />
+                          <div className="nc-menu" style={menu?.style}>
                             {/* Ragic 規則必須把網址貼進 Ragic 才會通；建立當下的成功畫面關掉就找不回來，
                                 逼人「刪掉重建」——所以列表要能隨時重新複製。*/}
                             {r.webhookToken && (
-                              <button onClick={() => { copyWebhook(r.webhookToken as string); setMenuFor(null); }}>複製 Webhook 網址</button>
+                              <button onClick={() => { copyWebhook(r.webhookToken as string); closeMenu(); }}>複製 Webhook 網址</button>
                             )}
                             {/* 同一張表單常要開好幾條只差通知對象的規則 · 從頭走一次精靈要重挑欄位 */}
-                            <button onClick={() => { setCopyFromId(r.ruleId); setEditingId(null); setMenuFor(null); setMode("wizard"); }}>複製規則</button>
-                            <button onClick={() => { void toggleEnabled(r); setMenuFor(null); }}>{r.enabled ? "停用" : "啟用"}</button>
+                            <button onClick={() => { setCopyFromId(r.ruleId); setEditingId(null); closeMenu(); setMode("wizard"); }}>複製規則</button>
+                            <button onClick={() => { void toggleEnabled(r); closeMenu(); }}>{r.enabled ? "停用" : "啟用"}</button>
                             <div className="nc-menu-sep" />
-                            <button className="danger" onClick={() => { setDelTarget(r); setMenuFor(null); }}>刪除</button>
+                            <button className="danger" onClick={() => { setDelTarget(r); closeMenu(); }}>刪除</button>
                           </div>
                         </>
                       )}
@@ -221,7 +249,7 @@ export default function NotifyConfigPage() {
               pageCount={pageCount}
               total={shown.length}
               pageSize={pageSize}
-              onPage={(p) => { setPage(p); setMenuFor(null); }}
+              onPage={(p) => { setPage(p); closeMenu(); }}
               onPageSize={changePageSize}
               summarySuffix={shown.length !== rules.length ? `（全部 ${rules.length} 筆）` : undefined}
             />
