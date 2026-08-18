@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>LINE 群組通知 @ 當事人 · UI flow mockup</title>
+<style>
+:root{--canvas:#F7F8FA;--surface:#FFFFFF;--well:#F1F3F6;--line:#E5E7EB;--line-2:#F0F2F5;--ink:#111827;--ink-2:#4B5563;--ink-3:#6B7280;--primary:#4F46E5;--primary-2:#4338CA;--primary-tint:#EEF2FF;--ok:#059669;--ok-tint:#ECFDF5;--warn:#D97706;--warn-tint:#FFFBEB;--danger:#E11D48;--danger-tint:#FFF1F2;--sans:'Inter','Noto Sans TC',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;--r:6px;--r-sm:4px;--r-lg:8px;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+.wrap{max-width:1180px;margin:0 auto;padding:26px 24px 70px;}
+h1.doc{font-size:21px;font-weight:700;margin:0 0 4px;}
+.doc-sub{color:var(--ink-3);font-size:12.5px;margin:0 0 14px;line-height:1.7;}
+.legend{font-size:12.5px;color:var(--ink-2);margin:0 0 8px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:7px;line-height:1.8;}
+.legend b{color:var(--primary-2);}
+.legend .k{display:inline-block;min-width:15px;font-weight:700;color:var(--primary-2);}
+
+h2.sec{font-size:15px;font-weight:700;margin:34px 0 4px;padding-top:16px;border-top:1px solid var(--line);}
+h2.sec:first-of-type{border-top:none;padding-top:0;}
+.sec-sub{color:var(--ink-3);font-size:12.5px;margin:0 0 14px;line-height:1.7;}
+.note{font-size:12.5px;color:var(--ink-2);background:var(--well);border-radius:var(--r);padding:10px 13px;line-height:1.75;margin:12px 0 0;}
+.note b{color:var(--ink);}
+
+/* ── 流程條 ───────────────────────────── */
+.flow{display:flex;align-items:stretch;gap:0;margin:16px 0 6px;flex-wrap:wrap;}
+.fstep{flex:1;min-width:150px;background:var(--surface);border:1px solid var(--line);padding:11px 14px;position:relative;}
+.fstep:first-child{border-radius:var(--r-lg) 0 0 var(--r-lg);}
+.fstep:last-child{border-radius:0 var(--r-lg) var(--r-lg) 0;}
+.fstep+.fstep{border-left:none;}
+.fstep .n{font-size:10.5px;font-family:var(--mono);color:var(--ink-3);letter-spacing:.06em;}
+.fstep .t{font-size:13px;font-weight:600;margin-top:3px;}
+.fstep .d{font-size:11.5px;color:var(--ink-3);margin-top:3px;line-height:1.5;}
+.fstep.done{background:var(--ok-tint);}
+.fstep.done .t{color:var(--ok);}
+.fstep.new{background:var(--primary-tint);border-color:#C7D2FE;}
+.fstep.new .t{color:var(--primary-2);}
+
+/* ── app 外框 ───────────────────────────── */
+.app{border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:0 2px 14px rgba(17,24,39,.05);overflow:hidden;margin-top:14px;}
+.app-hdr{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--surface);}
+.app-hdr h3{font-size:15px;font-weight:700;margin:0 0 2px;}
+.app-hdr .sub{font-size:12px;color:var(--ink-3);margin:0;}
+.pane{padding:18px 20px 22px;background:var(--canvas);}
+
+/* ── 精靈卡（沿用 .nc-card 家族）──────────── */
+.nc-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 20px;margin-bottom:14px;}
+.nc-card:last-child{margin-bottom:0;}
+.nc-card-h{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px;}
+.nc-step-n{width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;}
+.nc-card-sub{font-size:12px;color:var(--ink-3);margin:0 0 14px 28px;line-height:1.6;}
+.field{display:flex;flex-direction:column;gap:6px;width:100%;margin-bottom:14px;}
+.field:last-child{margin-bottom:0;}
+.field label{font-size:12.5px;color:var(--ink-2);font-weight:500;}
+.sel-box{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 12px;border-radius:var(--r);font-size:14px;display:flex;align-items:center;justify-content:space-between;}
+.sel-box .ph{color:var(--ink-3);}
+.sel-box .cv{color:var(--ink-3);font-size:12px;}
+.sel-box.dis{opacity:.5;}
+.hint{font-size:12px;color:var(--ink-3);line-height:1.6;}
+.hint b{color:var(--ink-2);}
+/* 管道 toggle（＝既有 .nc-evs / .nc-ev / .nc-sw）*/
+.nc-evs{display:flex;gap:10px;}
+.nc-ev{flex:1;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:flex;align-items:center;gap:8px;font-size:13px;background:var(--surface);color:var(--ink);}
+.nc-ev.on{border-color:var(--primary);background:var(--primary-tint);color:var(--primary-2);font-weight:600;}
+.nc-sw{width:32px;height:18px;border-radius:999px;background:var(--line);position:relative;flex-shrink:0;}
+.nc-ev.on .nc-sw{background:var(--primary);}
+.nc-sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;}
+.nc-ev.on .nc-sw::after{transform:translateX(14px);}
+
+/* 成員勾選列（＝既有「選擇要通知的欄位」的 .nc-fld 樣式）*/
+.nc-flds{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
+.nc-fld{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line-2);background:var(--surface);}
+.nc-fld:last-child{border-bottom:none;}
+.nc-fld.on{background:var(--primary-tint);}
+.nc-cb{width:18px;height:18px;border-radius:var(--r-sm);border:1.5px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface);}
+.nc-fld.on .nc-cb{background:var(--primary);border-color:var(--primary);}
+.nc-cb svg{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.5;}
+.m-name{font-weight:500;flex:1;}
+.m-name .nick{color:var(--ink-3);font-weight:400;}
+.m-tag{font-size:11px;padding:2px 7px;border-radius:999px;font-weight:600;white-space:nowrap;}
+.m-tag.bound{background:var(--ok-tint);color:var(--ok);}
+.m-tag.unbound{background:var(--well);color:var(--ink-3);}
+.m-tag.gone{background:var(--warn-tint);color:var(--warn);}
+.m-seen{font-size:11px;color:var(--ink-3);font-family:var(--mono);white-space:nowrap;}
+.m-search{border:1px solid var(--line);border-radius:var(--r);padding:8px 12px;font-size:13.5px;color:var(--ink-3);margin-bottom:8px;background:var(--surface);}
+
+.empty{border:1px dashed var(--line);border-radius:var(--r);padding:20px 16px;text-align:center;color:var(--ink-3);font-size:12.5px;line-height:1.8;background:var(--surface);}
+.empty b{color:var(--ink-2);display:block;font-size:13px;margin-bottom:4px;}
+.nc-callout{background:var(--warn-tint);border:1px solid #FDE68A;border-radius:var(--r);padding:10px 14px;font-size:12.5px;color:#92400E;line-height:1.65;margin-top:12px;}
+.chips{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--primary-tint);color:var(--primary-2);border-radius:999px;padding:4px 8px 4px 11px;font-size:12.5px;font-weight:600;}
+.chip .x{opacity:.5;font-size:13px;line-height:1;}
+.btnrow{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px 13px;font-size:13px;color:var(--ink-2);}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600;}
+
+/* ── LINE 對話預覽 ───────────────────────── */
+.chat{background:#8FA9C8;border-radius:var(--r-lg);padding:16px 14px;}
+.chat-t{font-size:11px;color:rgba(255,255,255,.85);text-align:center;margin-bottom:10px;font-weight:600;}
+.bub{background:#fff;border-radius:4px 14px 14px 14px;padding:11px 13px;max-width:420px;font-size:13px;line-height:1.7;color:#111;box-shadow:0 1px 2px rgba(0,0,0,.12);white-space:pre-wrap;word-break:break-all;}
+.bub .ttl{font-weight:700;margin-bottom:5px;}
+.bub .kv{display:flex;gap:8px;}
+.bub .kv .k{color:#6B7280;min-width:64px;flex-shrink:0;}
+.bub .lnk{color:#2563EB;text-decoration:underline;font-size:12px;}
+.mention{background:#DCF3E4;color:#04804D;border-radius:3px;padding:0 3px;font-weight:600;}
+.sender{font-size:11px;color:rgba(255,255,255,.9);margin-bottom:4px;}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:900px){.two{grid-template-columns:1fr;}}
+.cap{font-size:11.5px;color:var(--ink-3);margin:8px 0 0;line-height:1.6;}
+.cap b{color:var(--ink-2);}
+
+/* ── 表 ───────────────────────────── */
+table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;margin-top:12px;}
+th{text-align:left;font-size:11px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:9px 13px;border-bottom:1px solid var(--line);background:var(--well);}
+td{padding:10px 13px;border-bottom:1px solid var(--line-2);font-size:12.5px;vertical-align:top;line-height:1.65;}
+tr:last-child td{border-bottom:none;}
+td.n{font-family:var(--mono);font-weight:700;white-space:nowrap;color:var(--primary-2);}
+.st{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:2px 8px;border-radius:999px;font-weight:600;white-space:nowrap;}
+.st.ok{background:var(--ok-tint);color:var(--ok);}
+.st.warn{background:var(--warn-tint);color:var(--warn);}
+.st.bad{background:var(--danger-tint);color:var(--danger);}
+.mono{font-family:var(--mono);font-size:11.5px;}
+footer{margin-top:30px;font-size:11.5px;color:var(--ink-3);line-height:1.75;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1 class="doc">LINE 群組通知 @ 當事人 · UI flow mockup</h1>
+<p class="doc-sub">
+  對應 <b>docs/modules/notify-group-mention.md</b> v0.2（OQ-NGM-1..8 全採建議 · 2026-08-18 裁定）<br/>
+  <b>對標</b>：本專案既有的「通知設定精靈」—— 這是插進同一頁的新欄位，成員多選刻意複用該頁第 3 步
+  「選擇要通知的欄位」的勾選列樣式（<span class="mono">.nc-flds / .nc-fld / .nc-cb</span>），不自創多選元件。
+</p>
+
+<div class="legend">
+  <span class="k">✓</span> 綠底 ＝ <b>已經做完的部分</b>（選機器人 → 選群組，commit <span class="mono">0f4cb3d</span>）<br/>
+  <span class="k">＋</span> 藍底 ＝ <b>本次新增</b><br/>
+  <span class="k">!</span> 黃底 ＝ 邊界狀態，實作時不可省 —— 這幾個才是這份 mockup 的重點
+</div>
+
+<div class="note" style="margin-top:10px">
+  <b>畫面依據</b>（2026-08-18 逐一對過 code，非憑印象）：
+  精靈第 4 步的卡片結構、步驟編號、管道 toggle、兩個下拉與 hint 文案 ←
+  <span class="mono">web/src/notify-config/Wizard.tsx</span> ·
+  成員勾選列樣式 ← <span class="mono">web/src/styles.css</span> 的 <span class="mono">.nc-flds/.nc-fld/.nc-cb</span> ·
+  訊息內容格式 ← <span class="mono">server/src/notification-hub/template.renderer.ts</span> 的
+  <span class="mono">renderTemplate()</span> ·
+  通知紀錄六欄與狀態碼 ← <span class="mono">web/src/notify-config/LogsTab.tsx</span> ·
+  成員欄位 ← migration <span class="mono">0015_line_member.sql</span>。<br/>
+  <b>唯一沒有 code 依據的是 C 右邊那行 @</b> —— 那是本次要新增的東西，其餘皆為現況複製。
+</div>
+
+<div class="flow">
+  <div class="fstep done"><div class="n">STEP 1</div><div class="t">選機器人</div><div class="d">已做 · 決定用哪支 bot 發送</div></div>
+  <div class="fstep done"><div class="n">STEP 2</div><div class="t">選群組</div><div class="d">已做 · 只列該 bot 所在的群</div></div>
+  <div class="fstep new"><div class="n">STEP 3</div><div class="t">＋ 選要 @ 的人</div><div class="d">新增 · 只列該群成員（選填）</div></div>
+  <div class="fstep new"><div class="n">STEP 4</div><div class="t">＋ 送出時 @</div><div class="d">新增 · textV2 mention</div></div>
+</div>
+<p class="cap">
+  userId 從「這支 bot 在這個群」抓回來，再交給<b>同一支 bot</b> 發送 ——
+  provider 一致是資料來源決定的，不是靠人記得選對。
+</p>
+
+<!-- ══════════════════════════════════════ -->
+<h2 class="sec">A · 通知對象（現況 → 新版）</h2>
+<p class="sec-sub">精靈第 4 步。左邊是今天的樣子，右邊是加上「要 @ 的人」之後。前兩個欄位完全不動。</p>
+
+<div class="two">
+  <div>
+    <div class="app">
+      <div class="app-hdr"><h3>現況</h3><p class="sub">選完群組就結束</p></div>
+      <div class="pane">
+        <div class="nc-card">
+          <div class="nc-card-h"><span class="nc-step-n">4</span>通知對象</div>
+          <p class="nc-card-sub">要發到哪裡</p>
+          <div class="field"><label>管道</label>
+            <div class="nc-evs">
+              <div class="nc-ev on"><span class="nc-sw"></span>LINE 群組</div>
+              <div class="nc-ev"><span class="nc-sw"></span>LINE 私訊</div>
+            </div>
+          </div>
+          <div class="field"><label>用哪支機器人發送</label>
+            <div class="sel-box"><span>鮮湧 · 鮮湧AI客服</span><span class="cv">▾</span></div>
+          </div>
+          <div class="field"><label>LINE 目標群</label>
+            <div class="sel-box"><span>業助群</span><span class="cv">▾</span></div>
+            <div class="hint">找不到群組？把機器人拉進該群，然後在群裡隨便發一則訊息。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="app">
+      <div class="app-hdr"><h3>新版</h3><p class="sub">多一個選填欄位 · 不影響既有規則</p></div>
+      <div class="pane">
+        <div class="nc-card">
+          <div class="nc-card-h"><span class="nc-step-n">4</span>通知對象</div>
+          <p class="nc-card-sub">要發到哪裡 · 要不要指名誰</p>
+          <div class="field"><label>管道</label>
+            <div class="nc-evs">
+              <div class="nc-ev on"><span class="nc-sw"></span>LINE 群組</div>
+              <div class="nc-ev"><span class="nc-sw"></span>LINE 私訊</div>
+            </div>
+            <div class="hint">切到「LINE 私訊」時，下面的 @ 欄位整區隱藏 —— 私訊只有他一個人，指名沒有意義。</div>
+          </div>
+          <div class="field"><label>用哪支機器人發送</label>
+            <div class="sel-box"><span>鮮湧 · 鮮湧AI客服</span><span class="cv">▾</span></div>
+          </div>
+          <div class="field"><label>LINE 目標群</label>
+            <div class="sel-box"><span>業助群</span><span class="cv">▾</span></div>
+          </div>
+          <div class="field"><label>要 @ 的人（選填）</label>
+            <div class="m-search">🔍 搜尋成員…</div>
+            <div class="nc-flds">
+              <div class="nc-fld on">
+                <div class="nc-cb"><svg viewBox="0 0 14 14"><path d="M2 7l3.5 3.5L12 4"/></svg></div>
+                <span class="m-name">王小明 <span class="nick">（小星星）</span></span>
+                <span class="m-tag bound">已綁定</span>
+                <span class="m-seen">08/18</span>
+              </div>
+              <div class="nc-fld on">
+                <div class="nc-cb"><svg viewBox="0 0 14 14"><path d="M2 7l3.5 3.5L12 4"/></svg></div>
+                <span class="m-name">李佳慧 <span class="nick">（佳慧）</span></span>
+                <span class="m-tag bound">已綁定</span>
+                <span class="m-seen">08/18</span>
+              </div>
+              <div class="nc-fld">
+                <div class="nc-cb"></div>
+                <span class="m-name">阿宏</span>
+                <span class="m-tag unbound">未綁定</span>
+                <span class="m-seen">08/15</span>
+              </div>
+              <div class="nc-fld">
+                <div class="nc-cb"></div>
+                <span class="m-name">Ming</span>
+                <span class="m-tag unbound">未綁定</span>
+                <span class="m-seen">07/30</span>
+              </div>
+            </div>
+            <div class="hint" style="margin-top:6px">
+              只列出<b>在本群發言過</b>的成員 · 找不到人？請他在群裡發一則訊息，這裡就會出現。<br/>
+              「未綁定」＝這個人還沒把 LINE 綁到系統帳號，<b>不影響 @</b>，只是顯示的是他的 LINE 暱稱。
+            </div>
+          </div>
+        </div>
+        <div class="btnrow"><span class="btn">取消</span><span class="btn btn-primary">儲存規則</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <b>為什麼「未綁定」的人也列出來（OQ-NGM-2）</b>：@ 只需要 LINE userId，不需要系統帳號。
+  排除未綁定的人＝把功能綁回綁定率，而這個模組本來就不必等綁定。
+  有綁定的顯示「員工姓名（暱稱）」，沒綁定的只能顯示暱稱 —— 差別只在<b>主管認不認得出是誰</b>，
+  所以標籤講的是這件事，不是「可不可以選」。
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<h2 class="sec">B · 三個邊界狀態 <span class="st warn" style="margin-left:6px">實作不可省</span></h2>
+<p class="sec-sub">功能好不好用取決於這三個，不是取決於 A 那張漂亮的清單。</p>
+
+<div class="two">
+  <div>
+    <div class="app">
+      <div class="app-hdr"><h3>B-1 · 這個群還沒有可選成員</h3><p class="sub">最常見 —— 新拉進去的群</p></div>
+      <div class="pane">
+        <div class="nc-card">
+          <div class="field"><label>要 @ 的人（選填）</label>
+            <div class="empty">
+              <b>這個群目前還沒有可以 @ 的成員</b>
+              系統只認得<b>在群裡發過言</b>的人。<br/>
+              請對方在群組裡發一則訊息，這裡就會出現。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">
+      <b>不可以寫成「沒有成員」</b> —— 群裡明明有 20 個人。空的原因是我們只認得開過口的人，
+      文案要說出這件事，否則主管會以為系統壞了或那些人不在群裡。
+    </p>
+  </div>
+
+  <div>
+    <div class="app">
+      <div class="app-hdr"><h3>B-2 · 已選的人可能已不在群</h3><p class="sub">離職 / 退群後</p></div>
+      <div class="pane">
+        <div class="nc-card">
+          <div class="field"><label>要 @ 的人（選填）</label>
+            <div class="nc-flds">
+              <div class="nc-fld on">
+                <div class="nc-cb"><svg viewBox="0 0 14 14"><path d="M2 7l3.5 3.5L12 4"/></svg></div>
+                <span class="m-name">王小明 <span class="nick">（小星星）</span></span>
+                <span class="m-tag bound">已綁定</span>
+              </div>
+              <div class="nc-fld on">
+                <div class="nc-cb"><svg viewBox="0 0 14 14"><path d="M2 7l3.5 3.5L12 4"/></svg></div>
+                <span class="m-name">陳志豪 <span class="nick">（豪）</span></span>
+                <span class="m-tag gone">可能已不在群</span>
+              </div>
+            </div>
+            <div class="nc-callout">
+              <b>陳志豪</b> 最後一次在這個群發言是 <b>3 個月前</b>，可能已經退群。
+              保留他不會讓通知失敗，但他不會收到 @ ——<b>要不要移除由你決定</b>。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">
+      措辭用「<b>可能</b>已不在群」：我們只知道他很久沒發言，<b>不知道他退群了沒</b>。
+      LINE 沒給我們查詢群成員名單的權限（需認證帳號），講死了就是在騙人。
+    </p>
+  </div>
+</div>
+
+<div class="app" style="margin-top:14px">
+  <div class="app-hdr"><h3>B-3 · @ 不出來時，通知本身不受影響</h3><p class="sub">通知紀錄頁 · 這是本模組唯一的 P0</p></div>
+  <div class="pane">
+    <table>
+      <tr>
+        <th style="width:15%">時間</th><th style="width:23%">規則</th><th style="width:13%">結果</th>
+        <th style="width:19%">來源對象</th><th style="width:22%">說明</th><th style="width:8%">耗時</th>
+      </tr>
+      <tr>
+        <td class="mono">08/18 14:02</td><td>維修保養單 · 已更新</td>
+        <td><span class="st ok">已送出</span></td>
+        <td class="mono">service-tickets/10 #342</td>
+        <td>已 @ 王小明、李佳慧</td><td class="mono">412 ms</td>
+      </tr>
+      <tr>
+        <td class="mono">08/18 13:47</td><td>報價單（下游-1）</td>
+        <td><span class="st ok">已送出</span></td>
+        <td class="mono">erp/1 #394</td>
+        <td>未 @：指定的 1 人已不在群</td><td class="mono">388 ms</td>
+      </tr>
+      <tr>
+        <td class="mono">08/18 11:20</td><td>顧客產品需求通知單</td>
+        <td><span class="st ok">已送出</span></td>
+        <td class="mono">erp/64 #77</td>
+        <td>訊息已推送到 LINE</td><td class="mono">351 ms</td>
+      </tr>
+      <tr>
+        <td class="mono">08/18 10:09</td><td>原料驗貨單</td>
+        <td><span class="st bad">推送失敗</span></td>
+        <td class="mono">forms4/18 #101</td>
+        <td>LINE 回 429 · 該官方帳號本月推播額度已用完</td><td class="mono">204 ms</td>
+      </tr>
+    </table>
+    <p class="cap" style="margin-top:10px">
+      欄位＝<b>既有六欄</b>（時間 / 規則 / 結果 / 來源對象 / 說明 / 耗時，<span class="mono">LogsTab.tsx</span>）。
+      <b>「結果」的狀態碼一個都不新增</b> —— @ 的成敗寫進「說明」欄，
+      展開列的「實際送出的訊息」本來就會原樣顯示第一行的 @。<br/>
+      理由：<span class="mono">STATUS</span> 那張表是「每種狀態要能直接讀成我現在該做什麼」的單一事實來源，
+      把「已送出但沒 @ 到」塞成新狀態碼，會讓「已送出」這件事有兩個代碼。
+    </p>
+    <div class="note" style="margin-top:14px">
+      <b>鐵則：@ 出任何問題都不得把通知本身弄丟。</b>
+      第 2 列就是這個意思 —— @ 不到人只是少一個提醒，結果仍是<b>已送出</b>，差別只寫在說明欄。
+      為了 @ 不到人而整則送不出去，是把一個小遺憾換成一場事故；現在的通知是客戶每天在用的。
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<h2 class="sec">C · 群組裡實際看到的樣子</h2>
+<p class="sec-sub">左為現況，右為 @ 之後。訊息主體、欄位、Ragic 連結都不變，只在最前面多一行指名。</p>
+
+<div class="two">
+  <div>
+    <div class="chat">
+      <div class="chat-t">業助群</div>
+      <div class="sender">鮮湧AI客服</div>
+      <div class="bub">【維修保養單｜已更新】
+單號：TB-P71-0342
+客戶：示範案場 B
+狀態：待派工
+預計到場：（未填）
+
+檢視完整資料：
+<span class="lnk">https://ap5.ragic.com/aitode/service-tickets/10/342</span></div>
+    </div>
+    <p class="cap">
+      現況：全群都看得到，但<b>沒有人被指名</b> —— 於是每個人都覺得是別人的事。<br/>
+      <b>此為 <span class="mono">template.renderer.ts</span> 的實際輸出格式</b>：
+      <span class="mono">【標題｜事件】</span> → 逐行 <span class="mono">欄位：值</span> → 空行 →「檢視完整資料：」→ 原始網址。
+      缺值渲染成「（未填）」，沒有 emoji、沒有美化連結文字。
+    </p>
+  </div>
+
+  <div>
+    <div class="chat">
+      <div class="chat-t">業助群</div>
+      <div class="sender">鮮湧AI客服</div>
+      <div class="bub"><span class="mention">@王小明</span> <span class="mention">@李佳慧</span>
+【維修保養單｜已更新】
+單號：TB-P71-0342
+客戶：示範案場 B
+狀態：待派工
+預計到場：（未填）
+
+檢視完整資料：
+<span class="lnk">https://ap5.ragic.com/aitode/service-tickets/10/342</span></div>
+    </div>
+    <p class="cap">
+      新版：被 @ 的兩人會收到<b>個人推播</b>，其餘成員看到的訊息完全一樣。
+      @ 獨立成第一行，長訊息捲動時第一眼就知道與自己有關。<br/>
+      實作上是在 <span class="mono">renderTemplate()</span> 的輸出<b>前面</b>接一行，
+      不動既有的渲染邏輯 —— 那支函式現在被所有規則共用。
+    </p>
+  </div>
+</div>
+
+<div class="note">
+  <b>不做 @全體（OQ-NGM-4 已裁定）</b>：LINE 支援 <span class="mono">mentionee.type = "all"</span>，但一鍵吵全群、
+  發出去收不回來，與「LINE 群組一律不出聲」的克制取向衝突。真要吵全群，用戶自己在群裡打字更快。<br/>
+  <b>@ 是每條規則各自的開關（OQ-NGM-5）</b>：同一張單改三次就 @ 三次，兩天內對方就會把群組通知關掉 ——
+  那比不 @ 更糟。所以不做全域設定。
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<h2 class="sec">D · 八題裁定（2026-08-18 · 全採建議）</h2>
+<table>
+  <tr><th style="width:52px">#</th><th style="width:34%">問題</th><th>裁定</th></tr>
+  <tr><td class="n">NGM-1</td><td>名單固定 vs 依 Ragic 欄位動態決定</td>
+      <td><b>固定名單</b>。動態要拿欄位裡的人名去比對，撞禁用模糊比對紅線；等 Ragic 那格改成選單再談</td></tr>
+  <tr><td class="n">NGM-2</td><td>要不要含沒有系統帳號的人</td>
+      <td><b>要</b>。排除＝把功能綁回綁定率，而 @ 本來就不需要綁定</td></tr>
+  <tr><td class="n">NGM-3</td><td>暱稱怎麼顯示</td>
+      <td>有綁定「王小明（小星星）」· 無綁定只顯示暱稱並標「未綁定」，讓主管自己判斷</td></tr>
+  <tr><td class="n">NGM-4</td><td>要不要開 @全體</td><td><b>不開</b>。見上方說明</td></tr>
+  <tr><td class="n">NGM-5</td><td>每條規則開關 vs 全域</td><td><b>每條規則</b></td></tr>
+  <tr><td class="n">NGM-6</td><td>成員名單涵蓋率怎麼補</td>
+      <td>v1 只靠 webhook 被動累積 ＋ UI 明說限制；主動補抓視 M0.5 實測結果再定</td></tr>
+  <tr><td class="n">NGM-7</td><td>被 @ 的人退群 / 離職</td>
+      <td><b>不擋通知</b>，記 log，UI 標「可能已不在群」（B-2）</td></tr>
+  <tr><td class="n">NGM-8</td><td>log 記 @ 名單要不要跟 bot_id 併一支 migration</td>
+      <td><b>併</b>。同一張表、同一類缺口，分兩次要動兩次 prod</td></tr>
+</table>
+
+<!-- ══════════════════════════════════════ -->
+<h2 class="sec">E · 這份 mockup 沒有回答的事</h2>
+<table>
+  <tr><th style="width:34%">未知</th><th>影響哪一格畫面</th></tr>
+  <tr><td>送出端一則最多幾個 mention<br/><span class="hint">查到的「上限 20」是收訊側的描述</span></td>
+      <td>A 的多選要不要設上限、超過時怎麼講。<b>M1 實測後才畫得準</b></td></tr>
+  <tr><td>被 @ 的人不在群時 LINE 的行為<br/><span class="hint">整則失敗？還是照送但不生效？</span></td>
+      <td>B-2 的文案與 B-3 第 2 列的狀態文字。若是整則失敗，fallback 就必須在送出前先剔除</td></tr>
+  <tr><td>prod 每個群的 <span class="mono">line_member</span> 覆蓋率</td>
+      <td><b>整份 mockup 的前提</b>。若 20 人的群只認得 4 個，B-1 才是常態、A 是例外 —— 那要先解涵蓋率再做 UI（M0.5 gate）</td></tr>
+</table>
+
+<footer>
+  docs/mockup/notify-group-mention-flow.html · 2026-08-18 · 對應 docs/modules/notify-group-mention.md<br/>
+  人名為假名（王小明 / 李佳慧 / 示範案場 B）· 單號與時間為示意值，非 prod 實際資料。
+</footer>
+
+</div>
+</body></html>
