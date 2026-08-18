@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AssigneeResolverService } from "./assignee-resolver.service.js";
 import { sql } from "drizzle-orm";
 import { withTenant } from "../db/client.js";
-import { laneFor, RECOMPUTABLE_LANES } from "./ticket-lane.js";
+import { laneFor, workStatusFor, RECOMPUTABLE_LANES } from "./ticket-lane.js";
 
 /**
  * 紀錄類分類 —— 這些是「已經發生的事」，不是「該做的事」（0063）。
@@ -14,7 +14,6 @@ import { laneFor, RECOMPUTABLE_LANES } from "./ticket-lane.js";
  *    消費端有提醒／結案率／任務看板三處，各自加過濾的話，
  *    第四個消費端出現時一定會漏。
  */
-const RECORD_CATEGORIES = new Set(["daily_report", "attendance", "chitchat"]);
 
 /**
  * TicketMaterializerService · WTB-M1
@@ -122,9 +121,8 @@ export class TicketMaterializerService {
         const summary = truncate(rec.title || rec.detail || "（無摘要）", 500);
         const assignee = rec.person ? truncate(rec.person, 100) : null;
         const category = rec.category ? truncate(rec.category, 100) : null;
-        // 紀錄類不進工作生命週期（0063）· 日報是「已經做完的紀錄」不是待辦，
-        // 把它當任務追蹤，機器人就會對一份日報說「尚未確認完成」—— 讀不通的話沒人會再信
-        const workStatus = RECORD_CATEGORIES.has(category ?? "") ? "record" : "open";
+        // 要不要進工作生命週期 · 判準在 ticket-lane.ts（紀錄類分類 0063 + status=info）
+        const workStatus = workStatusFor(category, rec.status);
         // 對到系統帳號才自動歸屬；對不到一律 unclaimed 由主管手動派（doc §2 寧可不歸屬不可歸錯人）
         //
         // ⚠️ 對到之後**刻意不發 LINE 通知**（2026-07-29 用戶裁定）。不是漏接，不要「修好」它 ——

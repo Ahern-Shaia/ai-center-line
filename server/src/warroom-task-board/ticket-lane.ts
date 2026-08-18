@@ -58,8 +58,36 @@ export const RECOMPUTABLE_LANES: readonly ConfirmStatus[] = ["待簽核", "待�
 // docs/modules/task-completion-tracking.md §4.3
 
 /** 工作狀態 · 擁有者是當責人本人 · DB 的 tickets.work_status */
-/** record = 紀錄類（日報／出勤／閒聊）· 不進工作生命週期（0063）*/
+/** record = 不進工作生命週期（紀錄類分類 0063、或 AI 判為純資訊）*/
 export type WorkStatus = "open" | "closed" | "record";
+
+/** 紀錄類分類 · 日報／出勤／閒聊本來就不是待辦（0063）*/
+export const RECORD_CATEGORIES: ReadonlySet<string> = new Set(["daily_report", "attendance", "chitchat"]);
+
+/**
+ * 這張卡要不要進工作生命週期（個人待辦、LINE 完成回報、結案率）。
+ *
+ * 兩個入口，判準都在這裡（本檔的存在理由：判準只寫一次）：
+ *   1. 紀錄類分類（0063）—— 日報是「已經做完的紀錄」，對它說「尚未確認完成」讀不通
+ *   2. status === "info" —— AI 判為純資訊／公告。經驗提醒、法規說明、選型結論
+ *      都不是「某人要去做的事」，不該躺在誰的待辦清單裡等人按完成。
+ *
+ * ⚠️ resolved **不**在這裡擋（2026-08-18 用戶裁定採保守版）。
+ *    「AI 從對話讀到好了」是推論不是本人的承諾 —— 留在 open 讓當事人確認，
+ *    displayState 會顯示「AI 判讀已完成 · 尚未確認」，跟這個產品的簽核理念一致。
+ *
+ * 注意這條軸跟 laneFor（confirm_status）是**分開**的：laneFor 早就用 status 擋掉了
+ * 簽核佇列（info/resolved → 存查 或不建卡），但那只影響簽核率與健康度；
+ * 個人待辦是讀 work_status，所以那一層要在這裡各自擋。
+ */
+export function workStatusFor(
+  category: string | null | undefined,
+  status: string | null | undefined,
+): WorkStatus {
+  if (RECORD_CATEGORIES.has(category ?? "")) return "record";
+  if (status === "info") return "record";
+  return "open";
+}
 
 /** 為什麼結束 · DB 的 tickets.work_outcome（Jira 的 resolution 模型） */
 export type WorkOutcome = "完成" | "不用做了" | "轉他人" | "做不到";
