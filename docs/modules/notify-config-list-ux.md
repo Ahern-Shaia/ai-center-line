@@ -1,6 +1,7 @@
 # 設計文件 · 通知設定兩頁清單改版（M0）
 
-> 狀態：✅ **M1–M3 已實作**（2026-08-12）· OQ 全採建議 · 待部署驗證
+> 狀態：✅ **SHIPPED**（M1–M3 實作 2026-08-12 · **prod 版面驗收通過 2026-08-18**）· OQ 全採建議 ·
+> 三處刻意偏離 mockup 經裁定維持現狀（§9-bis）
 > 對象：`web/src/notify-config/Page.tsx`（規則清單）、`web/src/notify-config/LogsTab.tsx`（通知紀錄）、
 > `server/src/notify-config/notify-config.controller.ts`、`server/src/notification-hub/audit.repository.ts`
 > 相關：[`notify.md`](notify.md)、[`notify-selfserve-platform.md`](notify-selfserve-platform.md)、[`notify-bot-scoped-target.md`](notify-bot-scoped-target.md)
