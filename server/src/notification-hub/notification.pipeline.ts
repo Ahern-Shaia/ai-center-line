@@ -60,23 +60,30 @@ export class NotificationPipeline {
     // 3) render
     const text = renderTemplate(rule.template, event.payload, event.eventLabel, event.link);
 
-    // 3.5) 每一欄都取不到值 → 不送。
+    // 3.5) 抓不到完整資料、且每一欄都取不到值 → 不送。
     //
     // 這種訊息長得跟正常通知一樣，但十幾行全是「（未填）」，對收件的人是純噪音，
     // 而且一次 Ragic 批次修改就會洗滿整個群（2026-08-13 那 80 筆就是這樣來的）。
-    // 最常見成因是「抓不到完整資料」——例如 Ragic 帳號到期、金鑰失效——
+    // 成因是「抓不到完整資料」——例如 Ragic 帳號到期、金鑰失效——
     // 此時 payload 會退回 webhook 帶的內容，一個欄位都對不上。
+    //
+    // ⚠️ 2026-08-18 用戶裁定：**只擋「抓不到資料」，不擋「資料真的空」**。
+    //    原本 0fb415c 是「全空就擋」，但那會連帶擋掉一種正常情境 ——
+    //    有人在 Ragic 新建一張空白單、之後才回頭填，那則「已新增」就永遠不會發出，
+    //    而「有人開了一張新單」本身就是收件的人想知道的事。
+    //    兩者的差別只有一個訊號：`diagnostics.fetchError` 有沒有值。
+    //
+    //    代價講明：欄位設定與表單不符（改過表單、路徑不同）時會恢復送出全是（未填）的訊息。
+    //    那不是靜默的 —— 通知紀錄展開後的診斷會判讀成「已抓到資料，但勾選的欄位一個都對不上」，
+    //    指的正是去改欄位設定。擋下來反而讓設定錯誤沒有任何人看得見。
     //
     // 記成 invalid_body（畫面顯示「內容不符」）而不是新增狀態：DB 對 status 有 CHECK，
     // 加值要 migration，而 code 先上線就會 insert 失敗、整個 webhook handler 炸掉 ——
     // 比原本的問題更糟。「內容不符」本來就是核准的 mockup 給這個情境的標籤。
     const itemCount = (rule.template.items ?? []).length;
-    if (itemCount > 0 && countFilledItems(rule.template, event.payload) === 0) {
-      const fetchError = (event.diagnostics ?? {}).fetchError;
-      const why = fetchError
-        ? `取不到完整資料，${itemCount} 個欄位全部是空的 · 未送出 · 原因：${String(fetchError)}`
-        : `模板設定的 ${itemCount} 個欄位在這筆資料裡一個都取不到 · 未送出`
-          + `（欄位設定與這張表單不符，或這筆資料本來就整筆是空的）`;
+    const fetchError = (event.diagnostics ?? {}).fetchError;
+    if (itemCount > 0 && fetchError && countFilledItems(rule.template, event.payload) === 0) {
+      const why = `取不到完整資料，${itemCount} 個欄位全部是空的 · 未送出 · 原因：${String(fetchError)}`;
       await this.audit.write({
         ruleId: rule.ruleId, sourceType: rule.sourceType, channel: rule.channelType,
         tenantId: rule.tenantId, sourceRef: event.sourceRef ?? null, recordId: event.recordId ?? 0,

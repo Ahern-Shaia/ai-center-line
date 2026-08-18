@@ -63,7 +63,7 @@ const event = (payload: Record<string, unknown>, diagnostics?: Record<string, un
   diagnostics,
 } as unknown as NotificationEvent);
 
-test("⭐⭐ 欄位全部取不到 → 不推 LINE · 記成 invalid_body", async () => {
+test("⭐⭐ 抓取失敗 + 欄位全部取不到 → 不推 LINE · 記成 invalid_body", async () => {
   const { pipeline, written, pushes } = build();
   const items = [
     { path: "1031954", label: "分析表編號", order: 0 },
@@ -71,13 +71,30 @@ test("⭐⭐ 欄位全部取不到 → 不推 LINE · 記成 invalid_body", asyn
     { path: "1031956", label: "客戶全稱", order: 2 },
   ];
   // webhook 只帶了記錄編號（fetchRecord 失敗時的降級內容）
-  const res = await pipeline.deliver(rule(items), event({ _ragicId: 29 }));
+  const res = await pipeline.deliver(
+    rule(items),
+    event({ _ragicId: 29 }, { fetchError: "HTTP 403" }),
+  );
 
   assert.equal(res.status, "invalid_body");
   assert.equal(pushes.length, 0, "不可以送出全是（未填）的訊息");
   assert.equal(written.length, 1);
   assert.equal(written[0]?.status, "invalid_body");
-  assert.match(String(written[0]?.lineMessage), /一個都取不到/);
+  assert.match(String(written[0]?.lineMessage), /取不到完整資料/);
+});
+
+test("⭐⭐ 抓得到資料、只是這筆本來就空 → 照送（2026-08-18 裁定 · 新建空白單也要通知）", async () => {
+  const { pipeline, written, pushes } = build();
+  const items = [
+    { path: "1031954", label: "分析表編號", order: 0 },
+    { path: "1031955", label: "客戶編號", order: 1 },
+  ];
+  // 沒有 fetchError ＝ Ragic 資料抓得到，只是每一欄都還沒填
+  const res = await pipeline.deliver(rule(items), event({ _ragicId: 29 }));
+
+  assert.equal(res.status, "sent", "空白單的『已新增』本身就是要通知的事");
+  assert.equal(pushes.length, 1);
+  assert.equal(written[0]?.status, "sent");
 });
 
 test("⭐ 取不到的原因是抓取失敗時 · 原因要寫進紀錄（不是只說對不上）", async () => {
