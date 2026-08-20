@@ -44,32 +44,153 @@ h1{font-size:17px;font-weight:500;display:flex;align-items:center;gap:8px;}
 .ft{margin-top:16px;padding-top:11px;border-top:1px solid #2c2f36;
  font-size:11px;color:#5f636b;text-align:center;}
 @media(max-width:640px){.leg{font-size:11px;gap:8px}h1{font-size:15px}}
+
+/* ══════════════════════════════════════════════════════════════
+   以下為「批次品質」分頁 —— 一律 bq- 前綴。
+   ⚠️ 不可以複用上面平面圖的 class：兩邊的 .card / .kpi / .k / .leg / .d / .pill
+      定義不同（margin 方向、minmax 寬度、有無邊框），共用會把已核准的平面圖版面改掉。
+   ══════════════════════════════════════════════════════════════ */
+.vtabs{display:flex;gap:8px;margin-bottom:14px;}
+.vtab{padding:8px 18px;font-size:14px;background:#181b1f;color:#9fa3ab;
+ border:1px solid #2c2f36;border-radius:8px;cursor:pointer;}
+.vtab.on{background:#1f2937;color:#e6e7ea;border-color:#3b82f6;}
+.hide{display:none;}
+.bq-card{background:#181b1f;border:1px solid #2c2f36;border-radius:12px;padding:15px 17px;margin-bottom:12px;}
+.bq-ch{font-size:14px;color:#e6e7ea;font-weight:500;margin-bottom:3px;display:flex;
+ align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.bq-cs{font-size:11.5px;color:#5f636b;margin-bottom:13px;line-height:1.6;}
+.bq-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;margin-bottom:12px;}
+.bq-k{background:#181b1f;border:1px solid #2c2f36;border-radius:10px;padding:11px 13px;}
+.bq-k .bq-l{font-size:11px;color:#9fa3ab;margin-bottom:4px;}
+.bq-k .bq-v{font-size:22px;font-weight:500;color:#e6e7ea;line-height:1.15;}
+.bq-k .bq-v small{font-size:12px;color:#7b7f87;font-weight:400;}
+.bq-k .bq-m{font-size:11px;color:#5f636b;margin-top:3px;}
+.bq-rule{background:#141619;border:1px solid #3a2c2c;border-left:3px solid #d03b3b;
+ border-radius:10px;padding:13px 15px;margin-bottom:12px;}
+.bq-rule .bq-t{font-size:12.5px;color:#9fa3ab;margin-bottom:7px;}
+.bq-rule .bq-f{font-size:15px;color:#e6e7ea;line-height:1.7;}
+.bq-rule .bq-f b{color:#eda100;font-weight:500;}
+.bq-rule .bq-n{font-size:11.5px;color:#5f636b;margin-top:8px;line-height:1.6;}
+.bq-two{display:grid;grid-template-columns:1.35fr 1fr;gap:12px;}
+@media(max-width:860px){.bq-two{grid-template-columns:1fr}}
+.bq-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.bq-tbl th{text-align:left;font-size:10.5px;color:#7b7f87;font-weight:500;padding:7px 8px;
+ border-bottom:1px solid #2c2f36;white-space:nowrap;}
+.bq-tbl td{padding:7px 8px;border-bottom:1px solid #202329;color:#c8cad0;white-space:nowrap;}
+.bq-tbl tr:last-child td{border-bottom:none;}
+.bq-tbl tr.bq-cl{cursor:pointer;} .bq-tbl tr.bq-cl:hover td{background:#1c1f24;}
+.bq-tbl tr.bq-on td{background:#1f2937;}
+.bq-mono{font-variant-numeric:tabular-nums;}
+.bq-bad{color:#d03b3b;}
+.bq-pill{font-size:10.5px;padding:2px 8px;border-radius:7px;}
+.bq-leg{display:flex;gap:12px;font-size:11.5px;color:#9fa3ab;align-items:center;flex-wrap:wrap;}
+.bq-leg span{display:flex;align-items:center;gap:5px;}
+.bq-d{width:9px;height:9px;border-radius:50%;}
+.bq-bars{display:flex;flex-direction:column;gap:7px;}
+.bq-br{display:grid;grid-template-columns:96px 1fr 44px;align-items:center;gap:9px;font-size:11.5px;}
+.bq-br .bq-nm{color:#9fa3ab;font-variant-numeric:tabular-nums;}
+/* ⚠️ 這兩個一定要 display:block —— span 是 inline，吃不到 width/height，長條會整條不見 */
+.bq-br .bq-tr{display:block;background:#141619;border-radius:4px;height:15px;overflow:hidden;}
+.bq-br .bq-fl{display:block;height:100%;border-radius:4px;}
+.bq-br .bq-pc{text-align:right;color:#c8cad0;font-variant-numeric:tabular-nums;}
+.bq-note{background:#141619;border:1px solid #2c2f36;border-radius:10px;padding:12px 15px;
+ font-size:11.5px;color:#7b7f87;line-height:1.85;}
+.bq-note b{color:#c8cad0;font-weight:500;}
+.bq-note .bq-h{color:#eda100;font-size:12px;font-weight:500;margin-bottom:6px;display:block;}
 </style></head><body>
 
 <div class="top">
- <h1><span class="lv"></span>鮮湧智慧機聯網　戰情室<span class="sub">平面圖監控</span></h1>
- <div class="sub">機聯設備 28 台　｜　2F 15 台　3F 13 台</div>
+ <h1><span class="lv"></span>鮮湧智慧機聯網　戰情室<span class="sub" id="vsub">平面圖監控</span></h1>
+ <div class="sub" id="vmeta">機聯設備 28 台　｜　2F 15 台　3F 13 台</div>
 </div>
 
-<div class="bar">
- <div class="tabs">
-  <div class="tab on" data-f="2F">2F 蒸區・素食區・烤區</div>
-  <div class="tab" data-f="3F">3F 烹調區</div>
- </div>
- <div class="leg">
-  <span><i class="d" style="background:#0ca30c"></i>正常</span>
-  <span><i class="d" style="background:#eda100"></i>注意</span>
-  <span><i class="d" style="background:#d03b3b"></i>告警</span>
-  <span><i class="d" style="background:#a8a69e"></i>未納入本期</span>
-  <span><i style="width:14px;height:2px;background:#d03b3b;display:inline-block"></i>網路拉線</span>
- </div>
+<div class="vtabs">
+ <div class="vtab on" data-v="fp">平面圖監控</div>
+ <div class="vtab" data-v="bq">批次品質</div>
 </div>
 
-<div class="map"><svg id="fp" viewBox="0 0 660 350" width="100%"></svg></div>
-<div id="dt"></div>
-<div class="ft">多利鑫科技　｜　戰情室平面圖看板　｜　點擊機台檢視即時數據與溫度曲線</div>
+<!-- ══ 平面圖監控（原樣保留）══ -->
+<div id="view-fp">
+ <div class="bar">
+  <div class="tabs">
+   <div class="tab on" data-f="2F">2F 蒸區・素食區・烤區</div>
+   <div class="tab" data-f="3F">3F 烹調區</div>
+  </div>
+  <div class="leg">
+   <span><i class="d" style="background:#0ca30c"></i>正常</span>
+   <span><i class="d" style="background:#eda100"></i>注意</span>
+   <span><i class="d" style="background:#d03b3b"></i>告警</span>
+   <span><i class="d" style="background:#a8a69e"></i>未納入本期</span>
+   <span><i style="width:14px;height:2px;background:#d03b3b;display:inline-block"></i>網路拉線</span>
+  </div>
+ </div>
+ <div class="map"><svg id="fp" viewBox="0 0 660 350" width="100%"></svg></div>
+ <div id="dt"></div>
+ <div class="ft">多利鑫科技　｜　戰情室平面圖看板　｜　點擊機台檢視即時數據與溫度曲線</div>
+</div>
+
+<!-- ══ 批次品質 ══ -->
+<div id="view-bq" class="hide">
+ <div class="bq-kpi" id="bq-kpi"></div>
+
+ <div class="bq-rule">
+  <div class="bq-t">系統從這 40 批反推出的判定規則 —— <b style="color:#0ca30c">40 批全部吻合，零例外</b></div>
+  <div class="bq-f">製程不合格　⟺　COOK 段 ±5°C 佔比 <b>&lt; 90%</b>　或　液位變化 <b>≤ -15%</b></div>
+  <div class="bq-n">這條規則不是我們設定的，是從資料反推出來的 —— 代表系統讀得懂現場的判定邏輯。<br>
+   8 批不合格剛好一半一半：4 批溫度守不住（88.9 / 89.3 / 89.8 / 89.9，全都差臨界一點點）、4 批水耗太兇（-15.5 ~ -15.8）。</div>
+ </div>
+
+ <div class="bq-two">
+  <div class="bq-card">
+   <div class="bq-ch"><span>兩條門檻切出全部 8 批不合格</span>
+    <div class="bq-leg"><span><i class="bq-d" style="background:#0ca30c"></i>合格 32</span>
+     <span><i class="bq-d" style="background:#d03b3b"></i>不合格 8</span>
+     <span><i style="width:13px;height:2px;background:#d03b3b;display:inline-block"></i>門檻</span></div></div>
+   <div class="bq-cs">橫軸＝COOK 段 ±5°C 佔比　縱軸＝液位變化　灰底＝合格區間　點一下看該批明細</div>
+   <svg id="bq-sc" viewBox="0 0 620 300" width="100%"></svg>
+  </div>
+
+  <div class="bq-card">
+   <div class="bq-ch">8 批不合格 · 卡在哪一條</div>
+   <div class="bq-cs">點選看完整批次資料</div>
+   <div style="overflow-x:auto"><table class="bq-tbl" id="bq-ngt"></table></div>
+  </div>
+ </div>
+
+ <div id="bq-dt"></div>
+
+ <div class="bq-two">
+  <div class="bq-card">
+   <div class="bq-ch">各鍋合格率</div>
+   <div class="bq-cs">13 台二重鍋 · 40 批 · <b style="color:#eda100">DRUM-3F-S03 三批中兩批不合格</b>，值得優先查</div>
+   <div class="bq-bars" id="bq-bars"></div>
+  </div>
+
+  <div class="bq-card">
+   <div class="bq-ch">單批次製程時序 · WP26A-0001</div>
+   <div class="bq-cs">大鍋／綜合滷味　每 5 分鐘取樣（實際系統為 5–10 秒級連續蒐集）</div>
+   <svg id="bq-ts" viewBox="0 0 620 235" width="100%"></svg>
+   <div class="bq-leg" style="margin-top:9px;justify-content:center">
+    <span><i style="width:13px;height:2px;background:#eda100;display:inline-block"></i>上層溫</span>
+    <span><i style="width:13px;height:2px;background:#3b82f6;display:inline-block"></i>核心溫</span>
+    <span><i style="width:13px;height:2px;background:#8b8f97;display:inline-block"></i>目標 98°C</span>
+    <span><i class="bq-d" style="background:#2a2f38"></i>製程階段</span></div>
+  </div>
+ </div>
+
+ <div class="bq-note">
+  <span class="bq-h">⚠ 資料涵蓋範圍 —— 本頁數據為 3F 二重鍋歷史批次，與左頁即時監控是兩件事</span>
+  <b>資料範圍</b>：40 批全部落在 DRUM-3F-L01~L04（大鍋）與 S01~S09（小鍋），共 13 台，
+  期間 2026-01-06 ~ 01-25。平面圖上 2F 那 15 台（蒸庫 7、炒菜鍋 4、烤箱 4）本期未納入機聯網。<br>
+  <b>時序取樣</b>：逐分鐘曲線目前提供 WP26A-0001 一批作為代表，其餘批次為整批彙整結果。<br>
+  <b>資料性質</b>：本頁為<b>歷史批次品質分析</b>（每批一筆彙整），左頁「平面圖監控」為即時感測畫面，兩者資料來源與更新頻率不同。
+ </div>
+
+ <div class="ft">多利鑫科技　｜　批次品質看板　｜　資料來源：滷味二重鍋 40 批次資料集</div>
+</div>
 
 <script>
+/* ════ 平面圖監控 —— 原樣未動 ════ */
 const DATA={"2F": {"zones": [{"x": 20, "y": 18, "w": 250, "h": 70, "l": "廚房"}, {"x": 280, "y": 18, "w": 120, "h": 70, "l": "洗米區"}, {"x": 410, "y": 18, "w": 120, "h": 70, "l": "原物料緩衝室"}, {"x": 540, "y": 18, "w": 100, "h": 70, "l": "乾料米庫"}, {"x": 20, "y": 120, "w": 150, "h": 210, "l": "蒸區"}, {"x": 180, "y": 120, "w": 150, "h": 210, "l": "素食區"}, {"x": 340, "y": 120, "w": 130, "h": 210, "l": "烤區"}, {"x": 480, "y": 120, "w": 160, "h": 210, "l": "鍋爐室"}], "net": [[20, 104, 640, 104]], "star": [[300, 104]], "bolt": [[250, 104], [400, 104], [130, 190]], "dev": [{"id": "ST-2F-01", "n": "蒸庫01", "x": 60, "y": 160, "s": "g", "t": 98.4, "tg": 100, "ph": "COOK", "p": "蒸蛋", "rem": 1240}, {"id": "ST-2F-02", "n": "蒸庫02", "x": 60, "y": 200, "s": "g", "t": 99.1, "tg": 100, "ph": "COOK", "p": "蒸蛋", "rem": 980}, {"id": "ST-2F-03", "n": "蒸庫03", "x": 60, "y": 240, "s": "y", "t": 92.0, "tg": 100, "ph": "PREHEAT", "p": "蒸魚", "rem": 2100}, {"id": "ST-2F-04", "n": "蒸庫04", "x": 60, "y": 280, "s": "g", "t": 100.2, "tg": 100, "ph": "COOK", "p": "蒸魚", "rem": 760}, {"id": "ST-2F-05", "n": "蒸庫05", "x": 120, "y": 160, "s": "g", "t": 99.6, "tg": 100, "ph": "COOK", "p": "蒸蛋", "rem": 1450}, {"id": "ST-2F-06", "n": "蒸庫06", "x": 120, "y": 210, "s": "g", "t": 98.8, "tg": 100, "ph": "HOLD", "p": "蒸糕", "rem": 320}, {"id": "ST-2F-07", "n": "蒸庫07", "x": 120, "y": 260, "s": "g", "t": 97.9, "tg": 100, "ph": "COOK", "p": "蒸糕", "rem": 1680}, {"id": "WOK-2F-01", "n": "炒菜鍋01", "x": 250, "y": 160, "s": "g", "t": 74.2, "tg": 75, "ph": "COOK", "p": "炒青菜", "rem": 640}, {"id": "WOK-2F-02", "n": "炒菜鍋02", "x": 250, "y": 205, "s": "g", "t": 73.8, "tg": 75, "ph": "COOK", "p": "炒飯", "rem": 880}, {"id": "WOK-2F-03", "n": "炒菜鍋03", "x": 250, "y": 250, "s": "r", "t": 62.7, "tg": 75, "ph": "COOK", "p": "炒麵", "rem": 1150}, {"id": "WOK-2F-04", "n": "炒菜鍋04", "x": 250, "y": 295, "s": "g", "t": 75.4, "tg": 75, "ph": "COOK", "p": "炒青菜", "rem": 520}, {"id": "OV-2F-01", "n": "烤箱01", "x": 405, "y": 170, "s": "g", "t": 178.2, "tg": 180, "ph": "COOK", "p": "烤雞", "rem": 1320}, {"id": "OV-2F-02", "n": "烤箱02", "x": 405, "y": 215, "s": "g", "t": 179.5, "tg": 180, "ph": "COOK", "p": "烤雞", "rem": 1100}, {"id": "OV-2F-03", "n": "烤箱03", "x": 405, "y": 260, "s": "y", "t": 168.0, "tg": 180, "ph": "PREHEAT", "p": "烤魚", "rem": 1900}, {"id": "OV-2F-04", "n": "烤箱04", "x": 405, "y": 305, "s": "g", "t": 177.1, "tg": 180, "ph": "COOK", "p": "烤魚", "rem": 940}]}, "3F": {"zones": [{"x": 20, "y": 60, "w": 60, "h": 120, "l": "油煙罩"}, {"x": 95, "y": 60, "w": 110, "h": 50, "l": "蒸箱"}, {"x": 220, "y": 60, "w": 80, "h": 50, "l": "攪拌機"}, {"x": 320, "y": 60, "w": 130, "h": 50, "l": "萬能蒸烤箱"}, {"x": 95, "y": 125, "w": 355, "h": 110, "l": "烹調區"}, {"x": 530, "y": 55, "w": 110, "h": 230, "l": "蒸氣迴轉鍋"}, {"x": 20, "y": 255, "w": 500, "h": 80, "l": "蒸氣迴轉鍋"}], "net": [[20, 42, 540, 42]], "star": [[470, 42]], "bolt": [[100, 42], [520, 42], [60, 270]], "dev": [{"id": "-", "n": "蒸箱", "x": 150, "y": 85, "s": "x"}, {"id": "-", "n": "萬能蒸烤箱", "x": 385, "y": 85, "s": "x"}, {"id": "-", "n": "迴轉鍋", "x": 150, "y": 180, "s": "x"}, {"id": "-", "n": "迴轉鍋", "x": 215, "y": 180, "s": "x"}, {"id": "-", "n": "壓力鍋", "x": 400, "y": 180, "s": "x"}, {"id": "DRUM-L01", "n": "大鍋01", "x": 585, "y": 90, "s": "g", "t": 97.9, "tg": 98, "ph": "PREHEAT", "p": "滷豆干", "rem": 3460}, {"id": "DRUM-L02", "n": "大鍋02", "x": 585, "y": 140, "s": "g", "t": 99.7, "tg": 98, "ph": "COOK", "p": "綜合滷味", "rem": 2650}, {"id": "DRUM-L03", "n": "大鍋03", "x": 585, "y": 190, "s": "r", "t": 98.6, "tg": 98, "ph": "COOK", "p": "滷海帶", "rem": 2040, "liq": 5}, {"id": "DRUM-L04", "n": "大鍋04", "x": 585, "y": 240, "s": "g", "t": 97.0, "tg": 98, "ph": "COOK", "p": "滷雞胗", "rem": 1020}, {"id": "DRUM-S05", "n": "小鍋05", "x": 62, "y": 295, "s": "g", "t": 96.7, "tg": 98, "ph": "COOK", "p": "滷豆干", "rem": 1566}, {"id": "DRUM-S06", "n": "小鍋06", "x": 115, "y": 295, "s": "g", "t": 98.1, "tg": 98, "ph": "COOK", "p": "滷海帶", "rem": 1320}, {"id": "DRUM-S07", "n": "小鍋07", "x": 167, "y": 295, "s": "g", "t": 97.3, "tg": 98, "ph": "HOLD", "p": "滷雞胗", "rem": 280}, {"id": "DRUM-S08", "n": "小鍋08", "x": 220, "y": 295, "s": "g", "t": 99.0, "tg": 98, "ph": "COOK", "p": "滷豬頭皮", "rem": 1680}, {"id": "DRUM-S09", "n": "小鍋09", "x": 272, "y": 295, "s": "y", "t": 104.0, "tg": 98, "ph": "COOK", "p": "綜合滷味", "rem": 1740}, {"id": "DRUM-S10", "n": "小鍋10", "x": 325, "y": 295, "s": "g", "t": 96.4, "tg": 98, "ph": "COOK", "p": "滷豆干", "rem": 1440}, {"id": "DRUM-S11", "n": "小鍋11", "x": 377, "y": 295, "s": "g", "t": 98.8, "tg": 98, "ph": "COOK", "p": "滷海帶", "rem": 1190}, {"id": "DRUM-S12", "n": "小鍋12", "x": 430, "y": 295, "s": "g", "t": 97.6, "tg": 98, "ph": "PREHEAT", "p": "滷雞胗", "rem": 2800}, {"id": "DRUM-S13", "n": "小鍋13", "x": 482, "y": 295, "s": "g", "t": 98.3, "tg": 98, "ph": "COOK", "p": "滷豬頭皮", "rem": 1610}]}};
 const S={g:"#0ca30c",y:"#eda100",r:"#d03b3b",x:"#a8a69e"};
 const PH={PREHEAT:"預熱",COOK:"滷製／加熱",HOLD:"保溫"};
@@ -136,4 +257,136 @@ document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
  t.classList.add("on");cf=t.dataset.f;sel=null;draw();hint();});
 draw();hint();
+</script>
+
+<script>
+/* ════ 批次品質 ════
+   整段包在 IIFE 裡 —— 上面平面圖已經有 S / PH / sel / detail / W / px 這些名字，
+   不隔離的話後定義的會蓋掉前面的，平面圖點機台的詳情卡會直接壞掉。 */
+(function(){
+const D={"batches":[{"no":"WP26A-0001","date":"2026-01-06","st":"08:00:00","pot":"大鍋","dev":"DRUM-3F-L01","item":"綜合滷味","pre":17.3,"cook":51.1,"hold":24.2,"tg":98.0,"band":88.9,"core":88.3,"coreok":"合格","lv0":179.8,"lv1":162.9,"dlv":-9.4,"water":0.0,"soy":34.9,"sugar":10.43,"rock":1.21,"wt":200.0,"salt":3.32,"brix":8.4,"ok":"不合格"},{"no":"WP26A-0002","date":"2026-01-06","st":"13:00:00","pot":"大鍋","dev":"DRUM-3F-L02","item":"滷海帶","pre":16.5,"cook":52.3,"hold":22.6,"tg":98.0,"band":94.5,"core":92.1,"coreok":"合格","lv0":183.8,"lv1":154.9,"dlv":-15.7,"water":0.0,"soy":37.1,"sugar":10.97,"rock":1.21,"wt":200.0,"salt":3.13,"brix":8.7,"ok":"不合格"},{"no":"WP26A-0003","date":"2026-01-07","st":"08:00:00","pot":"大鍋","dev":"DRUM-3F-L03","item":"滷海帶","pre":17.2,"cook":51.0,"hold":20.6,"tg":98.0,"band":91.5,"core":90.6,"coreok":"合格","lv0":179.6,"lv1":162.6,"dlv":-9.5,"water":4.8,"soy":34.7,"sugar":10.85,"rock":1.22,"wt":200.0,"salt":3.17,"brix":8.2,"ok":"合格"},{"no":"WP26A-0004","date":"2026-01-07","st":"13:00:00","pot":"大鍋","dev":"DRUM-3F-L04","item":"滷海帶","pre":17.2,"cook":54.9,"hold":24.2,"tg":98.0,"band":93.0,"core":93.5,"coreok":"合格","lv0":181.6,"lv1":159.9,"dlv":-11.9,"water":0.0,"soy":34.7,"sugar":11.41,"rock":1.25,"wt":200.0,"salt":3.23,"brix":7.5,"ok":"合格"},{"no":"WP26A-0005","date":"2026-01-08","st":"08:00:00","pot":"大鍋","dev":"DRUM-3F-L01","item":"滷雞胗","pre":13.6,"cook":56.4,"hold":26.4,"tg":98.0,"band":94.2,"core":91.1,"coreok":"合格","lv0":183.8,"lv1":158.9,"dlv":-13.5,"water":0.0,"soy":34.7,"sugar":11.49,"rock":1.4,"wt":200.0,"salt":3.33,"brix":8.4,"ok":"合格"},{"no":"WP26A-0006","date":"2026-01-08","st":"13:00:00","pot":"大鍋","dev":"DRUM-3F-L02","item":"滷海帶","pre":16.9,"cook":48.4,"hold":23.7,"tg":98.0,"band":91.5,"core":91.9,"coreok":"合格","lv0":180.7,"lv1":167.3,"dlv":-7.4,"water":5.0,"soy":36.4,"sugar":10.97,"rock":1.33,"wt":200.0,"salt":3.37,"brix":8.2,"ok":"合格"},{"no":"WP26A-0007","date":"2026-01-09","st":"08:00:00","pot":"大鍋","dev":"DRUM-3F-L03","item":"滷豬頭皮","pre":12.2,"cook":55.0,"hold":32.2,"tg":98.0,"band":92.6,"core":92.8,"coreok":"合格","lv0":178.1,"lv1":156.1,"dlv":-12.4,"water":0.0,"soy":34.9,"sugar":10.77,"rock":1.35,"wt":200.0,"salt":3.09,"brix":8.3,"ok":"合格"},{"no":"WP26A-0008","date":"2026-01-09","st":"13:00:00","pot":"大鍋","dev":"DRUM-3F-L04","item":"滷雞胗","pre":17.3,"cook":51.3,"hold":32.8,"tg":98.0,"band":92.5,"core":87.3,"coreok":"合格","lv0":179.0,"lv1":153.8,"dlv":-14.1,"water":0.0,"soy":36.4,"sugar":10.74,"rock":1.34,"wt":200.0,"salt":3.29,"brix":7.2,"ok":"合格"},{"no":"WP26A-0009","date":"2026-01-10","st":"08:00:00","pot":"大鍋","dev":"DRUM-3F-L01","item":"滷雞胗","pre":16.5,"cook":50.2,"hold":21.9,"tg":98.0,"band":94.9,"core":93.1,"coreok":"合格","lv0":181.5,"lv1":160.1,"dlv":-11.8,"water":0.0,"soy":35.0,"sugar":10.53,"rock":1.32,"wt":200.0,"salt":3.1,"brix":7.8,"ok":"合格"},{"no":"WP26A-0010","date":"2026-01-10","st":"13:00:00","pot":"大鍋","dev":"DRUM-3F-L02","item":"滷海帶","pre":16.1,"cook":55.5,"hold":29.9,"tg":98.0,"band":93.0,"core":87.1,"coreok":"合格","lv0":183.6,"lv1":175.6,"dlv":-4.4,"water":7.3,"soy":35.9,"sugar":11.43,"rock":1.28,"wt":200.0,"salt":3.13,"brix":7.5,"ok":"合格"},{"no":"WP26A-0011","date":"2026-01-11","st":"08:00:00","pot":"大鍋","dev":"DRUM-3F-L03","item":"滷海帶","pre":14.5,"cook":42.8,"hold":23.9,"tg":98.0,"band":90.1,"core":89.6,"coreok":"合格","lv0":183.2,"lv1":174.2,"dlv":-4.9,"water":7.6,"soy":36.8,"sugar":11.21,"rock":1.37,"wt":200.0,"salt":3.12,"brix":8.1,"ok":"合格"},{"no":"WP26A-0012","date":"2026-01-11","st":"13:00:00","pot":"大鍋","dev":"DRUM-3F-L04","item":"滷雞胗","pre":17.3,"cook":48.4,"hold":26.9,"tg":98.0,"band":92.6,"core":87.6,"coreok":"合格","lv0":176.9,"lv1":157.1,"dlv":-11.2,"water":0.0,"soy":36.5,"sugar":11.23,"rock":1.34,"wt":200.0,"salt":3.18,"brix":8.6,"ok":"合格"},{"no":"WP26A-0013","date":"2026-01-12","st":"08:00:00","pot":"大鍋","dev":"DRUM-3F-L01","item":"滷豬頭皮","pre":13.2,"cook":48.2,"hold":28.0,"tg":98.0,"band":95.7,"core":87.8,"coreok":"合格","lv0":181.7,"lv1":159.3,"dlv":-12.3,"water":0.0,"soy":36.5,"sugar":11.25,"rock":1.39,"wt":200.0,"salt":3.28,"brix":7.6,"ok":"合格"},{"no":"WP26A-0014","date":"2026-01-12","st":"13:00:00","pot":"大鍋","dev":"DRUM-3F-L02","item":"滷豬頭皮","pre":13.4,"cook":45.9,"hold":24.7,"tg":98.0,"band":89.3,"core":91.5,"coreok":"合格","lv0":177.7,"lv1":159.2,"dlv":-10.4,"water":3.7,"soy":35.9,"sugar":11.48,"rock":1.29,"wt":200.0,"salt":3.29,"brix":8.0,"ok":"不合格"},{"no":"WP26A-0015","date":"2026-01-13","st":"08:00:00","pot":"大鍋","dev":"DRUM-3F-L03","item":"滷豆干","pre":17.0,"cook":56.1,"hold":34.2,"tg":98.0,"band":96.1,"core":93.8,"coreok":"合格","lv0":182.4,"lv1":162.6,"dlv":-10.9,"water":4.0,"soy":36.6,"sugar":11.45,"rock":1.39,"wt":200.0,"salt":3.44,"brix":8.3,"ok":"合格"},{"no":"WP26A-0016","date":"2026-01-13","st":"13:00:00","pot":"大鍋","dev":"DRUM-3F-L04","item":"綜合滷味","pre":13.1,"cook":46.0,"hold":26.7,"tg":98.0,"band":90.2,"core":87.5,"coreok":"合格","lv0":178.7,"lv1":164.7,"dlv":-7.8,"water":3.4,"soy":35.0,"sugar":11.28,"rock":1.36,"wt":200.0,"salt":3.02,"brix":7.2,"ok":"合格"},{"no":"WP26A-0017","date":"2026-01-14","st":"08:00:00","pot":"大鍋","dev":"DRUM-3F-L01","item":"滷海帶","pre":12.0,"cook":43.1,"hold":33.0,"tg":98.0,"band":97.6,"core":89.4,"coreok":"合格","lv0":178.9,"lv1":159.7,"dlv":-10.7,"water":0.0,"soy":34.7,"sugar":11.21,"rock":1.21,"wt":200.0,"salt":3.19,"brix":7.6,"ok":"合格"},{"no":"WP26A-0018","date":"2026-01-14","st":"13:00:00","pot":"大鍋","dev":"DRUM-3F-L02","item":"滷海帶","pre":15.0,"cook":49.9,"hold":25.6,"tg":98.0,"band":91.3,"core":87.1,"coreok":"合格","lv0":184.0,"lv1":162.0,"dlv":-12.0,"water":0.0,"soy":35.6,"sugar":11.27,"rock":1.31,"wt":200.0,"salt":3.14,"brix":7.3,"ok":"合格"},{"no":"WP26A-0019","date":"2026-01-15","st":"08:00:00","pot":"大鍋","dev":"DRUM-3F-L03","item":"滷豆干","pre":13.5,"cook":54.5,"hold":34.4,"tg":98.0,"band":94.8,"core":93.9,"coreok":"合格","lv0":181.1,"lv1":166.9,"dlv":-7.8,"water":6.3,"soy":36.5,"sugar":11.45,"rock":1.31,"wt":200.0,"salt":3.25,"brix":8.1,"ok":"合格"},{"no":"WP26A-0020","date":"2026-01-15","st":"13:00:00","pot":"大鍋","dev":"DRUM-3F-L04","item":"滷海帶","pre":17.7,"cook":56.2,"hold":24.8,"tg":98.0,"band":96.2,"core":88.5,"coreok":"合格","lv0":177.3,"lv1":160.9,"dlv":-9.2,"water":7.1,"soy":36.5,"sugar":10.89,"rock":1.35,"wt":200.0,"salt":3.21,"brix":7.6,"ok":"合格"},{"no":"WP26B-0021","date":"2026-01-16","st":"08:00:00","pot":"小鍋","dev":"DRUM-3F-S03","item":"滷豬頭皮","pre":16.4,"cook":49.0,"hold":24.8,"tg":98.0,"band":91.1,"core":93.4,"coreok":"合格","lv0":38.0,"lv1":34.5,"dlv":-9.2,"water":0.0,"soy":16.1,"sugar":5.06,"rock":0.6,"wt":40.7,"salt":5.02,"brix":9.5,"ok":"合格"},{"no":"WP26B-0022","date":"2026-01-16","st":"13:00:00","pot":"小鍋","dev":"DRUM-3F-S04","item":"滷海帶","pre":14.5,"cook":57.5,"hold":34.3,"tg":98.0,"band":89.8,"core":91.5,"coreok":"合格","lv0":37.3,"lv1":33.3,"dlv":-10.7,"water":0.0,"soy":16.2,"sugar":4.64,"rock":0.64,"wt":41.5,"salt":4.95,"brix":9.5,"ok":"不合格"},{"no":"WP26B-0023","date":"2026-01-17","st":"08:00:00","pot":"小鍋","dev":"DRUM-3F-S05","item":"滷雞胗","pre":16.4,"cook":57.0,"hold":20.0,"tg":98.0,"band":91.2,"core":89.1,"coreok":"合格","lv0":38.2,"lv1":41.4,"dlv":8.4,"water":7.1,"soy":17.2,"sugar":4.43,"rock":0.61,"wt":40.3,"salt":5.16,"brix":9.1,"ok":"合格"},{"no":"WP26B-0024","date":"2026-01-17","st":"13:00:00","pot":"小鍋","dev":"DRUM-3F-S06","item":"滷雞胗","pre":16.4,"cook":57.6,"hold":29.7,"tg":98.0,"band":92.7,"core":87.2,"coreok":"合格","lv0":37.8,"lv1":39.4,"dlv":4.2,"water":7.1,"soy":17.2,"sugar":4.95,"rock":0.56,"wt":43.3,"salt":5.0,"brix":9.3,"ok":"合格"},{"no":"WP26B-0025","date":"2026-01-18","st":"08:00:00","pot":"小鍋","dev":"DRUM-3F-S07","item":"綜合滷味","pre":12.9,"cook":55.0,"hold":20.2,"tg":98.0,"band":90.9,"core":90.3,"coreok":"合格","lv0":37.6,"lv1":33.5,"dlv":-10.9,"water":0.0,"soy":17.0,"sugar":4.65,"rock":0.64,"wt":42.0,"salt":4.96,"brix":8.6,"ok":"合格"},{"no":"WP26B-0026","date":"2026-01-18","st":"13:00:00","pot":"小鍋","dev":"DRUM-3F-S08","item":"綜合滷味","pre":13.6,"cook":44.3,"hold":20.1,"tg":98.0,"band":89.9,"core":89.3,"coreok":"合格","lv0":33.2,"lv1":30.4,"dlv":-8.4,"water":0.0,"soy":14.2,"sugar":4.36,"rock":0.57,"wt":39.3,"salt":4.57,"brix":9.3,"ok":"不合格"},{"no":"WP26B-0027","date":"2026-01-19","st":"08:00:00","pot":"小鍋","dev":"DRUM-3F-S09","item":"滷豆干","pre":16.3,"cook":48.7,"hold":34.6,"tg":98.0,"band":94.6,"core":87.4,"coreok":"合格","lv0":38.7,"lv1":33.4,"dlv":-13.7,"water":0.0,"soy":15.3,"sugar":4.47,"rock":0.61,"wt":41.3,"salt":4.71,"brix":10.1,"ok":"合格"},{"no":"WP26B-0028","date":"2026-01-19","st":"13:00:00","pot":"小鍋","dev":"DRUM-3F-S01","item":"滷雞胗","pre":15.6,"cook":45.3,"hold":20.2,"tg":98.0,"band":95.4,"core":89.9,"coreok":"合格","lv0":37.6,"lv1":38.3,"dlv":1.9,"water":4.1,"soy":15.5,"sugar":5.71,"rock":0.6,"wt":43.2,"salt":4.51,"brix":9.3,"ok":"合格"},{"no":"WP26B-0029","date":"2026-01-20","st":"08:00:00","pot":"小鍋","dev":"DRUM-3F-S02","item":"滷雞胗","pre":13.1,"cook":42.9,"hold":31.8,"tg":98.0,"band":95.5,"core":88.5,"coreok":"合格","lv0":37.3,"lv1":31.4,"dlv":-15.8,"water":0.0,"soy":14.6,"sugar":4.48,"rock":0.65,"wt":39.7,"salt":4.61,"brix":10.2,"ok":"不合格"},{"no":"WP26B-0030","date":"2026-01-20","st":"13:00:00","pot":"小鍋","dev":"DRUM-3F-S03","item":"滷豬頭皮","pre":13.1,"cook":47.5,"hold":22.0,"tg":98.0,"band":98.1,"core":91.0,"coreok":"合格","lv0":36.6,"lv1":30.9,"dlv":-15.6,"water":0.0,"soy":15.6,"sugar":4.18,"rock":0.64,"wt":39.2,"salt":5.03,"brix":9.9,"ok":"不合格"},{"no":"WP26B-0031","date":"2026-01-21","st":"08:00:00","pot":"小鍋","dev":"DRUM-3F-S04","item":"綜合滷味","pre":12.9,"cook":46.4,"hold":34.3,"tg":98.0,"band":91.4,"core":90.7,"coreok":"合格","lv0":40.6,"lv1":37.0,"dlv":-8.9,"water":0.0,"soy":16.3,"sugar":5.3,"rock":0.63,"wt":43.0,"salt":5.01,"brix":9.4,"ok":"合格"},{"no":"WP26B-0032","date":"2026-01-21","st":"13:00:00","pot":"小鍋","dev":"DRUM-3F-S05","item":"滷豬頭皮","pre":13.8,"cook":44.6,"hold":23.2,"tg":98.0,"band":94.9,"core":89.8,"coreok":"合格","lv0":34.6,"lv1":30.7,"dlv":-11.3,"water":0.0,"soy":17.4,"sugar":4.65,"rock":0.67,"wt":42.5,"salt":5.09,"brix":9.0,"ok":"合格"},{"no":"WP26B-0033","date":"2026-01-22","st":"08:00:00","pot":"小鍋","dev":"DRUM-3F-S06","item":"滷豬頭皮","pre":15.2,"cook":49.9,"hold":24.3,"tg":98.0,"band":90.9,"core":88.1,"coreok":"合格","lv0":39.4,"lv1":39.0,"dlv":-1.0,"water":3.1,"soy":16.0,"sugar":4.5,"rock":0.61,"wt":42.6,"salt":4.81,"brix":8.9,"ok":"合格"},{"no":"WP26B-0034","date":"2026-01-22","st":"13:00:00","pot":"小鍋","dev":"DRUM-3F-S07","item":"滷雞胗","pre":16.9,"cook":53.3,"hold":32.7,"tg":98.0,"band":93.1,"core":91.3,"coreok":"合格","lv0":37.5,"lv1":34.4,"dlv":-8.3,"water":0.0,"soy":15.4,"sugar":4.79,"rock":0.62,"wt":40.7,"salt":4.89,"brix":9.6,"ok":"合格"},{"no":"WP26B-0035","date":"2026-01-23","st":"08:00:00","pot":"小鍋","dev":"DRUM-3F-S08","item":"滷豆干","pre":16.5,"cook":53.7,"hold":24.5,"tg":98.0,"band":91.5,"core":92.1,"coreok":"合格","lv0":36.3,"lv1":32.3,"dlv":-11.0,"water":0.0,"soy":14.9,"sugar":4.24,"rock":0.53,"wt":39.4,"salt":4.99,"brix":8.4,"ok":"合格"},{"no":"WP26B-0036","date":"2026-01-23","st":"13:00:00","pot":"小鍋","dev":"DRUM-3F-S09","item":"滷雞胗","pre":14.6,"cook":42.0,"hold":32.1,"tg":98.0,"band":93.7,"core":92.0,"coreok":"合格","lv0":32.6,"lv1":35.2,"dlv":8.0,"water":6.9,"soy":16.5,"sugar":4.22,"rock":0.55,"wt":39.5,"salt":5.2,"brix":9.3,"ok":"合格"},{"no":"WP26B-0037","date":"2026-01-24","st":"08:00:00","pot":"小鍋","dev":"DRUM-3F-S01","item":"滷雞胗","pre":16.6,"cook":43.0,"hold":32.9,"tg":98.0,"band":91.4,"core":87.6,"coreok":"合格","lv0":33.1,"lv1":35.0,"dlv":5.7,"water":5.3,"soy":16.9,"sugar":5.05,"rock":0.64,"wt":39.7,"salt":5.16,"brix":10.2,"ok":"合格"},{"no":"WP26B-0038","date":"2026-01-24","st":"13:00:00","pot":"小鍋","dev":"DRUM-3F-S02","item":"滷豆干","pre":15.7,"cook":47.6,"hold":30.5,"tg":98.0,"band":97.7,"core":88.7,"coreok":"合格","lv0":36.9,"lv1":33.5,"dlv":-9.2,"water":0.0,"soy":15.5,"sugar":4.5,"rock":0.49,"wt":39.8,"salt":4.75,"brix":9.3,"ok":"合格"},{"no":"WP26B-0039","date":"2026-01-25","st":"08:00:00","pot":"小鍋","dev":"DRUM-3F-S03","item":"綜合滷味","pre":17.1,"cook":51.9,"hold":20.9,"tg":98.0,"band":96.4,"core":88.3,"coreok":"合格","lv0":37.4,"lv1":31.6,"dlv":-15.5,"water":0.0,"soy":16.9,"sugar":5.75,"rock":0.56,"wt":43.6,"salt":4.94,"brix":9.4,"ok":"不合格"},{"no":"WP26B-0040","date":"2026-01-25","st":"13:00:00","pot":"小鍋","dev":"DRUM-3F-S04","item":"滷海帶","pre":13.1,"cook":57.1,"hold":22.6,"tg":98.0,"band":93.8,"core":91.8,"coreok":"合格","lv0":38.8,"lv1":33.2,"dlv":-14.4,"water":0.0,"soy":15.8,"sugar":5.03,"rock":0.5,"wt":42.1,"salt":4.87,"brix":9.4,"ok":"合格"}],"series":[{"m":0,"ph":"PREHEAT","top":30.7,"core":19.0,"lv":179.4,"valve":77},{"m":5,"ph":"PREHEAT","top":49.6,"core":40.7,"lv":178.2,"valve":87},{"m":10,"ph":"PREHEAT","top":69.1,"core":62.6,"lv":177.0,"valve":76},{"m":15,"ph":"PREHEAT","top":89.3,"core":80.6,"lv":176.6,"valve":86},{"m":20,"ph":"COOK","top":96.8,"core":90.4,"lv":175.8,"valve":49},{"m":25,"ph":"COOK","top":96.8,"core":86.9,"lv":175.2,"valve":55},{"m":30,"ph":"COOK","top":98.3,"core":88.7,"lv":174.4,"valve":43},{"m":35,"ph":"COOK","top":96.8,"core":86.9,"lv":172.4,"valve":51},{"m":40,"ph":"COOK","top":97.7,"core":90.0,"lv":172.7,"valve":51},{"m":45,"ph":"COOK","top":98.8,"core":90.7,"lv":171.3,"valve":40},{"m":50,"ph":"COOK","top":96.4,"core":88.9,"lv":170.3,"valve":54},{"m":55,"ph":"COOK","top":95.7,"core":82.7,"lv":170.1,"valve":60},{"m":60,"ph":"COOK","top":95.3,"core":82.0,"lv":168.0,"valve":41},{"m":65,"ph":"COOK","top":96.7,"core":87.1,"lv":167.5,"valve":43},{"m":70,"ph":"HOLD","top":75.0,"core":63.4,"lv":167.1,"valve":20},{"m":75,"ph":"HOLD","top":75.5,"core":63.9,"lv":166.0,"valve":11},{"m":80,"ph":"HOLD","top":75.7,"core":68.5,"lv":164.7,"valve":16},{"m":85,"ph":"HOLD","top":75.3,"core":69.2,"lv":163.9,"valve":11},{"m":90,"ph":"HOLD","top":72.6,"core":63.9,"lv":163.8,"valve":11}],"devs":[{"dev":"DRUM-3F-S03","n":3,"ng":2,"rate":33},{"dev":"DRUM-3F-S08","n":2,"ng":1,"rate":50},{"dev":"DRUM-3F-S02","n":2,"ng":1,"rate":50},{"dev":"DRUM-3F-L02","n":5,"ng":2,"rate":60},{"dev":"DRUM-3F-S04","n":3,"ng":1,"rate":67},{"dev":"DRUM-3F-L01","n":5,"ng":1,"rate":80},{"dev":"DRUM-3F-L03","n":5,"ng":0,"rate":100},{"dev":"DRUM-3F-L04","n":5,"ng":0,"rate":100},{"dev":"DRUM-3F-S05","n":2,"ng":0,"rate":100},{"dev":"DRUM-3F-S06","n":2,"ng":0,"rate":100},{"dev":"DRUM-3F-S07","n":2,"ng":0,"rate":100},{"dev":"DRUM-3F-S09","n":2,"ng":0,"rate":100},{"dev":"DRUM-3F-S01","n":2,"ng":0,"rate":100}],"kpi":{"n":40,"ng":8,"band_lo":88.9,"band_hi":98.1,"core_lo":87.1,"core_hi":93.9,"d0":"2026-01-06","d1":"2026-01-25"}}
+;
+
+const S={g:"#0ca30c",r:"#d03b3b",y:"#eda100"};
+const PH={PREHEAT:"預熱",COOK:"滷製",HOLD:"保溫"};
+const q=s=>document.querySelector(s);
+const ng=D.batches.filter(b=>b.ok==="不合格");
+let sel=null;
+
+const okRate=Math.round((D.kpi.n-D.kpi.ng)/D.kpi.n*100);
+q("#bq-kpi").innerHTML=[
+ ["製程合格率",`${okRate}<small>%</small>`,`${D.kpi.n-D.kpi.ng} / ${D.kpi.n} 批`,"#0ca30c"],
+ ["不合格批次",`${D.kpi.ng}<small> 批</small>`,"溫度 4 · 液位 4","#d03b3b"],
+ ["中心溫合格",`${D.kpi.n}<small>/${D.kpi.n}</small>`,`${D.kpi.core_lo}~${D.kpi.core_hi}°C · 食安全過`,"#0ca30c"],
+ ["COOK 穩定度",`${D.kpi.band_lo}~${D.kpi.band_hi}<small>%</small>`,"門檻 90%","#eda100"],
+].map(k=>`<div class="bq-k"><div class="bq-l">${k[0]}</div><div class="bq-v" style="color:${k[3]}">${k[1]}</div><div class="bq-m">${k[2]}</div></div>`).join("");
+
+function scatter(){
+ const W=620,H=300,ml=46,mr=14,mt=14,mb=34;
+ const xs=D.batches.map(b=>b.band),ys=D.batches.map(b=>b.dlv);
+ const x0=Math.floor(Math.min(...xs)-1),x1=Math.ceil(Math.max(...xs)+1);
+ const y0=Math.floor(Math.min(...ys)-2),y1=Math.ceil(Math.max(...ys)+2);
+ const px=v=>ml+(v-x0)*(W-ml-mr)/(x1-x0), py=v=>mt+(y1-v)*(H-mt-mb)/(y1-y0);
+ let g="";
+ g+=`<rect x="${px(90)}" y="${py(y1)}" width="${W-mr-px(90)}" height="${py(-15)-py(y1)}" fill="#0ca30c" opacity=".06"/>`;
+ // 刻度取 5 的倍數 —— 均分會跑出 -11%／4% 這種讀不出來的數字
+ for(let v=Math.ceil(y0/5)*5;v<=y1;v+=5){const y=py(v);
+  g+=`<line x1="${ml}" y1="${y}" x2="${W-mr}" y2="${y}" stroke="rgba(137,135,129,.15)"/>`
+   +`<text x="${ml-6}" y="${y+4}" text-anchor="end" font-size="10.5" fill="#7b7f87">${v}%</text>`;}
+ for(let v=Math.ceil(x0/2)*2;v<=x1;v+=2)
+  g+=`<text x="${px(v)}" y="${H-13}" text-anchor="middle" font-size="10.5" fill="#7b7f87">${v}%</text>`;
+ g+=`<line x1="${px(90)}" y1="${mt}" x2="${px(90)}" y2="${H-mb}" stroke="#d03b3b" stroke-width="1.5" stroke-dasharray="5 4"/>`
+   +`<text x="${px(90)-5}" y="${mt+11}" text-anchor="end" font-size="10.5" fill="#d03b3b">90%</text>`;
+ g+=`<line x1="${ml}" y1="${py(-15)}" x2="${W-mr}" y2="${py(-15)}" stroke="#d03b3b" stroke-width="1.5" stroke-dasharray="5 4"/>`
+   +`<text x="${W-mr}" y="${py(-15)+13}" text-anchor="end" font-size="10.5" fill="#d03b3b">-15%</text>`;
+ D.batches.forEach(b=>{
+  const bad=b.ok==="不合格", on=sel===b.no;
+  g+=`<g class="bq-pt" data-no="${b.no}" style="cursor:pointer">`
+   +(on?`<circle cx="${px(b.band)}" cy="${py(b.dlv)}" r="9" fill="none" stroke="${bad?S.r:S.g}" opacity=".55"/>`:"")
+   +`<circle cx="${px(b.band)}" cy="${py(b.dlv)}" r="${bad?5.2:4.2}" fill="${bad?S.r:S.g}" opacity="${bad?1:.72}"/></g>`;});
+ g+=`<text x="${(ml+W-mr)/2}" y="${H-1}" text-anchor="middle" font-size="10.5" fill="#5f636b">COOK 段 ±5°C 佔比</text>`;
+ q("#bq-sc").innerHTML=g;
+ q("#bq-sc").querySelectorAll(".bq-pt").forEach(p=>p.onclick=()=>pick(p.dataset.no));
+}
+
+function ngTable(){
+ q("#bq-ngt").innerHTML="<thead><tr><th>批次</th><th>設備</th><th>品項</th><th>COOK</th><th>液位</th><th>原因</th></tr></thead><tbody>"
+  +ng.map(b=>{const t=b.band<90;
+   return `<tr class="bq-cl${sel===b.no?" bq-on":""}" data-no="${b.no}"><td class="bq-mono">${b.no}</td>`
+    +`<td class="bq-mono" style="color:#9fa3ab">${b.dev.replace("DRUM-3F-","")}</td><td>${b.item}</td>`
+    +`<td class="bq-mono ${t?"bq-bad":""}">${b.band}%</td><td class="bq-mono ${t?"":"bq-bad"}">${b.dlv}%</td>`
+    +`<td><span class="bq-pill" style="background:${t?"#d03b3b26":"#eda10026"};color:${t?"#d03b3b":"#eda100"}">${t?"溫度不穩":"水耗過大"}</span></td></tr>`;}).join("")
+  +"</tbody>";
+ q("#bq-ngt").querySelectorAll("tr.bq-cl").forEach(r=>r.onclick=()=>pick(r.dataset.no));
+}
+
+function pick(no){ sel=(sel===no?null:no); scatter(); ngTable(); detail(); }
+
+function detail(){
+ const el=q("#bq-dt");
+ if(!sel){el.innerHTML="";return;}
+ const b=D.batches.find(x=>x.no===sel),bad=b.ok==="不合格",c=bad?S.r:S.g;
+ const ks=[["日期",`${b.date} ${b.st.slice(0,5)}`],["設備",`${b.dev}（${b.pot}）`],["品項",b.item],
+  ["預熱／滷製／保溫",`${b.pre} / ${b.cook} / ${b.hold} 分`],
+  ["COOK 段 ±5°C 佔比",`${b.band}%`],["中心溫",`${b.core}°C（${b.coreok}）`],
+  ["液位",`${b.lv0} → ${b.lv1} L（${b.dlv}%）`],["補水",`${b.water} kg`],
+  ["醬油／二砂／冰糖",`${b.soy} / ${b.sugar} / ${b.rock} kg`],
+  ["滷汁重",`${b.wt} kg`],["鹹度",`${b.salt}%`],["甜度",`${b.brix} °Brix`]];
+ el.innerHTML=`<div class="bq-card" style="border-left:3px solid ${c}">
+  <div class="bq-ch"><span style="font-size:16px">${b.no}　<span style="color:#7b7f87;font-size:12px">${b.item}</span></span>
+   <span class="bq-pill" style="background:${c}26;color:${c};font-size:12px;padding:3px 11px">${b.ok}</span></div>
+  <div class="bq-cs">${bad?(b.band<90?"COOK 段 ±5°C 佔比 "+b.band+"% 未達 90% 門檻":"液位變化 "+b.dlv+"% 超過 -15% 門檻"):"兩條門檻都在範圍內"}</div>
+  <div class="bq-kpi" style="margin:0">${ks.map(k=>`<div class="bq-k"><div class="bq-l">${k[0]}</div><div class="bq-v" style="font-size:15px">${k[1]}</div></div>`).join("")}</div></div>`;
+}
+
+q("#bq-bars").innerHTML=D.devs.map(d=>{
+ const c=d.rate<60?S.r:d.rate<100?S.y:S.g;
+ return `<div class="bq-br"><span class="bq-nm">${d.dev.replace("DRUM-3F-","")}　<span style="color:#5f636b">${d.n}批</span></span>
+  <span class="bq-tr"><span class="bq-fl" style="width:${d.rate}%;background:${c}"></span></span>
+  <span class="bq-pc" style="color:${c}">${d.rate}%</span></div>`;}).join("");
+
+function series(){
+ const W=620,H=235,ml=42,mr=44,mt=14,mb=28,P=D.series;
+ const lo=0,hi=110;
+ const px=i=>ml+i*(W-ml-mr)/(P.length-1), py=v=>mt+(hi-v)*(H-mt-mb)/(hi-lo);
+ let g="",st=0;
+ for(let i=1;i<=P.length;i++){
+  if(i===P.length||P[i].ph!==P[st].ph){
+   const a=px(st)-((st>0)?(px(st)-px(st-1))/2:0), b=px(i-1)+((i<P.length)?(px(i)-px(i-1))/2:0);
+   g+=`<rect x="${a}" y="${mt}" width="${b-a}" height="${H-mt-mb}" fill="#2a2f38" opacity="${P[st].ph==="COOK"?.5:.26}"/>`
+    +`<text x="${(a+b)/2}" y="${mt+12}" text-anchor="middle" font-size="10.5" fill="#7b7f87">${PH[P[st].ph]}</text>`;
+   st=i;}}
+ for(let v=0;v<=100;v+=25)
+  g+=`<line x1="${ml}" y1="${py(v)}" x2="${W-mr}" y2="${py(v)}" stroke="rgba(137,135,129,.13)"/>`
+   +`<text x="${ml-6}" y="${py(v)+4}" text-anchor="end" font-size="10.5" fill="#7b7f87">${v}</text>`;
+ g+=`<line x1="${ml}" y1="${py(98)}" x2="${W-mr}" y2="${py(98)}" stroke="#8b8f97" stroke-width="1.1" stroke-dasharray="5 4"/>`;
+ const path=(key,col)=>{
+  const d=P.map((p,i)=>(i?"L":"M")+px(i).toFixed(1)+" "+py(p[key]).toFixed(1)).join(" ");
+  return `<path d="${d}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;};
+ g+=path("top","#eda100")+path("core","#3b82f6");
+ const lvs=P.map(p=>p.lv),l0=Math.min(...lvs)-3,l1=Math.max(...lvs)+3;
+ const ly=v=>mt+(l1-v)*(H-mt-mb)/(l1-l0);
+ g+=`<path d="${P.map((p,i)=>(i?"L":"M")+px(i).toFixed(1)+" "+ly(p.lv).toFixed(1)).join(" ")}" fill="none" stroke="#0ca30c" stroke-width="1.4" stroke-dasharray="3 3" opacity=".75"/>`;
+ g+=`<text x="${W-mr+5}" y="${ly(P[0].lv)+4}" font-size="10" fill="#0ca30c">液位</text>`;
+ g+=`<text x="${W-mr+5}" y="${ly(P[P.length-1].lv)+4}" font-size="10" fill="#0ca30c">${P[P.length-1].lv}L</text>`;
+ [0,6,12,18].forEach(i=>{if(P[i])g+=`<text x="${px(i)}" y="${H-9}" text-anchor="middle" font-size="10.5" fill="#7b7f87">${P[i].m}分</text>`;});
+ q("#bq-ts").innerHTML=g;
+}
+
+scatter(); ngTable(); series();
+
+/* ── 分頁切換 ── */
+const META={fp:["平面圖監控","機聯設備 28 台　｜　2F 15 台　3F 13 台"],
+            bq:["批次品質",`${D.kpi.n} 批　｜　${D.kpi.d0} ~ ${D.kpi.d1}　｜　3F 二重鍋 13 台`]};
+document.querySelectorAll(".vtab").forEach(t=>t.onclick=()=>{
+ document.querySelectorAll(".vtab").forEach(x=>x.classList.remove("on"));
+ t.classList.add("on");
+ const v=t.dataset.v;
+ document.getElementById("view-fp").classList.toggle("hide",v!=="fp");
+ document.getElementById("view-bq").classList.toggle("hide",v!=="bq");
+ q("#vsub").textContent=META[v][0];
+ q("#vmeta").textContent=META[v][1];
+ scrollTo(0,0);
+});
+})();
 </script></body></html>
