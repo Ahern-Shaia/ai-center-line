@@ -61,7 +61,11 @@
 ### B2 · 選版型 + 背景圖
 1. **選版型**：三顆按鈕挑「**1 列 3 欄**」版面（大版或半高版皆可）。
 2. **上傳背景圖**：圖文選單是「**一張背景圖 + 在上面框可點區塊**」，所以背景圖上要**畫好按鈕文字**（打卡／我的行程／我的日報）。
-   - 現成 mockup 背景圖（三欄）：`docs/mockup/richmenu/richmenu-large-2500x1686.png`（大版）、`richmenu-compact-2500x843.png`（半高版），直接上傳即可。
+   - 現成 mockup 背景圖（三欄）：`docs/mockup/richmenu/taiwanhomecare/richmenu-large-2500x1686.png`（大版）、
+     同資料夾的 `richmenu-compact-2500x843.png`（半高版），直接上傳即可。
+   - ⚠️ **背景圖依租戶分資料夾** —— 按鈕文字是畫在圖上的，每家開的功能不同就不能共用同一張。
+     各家現況、產圖指令、LINE 的尺寸限制見 [`../mockup/richmenu/README.md`](../mockup/richmenu/README.md)。
+     鮮湧是 6 宮格（`docs/mockup/richmenu/shianyong/`），不適用本節的「1 列 3 欄」版型。
    - LINE 也有內建版型可直接套色塊。
 
 ### B3 · 設每個區塊的動作（**關鍵**）
