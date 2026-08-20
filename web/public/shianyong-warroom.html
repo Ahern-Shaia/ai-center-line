@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-TW"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- 公開網址但不希望被搜尋到：頁面含客戶名稱、廠區平面圖與設備清單 -->
+<meta name="robots" content="noindex,nofollow">
+<title>鮮湧智慧機聯網 - 戰情室</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;
+ font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;}
+body{background:#0d0f12;color:#d8d9dc;padding:14px;}
+.top{display:flex;align-items:center;justify-content:space-between;
+ padding-bottom:12px;border-bottom:1px solid #2c2f36;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+h1{font-size:17px;font-weight:500;display:flex;align-items:center;gap:8px;}
+.lv{width:8px;height:8px;border-radius:50%;background:#0ca30c;animation:p 2s infinite;}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.35}}
+.sub{font-size:12px;color:#7b7f87;font-weight:400;}
+.bar{display:flex;align-items:center;justify-content:space-between;
+ margin-bottom:12px;flex-wrap:wrap;gap:10px;}
+.tabs{display:flex;gap:8px;}
+.tab{padding:7px 16px;font-size:14px;background:#181b1f;color:#9fa3ab;
+ border:1px solid #2c2f36;border-radius:8px;cursor:pointer;}
+.tab.on{background:#1f2937;color:#e6e7ea;border-color:#3b82f6;}
+.leg{display:flex;gap:12px;font-size:12px;color:#9fa3ab;align-items:center;flex-wrap:wrap;}
+.leg span{display:flex;align-items:center;gap:4px;}
+.d{width:10px;height:10px;border-radius:50%;}
+.map{background:#141619;border:1px solid #2c2f36;border-radius:12px;padding:10px;}
+.mk{cursor:pointer;}
+.mk:hover circle{opacity:.8;}
+.card{margin-top:12px;background:#181b1f;border:1px solid #2c2f36;
+ border-radius:12px;padding:15px 17px;}
+.hd2{display:flex;justify-content:space-between;align-items:center;
+ flex-wrap:wrap;gap:8px;margin-bottom:13px;}
+.nm{font-size:17px;font-weight:500;color:#e6e7ea;}
+.did{font-size:12px;color:#7b7f87;}
+.pill{font-size:12px;padding:3px 11px;border-radius:8px;}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
+ gap:10px;margin-bottom:13px;}
+.k{background:#141619;border-radius:8px;padding:9px 11px;}
+.k .l{font-size:11px;color:#9fa3ab;margin-bottom:3px;}
+.k .v{font-size:16px;font-weight:500;color:#e6e7ea;}
+.cw{position:relative;width:100%;height:190px;}
+.cap{font-size:11px;color:#5f636b;text-align:center;margin-top:7px;}
+.hint{text-align:center;padding:26px;font-size:13px;color:#5f636b;}
+.ft{margin-top:16px;padding-top:11px;border-top:1px solid #2c2f36;
+ font-size:11px;color:#5f636b;text-align:center;}
+@media(max-width:640px){.leg{font-size:11px;gap:8px}h1{font-size:15px}}
+</style></head><body>
+
+<div class="top">
+ <h1><span class="lv"></span>鮮湧智慧機聯網　戰情室<span class="sub">平面圖監控</span></h1>
+ <div class="sub">機聯設備 28 台　｜　2F 15 台　3F 13 台</div>
+</div>
+
+<div class="bar">
+ <div class="tabs">
+  <div class="tab on" data-f="2F">2F 蒸區・素食區・烤區</div>
+  <div class="tab" data-f="3F">3F 烹調區</div>
+ </div>
+ <div class="leg">
+  <span><i class="d" style="background:#0ca30c"></i>正常</span>
+  <span><i class="d" style="background:#eda100"></i>注意</span>
+  <span><i class="d" style="background:#d03b3b"></i>告警</span>
+  <span><i class="d" style="background:#a8a69e"></i>未納入本期</span>
+  <span><i style="width:14px;height:2px;background:#d03b3b;display:inline-block"></i>網路拉線</span>
+ </div>
+</div>
+
+<div class="map"><svg id="fp" viewBox="0 0 660 350" width="100%"></svg></div>
+<div id="dt"></div>
+<div class="ft">多利鑫科技　｜　戰情室平面圖看板　｜　點擊機台檢視即時數據與溫度曲線</div>
+
+<script>
+const DATA={"2F": {"zones": [{"x": 20, "y": 18, "w": 250, "h": 70, "l": "廚房"}, {"x": 280, "y": 18, "w": 120, "h": 70, "l": "洗米區"}, {"x": 410, "y": 18, "w": 120, "h": 70, "l": "原物料緩衝室"}, {"x": 540, "y": 18, "w": 100, "h": 70, "l": "乾料米庫"}, {"x": 20, "y": 120, "w": 150, "h": 210, "l": "蒸區"}, {"x": 180, "y": 120, "w": 150, "h": 210, "l": "素食區"}, {"x": 340, "y": 120, "w": 130, "h": 210, "l": "烤區"}, {"x": 480, "y": 120, "w": 160, "h": 210, "l": "鍋爐室"}], "net": [[20, 104, 640, 104]], "star": [[300, 104]], "bolt": [[250, 104], [400, 104], [130, 190]], "dev": [{"id": "ST-2F-01", "n": "蒸庫01", "x": 60, "y": 160, "s": "g", "t": 98.4, "tg": 100, "ph": "COOK", "p": "蒸蛋", "rem": 1240}, {"id": "ST-2F-02", "n": "蒸庫02", "x": 60, "y": 200, "s": "g", "t": 99.1, "tg": 100, "ph": "COOK", "p": "蒸蛋", "rem": 980}, {"id": "ST-2F-03", "n": "蒸庫03", "x": 60, "y": 240, "s": "y", "t": 92.0, "tg": 100, "ph": "PREHEAT", "p": "蒸魚", "rem": 2100}, {"id": "ST-2F-04", "n": "蒸庫04", "x": 60, "y": 280, "s": "g", "t": 100.2, "tg": 100, "ph": "COOK", "p": "蒸魚", "rem": 760}, {"id": "ST-2F-05", "n": "蒸庫05", "x": 120, "y": 160, "s": "g", "t": 99.6, "tg": 100, "ph": "COOK", "p": "蒸蛋", "rem": 1450}, {"id": "ST-2F-06", "n": "蒸庫06", "x": 120, "y": 210, "s": "g", "t": 98.8, "tg": 100, "ph": "HOLD", "p": "蒸糕", "rem": 320}, {"id": "ST-2F-07", "n": "蒸庫07", "x": 120, "y": 260, "s": "g", "t": 97.9, "tg": 100, "ph": "COOK", "p": "蒸糕", "rem": 1680}, {"id": "WOK-2F-01", "n": "炒菜鍋01", "x": 250, "y": 160, "s": "g", "t": 74.2, "tg": 75, "ph": "COOK", "p": "炒青菜", "rem": 640}, {"id": "WOK-2F-02", "n": "炒菜鍋02", "x": 250, "y": 205, "s": "g", "t": 73.8, "tg": 75, "ph": "COOK", "p": "炒飯", "rem": 880}, {"id": "WOK-2F-03", "n": "炒菜鍋03", "x": 250, "y": 250, "s": "r", "t": 62.7, "tg": 75, "ph": "COOK", "p": "炒麵", "rem": 1150}, {"id": "WOK-2F-04", "n": "炒菜鍋04", "x": 250, "y": 295, "s": "g", "t": 75.4, "tg": 75, "ph": "COOK", "p": "炒青菜", "rem": 520}, {"id": "OV-2F-01", "n": "烤箱01", "x": 405, "y": 170, "s": "g", "t": 178.2, "tg": 180, "ph": "COOK", "p": "烤雞", "rem": 1320}, {"id": "OV-2F-02", "n": "烤箱02", "x": 405, "y": 215, "s": "g", "t": 179.5, "tg": 180, "ph": "COOK", "p": "烤雞", "rem": 1100}, {"id": "OV-2F-03", "n": "烤箱03", "x": 405, "y": 260, "s": "y", "t": 168.0, "tg": 180, "ph": "PREHEAT", "p": "烤魚", "rem": 1900}, {"id": "OV-2F-04", "n": "烤箱04", "x": 405, "y": 305, "s": "g", "t": 177.1, "tg": 180, "ph": "COOK", "p": "烤魚", "rem": 940}]}, "3F": {"zones": [{"x": 20, "y": 60, "w": 60, "h": 120, "l": "油煙罩"}, {"x": 95, "y": 60, "w": 110, "h": 50, "l": "蒸箱"}, {"x": 220, "y": 60, "w": 80, "h": 50, "l": "攪拌機"}, {"x": 320, "y": 60, "w": 130, "h": 50, "l": "萬能蒸烤箱"}, {"x": 95, "y": 125, "w": 355, "h": 110, "l": "烹調區"}, {"x": 530, "y": 55, "w": 110, "h": 230, "l": "蒸氣迴轉鍋"}, {"x": 20, "y": 255, "w": 500, "h": 80, "l": "蒸氣迴轉鍋"}], "net": [[20, 42, 540, 42]], "star": [[470, 42]], "bolt": [[100, 42], [520, 42], [60, 270]], "dev": [{"id": "-", "n": "蒸箱", "x": 150, "y": 85, "s": "x"}, {"id": "-", "n": "萬能蒸烤箱", "x": 385, "y": 85, "s": "x"}, {"id": "-", "n": "迴轉鍋", "x": 150, "y": 180, "s": "x"}, {"id": "-", "n": "迴轉鍋", "x": 215, "y": 180, "s": "x"}, {"id": "-", "n": "壓力鍋", "x": 400, "y": 180, "s": "x"}, {"id": "DRUM-L01", "n": "大鍋01", "x": 585, "y": 90, "s": "g", "t": 97.9, "tg": 98, "ph": "PREHEAT", "p": "滷豆干", "rem": 3460}, {"id": "DRUM-L02", "n": "大鍋02", "x": 585, "y": 140, "s": "g", "t": 99.7, "tg": 98, "ph": "COOK", "p": "綜合滷味", "rem": 2650}, {"id": "DRUM-L03", "n": "大鍋03", "x": 585, "y": 190, "s": "r", "t": 98.6, "tg": 98, "ph": "COOK", "p": "滷海帶", "rem": 2040, "liq": 5}, {"id": "DRUM-L04", "n": "大鍋04", "x": 585, "y": 240, "s": "g", "t": 97.0, "tg": 98, "ph": "COOK", "p": "滷雞胗", "rem": 1020}, {"id": "DRUM-S05", "n": "小鍋05", "x": 62, "y": 295, "s": "g", "t": 96.7, "tg": 98, "ph": "COOK", "p": "滷豆干", "rem": 1566}, {"id": "DRUM-S06", "n": "小鍋06", "x": 115, "y": 295, "s": "g", "t": 98.1, "tg": 98, "ph": "COOK", "p": "滷海帶", "rem": 1320}, {"id": "DRUM-S07", "n": "小鍋07", "x": 167, "y": 295, "s": "g", "t": 97.3, "tg": 98, "ph": "HOLD", "p": "滷雞胗", "rem": 280}, {"id": "DRUM-S08", "n": "小鍋08", "x": 220, "y": 295, "s": "g", "t": 99.0, "tg": 98, "ph": "COOK", "p": "滷豬頭皮", "rem": 1680}, {"id": "DRUM-S09", "n": "小鍋09", "x": 272, "y": 295, "s": "y", "t": 104.0, "tg": 98, "ph": "COOK", "p": "綜合滷味", "rem": 1740}, {"id": "DRUM-S10", "n": "小鍋10", "x": 325, "y": 295, "s": "g", "t": 96.4, "tg": 98, "ph": "COOK", "p": "滷豆干", "rem": 1440}, {"id": "DRUM-S11", "n": "小鍋11", "x": 377, "y": 295, "s": "g", "t": 98.8, "tg": 98, "ph": "COOK", "p": "滷海帶", "rem": 1190}, {"id": "DRUM-S12", "n": "小鍋12", "x": 430, "y": 295, "s": "g", "t": 97.6, "tg": 98, "ph": "PREHEAT", "p": "滷雞胗", "rem": 2800}, {"id": "DRUM-S13", "n": "小鍋13", "x": 482, "y": 295, "s": "g", "t": 98.3, "tg": 98, "ph": "COOK", "p": "滷豬頭皮", "rem": 1610}]}};
+const S={g:"#0ca30c",y:"#eda100",r:"#d03b3b",x:"#a8a69e"};
+const PH={PREHEAT:"預熱",COOK:"滷製／加熱",HOLD:"保溫"};
+let cf="2F",sel=null;
+
+function draw(){
+ const d=DATA[cf];let h='<rect x="8" y="8" width="644" height="334" fill="none" stroke="#3a3f48" stroke-width="1.5" rx="4"/>';
+ d.zones.forEach(z=>{h+='<rect x="'+z.x+'" y="'+z.y+'" width="'+z.w+'" height="'+z.h+'" fill="#181b1f" stroke="#2c2f36" rx="4"/><text x="'+(z.x+z.w/2)+'" y="'+(z.y+16)+'" text-anchor="middle" font-size="12" fill="#6b6f77">'+z.l+'</text>';});
+ d.net.forEach(n=>{h+='<line x1="'+n[0]+'" y1="'+n[1]+'" x2="'+n[2]+'" y2="'+n[3]+'" stroke="#d03b3b" stroke-width="2.5"/>';});
+ d.star.forEach(s=>{h+='<path d="M'+s[0]+' '+(s[1]-11)+' l3.2 7.4 8-.6-6 5.4 2.4 7.7-7.6-4.4-7.6 4.4 2.4-7.7-6-5.4 8 .6z" fill="#d03b3b"/>';});
+ d.bolt.forEach(b=>{h+='<path d="M'+b[0]+' '+(b[1]-9)+' l-5 11h4l-3 9 9-12h-4.5l3-8z" fill="#eda100"/>';});
+ d.dev.forEach((v,i)=>{
+  const off=v.s==="x",on=sel&&sel.n===v.n&&sel.x===v.x;
+  h+='<g '+(off?'':'class="mk" data-i="'+i+'"')+' opacity="'+(off?.55:1)+'">'
+   +(on?'<circle cx="'+v.x+'" cy="'+v.y+'" r="15" fill="none" stroke="'+S[v.s]+'" stroke-width="1.5" opacity=".5"/>':'')
+   +'<circle cx="'+v.x+'" cy="'+v.y+'" r="'+(off?8:9.5)+'" fill="'+S[v.s]+'"/>'
+   +'<text x="'+v.x+'" y="'+(v.y+22)+'" text-anchor="middle" font-size="9.5" fill="'+(off?"#5f636b":"#9fa3ab")+'">'+v.n+'</text></g>';});
+ const sv=document.getElementById("fp");sv.innerHTML=h;
+ sv.querySelectorAll(".mk").forEach(m=>m.onclick=()=>{sel=d.dev[+m.dataset.i];draw();detail(sel);});
+}
+
+function detail(v){
+ const c=S[v.s],tx={g:"正常",y:"注意",r:"告警"}[v.s];
+ const rm=v.rem<=0?"已超時":Math.floor(v.rem/60)+"分"+String(v.rem%60).padStart(2,"0")+"秒";
+ let ks=[["目前溫度",v.t.toFixed(1)+"°C"],["目標溫度",v.tg+"°C"],["製程階段",PH[v.ph]],
+  ["生產品項",v.p],["剩餘時間",rm]];
+ if(v.liq!==undefined)ks.push(["液位",v.liq+" L"]);
+ document.getElementById("dt").innerHTML='<div class="card" style="border-left:3px solid '+c+'">'
+  +'<div class="hd2"><div style="display:flex;align-items:center;gap:9px">'
+  +'<span class="d" style="width:12px;height:12px;background:'+c+'"></span>'
+  +'<span class="nm">'+v.n+'</span><span class="did">'+v.id+'</span></div>'
+  +'<span class="pill" style="background:'+c+'26;color:'+c+'">'+tx+'</span></div>'
+  +'<div class="kpi">'+ks.map(k=>'<div class="k"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div></div>').join("")+'</div>'
+  +'<div class="cw"><svg id="cv" viewBox="0 0 900 190" width="100%" height="100%" preserveAspectRatio="none"></svg></div>'
+  +'<div class="cap">近 60 分鐘溫度曲線　虛線＝目標溫度</div></div>';
+ const p=[],b=v.t;
+ for(let i=0;i<30;i++)p.push(+(i<7?28+(b-28)*(i/7)+Math.random()*2-1:b+Math.random()*4-2).toFixed(1));
+ drawChart(p,v.tg,c);
+}
+
+function drawChart(p,tg,c){
+ const W=900,H=190,ml=42,mr=12,mt=14,mb=26;
+ const all=p.concat([tg]);
+ let lo=Math.min.apply(null,all),hi=Math.max.apply(null,all);
+ const pad=Math.max(4,(hi-lo)*0.18); lo=Math.floor(lo-pad); hi=Math.ceil(hi+pad);
+ const px=i=>ml+i*(W-ml-mr)/(p.length-1);
+ const py=v=>mt+(hi-v)*(H-mt-mb)/(hi-lo);
+ let g="";
+ for(let k=0;k<=4;k++){const val=lo+(hi-lo)*k/4,y=py(val);
+  g+='<line x1="'+ml+'" y1="'+y+'" x2="'+(W-mr)+'" y2="'+y+'" stroke="rgba(137,135,129,.18)" stroke-width="1"/>'
+   +'<text x="'+(ml-7)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="#7b7f87">'+val.toFixed(0)+'</text>';}
+ const line=p.map((v,i)=>(i?"L":"M")+px(i).toFixed(1)+" "+py(v).toFixed(1)).join(" ");
+ const area=line+" L"+px(p.length-1).toFixed(1)+" "+py(lo)+" L"+ml+" "+py(lo)+" Z";
+ g+='<path d="'+area+'" fill="'+c+'" opacity=".13"/>';
+ g+='<line x1="'+ml+'" y1="'+py(tg)+'" x2="'+(W-mr)+'" y2="'+py(tg)+'" stroke="#8b8f97" stroke-width="1.2" stroke-dasharray="6 4"/>';
+ g+='<path d="'+line+'" fill="none" stroke="'+c+'" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>';
+ g+='<circle cx="'+px(p.length-1).toFixed(1)+'" cy="'+py(p[p.length-1]).toFixed(1)+'" r="4.5" fill="'+c+'" stroke="#181b1f" stroke-width="2"/>';
+ g+='<text x="'+ml+'" y="'+(H-6)+'" font-size="11" fill="#7b7f87">-60分</text>';
+ g+='<text x="'+(W-mr)+'" y="'+(H-6)+'" text-anchor="end" font-size="11" fill="#7b7f87">現在</text>';
+ document.getElementById("cv").innerHTML=g;
+}
+function hint(){document.getElementById("dt").innerHTML='<div class="hint">點擊平面圖上的機台圓點，檢視監測數據與溫度曲線</div>';}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+ document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
+ t.classList.add("on");cf=t.dataset.f;sel=null;draw();hint();});
+draw();hint();
+</script></body></html>
