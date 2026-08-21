@@ -14,6 +14,8 @@ export interface LineGroupRow {
   analyzeEnabled: boolean;
   /** bot 在這個群要不要回話 · 與 analyzeEnabled 是兩件事 */
   replyEnabled: boolean;
+  /** 0068 · department 才定義組織歸屬 */
+  groupType: string;
   firstSeenAt: string;
   lastEventAt: string;
   eventCount: number;
@@ -60,12 +62,12 @@ export class LineGroupRepository {
     const res = await tx.execute<{
       group_registry_id: string; bot_id: string; group_id: string;
       display_name: string | null; department_id: string | null;
-      department_name: string | null; analyze_enabled: boolean; reply_enabled: boolean;
+      department_name: string | null; analyze_enabled: boolean; reply_enabled: boolean; group_type: string;
       first_seen_at: string; last_event_at: string; event_count: number;
       status: "active" | "left" | "hidden";
     }>(sql`
       SELECT g.group_registry_id, g.bot_id, g.group_id, g.display_name,
-             g.department_id, d.department_name, g.analyze_enabled, g.reply_enabled,
+             g.department_id, d.department_name, g.analyze_enabled, g.reply_enabled, g.group_type,
              g.first_seen_at::text, g.last_event_at::text, g.event_count, g.status
       FROM line_group g
       LEFT JOIN departments d ON d.department_id = g.department_id
@@ -81,6 +83,7 @@ export class LineGroupRepository {
       departmentName: r.department_name,
       analyzeEnabled: r.analyze_enabled,
       replyEnabled: r.reply_enabled,
+      groupType: r.group_type,
       firstSeenAt: r.first_seen_at,
       lastEventAt: r.last_event_at,
       eventCount: r.event_count,
@@ -97,12 +100,12 @@ export class LineGroupRepository {
     const res = await tx.execute<{
       group_registry_id: string; bot_id: string; group_id: string;
       display_name: string | null; department_id: string | null;
-      department_name: string | null; analyze_enabled: boolean; reply_enabled: boolean;
+      department_name: string | null; analyze_enabled: boolean; reply_enabled: boolean; group_type: string;
       first_seen_at: string; last_event_at: string; event_count: number;
       status: "active" | "left" | "hidden";
     }>(sql`
       SELECT g.group_registry_id, g.bot_id, g.group_id, g.display_name,
-             g.department_id, d.department_name, g.analyze_enabled, g.reply_enabled,
+             g.department_id, d.department_name, g.analyze_enabled, g.reply_enabled, g.group_type,
              g.first_seen_at::text, g.last_event_at::text, g.event_count, g.status
       FROM line_group g
       JOIN line_bot b ON b.bot_id = g.bot_id
@@ -119,6 +122,7 @@ export class LineGroupRepository {
       departmentName: r.department_name,
       analyzeEnabled: r.analyze_enabled,
       replyEnabled: r.reply_enabled,
+      groupType: r.group_type,
       firstSeenAt: r.first_seen_at,
       lastEventAt: r.last_event_at,
       eventCount: r.event_count,
@@ -130,12 +134,12 @@ export class LineGroupRepository {
     const res = await tx.execute<{
       group_registry_id: string; bot_id: string; group_id: string;
       display_name: string | null; department_id: string | null;
-      department_name: string | null; analyze_enabled: boolean; reply_enabled: boolean;
+      department_name: string | null; analyze_enabled: boolean; reply_enabled: boolean; group_type: string;
       first_seen_at: string; last_event_at: string; event_count: number;
       status: "active" | "left" | "hidden";
     }>(sql`
       SELECT g.group_registry_id, g.bot_id, g.group_id, g.display_name,
-             g.department_id, d.department_name, g.analyze_enabled, g.reply_enabled,
+             g.department_id, d.department_name, g.analyze_enabled, g.reply_enabled, g.group_type,
              g.first_seen_at::text, g.last_event_at::text, g.event_count, g.status
       FROM line_group g
       LEFT JOIN departments d ON d.department_id = g.department_id
@@ -153,6 +157,7 @@ export class LineGroupRepository {
       departmentName: r.department_name,
       analyzeEnabled: r.analyze_enabled,
       replyEnabled: r.reply_enabled,
+      groupType: r.group_type,
       firstSeenAt: r.first_seen_at,
       lastEventAt: r.last_event_at,
       eventCount: r.event_count,
@@ -188,6 +193,7 @@ export class LineGroupRepository {
     analyzeEnabled?: boolean;
     replyEnabled?: boolean;
     hidden?: boolean;
+    groupType?: "department" | "process" | "announcement" | "test";
   }): Promise<void> {
     await tx.execute(sql`
       UPDATE line_group SET
@@ -196,6 +202,8 @@ export class LineGroupRepository {
         display_name = COALESCE(${patch.displayName ?? null}, display_name),
         analyze_enabled = COALESCE(${patch.analyzeEnabled ?? null}, analyze_enabled),
         reply_enabled = COALESCE(${patch.replyEnabled ?? null}, reply_enabled),
+        -- 0068 · 沒帶就不動（COALESCE 語意），不會被誤清成預設值
+        group_type = COALESCE(${patch.groupType ?? null}, group_type),
         -- 0059 · 只在有帶 hidden 時動 status，且**只能在 left ↔ hidden 之間切**：
         -- 不可把還在群內的（active）藏起來 —— 那會讓正在分析的群憑空消失
         status = CASE

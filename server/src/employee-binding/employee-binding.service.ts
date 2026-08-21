@@ -208,6 +208,10 @@ export class EmployeeBindingService {
           AND lm.chat_context = 'group'
           AND lm.sent_at > now() - interval '30 days'
           AND lg.department_id IS NOT NULL
+          -- 0068 · 只看部門群。少這一行的話，在「有你真好」（全員群 40 人，
+          -- 而社交群通常話最多）發言最多的人會被歸到那個假部門，
+          -- 他的日報與任務就統計到一個不存在的組織單位底下。
+          AND lg.group_type = 'department'
         GROUP BY lg.department_id, d.department_name
         ORDER BY count(*) DESC
         LIMIT 1

@@ -46,6 +46,12 @@ export const LineGroupPatchSchema = z.object({
   departmentId: z.string().regex(uuidRegex).nullable().optional(),
   displayName: z.string().trim().min(1).max(200).optional(),
   analyzeEnabled: z.boolean().optional(),
+  /**
+   * 0068 · 這個群定不定義組織（group-type-classification.md）。
+   * ⚠️ 改成非 department 之後，該群的成員不再被視為那個部門的人，
+   *    部門推導也不會再看它 —— 但任務照樣掛在它原本的部門下。
+   */
+  groupType: z.enum(["department", "process", "announcement", "test"]).optional(),
   /** bot 在這個群要不要回話 · 與 analyzeEnabled 是兩件事（0040）*/
   replyEnabled: z.boolean().optional(),
   /**

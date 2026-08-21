@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { inArray } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import { currentTx } from "../db/client.js";
 import { departments, tickets, users } from "../db/schema.js";
 import { inSignoffScope } from "../warroom-task-board/ticket-lane.js";
@@ -37,8 +37,27 @@ export interface WarroomGroup {
 export class WarroomService {
   async warroom() {
     const tx = currentTx();
-    const depts = await tx.select().from(departments);
+    const allDepts = await tx.select().from(departments);
     const tks = await tx.select().from(tickets);
+
+    // 0068 · 分母排除「不是組織單位」的部門（group-type-classification.md §4.2）
+    //
+    // ⚠️ 這裡才是分母的真正所在 —— 不是群組數，是 departments.length。
+    //    只把群標成 announcement／process **不會**讓分母變小，因為那個部門仍然存在
+    //    （而且必須存在：tickets.department_id 是 NOT NULL，那些群的任務要有地方掛）。
+    //
+    // 判準：一個部門若**有群、但一個 department 型的都沒有**，它就只是
+    //      「裝跨部門群任務的容器」，不是組織單位 → 不進健康度與簽核率分母。
+    //      完全沒有群的部門仍算（那是導入還沒做完，不是分類錯）。
+    const gt = await tx.execute<{ department_id: string; has_dept_group: boolean }>(sql`
+      SELECT lg.department_id::text AS department_id,
+             bool_or(lg.group_type = 'department') AS has_dept_group
+      FROM line_group lg JOIN line_bot b ON b.bot_id = lg.bot_id
+      WHERE lg.status = 'active' AND lg.department_id IS NOT NULL
+      GROUP BY lg.department_id
+    `);
+    const hasDeptGroup = new Map(gt.rows.map((r) => [r.department_id, r.has_dept_group]));
+    const depts = allDepts.filter((d) => hasDeptGroup.get(d.departmentId) !== false);
 
     // 抓已簽核者 display_name（一次撈，避免 N+1）
     const signerIds = [...new Set(tks.map((t) => t.confirmedBy).filter((x): x is string => !!x))];
@@ -110,6 +129,8 @@ export class WarroomService {
     return {
       as_of: new Date(asOfMs).toISOString(),
       dept_count: N,
+      /** 0068 · 被排除的部門數（只裝跨部門群、不是組織單位）· 前端在分母旁說明用 */
+      excluded_depts: allDepts.length - N,
       signoff_rate: N ? signed / N : 0,
       signed_depts: signed,
       health_rate: N ? green / N : 0,
