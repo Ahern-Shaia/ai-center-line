@@ -112,7 +112,7 @@ footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.8;}
 
 <h1 class="doc">群組類型 · 分類後的預期成果（mockup）</h1>
 <p class="doc-sub">
-  對應 <b>docs/modules/group-type-classification.md</b> v0.2（OQ-GTC-1..10 全採建議 · 2026-08-21）<br>
+  對應 <b>docs/modules/group-type-classification.md</b> v0.3（OQ-GTC-1..10 全採建議 · 11/12 待裁定 · 2026-08-21）<br>
   <b>畫面依據</b>：組織圖沿用 2026-08-21 剛上線的左右樹版型（<code>OrgGraph.tsx</code>）·
   數字全部取自 prod 實查 · 成員姓名假名化（保留長度與中英 emoji 混排）。
 </p>
@@ -236,7 +236,53 @@ footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.8;}
 </div>
 
 <!-- ══════════════════════════════ -->
-<h2 class="sec">④ 這份 mockup 沒有解決的事</h2>
+<h2 class="sec">④ 那「跨多群」的人，到底被算在哪一個部門？</h2>
+<p class="sec-s">
+  這是廠商當初的原問題。答案是：<b>系統早就有解，只是沒有人知道它在運作。</b>
+</p>
+
+<div class="note">
+  <span class="h">主要部門 ＝ 近 30 天發言最多的那個群</span>
+  員工完成 LINE 綁定時，系統會撈他近 30 天在各群的發言數，<b>取最多的那一群所屬的部門</b>
+  （<code>employee-binding.service.ts</code>）。所以 <code>users.department_id</code> 是<b>單值</b>，
+  而組織圖上每個人也只會出現在一個部門。<br>
+  「跨多群」跨的是<b>他在幾個群發言</b> —— 那是另一個維度，本來就不該畫進部門樹。<br>
+  <b>已有兩層防護</b>：推不出來（30 天沒發言）就落「未分派」等主管指定；
+  主管手動改過的會標記，<b>自動推導日後不得覆寫</b>。
+</div>
+
+<div class="cmp" style="margin-top:12px">
+  <div class="cmp-c">
+    <h4 style="font-size:13px;font-weight:700;margin-bottom:9px">修好分類之前</h4>
+    <div style="font-size:12.5px;color:var(--ink-2);line-height:1.9">
+      淑惠在 <b>10 個群</b>發言，其中「有你真好」是全公司都在的社交群 ——
+      而社交群通常話最多。<br>
+      → 推導把她歸到<b>「有你真好」這個假部門</b>。
+    </div>
+    <div style="margin-top:10px;padding:9px 12px;background:var(--danger-tint);border-radius:8px;
+      font-size:12px;color:#9F1239">她的日報與任務會統計到一個不存在的部門底下</div>
+  </div>
+  <div class="cmp-c hi">
+    <h4 style="font-size:13px;font-weight:700;margin-bottom:9px">修好之後</h4>
+    <div style="font-size:12.5px;color:var(--ink-2);line-height:1.9">
+      推導只看<b>部門群</b>（多一個條件 <code>group_type = 'department'</code>）。<br>
+      → 全員群與流程群不再參與，她被歸到<b>真正的業務助理</b>。
+    </div>
+    <div style="margin-top:10px;padding:9px 12px;background:var(--ok-tint);border-radius:8px;
+      font-size:12px;color:#065F46">一行 SQL · 這是這次分類工作最大的實益</div>
+  </div>
+</div>
+
+<div class="note warn" style="margin-top:12px">
+  <span class="h">⚠ 但推導還有兩個洞，本次不解</span>
+  <b>只在綁定當下跑一次。</b>半年前綁定時主要在業務群、現在調到技術部天天在技術群發言 ——
+  部門還停在業務部，<b>而且沒有任何機制會發現</b>。要不要定期重算是獨立的決定，
+  因為重算會動到主管已經手動指派過的人。<br>
+  <b>44 人根本沒觸發過。</b>推導只在完成綁定時跑，而群裡 56 人只有 12 個有帳號 ——
+  其餘的人從來沒走過這條路。那是帳號覆蓋率的問題，不是分類的問題。
+</div>
+
+<h2 class="sec">⑤ 這份 mockup 沒有解決的事</h2>
 <table>
   <tr><th style="width:34%">問題</th><th>為什麼不在這裡解</th></tr>
   <tr><td><b>56 人在群裡，只有 12 個有系統帳號</b><br>
