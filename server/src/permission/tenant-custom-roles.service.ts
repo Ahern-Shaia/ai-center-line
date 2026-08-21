@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { currentTx } from "../db/client.js";
 import { PermissionService } from "./permission.service.js";
@@ -70,19 +71,19 @@ export class TenantCustomRolesService {
   async create(args: {
     tenantId: string;
     callerUserId: string;
-    roleKey: string;
     roleName: string;
     baselineRole: string;
     permissionIds: string[];
-  }): Promise<{ roleId: string }> {
-    const { tenantId, callerUserId, roleKey, roleName, baselineRole, permissionIds } = args;
+  }): Promise<{ roleId: string; roleKey: string }> {
+    const { tenantId, callerUserId, roleName, baselineRole, permissionIds } = args;
 
-    if (!/^[a-z][a-z0-9_-]{1,50}$/.test(roleKey)) {
-      throw new BadRequestException({
-        status: "invalid_role_key",
-        message: "角色代號需為小寫英文開頭，只能用英文、數字、- 或 _",
-      });
-    }
+    // ⚠️ `role_key` **不讓使用者填**（2026-08-21 裁定）。
+    //    它是給程式用的識別字，使用者從頭到尾看不到它 ——
+    //    要一位總經理發明一個小寫英文代號，是多一次沒有必要的判斷。
+    //    用隨機後綴而不是流水號：不必先查最大值，也就沒有兩人同時建立時撞號的問題
+    //    （`uniq_role_key_tenant` 仍是最後一道保險）。
+    const roleKey = `custom_${randomUUID().replace(/-/g, "").slice(0, 8)}`;
+
     if (!roleName.trim()) {
       throw new BadRequestException({ status: "invalid_role_name", message: "請填角色名稱" });
     }
@@ -100,14 +101,15 @@ export class TenantCustomRolesService {
 
     const tx = currentTx();
 
-    // 名稱重複要回看得懂的話，不要把 pg 23505 丟到畫面上
+    // 角色**名稱**重複要擋 —— 那是使用者看得到的東西，兩個「品保組長」在下拉裡分不出來。
+    // （代號是隨機生成的，不會撞，也不需要跟使用者解釋。）
     const dup = await tx.execute(sql`
-      SELECT 1 FROM roles WHERE tenant_id = ${tenantId}::uuid AND role_key = ${roleKey} LIMIT 1
+      SELECT 1 FROM roles WHERE tenant_id = ${tenantId}::uuid AND role_name = ${roleName.trim()} LIMIT 1
     `);
     if (dup.rows.length > 0) {
       throw new BadRequestException({
-        status: "role_key_exists",
-        message: `角色代號「${roleKey}」已經有人用了，換一個`,
+        status: "role_name_exists",
+        message: `已經有一個角色叫「${roleName.trim()}」了，換個名字`,
       });
     }
 
@@ -129,7 +131,48 @@ export class TenantCustomRolesService {
 
     this.perms.invalidateAll();
     this.logger.log(`建立自訂角色 · tenant=${tenantId} key=${roleKey} baseline=${baselineRole} perms=${permissionIds.length}`);
-    return { roleId };
+    return { roleId, roleKey };
+  }
+
+  /**
+   * 改自訂角色的權限（全 replace）。
+   *
+   * 不用像 0067 那樣「只換看得見的 scope」—— 自訂角色**從頭到尾只可能有租戶級權限**
+   * （create 與這裡都過 assertWithinCallerPermissions，platform 級送不進來），
+   * 所以沒有「使用者改不到卻被清掉」的東西要保護。
+   */
+  async updatePermissions(args: {
+    tenantId: string;
+    callerUserId: string;
+    roleId: string;
+    permissionIds: string[];
+  }): Promise<{ count: number }> {
+    const { tenantId, callerUserId, roleId, permissionIds } = args;
+    const tx = currentTx();
+
+    const own = await tx.execute(sql`
+      SELECT 1 FROM roles
+      WHERE role_id = ${roleId}::uuid AND tenant_id = ${tenantId}::uuid
+        AND is_system = false AND baseline_role IS NOT NULL
+      LIMIT 1
+    `);
+    if (own.rows.length === 0) {
+      throw new BadRequestException({ status: "role_not_found", message: "找不到這個角色" });
+    }
+
+    await this.assertWithinCallerPermissions(callerUserId, permissionIds);
+
+    await tx.execute(sql`DELETE FROM role_permissions WHERE role_id = ${roleId}::uuid`);
+    if (permissionIds.length > 0) {
+      const values = permissionIds.map((pid) => sql`(${roleId}::uuid, ${pid})`);
+      await tx.execute(sql`
+        INSERT INTO role_permissions (role_id, permission_id)
+        VALUES ${sql.join(values, sql`, `)}
+        ON CONFLICT DO NOTHING
+      `);
+    }
+    this.perms.invalidateAll();
+    return { count: permissionIds.length };
   }
 
   /**

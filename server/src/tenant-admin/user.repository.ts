@@ -16,6 +16,7 @@ export interface UserRow {
   lineUserId: string | null;
   createdAt: string;
   hasPassword: boolean;
+  roleId?: string | null;
 }
 
 export interface UserInsertInput {
@@ -36,14 +37,14 @@ export class UserRepository {
   async listByTenant(tx: Db, tenantId: string): Promise<UserRow[]> {
     // 明確 filter tenant_id · 避免 aiproot_admin role bypass 意外看到其他 tenant 或平台方 users
     const res = await tx.execute<{
-      user_id: string; tenant_id: string | null; role: Role;
+      user_id: string; tenant_id: string | null; role: Role; role_id: string | null;
       department_id: string | null; department_name: string | null;
       department_source: "auto" | "manual";
       email: string | null; display_name: string | null;
       line_user_id: string | null; created_at: string;
       has_password: boolean;
     }>(sql`
-      SELECT u.user_id, u.tenant_id, u.role, u.department_id, d.department_name,
+      SELECT u.user_id, u.tenant_id, u.role, u.role_id::text, u.department_id, d.department_name,
              u.department_source,
              u.email, u.display_name, u.line_user_id, u.created_at::text,
              (u.password_hash IS NOT NULL) AS has_password
@@ -57,13 +58,13 @@ export class UserRepository {
 
   async getById(tx: Db, userId: string): Promise<UserRow | null> {
     const res = await tx.execute<{
-      user_id: string; tenant_id: string | null; role: Role;
+      user_id: string; tenant_id: string | null; role: Role; role_id: string | null;
       department_id: string | null; department_name: string | null;
       department_source: "auto" | "manual";
       email: string | null; display_name: string | null;
       line_user_id: string | null; created_at: string; has_password: boolean;
     }>(sql`
-      SELECT u.user_id, u.tenant_id, u.role, u.department_id, d.department_name,
+      SELECT u.user_id, u.tenant_id, u.role, u.role_id::text, u.department_id, d.department_name,
              u.department_source,
              u.email, u.display_name, u.line_user_id, u.created_at::text,
              (u.password_hash IS NOT NULL) AS has_password
@@ -160,7 +161,7 @@ export class UserRepository {
   }
 
   private rowToDto(r: {
-    user_id: string; tenant_id: string | null; role: Role;
+    user_id: string; tenant_id: string | null; role: Role; role_id: string | null;
     department_id: string | null; department_name: string | null;
     department_source: "auto" | "manual";
     email: string | null; display_name: string | null;
@@ -170,6 +171,8 @@ export class UserRepository {
       userId: r.user_id,
       tenantId: r.tenant_id,
       role: r.role,
+      // 自訂角色指到的 role_id · null ＝ 用內建角色（custom-roles v0.3）
+      roleId: r.role_id,
       departmentId: r.department_id,
       departmentName: r.department_name,
       departmentSource: r.department_source,

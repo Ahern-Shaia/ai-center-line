@@ -73,7 +73,7 @@ after(async () => {
 
 const mk = (over: Partial<Parameters<typeof svc.create>[0]> = {}) => ({
   tenantId: T, callerUserId: CALLER,
-  roleKey: "qa_lead", roleName: "品保組長",
+  roleName: "品保組長",
   baselineRole: "group_owner", permissionIds: [MINE],
   ...over,
 });
@@ -100,7 +100,7 @@ test("⭐⭐ V-1 建角色時不能放進自己沒有的權限（自我提權）
 test("⭐⭐ V-2 不可以拿 assistant 當資料範圍基準", async () => {
   for (const bad of ["assistant", "consultant", "aiproot_admin"]) {
     await assert.rejects(
-      () => asTenant(T, () => svc.create(mk({ roleKey: `x_${bad}`, baselineRole: bad }))),
+      () => asTenant(T, () => svc.create(mk({ roleName: `X${bad}`, baselineRole: bad }))),
       (e: { response?: { status?: string } }) => (e.response?.status ?? "") === "invalid_baseline",
       `${bad} 是平台角色 · app_is_platform_ops() 沒有租戶條件`,
     );
@@ -171,14 +171,18 @@ test("⭐ 取消自訂角色 · 退回基準角色（role_id 清掉、role 留�
   assert.equal(row.role, "group_owner", "退回的是基準本身 —— 不會變回原本的 employee");
 });
 
-test("角色代號格式與重複都要回看得懂的中文", async () => {
+test("⭐ 角色代號自動產生 · 使用者不用填也看不到", async () => {
+  const roles = await asTenant(T, () => svc.list(T));
+  assert.match(roles[0].roleKey, /^custom_[0-9a-f]{8}$/,
+    "要一位總經理發明一個小寫英文代號，是多一次沒有必要的判斷");
+});
+
+test("角色『名稱』重複要回看得懂的中文（名稱才是使用者看得到的東西）", async () => {
   await assert.rejects(
-    () => asTenant(T, () => svc.create(mk({ roleKey: "QA Lead" }))),
-    (e: { response?: { status?: string } }) => (e.response?.status ?? "") === "invalid_role_key",
-  );
-  await assert.rejects(
-    () => asTenant(T, () => svc.create(mk())),   // qa_lead 已存在
-    (e: { response?: { message?: string } }) => (e.response?.message ?? "").includes("已經有人用了"),
+    () => asTenant(T, () => svc.create(mk())),   // 「品保組長」已存在
+    (e: { response?: { status?: string; message?: string } }) =>
+      (e.response?.status ?? "") === "role_name_exists" &&
+      (e.response?.message ?? "").includes("換個名字"),
     "不要把 pg 23505 丟到畫面上",
   );
 });

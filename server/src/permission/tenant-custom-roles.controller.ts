@@ -47,11 +47,12 @@ export class TenantCustomRolesController {
   @Post()
   @RequirePermission("roles:manage-tenant")
   async create(
-    @Body() body: { roleKey?: string; roleName?: string; baselineRole?: string; permissionIds?: string[] },
+    @Body() body: { roleName?: string; baselineRole?: string; permissionIds?: string[] },
     @CurrentUser() user: JwtUser,
   ) {
-    if (!body?.roleKey || !body?.roleName || !body?.baselineRole) {
-      throw new BadRequestException({ status: "missing_field", message: "角色代號、名稱、資料範圍都要填" });
+    // 沒有 roleKey —— 那是程式用的識別字，由 service 自動產生（使用者看不到它）
+    if (!body?.roleName || !body?.baselineRole) {
+      throw new BadRequestException({ status: "missing_field", message: "角色名稱與資料範圍都要填" });
     }
     if (!Array.isArray(body.permissionIds)) {
       throw new BadRequestException({ status: "invalid_permissions", message: "permissionIds 需為陣列" });
@@ -59,9 +60,27 @@ export class TenantCustomRolesController {
     return this.svc.create({
       tenantId: this.tenantOf(user),
       callerUserId: user.user_id,
-      roleKey: body.roleKey,
       roleName: body.roleName,
       baselineRole: body.baselineRole,
+      permissionIds: body.permissionIds,
+    });
+  }
+
+  /** 改這個角色可以做哪些事（全 replace） */
+  @Put(":roleId/permissions")
+  @RequirePermission("roles:manage-tenant")
+  async updatePermissions(
+    @Param("roleId") roleId: string,
+    @Body() body: { permissionIds?: string[] },
+    @CurrentUser() user: JwtUser,
+  ) {
+    if (!Array.isArray(body?.permissionIds)) {
+      throw new BadRequestException({ status: "invalid_permissions", message: "permissionIds 需為陣列" });
+    }
+    return this.svc.updatePermissions({
+      tenantId: this.tenantOf(user),
+      callerUserId: user.user_id,
+      roleId,
       permissionIds: body.permissionIds,
     });
   }

@@ -19,6 +19,8 @@ export interface UserDto {
   lineUserId: string | null;
   createdAt: string;
   hasPassword: boolean;
+  /** 自訂角色的 role_id · null ＝ 用內建角色 */
+  roleId?: string | null;
 }
 
 @Injectable()
