@@ -133,6 +133,28 @@
 | G | **自己部門** | `app.current_department`（`tickets`/`personal_daily_report` 的部門子句）|
 | E | 只有自己 | `app.current_user_id` |
 
+### 4.1 ⭐ 自訂角色的資料範圍（2026-08-21 · custom-roles v0.3 方案 A）
+
+租戶現在可以自己建角色（設定 → 權限管理 → ＋ 建立角色）。自訂角色**只宣告「能做什麼」**，
+資料範圍沿用上表六個內建角色其中之一當「**基準**」：
+
+```
+users.role     = 基準（employee / group_owner / tenant_admin）→ 餵上表的 RLS
+users.role_id  = 自訂角色 → 餵權限碼
+```
+
+指派時兩欄**同一句 UPDATE 一起寫**。**35 條 RLS policy 一條都不用改** —— 這是這個設計的全部理由。
+
+| 基準 | 租戶可選 | 為什麼 |
+|---|:--:|---|
+| `employee`（只看自己）| ✅ | |
+| `group_owner`（只看自己部門）| ✅ | ⚠️ 指派前那個人**必須先有部門**，否則 `current_department` 是空的 → 他反而**看得到全租戶** |
+| `tenant_admin`（看全公司）| ✅ | UI 明說「這個角色看得到全公司資料」|
+| `assistant` / `consultant` / `aiproot_admin` | ❌ **絕不可** | 它們在 `app_is_platform_ops()` 白名單裡，而那個函式**沒有租戶條件** —— 拿來當基準等於讓租戶自製一個讀得到**所有租戶** Ragic API 金鑰的角色。DB CHECK（`0070`）＋ service 兩層擋 |
+
+⚠️ **防提權**：建立與指派時都比對「呼叫者當下的有效權限」——
+給不出自己沒有的東西（K8s RBAC 的 `escalate` / `bind` 紀律）。在 server 端擋，不靠前端隱藏。
+
 ⚠️ **權限碼擋不住跨租戶 IDOR** —— 端點若讓 client 傳 tenantId 就危險（[[pitfall-permission-code-is-not-tenant-boundary]]）。一律用 `currentTx()` 繼承上下文。
 
 ---
@@ -215,6 +237,7 @@
 
 | 日期 | 版本 | 變更 | 作者 |
 |---|---|---|---|
+| 2026-08-21 | v2.3 | 角色顯示名三處統一（migration `0069`：DB `roles.role_name` 對齊「部門主管／員工」）· `assistant` 移出租戶可管角色清單（它的權限全是 platform scope、`app_is_platform_ops()` 無租戶條件）· ⭐ **§4.1 新增：租戶自建角色的資料範圍**（custom-roles v0.3 方案 A —— 自訂角色只宣告能力、範圍沿用內建角色當基準、0 條 RLS 要改；`assistant` 絕不可當基準）| ahern + Claude Code |
 | 2026-07-31 | v2.2 | 0055：改角色 `users:assign-role`（限員工↔部門主管）+ 刪除 `users:delete-member`（限員工/部門主管）下放 T · 伺服器三道護欄 + 10 P0 測試 · §3/§5.4 標 ✅ · 順修 UserRole 補 employee（「員工」不再顯示英文）| ahern + Claude Code |
 | 2026-07-30 | v2.1 | MDA 落地：`users:assign-department`（A/T）、master-data 開放 T（0053）、label 群組負責人→部門主管 —— §3/§5/§6 標為 ✅ 已實作 · notify-config 開放 T 判定為不可直接開（需 notify 租戶化 M0）| ahern + Claude Code |
 | 2026-07-30 | v2 | **重寫成 6 角色 + prod 實查 61 條權限**（v1 只有 4 角色、且與實作不符）· ⭐ 標出 MDA 目標：新增 `users:assign-department` 讓 T 能分配成員部門（現況 aiproot-only + 403 誤導按鈕）· 記錄核心原則「屬性可下放、權限不可」· 揭露 v1「員工部門 tenant_admin 可改」一直是未實作的意圖 · 附可議項（notify-config / master-data 是否開放 T）| ahern + Claude Code |
