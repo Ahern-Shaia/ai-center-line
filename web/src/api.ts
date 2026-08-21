@@ -1504,6 +1504,19 @@ export const setTenantBatchEnabled = (tenantId: string, enabled: boolean) =>
   );
 
 // employee-line-binding · aiproot audit + nudge
+// 成員的群組活動（group-type-classification.md §4.6）· 成員頁顯示「所屬部門是怎麼推出來的」
+// 只含已綁定的人 —— 沒帳號的群成員不在這裡（那是另一個決定 OQ-GTC-13）
+export interface MemberGroupActivity {
+  groupName: string;
+  groupType: string;
+  messageCount: number;
+  /** 只有部門群且有分派部門的才算進部門判定 */
+  countsTowardDepartment: boolean;
+}
+export const listMemberGroupActivity = (tenantId?: string) =>
+  req<{ activity: Record<string, MemberGroupActivity[]> }>(
+    `/tenant-admin/users/group-activity${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
+
 export interface BindingAuditRow {
   bindingId: string;
   userId: string;

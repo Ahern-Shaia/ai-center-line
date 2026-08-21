@@ -1587,6 +1587,16 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .dm-dept-src { font-size:11px; color:var(--ink-3); }
 .dm-dept-src.ok { color:var(--ok); }
 .dm-dept-src.warn { color:var(--warn); font-weight:600; }
+/* §4.6 · 部門推導的依據（他在哪些群、各幾則）· group-type-classification.md */
+.dm-dept-why { margin-top:3px; line-height:1.7; }
+.dm-dept-note { display:block; font-size:11px; color:var(--ink-3); }
+.dm-grp-line { display:block; margin-top:2px; }
+.dm-grp { display:inline-block; font-size:11px; background:var(--well); color:var(--ink-2);
+  border-radius:5px; padding:0 7px; margin:2px 5px 0 0; white-space:nowrap; }
+.dm-grp b { color:var(--ink); font-variant-numeric:tabular-nums; font-weight:600; }
+/* 非部門群 · 刪除線講明「算了但不計入」—— 不畫出來的話「他明明在那個群」沒有答案 */
+.dm-grp.out { background:var(--warn-tint, #FFFBEB); color:#B45309; text-decoration:line-through; }
+.dm-grp.out b { color:#B45309; }
 .dm-dept-unset { color:var(--warn); font-weight:600; }
 .dm-dept-edit { display:flex; flex-direction:column; gap:2px; }
 .dm-cell-actions { text-align:right; white-space:nowrap; }

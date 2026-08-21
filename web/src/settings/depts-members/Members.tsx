@@ -13,6 +13,8 @@ import {
   type DepartmentDto,
   type TenantUserDto,
   type UserRole,
+  listMemberGroupActivity,
+  type MemberGroupActivity,
 } from "../../api";
 import { useToast } from "../../Toast";
 import { usePermissions } from "../../permission/PermissionContext";
@@ -86,13 +88,18 @@ export function Members({
   const [savingRole, setSavingRole] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<null | { kind: "new" } | { kind: "edit"; user: TenantUserDto }>(null);
   const [confirmDelete, setConfirmDelete] = useState<TenantUserDto | null>(null);
+  // §4.6 · 每個已綁定成員近 30 天在各群的發言數 · 用來說明部門是怎麼推出來的
+  const [activity, setActivity] = useState<Record<string, MemberGroupActivity[]>>({});
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [usersRes, deptsRes] = await Promise.all([listTenantUsers(tenantId), listDepartments(tenantId)]);
+      const [usersRes, deptsRes, actRes] = await Promise.all([
+        listTenantUsers(tenantId), listDepartments(tenantId), listMemberGroupActivity(tenantId),
+      ]);
       setUsers(usersRes.users);
       setDepts(deptsRes.departments);
+      setActivity(actRes.activity);
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
     } finally {
@@ -175,6 +182,7 @@ export function Members({
                   </td>
                   <td>
                     <DeptCell
+                      activity={activity[u.userId] ?? []}
                       user={u}
                       depts={depts}
                       editable={canAssignDept && u.role !== "tenant_admin" && !isSelf(u)}
@@ -284,28 +292,68 @@ function RoleCell({ user, editable, saving, onChange }: {
 }
 
 // MDA · 一列的「所屬部門」格 · 可改的下拉 + 來源標記（系統自動 / 手動 / 未分派）
-function DeptCell({ user, depts, editable, saving, onChange }: {
+function DeptCell({ user, depts, editable, saving, onChange, activity }: {
   user: TenantUserDto;
   depts: DepartmentDto[];
   editable: boolean;
   saving: boolean;
   onChange: (departmentId: string | null) => void;
+  /** 近 30 天在各群的發言數 · 用來說明部門怎麼推出來的（§4.6）*/
+  activity: MemberGroupActivity[];
 }) {
   // 總經理室＝全公司，不屬單一部門，不給下拉
   if (user.role === "tenant_admin") {
     return <span className="dm-cell-muted">全公司（不分部門）</span>;
   }
   const unassigned = !user.departmentId;
-  const source =
-    unassigned ? <span className="dm-dept-src warn">⚠ 系統推不出，請指派</span>
-    : user.departmentSource === "manual" ? <span className="dm-dept-src ok">· 手動指派</span>
-    : <span className="dm-dept-src">· 系統自動判定</span>;
+  const counted = activity.filter((a) => a.countsTowardDepartment);
+  const notCounted = activity.filter((a) => !a.countsTowardDepartment);
+
+  // ⭐ §4.6 · 光說「系統自動判定」不夠 —— 要說出依據，否則
+  //    「為什麼他在這個部門」「他是不是跨多個群」這兩題畫面上都答不出來。
+  const why = (
+    <div className="dm-dept-why">
+      {unassigned ? (
+        <span className="dm-dept-src warn">⚠ 系統推不出，請指派</span>
+      ) : user.departmentSource === "manual" ? (
+        <>
+          <span className="dm-dept-src ok">· 手動指派</span>
+          <span className="dm-dept-note">系統的自動判定不會再覆寫</span>
+        </>
+      ) : (
+        <>
+          <span className="dm-dept-src">
+            · 系統自動判定{counted.length > 0 && ` · 依 ${counted.length} 個部門群中發言最多的`}
+          </span>
+          {counted.length > 0 && (
+            <span className="dm-grp-line">
+              {counted.map((a, i) => (
+                <span className="dm-grp" key={i}>{a.groupName} <b>{a.messageCount}</b> 則</span>
+              ))}
+            </span>
+          )}
+        </>
+      )}
+      {/* 非部門群也列出來 —— 不列的話，「他明明在那個群為什麼沒算」沒有答案 */}
+      {notCounted.length > 0 && (
+        <span className="dm-grp-line muted">
+          {notCounted.map((a, i) => (
+            <span className="dm-grp out" key={i}>{a.groupName} <b>{a.messageCount}</b> 則</span>
+          ))}
+          <span className="dm-dept-note">不計入部門判定（非部門群）</span>
+        </span>
+      )}
+      {activity.length === 0 && !unassigned && user.departmentSource !== "manual" && (
+        <span className="dm-dept-note">近 30 天沒有在任何群發言</span>
+      )}
+    </div>
+  );
 
   if (!editable) {
     return (
       <div>
         <span className={unassigned ? "dm-dept-unset" : ""}>{user.departmentName ?? "未分派"}</span>
-        <div>{source}</div>
+        {why}
       </div>
     );
   }
@@ -322,7 +370,7 @@ function DeptCell({ user, depts, editable, saving, onChange }: {
         items={depts.map((d) => ({ id: d.departmentId, label: d.departmentName }))}
         onChange={(v) => onChange(v || null)}
       />
-      <div>{source}</div>
+      {why}
     </div>
   );
 }
