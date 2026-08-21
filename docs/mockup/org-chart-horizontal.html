@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>組織圖 · 左右樹版型（mockup）</title>
+<style>
+:root{--canvas:#F7F8FA;--surface:#FFFFFF;--well:#F1F3F6;--line:#E5E7EB;--line-2:#F0F2F5;
+ --ink:#111827;--ink-2:#4B5563;--ink-3:#6B7280;--primary:#4F46E5;--primary-2:#4338CA;--primary-tint:#EEF2FF;
+ --warn:#D97706;--warn-tint:#FFFBEB;--sans:'Inter','Noto Sans TC',system-ui,sans-serif;--r:8px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:1280px;margin:0 auto;padding:24px 22px 60px;}
+h1.doc{font-size:20px;font-weight:700;margin:0 0 4px;}
+.doc-sub{color:var(--ink-3);font-size:12.5px;line-height:1.75;margin:0 0 14px;}
+.note{font-size:12.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);
+ border-radius:var(--r);padding:12px 15px;line-height:1.8;margin-bottom:14px;}
+.note b{color:var(--ink);}
+.note .h{display:block;font-weight:600;color:var(--primary-2);margin-bottom:5px;}
+
+/* ── 頁面外框（模擬產品內的「部門/成員 → 組織圖」tab）── */
+.app{border:1px solid var(--line);border-radius:12px;background:var(--surface);
+ box-shadow:0 2px 14px rgba(17,24,39,.05);overflow:hidden;}
+.app-h{padding:15px 20px 0;}
+.app-h h2{font-size:17px;font-weight:700;margin:0 0 3px;}
+.app-h .s{font-size:12.5px;color:var(--ink-3);}
+.tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin:12px 0 0;padding:0 20px;}
+.tab{padding:9px 1px;font-size:13.5px;color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;}
+.tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--primary);}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px 0;flex-wrap:wrap;}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
+.seg button{border:0;background:var(--surface);color:var(--ink-2);font:inherit;font-size:12.5px;
+ padding:6px 13px;cursor:pointer;}
+.seg button+button{border-left:1px solid var(--line);}
+.seg button.on{background:var(--primary-tint);color:var(--primary-2);font-weight:600;}
+.srch{border:1px solid var(--line);border-radius:var(--r);padding:6px 12px;font-size:12.5px;color:var(--ink-3);min-width:190px;}
+
+/* ── 左右樹本體 ── */
+.og{position:relative;padding:20px 20px 24px;}
+.og-grid{position:relative;display:grid;grid-template-columns:186px 1fr;gap:0 34px;align-items:start;}
+.og-edges{position:absolute;inset:0;overflow:visible;pointer-events:none;z-index:0;}
+.og-root{position:sticky;top:14px;z-index:1;}
+.og-co{padding:11px 16px;border-radius:12px;color:#fff;text-align:center;
+ background:linear-gradient(135deg,#1E293B,#0F172A);box-shadow:0 8px 22px rgba(15,23,42,.22);}
+.og-co .t{font-size:10px;letter-spacing:2px;color:#93A5C4;font-weight:600;}
+.og-co .n{font-size:16px;font-weight:700;margin-top:2px;}
+.og-gm{margin-top:10px;display:flex;align-items:center;gap:8px;background:#F5F3FF;border:1px solid #DDD6FE;
+ border-radius:11px;padding:9px 11px;}
+.og-gm .av{width:26px;height:26px;border-radius:8px;background:#7C3AED;color:#fff;font-size:12px;
+ display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;}
+.og-gm .n{font-size:13px;font-weight:600;line-height:1.3;}
+.og-gm .r{font-size:11px;color:#6D28D9;}
+
+.og-rows{display:flex;flex-direction:column;gap:9px;position:relative;z-index:1;}
+/* 一列＝一個部門。橫向排版讓部門卡拿得到 300px+，長標籤一行放得下（研究 §3-C）*/
+.og-row{display:grid;grid-template-columns:296px 1fr;gap:0 26px;align-items:center;}
+.og-dept{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);
+ border-radius:11px;box-shadow:0 3px 10px rgba(15,23,42,.05);padding:10px 13px;position:relative;overflow:hidden;}
+.og-dept .lbar{position:absolute;left:0;top:0;bottom:0;width:5px;}
+.og-dept .txt{flex:1;min-width:0;padding-left:4px;}
+.og-dept .n{font-size:14.5px;font-weight:670;line-height:1.35;}
+.og-dept .grp{display:inline-block;margin-top:3px;font-size:11px;padding:1px 8px;border-radius:999px;
+ max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;}
+.og-dept .grp.warn{background:var(--warn-tint);color:var(--warn);}
+.og-dept .cnt{font-size:11.5px;color:var(--ink-3);flex-shrink:0;align-self:flex-start;}
+
+.og-mems{display:flex;flex-wrap:wrap;gap:7px;align-items:center;}
+.og-mem{display:inline-flex;align-items:center;gap:7px;background:var(--well);border:1px solid var(--line-2);
+ border-radius:999px;padding:4px 12px 4px 4px;font-size:12.5px;white-space:nowrap;}
+.og-mem .av{width:22px;height:22px;border-radius:50%;color:#fff;font-size:11px;font-weight:700;
+ display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.og-mem.nolink{background:var(--warn-tint);border-color:#FDE68A;}
+.og-mem .tag{font-size:10.5px;color:var(--warn);border:1px solid #FDE68A;border-radius:5px;padding:0 5px;}
+.og-empty{font-size:11.5px;color:#B6BCC7;font-style:normal;}
+
+.og-orphan{margin-top:16px;margin-left:220px;background:var(--warn-tint);border:1px dashed #FDE68A;
+ border-radius:11px;padding:11px 15px;}
+.og-orphan .t{font-size:12.5px;font-weight:600;color:var(--warn);margin-bottom:3px;}
+.og-orphan .s{font-size:11.5px;color:#92400E;line-height:1.7;}
+
+/* ── 對照：現況（上下樹）── */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
+@media(max-width:900px){.cmp{grid-template-columns:1fr}}
+.cmp-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;}
+.cmp-card h3{font-size:13px;font-weight:700;margin:0 0 3px;}
+.cmp-card .s{font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:9px;}
+.mini{background:var(--well);border-radius:6px;padding:10px;overflow:hidden;}
+.mini-lane{display:flex;gap:3px;}
+.mini-lane i{display:block;height:20px;background:#C7CBD4;border-radius:2px;flex:none;width:14px;}
+.mini-lane i.hi{background:var(--primary);}
+.mini-cap{font-size:10.5px;color:var(--ink-3);margin-top:7px;line-height:1.6;}
+.mini-rows i{display:block;height:9px;background:#C7CBD4;border-radius:2px;margin-bottom:3px;width:78%;}
+.mini-rows i.hi{background:var(--primary);}
+footer{margin-top:22px;font-size:11.5px;color:var(--ink-3);line-height:1.8;}
+</style></head><body>
+<div class="wrap">
+
+<h1 class="doc">組織圖 · 左右樹版型（mockup）</h1>
+<p class="doc-sub">
+  對應 <b>docs/modules/design-research-org-chart-layout.md</b> §5 的建議版型 C。<br>
+  <b>畫面依據</b>：結構與部門／LINE 群名稱取自台灣福祉 prod 現況（13 部門）·
+  配色沿用 <code>OrgGraph.tsx</code> 的 PALETTE · 外框沿用專案既有的 tab／segmented 樣式。<br>
+  <b>成員姓名已假名化</b>，但刻意保留原本的長度與中英文＋emoji 混排 —— 版面壓力測試靠的就是那個特徵。
+</p>
+
+<div class="note">
+  <span class="h">這份 mockup 要驗證的一件事</span>
+  現況把 13 個部門排成一列 ＝ <b>2900px 寬</b>，必須縮到 40% 才看得完，而 40% 時部門名剩 6px、成員名剩 4.4px，
+  <b>看得到形狀、讀不到內容</b>。<br>
+  轉成左右樹之後：<b>13 列 × 約 56px ≈ 730px 高</b>，寬度回到一般版面內 ——
+  <b>100% 就看得完，一個字都不用縮</b>。而網頁本來就是垂直捲的。
+</div>
+
+<div class="app">
+  <div class="app-h">
+    <h2>部門 / 成員</h2>
+    <div class="s">管理本公司部門與部門主管 · 部門建立後，到左側「LINE 群組」頁把各群組分派到對應部門（一個部門可含多個群）</div>
+  </div>
+  <div class="tabs">
+    <div class="tab">部門配置</div><div class="tab">成員</div><div class="tab on">組織圖</div>
+  </div>
+  <div class="bar">
+    <div class="seg">
+      <button class="on" data-lod="all">部門＋成員</button>
+      <button data-lod="dept">只看部門</button>
+    </div>
+    <div class="srch">🔍 搜尋部門或成員…</div>
+  </div>
+
+  <div class="og">
+    <div class="og-grid" id="grid">
+      <svg class="og-edges" id="edges"></svg>
+      <div class="og-root" id="root">
+        <div class="og-co"><div class="t">公司</div><div class="n">台灣福祉</div></div>
+        <div class="og-gm" id="gm">
+          <span class="av">台</span>
+          <span><span class="n">台灣福祉</span><br><span class="r">總經理室 · 看全公司</span></span>
+        </div>
+      </div>
+      <div class="og-rows" id="rows"></div>
+    </div>
+    <div class="og-orphan">
+      <div class="t">⚠ 未分派 · 導入待補</div>
+      <div class="s">群組：福祉 分析表測試群、福祉 Line 通知測試群　｜　成員：✨小柚👼🏻（系統推不出部門）</div>
+    </div>
+  </div>
+</div>
+
+<div class="cmp">
+  <div class="cmp-card">
+    <h3>現況 · 上下樹（一列 13 欄）</h3>
+    <div class="s">寬度隨部門數線性成長。加一個部門就寬 222px。</div>
+    <div class="mini">
+      <div class="mini-lane">
+        <i class="hi"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <div class="mini-cap">13 欄 ＝ <b>2900px</b> · 視窗放不下 → 縮到 40% 或一路橫捲</div>
+    </div>
+  </div>
+  <div class="cmp-card">
+    <h3>建議 · 左右樹（13 列）</h3>
+    <div class="s">高度隨部門數成長，而頁面本來就能垂直捲。</div>
+    <div class="mini">
+      <div class="mini-rows">
+        <i class="hi"></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <div class="mini-cap">13 列 ≈ <b>730px 高</b> · 寬度固定 · 100% 顯示，且節點寬 296px 放得下長標籤</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  docs/mockup/org-chart-horizontal.html · 2026-08-21 · 對應 design-research-org-chart-layout.md<br>
+  成員姓名為假名（保留原長度與語言混排特徵）· 部門名與 LINE 群名為台灣福祉 prod 實際設定。
+</footer>
+</div>
+
+<script>
+// PALETTE 與產品端 OrgGraph.tsx 同一組 · 依部門索引 % 5 循環
+const P=[["#4F46E5","#6366F1","#EEF2FF"],["#0D9488","#14B8A6","#ECFDF5"],
+         ["#D97706","#F59E0B","#FFFBEB"],["#DB2777","#EC4899","#FDF2F8"],
+         ["#0284C7","#0EA5E9","#EFF6FF"]];
+// 部門／群組名＝prod 實際值；成員名＝假名（長度與中英emoji混排刻意保留）
+const D=[
+ {n:"人資總務",g:"福祉集團-人資總務群",m:[]},
+ {n:"售後服務",g:null,m:[{n:"小方",no:1}]},
+ {n:"報工及車輛調度",g:"報工及車輛調度",m:[]},
+ {n:"報工生產",g:"福祉—品保部",m:[]},
+ {n:"技術工程",g:"技術工程部組長/生管/物控",m:[]},
+ {n:"技術研發",g:"技術工程部_技術開發組",m:[{n:"Emma"}]},
+ {n:"暫留",g:null,m:[]},
+ {n:"有你真好",g:"有你真好",m:[]},
+ {n:"業務一部",g:"福祉集團-業務部",m:[{n:"陳志明 台灣福祉科技有限公司"},{n:"林佩君Alice（佩佩）"}]},
+ {n:"業務二部",g:"福祉集團-業務二部(含售服)",m:[{n:"台灣福祉維修客服"},{n:"台灣福祉維修組  建宏"}]},
+ {n:"業務助理",g:"福祉業務助理小組",m:[{n:"淑惠Sandra三爪❤️台灣福祉"}]},
+ {n:"法規",g:"台灣福祉法規組",m:[]},
+ {n:"舊資料-待刪除",g:null,m:[{n:"Chen L"},{n:"吳明翰 Patrick"},{n:"宗翰",no:1},{n:"黃玉婷Sandy"}]},
+];
+
+let lod="all";
+function render(){
+ document.getElementById("rows").innerHTML=D.map((d,i)=>{
+  const c=P[i%5];
+  const mems=lod==="dept" ? "" :
+    (d.m.length
+      ? d.m.map(m=>`<span class="og-mem${m.no?" nolink":""}">
+           <span class="av" style="background:linear-gradient(135deg,${c[0]},${c[1]})">${[...m.n][0]}</span>
+           ${m.n}${m.no?'<span class="tag">未綁</span>':""}</span>`).join("")
+      : `<span class="og-empty">— 尚無成員</span>`);
+  return `<div class="og-row" data-i="${i}">
+    <div class="og-dept">
+      <span class="lbar" style="background:linear-gradient(180deg,${c[0]},${c[1]})"></span>
+      <span class="txt">
+        <span class="n">${d.n}</span><br>
+        <span class="grp${d.g?"":" warn"}" ${d.g?`style="color:${c[0]};background:${c[2]}"`:""}>◍ ${d.g??"未接 LINE 群"}</span>
+      </span>
+      <span class="cnt">${d.m.length} 位</span>
+    </div>
+    <div class="og-mems">${mems}</div>
+  </div>`;}).join("");
+ requestAnimationFrame(edges);
+}
+
+// 連線沿用產品端「座標用量不用排」的做法：render 後量真實位置再畫 SVG
+// —— 左右樹的好處在這裡很明顯：所有線從同一點分岔，不需要跨列的長曲線
+function edges(){
+ const grid=document.getElementById("grid"), gm=document.getElementById("gm");
+ const gb=grid.getBoundingClientRect(), ab=gm.getBoundingClientRect();
+ const x1=ab.right-gb.left, y1=ab.top-gb.top+ab.height/2;
+ let s="";
+ document.querySelectorAll(".og-row").forEach((r,i)=>{
+  const b=r.querySelector(".og-dept").getBoundingClientRect();
+  const x2=b.left-gb.left, y2=b.top-gb.top+b.height/2;
+  const dx=Math.max(16,(x2-x1)*0.55);
+  s+=`<path d="M${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}"
+       stroke="${P[i%5][0]}" stroke-width="1.6" fill="none" opacity=".38"/>`;
+ });
+ const sv=document.getElementById("edges");
+ sv.setAttribute("width",grid.scrollWidth); sv.setAttribute("height",grid.scrollHeight);
+ sv.innerHTML=s;
+}
+
+document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".seg button").forEach(x=>x.classList.remove("on"));
+ b.classList.add("on"); lod=b.dataset.lod; render();
+});
+addEventListener("resize",edges);
+render();
+</script>
+</body></html>
