@@ -71,10 +71,38 @@ test("⭐ 租戶只看得到 tenant / department 級權限（platform 那 34 項
     "平台權限不可以出現在租戶清單裡");
 });
 
-test("⭐ 角色清單只有白名單那三個 · tenant_admin 不在裡面（防自我提權）", async () => {
+test("⭐ 角色清單只有白名單那兩個 · tenant_admin 與 assistant 都不在裡面", async () => {
   const roles = await asTenant(T, () => svc.listRoles(T));
-  assert.deepEqual(roles.map((r) => r.roleKey).sort(), ["assistant", "employee", "group_owner"]);
+  assert.deepEqual(roles.map((r) => r.roleKey).sort(), ["employee", "group_owner"]);
   assert.equal(roles.every((r) => !r.isCustomized), true, "還沒改過，全部應為系統預設");
+});
+
+test("⭐⭐ assistant 不可以回到清單裡 —— 它是平台角色不是租戶角色", async () => {
+  // 2026-08-21：原本錯放在 TENANT_EDITABLE_ROLE_KEYS 裡。它的兩項權限都是 scope=platform，
+  // 而 notification_rule / notify_config / ragic_account 的 policy 是
+  // app_is_platform_ops()＝純角色白名單、**沒有租戶條件**。
+  // 租戶只要生得出一個 assistant，那個人就讀得到所有租戶的通知規則與 Ragic API 金鑰。
+  const roles = await asTenant(T, () => svc.listRoles(T));
+  assert.equal(roles.some((r) => r.roleKey === "assistant"), false,
+    "assistant 是 AIPROOT 內部角色 · 放進租戶清單＝跨租戶金鑰外洩（P0）");
+
+  await assert.rejects(
+    () => asTenant(T, () => svc.updatePermissions({ tenantId: T, roleKey: "assistant", permissionIds: [] })),
+    /不開放自行調整/,
+    "就算繞過前端直接打 API 也要擋",
+  );
+});
+
+test("⭐⭐ 權限數只算租戶看得見的 —— 不然畫面會出現『已勾 N』但一個勾都找不到", async () => {
+  // listPermissions 只回 tenant/department 級，若 listRoles 的計數含 platform 級，
+  // 使用者會看到「已勾 2 / 32」然後在 32 項裡遍尋不著那 2 項。
+  const [roles, perms] = await asTenant(T, async () =>
+    [await svc.listRoles(T), await svc.listPermissions()] as const);
+  const visible = new Set(perms.map((p) => p.permissionId));
+  for (const r of roles) {
+    const strays = r.permissions.filter((id) => !visible.has(id));
+    assert.deepEqual(strays, [], `「${r.roleName}」算進了畫面上看不到的權限：${strays.join(", ")}`);
+  }
 });
 
 test("⭐⭐ 分岔時『所有』該角色的使用者都要改到 role_id（P0-D · 漏一個就靜默沿用內建）", async () => {
@@ -146,6 +174,6 @@ test("⭐ 還原成系統預設 · 人要指回內建角色、租戶版要被刪
 });
 
 test("沒改過就按還原 · 回 restored=false，不報錯", async () => {
-  const r = await asTenant(T, () => svc.resetToDefault({ tenantId: T, roleKey: "assistant" }));
+  const r = await asTenant(T, () => svc.resetToDefault({ tenantId: T, roleKey: "employee" }));
   assert.equal(r.restored, false);
 });
