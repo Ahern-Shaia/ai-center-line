@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>租戶自建角色 · UI mockup（custom-roles v0.3 M6）</title>
+<link rel="stylesheet" href="../../web/src/styles.css" />
+<style>
+  body { background:#F5F6F8; margin:0; padding:28px; font-family:"Noto Sans TC",-apple-system,sans-serif; }
+  .mk { max-width:1180px; margin:0 auto; }
+  .mk-h { font-size:20px; font-weight:700; color:#111827; margin:0 0 4px; }
+  .mk-sub { font-size:13px; color:#6B7280; margin:0 0 22px; }
+  .mk-sec { background:#fff; border:1px solid #E5E7EB; border-radius:6px; padding:20px; margin-bottom:20px; }
+  .mk-sec > h2 { font-size:14px; font-weight:700; color:#111827; margin:0 0 4px; }
+  .mk-sec > .why { font-size:12px; color:#6B7280; margin:0 0 16px; line-height:1.7; }
+  .mk-tag { display:inline-block; font-size:10.5px; padding:1px 7px; border-radius:3px; margin-left:6px; vertical-align:2px; }
+  .mk-new { background:#ECFDF5; color:#065F46; }
+  .mk-same { background:#F3F4F6; color:#6B7280; }
+  .mk-ask { background:#FEF3C7; color:#78350F; }
+  .basis { background:#F9FAFB; border-left:3px solid #4F46E5; padding:12px 14px; font-size:12px; color:#4B5563; line-height:1.9; margin-bottom:22px; border-radius:0 4px 4px 0; }
+  .basis b { color:#111827; }
+  .basis code { background:#EEF2FF; color:#3730A3; padding:1px 5px; border-radius:3px; font-size:11px; }
+  .frame { border:1px solid #E5E7EB; border-radius:5px; overflow:hidden; }
+  .frame-cap { background:#F9FAFB; border-bottom:1px solid #E5E7EB; padding:7px 12px; font-size:11.5px; color:#6B7280; }
+  .frame-body { padding:16px; background:#F5F6F8; }
+  .side-by { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .drawer-mock { background:#fff; border:1px solid #E5E7EB; border-radius:5px; width:420px; }
+  .drawer-hd { padding:14px 18px; border-bottom:1px solid #E5E7EB; font-size:15px; font-weight:700; }
+  .drawer-bd { padding:18px; }
+  .baseline-opt { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border:1px solid #E5E7EB; border-radius:4px; margin-bottom:6px; cursor:pointer; }
+  .baseline-opt.on { border-color:#4F46E5; background:#EEF2FF; }
+  /* ⚠️ styles.css 的 .field input{width:100%} 是為文字框寫的 —— 不覆寫的話
+     radio 會被撐成滿版，把右邊文字擠成直排（實際渲染踩到過） */
+  .baseline-opt input[type=radio] { width:auto; flex:none; margin:3px 0 0; }
+  .baseline-opt > span { flex:1; text-align:left; }
+  .baseline-lb { display:block; font-size:13px; font-weight:600; color:#111827; }
+  .baseline-hi { display:block; font-size:11.5px; color:#6B7280; margin-top:2px; line-height:1.6; }
+  .err { background:#FEF2F2; border:1px solid #FECACA; color:#991B1B; border-radius:4px; padding:10px 12px; font-size:12.5px; line-height:1.7; margin-bottom:10px; }
+  .err b { display:block; margin-bottom:2px; }
+  .ask { background:#FFFBEB; border:1px solid #FDE68A; border-radius:5px; padding:14px 16px; margin-bottom:12px; }
+  .ask h3 { font-size:13px; margin:0 0 6px; color:#78350F; }
+  .ask p { font-size:12.5px; color:#78350F; margin:0 0 8px; line-height:1.8; }
+  .ask .opt { font-size:12.5px; color:#451A03; line-height:1.9; }
+</style>
+</head>
+<body>
+<div class="mk">
+  <h1 class="mk-h">租戶自建角色 · 預期成果</h1>
+  <p class="mk-sub">docs/modules/custom-roles.md v0.3 · M6 前端 · 後端已完成（<code>dbb5996</code>）</p>
+
+  <div class="basis">
+    <b>畫面依據</b>（抄現況，不是想像）<br>
+    · 版面與所有 <code>rm-*</code> class ＝ <b>web/src/settings/role-permissions/Page.tsx</b> 現行實作（左側角色清單 280px ＋ 右側權限編輯器）<br>
+    · 樣式直接連 <b>web/src/styles.css</b>（沒有另寫一份 mockup 專用 CSS，所以看到的間距／字級就是實際的）<br>
+    · 抽屜表單沿用 <b>Members.tsx</b> 的 <code>llm-form</code> / <code>field</code> / <code>llm-hint</code><br>
+    · 三個資料範圍的文案 ＝ 後端 <b>tenant-custom-roles.controller.ts</b> 的 <code>GET /baselines</code>（前端不自己編一套）<br>
+    · 錯誤訊息 ＝ service 實際回傳的 <code>status</code> 與中文 message，不是我編的
+  </div>
+
+  <!-- ① 角色清單 -->
+  <div class="mk-sec">
+    <h2>① 權限管理 · 角色清單<span class="mk-tag mk-new">有變動</span></h2>
+    <p class="why">
+      現況只有「員工／部門主管」兩個內建角色，頁面上方寫著「需要新的角色？請聯繫 AIPROOT」。<br>
+      改為：<b>上方那句話換成一顆按鈕</b>，自訂角色獨立成一區，並標出它的資料範圍 —— 那是自訂角色唯一比內建角色多出來的概念，不標的話沒人知道這個角色看得到什麼。
+    </p>
+    <div class="side-by">
+      <div class="frame">
+        <div class="frame-cap">現況</div>
+        <div class="frame-body">
+          <div class="rm-note">需要新的角色？請聯繫 AIPROOT 並說明這個角色要做哪些事 —— 我們會幫你建立。</div>
+          <div class="rm-sidebar" style="background:#fff">
+            <div class="rm-sidebar-hdr">角色（2）</div>
+            <button class="rm-role-item">
+              <div class="rm-role-name">員工<span class="rm-role-badge">系統預設</span></div>
+              <div class="rm-perm-meta">2 項權限 · 13 位成員</div>
+              <div class="rm-role-source">同仁綁定 LINE 後自動成為員工</div>
+            </button>
+            <button class="rm-role-item">
+              <div class="rm-role-name">部門主管<span class="rm-role-badge">系統預設</span></div>
+              <div class="rm-perm-meta">10 項權限 · 0 位成員</div>
+              <div class="rm-role-source">在「部門/成員」頁新增</div>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="frame">
+        <div class="frame-cap">改後</div>
+        <div class="frame-body">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+            <button class="btn btn-primary">＋ 建立角色</button>
+          </div>
+          <div class="rm-sidebar" style="background:#fff">
+            <div class="rm-sidebar-hdr">內建角色（2）</div>
+            <button class="rm-role-item">
+              <div class="rm-role-name">員工<span class="rm-role-badge">系統預設</span></div>
+              <div class="rm-perm-meta">2 項權限 · 13 位成員</div>
+              <div class="rm-role-source">同仁綁定 LINE 後自動成為員工</div>
+            </button>
+            <button class="rm-role-item">
+              <div class="rm-role-name">部門主管<span class="rm-role-badge">系統預設</span></div>
+              <div class="rm-perm-meta">10 項權限 · 0 位成員</div>
+              <div class="rm-role-source">在「部門/成員」頁新增</div>
+            </button>
+            <div class="rm-sidebar-hdr" style="margin-top:10px">本公司自建（1）</div>
+            <button class="rm-role-item active">
+              <div class="rm-role-name">品保組長<span class="rm-role-badge custom">本公司自建</span></div>
+              <div class="rm-perm-meta">6 項權限 · 2 位成員</div>
+              <div class="rm-role-source">看得到：只有自己部門</div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 建立角色 -->
+  <div class="mk-sec">
+    <h2>② 建立角色<span class="mk-tag mk-new">全新</span></h2>
+    <p class="why">
+      抽屜沿用「新增成員」那一套。<b>只問兩件事</b>：這個角色叫什麼、他看得到誰的資料；權限沿用下面既有的勾選清單。<br>
+      ⚠️ <b>沒有「角色代號」欄位</b> —— 見下方待裁定 A。
+    </p>
+    <div class="frame">
+      <div class="frame-cap">設定 → 權限管理 → ＋ 建立角色</div>
+      <div class="frame-body" style="display:flex;justify-content:center">
+        <div class="drawer-mock">
+          <div class="drawer-hd">建立角色</div>
+          <div class="drawer-bd">
+            <div class="llm-form">
+              <div class="field">
+                <label>角色名稱 *</label>
+                <input type="text" value="品保組長" />
+                <div class="llm-hint">成員清單與這一頁都會顯示這個名字</div>
+              </div>
+
+              <div class="field">
+                <label>這個角色看得到誰的資料 *</label>
+                <label class="baseline-opt"><input type="radio" name="bl" />
+                  <span><span class="baseline-lb">只看自己</span>
+                  <span class="baseline-hi">只看得到自己的日報與行程</span></span></label>
+                <label class="baseline-opt on"><input type="radio" name="bl" checked />
+                  <span><span class="baseline-lb">只看自己部門</span>
+                  <span class="baseline-hi">看得到所屬部門的任務與日報 · 指派前要先設好部門</span></span></label>
+                <label class="baseline-opt"><input type="radio" name="bl" />
+                  <span><span class="baseline-lb">看全公司</span>
+                  <span class="baseline-hi">看得到全公司所有部門的資料</span></span></label>
+                <div class="llm-hint">這一項<b>建立後不能改</b> —— 改了會讓已經指派的人資料範圍突然變動</div>
+              </div>
+
+              <div class="field">
+                <label>這個角色可以做哪些事</label>
+                <div class="llm-hint">下一步在權限清單勾選 · 只列得出你自己有的權限</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:16px">
+              <button class="btn btn-primary">建立</button>
+              <button class="btn">取消</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 成員頁 -->
+  <div class="mk-sec">
+    <h2>③ 部門 / 成員 · 角色下拉<span class="mk-tag mk-new">有變動</span></h2>
+    <p class="why">
+      現況下拉只有「員工／部門主管」兩個內建角色。改後多一個分組列出自建角色 —— 分組是必要的，
+      否則「品保組長」混在內建角色裡，沒人知道那是自己公司建的、可以改。
+    </p>
+    <div class="frame">
+      <div class="frame-cap">設定 → 部門/成員 → 成員</div>
+      <div class="frame-body">
+        <table class="dm-table" style="background:#fff">
+          <thead><tr><th>顯示名稱</th><th>Email</th><th>角色</th><th>所屬部門</th><th>密碼</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>廖蘭萱Alice</td><td><span class="dm-tag-unset">LINE 綁定</span></td>
+              <td>
+                <div style="border:1px solid #4F46E5;border-radius:4px;background:#fff;width:150px">
+                  <div style="padding:6px 10px;font-size:12.5px;color:#9CA3AF">內建角色</div>
+                  <div style="padding:6px 14px;font-size:13px">員工</div>
+                  <div style="padding:6px 14px;font-size:13px">部門主管</div>
+                  <div style="padding:6px 10px;font-size:12.5px;color:#9CA3AF;border-top:1px solid #E5E7EB">本公司自建</div>
+                  <div style="padding:6px 14px;font-size:13px;background:#EEF2FF;color:#3730A3;font-weight:600">品保組長 ✓</div>
+                </div>
+              </td>
+              <td><button class="btn" style="width:140px">品保部</button>
+                <div class="dm-dept-why"><span class="dm-dept-src">· 自動判定 · 3 群</span></div></td>
+              <td><span class="dm-tag-unset">未設</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 擋下來的情境 -->
+  <div class="mk-sec">
+    <h2>④ 三個會被擋下來的情境<span class="mk-tag mk-same">後端已實作</span></h2>
+    <p class="why">
+      這三個都是 FMEA 的 P0，後端已經有測試守住（<code>tenant-custom-roles.test.ts</code> 9 條）。
+      這裡列出<b>使用者實際會看到的字</b> —— 錯誤訊息不可以猜原因，也不可以把英文或 JSON 丟到畫面上。
+    </p>
+    <div class="err">
+      <b>V-7 · 指派「只看自己部門」的角色給沒有部門的人</b>
+      這個角色的範圍是「只看自己部門」，請先幫這位成員指定所屬部門
+      <div style="font-size:11.5px;opacity:.75;margin-top:6px">
+        為什麼要擋：沒有部門的話 RLS 的 <code>current_department</code> 會是空的 → 他反而<b>看得到全公司</b>。
+        症狀是「看太多」不是「壞掉」，畫面上完全正常。
+      </div>
+    </div>
+    <div class="err">
+      <b>V-1 · 把自己沒有的權限放進新角色</b>
+      你自己沒有其中 1 項權限，不能把它們給別人
+      <div style="font-size:11.5px;opacity:.75;margin-top:6px">
+        Kubernetes RBAC 的 escalate 紀律。server 端比對，不是靠前端只送得出看得到的東西。
+      </div>
+    </div>
+    <div class="err">
+      <b>V-8 · 刪除還有人在用的角色</b>
+      還有 2 位成員在用這個角色，請先幫他們改成別的角色
+    </div>
+  </div>
+
+  <!-- ⑤ 待裁定 -->
+  <div class="mk-sec">
+    <h2>⑤ 待你裁定<span class="mk-tag mk-ask">3 題</span></h2>
+
+    <div class="ask">
+      <h3>A · 「角色代號」要不要讓使用者填？</h3>
+      <p>
+        後端目前<b>要求</b> <code>roleKey</code>（小寫英文、如 <code>qa_lead</code>）。但那是給程式用的識別字，
+        使用者從頭到尾看不到它 —— 要一位總經理發明一個小寫英文代號，是多一次沒有必要的判斷。
+      </p>
+      <div class="opt">
+        <b>建議：拿掉這個欄位，後端自動產生</b>（例 <code>custom_1</code>、<code>custom_2</code>）。<br>
+        代價：要改後端 API（roleKey 變選填 + server 端生成）· 約 10 行。
+      </div>
+    </div>
+
+    <div class="ask">
+      <h3>B · 資料範圍建立後可不可以改？</h3>
+      <p>
+        mockup 目前寫「建立後不能改」。理由：改了會讓已經指派的人資料範圍突然變動 ——
+        例如從「只看自己部門」改成「看全公司」，那 2 位成員下次登入就看得到全公司，<b>而沒有任何人會收到通知</b>。
+      </p>
+      <div class="opt">
+        <b>建議：不能改</b>，要換範圍就建一個新角色再重新指派（看得見、可回溯）。<br>
+        另一選項：可以改，但要跳確認並寫進稽核記錄。
+      </div>
+    </div>
+
+    <div class="ask">
+      <h3>C · ⭐ 客戶要的那個角色到底是什麼？（OQ-CR-7）</h3>
+      <p>
+        這題還沒有答案。上面的「品保組長 · 只看自己部門 · 6 項權限」<b>是我編的範例</b>，不是客戶說的。
+      </p>
+      <div class="opt">
+        要問的四件事：① 角色叫什麼 ② 他要做哪些事 ③ 看得到誰的資料（自己／自己部門／全公司）
+        ④ 跟現有的「部門主管」差在哪。<br>
+        <b>拿到答案前 M6 可以先做</b>（畫面不依賴那個角色的內容），但驗收要用真的角色跑一次。
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
