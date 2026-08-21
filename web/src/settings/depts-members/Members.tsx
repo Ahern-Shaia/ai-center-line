@@ -94,8 +94,12 @@ export function Members({
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
+      // 群組活動只是「部門是怎麼判的」的說明 —— 它掛掉不該讓整份成員名單消失，
+      // 所以自己吞掉錯誤（畫面退回沒有依據那行），不進下面的 catch
       const [usersRes, deptsRes, actRes] = await Promise.all([
-        listTenantUsers(tenantId), listDepartments(tenantId), listMemberGroupActivity(tenantId),
+        listTenantUsers(tenantId),
+        listDepartments(tenantId),
+        listMemberGroupActivity(tenantId).catch(() => ({ activity: {} })),
       ]);
       setUsers(usersRes.users);
       setDepts(deptsRes.departments);
