@@ -186,7 +186,16 @@
 |---|---|---|
 | notify-config 給 T？ | 🔴 **不能直接開** —— `notify_rule` 無 tenant_id/RLS，開了會跨租戶洩漏 · 另開 M0（notify 租戶化）見 `modules/notify-tenant-scoping.md` |
 | master-data 給 T？ | ✅ **已開放**（migration 0053）· resolveTenantId 鎖自租戶無 IDOR | — |
-| UI label「群組負責人」→「部門主管」 | ✅ **已改**（commit d06ea9a · role key group_owner 不變）| — |
+| UI label「群組負責人」→「部門主管」 | ✅ **已改**（`d06ea9a` 前端 label · `0069` DB `roles.role_name` · role key group_owner 不變）| — |
+
+> ⚠️ **這一列曾經是錯的，值得留著當教訓。** `d06ea9a`（2026-07-30）只改前端硬編 label，
+> commit message 明寫「DB 不動」—— 當時正確，因為沒有畫面在讀 `roles.role_name`。
+> 但這一列只寫「✅ 已改」，於是 22 天後沒有人記得它其實只改了一半。
+> `0067` 權限管理頁一讀 DB，舊名就回到畫面上，客戶當場問「權限管理不同步」。
+>
+> **判準**：改顯示名時要問的不是「現在誰在讀」，而是「這個值會不會變成 user-visible」。
+> 現在三處（DB / `server/src/auth/role-label.ts` / `web/src/shared/roleLabel.ts`）
+> 由 `server/test/role-label-consistency.test.ts` 釘住，再漂移會直接紅。
 
 ---
 
