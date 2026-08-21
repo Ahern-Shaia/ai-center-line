@@ -1248,6 +1248,42 @@ export const updateMyDisplayName = async (displayName: string) => {
   setLocalDisplayName(res.displayName);
   return res;
 };
+// === 租戶自管角色權限 · docs/modules/tenant-role-permissions.md ===
+// 與上面的 /permissions、/roles 是**兩套**：那兩支是 aiproot 的（64 項、6 個角色），
+// 這幾支是租戶的（26 項、3 個角色）。差異由後端決定，前端只是呼叫不同端點。
+
+export interface TenantPermissionDto {
+  permissionId: string;
+  description: string;
+  scope: string;   // 'tenant' | 'department'
+}
+export interface TenantRoleDto {
+  roleKey: string;
+  roleName: string;
+  permissions: string[];
+  /** 已由本公司調整過，不再跟隨系統預設 */
+  isCustomized: boolean;
+  /** 使用這個角色的人數 · 用來算「移除權限會影響幾個人」 */
+  memberCount: number;
+}
+
+export const listTenantPermissions = () =>
+  req<{ permissions: TenantPermissionDto[] }>("/tenant-roles/permissions");
+
+export const listTenantRoles = () =>
+  req<{ roles: TenantRoleDto[] }>("/tenant-roles");
+
+export const updateTenantRolePermissions = (roleKey: string, permissionIds: string[]) =>
+  req<{ forked: boolean; count: number }>(`/tenant-roles/${encodeURIComponent(roleKey)}/permissions`, {
+    method: "PATCH",
+    body: JSON.stringify({ permissionIds }),
+  });
+
+export const resetTenantRole = (roleKey: string) =>
+  req<{ restored: boolean }>(`/tenant-roles/${encodeURIComponent(roleKey)}/reset`, {
+    method: "POST",
+  });
+
 export const listPermissions = () =>
   req<{ permissions: PermissionDto[] }>("/permissions");
 export const listRoles = () =>

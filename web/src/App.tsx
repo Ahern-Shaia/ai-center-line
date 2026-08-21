@@ -17,6 +17,7 @@ import KnowledgeBase from "./kb/KnowledgeBase";
 import CustomerMap from "./kb/CustomerMap";
 import DepartmentsMembers from "./settings/depts-members/Page";
 import AuditLog from "./settings/AuditLog";
+import RolePermissionsPage from "./settings/role-permissions/Page";
 import SchedulerConfigPage from "./settings/scheduler-config/Page";
 import LineGroupsPage from "./settings/line-groups/Page";
 import TenantBindingAudit from "./settings/TenantBindingAudit";
@@ -57,6 +58,7 @@ type Route =
   | { page: "km" }
   | { page: "map" }
   | { page: "depts"; tab?: "dept" | "member" }
+  | { page: "role-permissions" }
   | { page: "audit" }
   | { page: "scheduler-config" }
   | { page: "master-data" }
@@ -92,6 +94,7 @@ const PAGE_TITLE: Record<Route["page"], string> = {
   km: "知識庫",
   map: "客戶地圖",
   depts: "部門 / 成員",
+  "role-permissions": "權限管理",
   audit: "稽核記錄",
   "scheduler-config": "自動化",
   "master-data": "資料來源",
@@ -266,6 +269,7 @@ export default function App() {
           {route.page === "km" && <KnowledgeBase />}
           {route.page === "map" && <CustomerMap />}
           {route.page === "depts" && <DepartmentsMembers initialTab={route.tab} onOpenGuide={() => setRoute({ page: "permission-guide" })} />}
+          {route.page === "role-permissions" && <RolePermissionsPage />}
           {route.page === "audit" && <AuditLog />}
           {route.page === "scheduler-config" && <SchedulerConfigPage />}
           {/* 通訊管道 · 兩頁合一（M4）。群組與員工綁定都是「誰在哪個管道上」，

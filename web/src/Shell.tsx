@@ -63,6 +63,9 @@ const NAV: Array<{
       // 「定時任務」與本產品的核心產出「任務」撞名 —— 客戶點進去想找任務，
       // 看到的是 cron 排程設定。改名就能解，是硬傷裡最便宜的一個。
       { key: "scheduler-config", label: "自動化", ic: iconCog, done: true, perm: "scheduler-config:view", renamedFrom: "定時任務" },
+      // 租戶自管角色權限（docs/modules/tenant-role-permissions.md）·
+      // aiproot 側另有「平台 → 權限管理」，兩者是同一件事的兩種可見範圍
+      { key: "role-permissions", label: "權限管理", ic: iconShield, done: true, perm: "roles:manage-tenant" },
       { key: "audit", label: "稽核記錄", ic: iconShield, done: true, perm: "audit:view" },
     ],
   },
