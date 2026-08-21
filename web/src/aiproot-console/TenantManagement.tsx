@@ -9,15 +9,11 @@ import {
 } from "../api";
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
+import { ROLE_LABEL } from "../shared/roleLabel";
 
 // 租戶管理（aiproot）· 開通後的救援窗口
 // 開通當下的一次性密碼只顯示一次；忘記帳號或密碼時，在這裡查得到「帳號是誰」、重設得了密碼。
 // 密碼本身一律不回（連雜湊都不回）——只能產新的。
-const ROLE_LABEL: Record<string, string> = {
-  aiproot_admin: "AIPROOT 管理員", consultant: "顧問",
-  tenant_admin: "總經理室", group_owner: "部門主管", employee: "一般員工",
-};
-
 export default function TenantManagement() {
   const perms = usePermissions();
   const [onboarding, setOnboarding] = useState(false);

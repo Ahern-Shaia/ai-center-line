@@ -13,6 +13,14 @@ import { PERMISSION_GROUPS, PERMISSION_HINT, CRITICAL_PERMISSION_IDS } from "./l
 // 版面沿用 aiproot 側 RolesManagement 的 rm-* class —— 兩邊是同一個東西的兩種可見範圍，
 // 長得一樣才對；差別在資料（3 個角色 / 26 項權限），而那是後端決定的。
 
+// 這個角色的人是怎麼來的 —— 回答「這裡有三個角色，新增成員卻只能選一個」。
+// 三者各有原因：員工是自動生的、部門主管是這裡手動建的、助理帶平台側權限只能由 AIPROOT 指派。
+const ROLE_SOURCE: Record<string, string> = {
+  employee: "同仁綁定 LINE 後自動成為員工",
+  group_owner: "在「部門/成員」頁新增",
+  assistant: "由 AIPROOT 指派",
+};
+
 export default function RolePermissionsPage() {
   const [perms, setPerms] = useState<TenantPermissionDto[]>([]);
   const [roles, setRoles] = useState<TenantRoleDto[]>([]);
@@ -144,6 +152,9 @@ export default function RolePermissionsPage() {
               <div className="rm-perm-meta">
                 {r.permissions.length} 項權限 · {r.memberCount} 位成員
               </div>
+              {/* 這頁有三個角色、「新增成員」卻只有一個選項 —— 不說明的話，
+                  看起來就像設定沒同步。講清楚「這個角色的人怎麼來的」比較實在。 */}
+              <div className="rm-role-source">{ROLE_SOURCE[r.roleKey] ?? ""}</div>
             </button>
           ))}
         </div>

@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import { ApiError, login, getLineOauthUrl, completeLineOauth, selectLineTenant, type TenantChoice } from "./api";
-
-const ROLE_LABEL: Record<string, string> = {
-  aiproot_admin: "平台管理員", consultant: "顧問", tenant_admin: "總經理室",
-  group_owner: "部門主管", assistant: "助理", employee: "員工",
-};
+import { ROLE_LABEL } from "./shared/roleLabel";
 
 // LINE OAuth state 由後端簽章並驗證（見 line-oauth.service）。
 // 早期版本存在 sessionStorage 前端自驗 → 手機上 LINE 內建瀏覽器把導回交給 Safari 時，

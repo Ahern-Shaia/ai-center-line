@@ -6,6 +6,7 @@ import { useToast } from "./Toast";
 import { usePermissions } from "./permission/PermissionContext";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
 import ChangeDisplayNameDialog from "./auth/ChangeDisplayNameDialog";
+import { ROLE_LABEL } from "./shared/roleLabel";
 
 // 對照 docs/roles-permissions-matrix.md · 每個 item 綁 permission
 //
@@ -153,14 +154,6 @@ export function canOpenPage(page: string, hasAny: (...p: string[]) => boolean, r
 
 const COLLAPSED_KEY = "sb_collapsed_groups";
 const SEEN_RENAMES_KEY = "sb_seen_renames";
-
-const ROLE_LABEL: Record<string, string> = {
-  aiproot_admin: "AIPROOT 管理員",
-  consultant: "顧問",
-  tenant_admin: "總經理室",
-  group_owner: "部門主管",
-  employee: "一般員工",
-};
 
 // TODO(iam-followup): JWT 應內含 tenant_name · 目前 hard-code 補
 // 現在有 2 個 tenant · 未來 wizard 加更多會沒 match → fallback 顯 tenant slug

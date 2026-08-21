@@ -20,15 +20,7 @@ import { useToast } from "../../Toast";
 import { usePermissions } from "../../permission/PermissionContext";
 import Drawer from "../../shared/Drawer";
 import StyledSelect from "../../shared/StyledSelect";
-
-const ROLE_LABEL: Record<UserRole, string> = {
-  aiproot_admin: "AIPROOT 管理員",
-  consultant: "顧問",
-  tenant_admin: "總經理室",
-  group_owner: "部門主管",
-  assistant: "助理",
-  employee: "員工",
-};
+import { ROLE_LABEL } from "../../shared/roleLabel";
 
 // tenant_admin 能內嵌調整的角色（碰不到 總經理室/助理/aiproot）· 對齊後端 0055 護欄
 const MEMBER_EDITABLE_ROLES: UserRole[] = ["employee", "group_owner"];
@@ -462,10 +454,13 @@ function MemberDrawer({
             disabled={saving}
             ariaLabel="角色"
           />
+          {/* ⚠️ 舊文案寫「可新增部門主管與助理」，但 0049 之後租戶就不能建助理了（見
+              assignableRolesFor 的註解）。選項只有一個時更要說明另外兩個去哪了 ——
+              不然在「權限管理」看到三個角色的人，會以為這裡壞掉。 */}
           <div className="llm-hint">
             {session?.role === "tenant_admin"
-              ? "可新增「部門主管」與「助理」· 總經理室級請聯繫 AIPROOT"
-              : "此頁可新增「總經理室」「部門主管」「助理」· 平台管理帳號由 AIPROOT 另行建立"}
+              ? "「員工」不必在這裡建 —— 同仁用 LINE 綁定後會自動成為員工。「助理」與「總經理室」請聯繫 AIPROOT 開通。"
+              : "此頁可新增「總經理室」「部門主管」「助理」·「員工」由 LINE 綁定自動建立 · 平台管理帳號由 AIPROOT 另行建立"}
           </div>
         </div>
 
