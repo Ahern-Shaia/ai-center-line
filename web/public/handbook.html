@@ -1,0 +1,2012 @@
+<!--
+  台灣福祉 · LINE AI 戰情室 全員使用手冊
+  ═══════════════════════════════════════════════════════════════
+
+  ⚠️ 這個檔**必須留在 web/public/** —— 它靠公開網址 /handbook.html 交付。
+     §1.1「第一次使用：加好友並綁定」得在使用者**還沒有系統帳號**時就讀得到，
+     所以不能放登入後；而 docs/sop/ 不會被 build 出去，搬過去網址就死。
+     刻意**不**在 docs/sop/ 放第二份 —— 兩份會漂移。
+
+  定位：這份是**總入口**（概念 + 五種角色的日常操作）。
+        一次性的深度建置步驟不重述，指向既有的專門手冊：
+          docs/sop/ragic-line-通知設定-手冊.html   （§4.1 已指過去）
+          docs/sop/群組ID小幫手-手冊.html          （§4.1 已指過去）
+          docs/sop/權限設定-手冊.html
+          docs/sop/導入-checklist.html
+        那 4 份合併版＝docs/sop/戰情室操作手冊.html（由 build-手冊.py 生成）。
+        它們讀者是資訊窗口／助理（少數人、可用檔案交付），刻意**不公開**。
+
+  已做的去識別化（2026-08-21）：真實部門／群組名 → ○○集團-業務部 / ○○—品保部。
+  **機器人名「台灣福祉 AI 助手」刻意保留** —— 拿掉的話 §1.1 就失效了
+  （員工照著找不到要加的官方帳號）。移除的是內部組織結構，那才是敏感的部分。
+
+  用詞對齊 UI（migration 0069）：角色一律「員工／部門主管／總經理室／助理／AIPROOT 管理員」。
+-->
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LINE AI 戰情室 · 全員使用手冊</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════
+   設計語言
+   核心裝置：每一段內容都標「這件事在哪裡做」
+     · 綠 = 在手機的 LINE 裡做（員工端）
+     · 靛 = 在電腦的後台網頁做（主管／管理端）
+   顏色不是裝飾，是導航。看到綠色就知道不用開電腦。
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  --ink:#16202B; --ink-2:#4A5A6A; --ink-3:#8296A8; --ink-4:#AAB8C4;
+  --paper:#EDF0F3; --card:#FFFFFF; --well:#F5F7F9; --deep:#0F1922;
+  --line:#DCE3E9; --line-2:#EDF1F4;
+
+  --phone:#06C755; --phone-d:#04913E; --phone-t:#E7FAEF;   /* LINE 綠 · 手機端 */
+  --desk:#4F46E5;  --desk-d:#3730A3;  --desk-t:#EDEDFD;    /* 靛 · 後台端 */
+
+  --warn:#C2710A; --warn-t:#FFF7EA;
+  --danger:#DC2743; --danger-t:#FFF0F3;
+  --ok:#047857; --ok-t:#E9FBF3;
+
+  --serif:'Noto Serif TC', 'Songti TC', 'PMingLiU', serif;
+  --sans:'Noto Sans TC','PingFang TC','Microsoft JhengHei',system-ui,sans-serif;
+  --mono:'JetBrains Mono','SFMono-Regular',ui-monospace,monospace;
+
+  --r:10px; --r-s:6px; --r-l:16px;
+  --sh:0 1px 2px rgba(22,32,43,.05), 0 8px 24px -12px rgba(22,32,43,.18);
+  --sh-s:0 1px 2px rgba(22,32,43,.06);
+  --nav-w:266px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:15.5px; line-height:1.85;
+  -webkit-font-smoothing:antialiased; letter-spacing:.01em;
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{animation:none!important;transition:none!important}
+}
+:focus-visible{outline:2.5px solid var(--desk);outline-offset:3px;border-radius:4px}
+
+/* ── 版面骨架 ───────────────────────────────────────────── */
+.layout{display:grid;grid-template-columns:var(--nav-w) 1fr;max-width:1500px;margin:0 auto;gap:0}
+.doc{min-width:0;padding:0 clamp(18px,4vw,64px) 140px}
+
+/* ── 側邊目錄 ───────────────────────────────────────────── */
+.toc{position:sticky;top:0;height:100vh;overflow-y:auto;padding:26px 14px 40px 22px;
+     border-right:1px solid var(--line);background:linear-gradient(180deg,#F7F9FB,#EDF0F3)}
+.toc-mark{display:flex;align-items:center;gap:9px;margin-bottom:22px}
+.toc-mark b{width:30px;height:30px;border-radius:8px;background:var(--deep);color:#fff;
+  display:grid;place-items:center;font-size:13px;font-family:var(--serif);letter-spacing:.02em}
+.toc-mark span{font-size:12.5px;color:var(--ink-2);line-height:1.35;font-weight:500}
+.toc h4{font-size:10.5px;letter-spacing:.16em;color:var(--ink-3);font-weight:700;
+        margin:22px 0 8px;text-transform:uppercase}
+.toc a{display:flex;gap:9px;align-items:flex-start;padding:6px 10px;border-radius:var(--r-s);
+  color:var(--ink-2);text-decoration:none;font-size:13.5px;line-height:1.5;transition:.14s}
+.toc a:hover{background:#fff;color:var(--ink)}
+.toc a.on{background:#fff;color:var(--ink);font-weight:700;box-shadow:var(--sh-s)}
+.toc a i{width:7px;height:7px;border-radius:50%;flex:none;margin-top:8px;background:var(--ink-4)}
+.toc a[data-w="phone"] i{background:var(--phone)}
+.toc a[data-w="desk"] i{background:var(--desk)}
+.toc a[data-w="both"] i{background:linear-gradient(135deg,var(--phone) 50%,var(--desk) 50%)}
+
+/* ── 角色篩選器（本手冊的招牌互動）───────────────────── */
+.rolebar{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:6px}
+.rolebar p{font-size:11.5px;color:var(--ink-3);font-weight:700;letter-spacing:.1em;margin-bottom:9px}
+.rolebar button{display:block;width:100%;text-align:left;border:1px solid var(--line-2);background:var(--well);
+  border-radius:var(--r-s);padding:7px 10px;margin-bottom:5px;font-family:inherit;font-size:13px;
+  color:var(--ink-2);cursor:pointer;transition:.14s;line-height:1.4}
+.rolebar button:hover{border-color:var(--ink-4);color:var(--ink)}
+.rolebar button.on{background:var(--deep);border-color:var(--deep);color:#fff;font-weight:700}
+.rolebar button small{display:block;font-size:11px;opacity:.72;font-weight:400}
+body.filtering section[data-roles]:not(.match){opacity:.24;filter:saturate(.15)}
+body.filtering .toc a[data-roles]:not(.match){opacity:.3}
+section[data-roles]{transition:opacity .3s ease, filter .3s ease}
+
+/* ── 封面 ───────────────────────────────────────────────── */
+.cover{padding:64px 0 40px;border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;color:var(--ink-3);text-transform:uppercase}
+.cover h1{font-family:var(--serif);font-size:clamp(34px,5.6vw,60px);line-height:1.16;font-weight:900;
+  letter-spacing:-.015em;margin:14px 0 18px}
+.cover h1 em{font-style:normal;color:var(--desk)}
+.cover .lede{font-size:clamp(16px,1.8vw,19px);color:var(--ink-2);max-width:44em;line-height:1.9}
+.cover .lede b{color:var(--ink);font-weight:700}
+.meta{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:30px;font-size:13px;color:var(--ink-3)}
+.meta b{color:var(--ink);font-weight:700}
+
+/* ── 圖例（招牌色碼）─────────────────────────────────── */
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:34px 0 0}
+.legend div{border-radius:var(--r);padding:16px 18px;border:1px solid;position:relative;overflow:hidden}
+.legend div::before{content:"";position:absolute;inset:0 auto 0 0;width:5px}
+.legend .lg-p{background:var(--phone-t);border-color:#B8ECCE}
+.legend .lg-p::before{background:var(--phone)}
+.legend .lg-d{background:var(--desk-t);border-color:#CFCEFB}
+.legend .lg-d::before{background:var(--desk)}
+.legend h5{font-size:15px;font-weight:900;margin-bottom:3px}
+.legend .lg-p h5{color:var(--phone-d)} .legend .lg-d h5{color:var(--desk-d)}
+.legend p{font-size:13px;color:var(--ink-2);line-height:1.7}
+
+/* ── 章節 ───────────────────────────────────────────────── */
+section{padding:66px 0 10px;scroll-margin-top:20px}
+.ch-head{display:flex;gap:18px;align-items:flex-start;padding-bottom:20px;
+  border-bottom:1px solid var(--line);margin-bottom:34px}
+.ch-num{font-family:var(--serif);font-size:15px;font-weight:900;color:#fff;background:var(--deep);
+  width:40px;height:40px;border-radius:11px;display:grid;place-items:center;flex:none;letter-spacing:0}
+.ch-head[data-w="phone"] .ch-num{background:var(--phone-d)}
+.ch-head h2{font-family:var(--serif);font-size:clamp(24px,3.2vw,34px);line-height:1.28;font-weight:900;letter-spacing:-.01em}
+.ch-head .who{font-size:13.5px;color:var(--ink-3);margin-top:5px;line-height:1.6}
+h3{font-family:var(--serif);font-size:21px;font-weight:700;margin:48px 0 14px;line-height:1.4;
+   padding-left:14px;border-left:4px solid var(--ink)}
+h3[data-w="phone"]{border-color:var(--phone)} h3[data-w="desk"]{border-color:var(--desk)}
+h4{font-size:16px;font-weight:900;margin:28px 0 10px;color:var(--ink)}
+p{margin:0 0 14px;max-width:52em}
+ul,ol{margin:0 0 16px;padding-left:1.35em;max-width:52em}
+li{margin-bottom:7px}
+strong,b{font-weight:700}
+code,.k{font-family:var(--mono);font-size:.87em;background:var(--well);border:1px solid var(--line);
+  padding:1.5px 6px;border-radius:5px;color:var(--ink)}
+
+/* ── 位置徽章 ───────────────────────────────────────────── */
+.where{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;
+  padding:3.5px 10px;border-radius:99px;letter-spacing:.04em;vertical-align:2px;white-space:nowrap}
+.w-phone{background:var(--phone-t);color:var(--phone-d);border:1px solid #A9E8C4}
+.w-desk{background:var(--desk-t);color:var(--desk-d);border:1px solid #C7C6FA}
+.where svg{width:12px;height:12px}
+
+/* ── 卡片與提示塊 ───────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;
+  margin:20px 0;box-shadow:var(--sh-s)}
+.note{border-left:4px solid;border-radius:var(--r-s);padding:15px 18px;margin:20px 0;font-size:14.5px;max-width:56em}
+.note p:last-child{margin-bottom:0}
+.note b.t{display:block;font-size:13px;letter-spacing:.05em;margin-bottom:5px;font-weight:900}
+.n-warn{background:var(--warn-t);border-color:var(--warn)} .n-warn b.t{color:var(--warn)}
+.n-stop{background:var(--danger-t);border-color:var(--danger)} .n-stop b.t{color:var(--danger)}
+.n-ok{background:var(--ok-t);border-color:var(--ok)} .n-ok b.t{color:var(--ok)}
+.n-info{background:var(--well);border-color:var(--ink-3)} .n-info b.t{color:var(--ink-2)}
+
+/* ── 步驟 ───────────────────────────────────────────────── */
+.steps{counter-reset:s;margin:22px 0}
+.step{position:relative;padding:0 0 4px 56px;margin-bottom:26px}
+.step::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;
+  width:36px;height:36px;border-radius:11px;display:grid;place-items:center;
+  font-family:var(--mono);font-size:15px;font-weight:600;color:#fff;background:var(--deep)}
+.step::after{content:"";position:absolute;left:17.5px;top:42px;bottom:-22px;width:1.5px;background:var(--line)}
+.step:last-child::after{display:none}
+.steps[data-w="phone"] .step::before{background:var(--phone-d)}
+.steps[data-w="desk"] .step::before{background:var(--desk)}
+.step h5{font-size:16.5px;font-weight:900;margin-bottom:6px;padding-top:5px}
+.step p{margin-bottom:9px}
+.expect{background:var(--well);border:1px solid var(--line-2);border-left:3px solid var(--ok);
+  border-radius:var(--r-s);padding:11px 15px;font-size:14px;color:var(--ink-2);max-width:52em}
+.expect b{color:var(--ok);font-weight:900;font-size:12.5px;letter-spacing:.05em;display:block;margin-bottom:3px}
+
+/* ── 表格 ───────────────────────────────────────────────── */
+.tw{overflow-x:auto;margin:20px 0;border:1px solid var(--line);border-radius:var(--r);background:#fff}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}
+th{background:var(--well);text-align:left;padding:11px 15px;font-weight:900;font-size:12.5px;
+   letter-spacing:.05em;color:var(--ink-2);border-bottom:1.5px solid var(--line);white-space:nowrap}
+td{padding:11px 15px;border-bottom:1px solid var(--line-2);vertical-align:top;line-height:1.7}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#FBFCFD}
+td.c,th.c{text-align:center}
+.yes{color:var(--ok);font-weight:900} .no{color:var(--ink-4)}
+
+/* ── 圖說 ───────────────────────────────────────────────── */
+figure{margin:28px 0 32px}
+figure svg{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:var(--r);
+  background:#fff;box-shadow:var(--sh)}
+figcaption{font-size:13px;color:var(--ink-3);margin-top:11px;line-height:1.7;max-width:52em}
+figcaption b{color:var(--ink-2);font-weight:700}
+
+/* ── 兩欄 ───────────────────────────────────────────────── */
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin:20px 0}
+.two .card{margin:0}
+
+/* ── 速查條 ─────────────────────────────────────────────── */
+.quick{background:var(--deep);color:#E6EDF3;border-radius:var(--r-l);padding:26px 30px;margin:30px 0}
+.quick h4{color:#fff;margin:0 0 14px;font-family:var(--serif);font-size:19px}
+.quick ul{list-style:none;padding:0;margin:0}
+.quick li{display:flex;gap:14px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.09);font-size:14.5px}
+.quick li:last-child{border:0}
+.quick li b{flex:none;width:118px;color:#9FE8C0;font-family:var(--mono);font-size:13px;font-weight:600}
+.quick li span{color:#C9D6E0}
+
+/* ── 頁尾 ───────────────────────────────────────────────── */
+footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-size:13px;color:var(--ink-3)}
+
+/* ── 響應式 ─────────────────────────────────────────────── */
+.mobile-toggle{display:none}
+@media (max-width:960px){
+  .layout{grid-template-columns:1fr}
+  .toc{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);
+       padding:18px 20px;max-height:none}
+  .toc-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:2px}
+  .doc{padding:0 20px 90px}
+  body{font-size:15px}
+  .step{padding-left:46px} .step::before{width:32px;height:32px;font-size:14px}
+  .step::after{left:15.5px}
+}
+@media print{
+  .toc{display:none} .layout{grid-template-columns:1fr}
+  body{background:#fff;font-size:11pt}
+  section{page-break-inside:auto;padding-top:24px}
+  figure,.card,.note,.quick{page-break-inside:avoid}
+  .quick{background:#fff;color:#000;border:2px solid #000}
+  .quick h4,.quick li span{color:#000} .quick li b{color:#333}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ═══════════════ 側邊目錄 ═══════════════ -->
+<nav class="toc" aria-label="目錄">
+  <div class="toc-mark">
+    <b>AI</b>
+    <span>LINE AI 戰情室<br>全員使用手冊 v1.0</span>
+  </div>
+
+  <div class="rolebar">
+    <p>我是誰？（點一下只看我要用的）</p>
+    <button data-role="emp" type="button">員工<small>用手機記工作、送日報、打卡</small></button>
+    <button data-role="mgr" type="button">部門主管<small>看任務、簽核、看部門日報</small></button>
+    <button data-role="gm"  type="button">總經理室<small>看全公司、管部門與成員</small></button>
+    <button data-role="asst" type="button">助理<small>設定 Ragic 表單異動通知</small></button>
+    <button data-role="it"  type="button">資訊窗口<small>導入、健康度、排錯</small></button>
+  </div>
+
+  <div class="toc-links">
+    <h4>先讀這個</h4>
+    <a href="#c0" data-w="both" data-roles="emp mgr gm asst it"><i></i>0 · 這套系統在做什麼</a>
+    <a href="#c0-day" data-w="both" data-roles="emp mgr gm asst it"><i></i>0.3 一天的節奏</a>
+    <a href="#c0-limit" data-w="both" data-roles="emp mgr gm asst it"><i></i>0.5 它不會做的事</a>
+
+    <h4>各自的操作</h4>
+    <a href="#c1" data-w="phone" data-roles="emp mgr it"><i></i>1 · 員工（全在 LINE）</a>
+    <a href="#c2" data-w="desk" data-roles="mgr gm it"><i></i>2 · 部門主管</a>
+    <a href="#c3" data-w="desk" data-roles="gm it"><i></i>3 · 總經理室</a>
+    <a href="#c4" data-w="desk" data-roles="asst it"><i></i>4 · 助理：通知設定</a>
+    <a href="#c5" data-w="desk" data-roles="it"><i></i>5 · 資訊窗口與導入</a>
+
+    <h4>查詢用</h4>
+    <a href="#c6" data-w="both" data-roles="emp mgr gm asst it"><i></i>6 · 名詞對照表</a>
+    <a href="#c7" data-w="both" data-roles="emp mgr gm asst it"><i></i>7 · 疑難排解</a>
+    <a href="#c8" data-w="both" data-roles="mgr gm it"><i></i>8 · 誰看得到什麼</a>
+  </div>
+</nav>
+
+<!-- ═══════════════ 內文 ═══════════════ -->
+<main class="doc">
+
+<header class="cover">
+  <div class="eyebrow">操作手冊 · 全公司適用 · 不需任何技術背景</div>
+  <h1>群組裡講過的事，<br>不用再靠<em>「記得」</em>。</h1>
+  <p class="lede">
+    這套系統會把散在 LINE 群組裡的對話，整理成一筆一筆有
+    <b>「誰、什麼事、對口是誰、後續要做什麼」</b>的紀錄。
+    員工照原本的方式用 LINE，主管不用滑對話就知道今天各單位發生什麼事。<br>
+    這份手冊寫給公司裡的<b>每一個人</b>——第 1 章給員工、第 2 章給主管、第 3 章給總經理室，
+    各看各的那一章就夠了。
+  </p>
+
+  <div class="legend">
+    <div class="lg-p">
+      <h5>綠色 ＝ 在手機的 LINE 裡做</h5>
+      <p>不用帳號密碼、不用開電腦。加好友、傳訊息、點按鈕就完成。<b>員工只會看到綠色的章節。</b></p>
+    </div>
+    <div class="lg-d">
+      <h5>靛色 ＝ 在電腦的後台網頁做</h5>
+      <p>要登入。主管簽核、總經理室管理部門與成員、助理設定通知，都在這裡。</p>
+    </div>
+  </div>
+
+  <div class="meta">
+    <span>版本 <b>v1.0</b></span>
+    <span>適用系統 <b>LINE AI 戰情室</b></span>
+    <span>維護 <b>aiproot 交付團隊</b></span>
+    <span>看不懂就問 <b>公司資訊窗口</b></span>
+  </div>
+</header>
+
+<!-- ═══════════════ 第 0 章 ═══════════════ -->
+<section id="c0" data-roles="emp mgr gm asst it">
+  <div class="ch-head">
+    <div class="ch-num">0</div>
+    <div>
+      <h2>這套系統在做什麼</h2>
+      <div class="who">全公司都該看 · 約 5 分鐘 · 看完你會知道自己每天要做什麼、不用做什麼</div>
+    </div>
+  </div>
+
+  <h3>0.1　一句話</h3>
+  <p>
+    <b>它把 LINE 對話變成可以追蹤的紀錄。</b>
+    大家照舊在群組裡討論、在私訊裡回報，系統每天自動讀一次，
+    整理成「任務卡」「群組日誌」「個人日報」三種東西，讓該知道的人看得到。
+  </p>
+  <p>
+    最重要的一點：<b>它不改變任何人現在的習慣。</b>
+    員工不必學新軟體、不必登入系統、不必填表單——照原本的方式用 LINE 就好。
+  </p>
+
+  <h3>0.2　全景圖：東西從哪來、到哪去</h3>
+
+  <figure>
+  <svg viewBox="0 0 1000 486" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="系統全景圖：LINE 群組對話、私訊、打卡三種輸入，經過每日 AI 整理，產出任務看板、群組日誌、素材看板、我的日報、我的行程">
+    <defs>
+      <marker id="ar" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+        <path d="M0 1 L8 4.5 L0 8 z" fill="#8296A8"/>
+      </marker>
+      <marker id="arg" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+        <path d="M0 1 L8 4.5 L0 8 z" fill="#06C755"/>
+      </marker>
+      <marker id="ari" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+        <path d="M0 1 L8 4.5 L0 8 z" fill="#4F46E5"/>
+      </marker>
+    </defs>
+    <style>
+      .t{font-family:'Noto Sans TC',sans-serif}
+      .hd{font-size:12px;font-weight:900;letter-spacing:.16em}
+      .bx{font-size:14.5px;font-weight:700;fill:#16202B}
+      .sm{font-size:11.5px;fill:#6B7C8C}
+      .mn{font-family:'JetBrains Mono',monospace;font-size:11px}
+    </style>
+    <rect width="1000" height="486" fill="#fff"/>
+
+    <!-- 欄標 -->
+    <text class="t hd" x="30" y="34" fill="#04913E">① 資料從這裡進來（手機 · LINE）</text>
+    <text class="t hd" x="390" y="34" fill="#16202B">② 每天整理一次</text>
+    <text class="t hd" x="640" y="34" fill="#3730A3">③ 在後台看得到（電腦）</text>
+    <line x1="30" y1="46" x2="360" y2="46" stroke="#B8ECCE" stroke-width="2"/>
+    <line x1="390" y1="46" x2="600" y2="46" stroke="#DCE3E9" stroke-width="2"/>
+    <line x1="640" y1="46" x2="970" y2="46" stroke="#CFCEFB" stroke-width="2"/>
+
+    <!-- 輸入 1 -->
+    <rect x="30" y="66" width="300" height="96" rx="10" fill="#E7FAEF" stroke="#A9E8C4" stroke-width="1.5"/>
+    <circle cx="56" cy="94" r="11" fill="#06C755"/><text class="t" x="56" y="99" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">群</text>
+    <text class="t bx" x="76" y="99">LINE 工作群組的對話</text>
+    <text class="t sm" x="76" y="120">維修群、業務群、品保群…… 大家照常討論</text>
+    <text class="t sm" x="76" y="139">照片、檔案、影片也會一起保存下來</text>
+    <text class="t sm" x="76" y="155" fill="#04913E" font-weight="700">員工不用做任何事</text>
+
+    <!-- 輸入 2 -->
+    <rect x="30" y="182" width="300" height="96" rx="10" fill="#E7FAEF" stroke="#A9E8C4" stroke-width="1.5"/>
+    <circle cx="56" cy="210" r="11" fill="#06C755"/><text class="t" x="56" y="215" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">私</text>
+    <text class="t bx" x="76" y="215">私訊給公司官方帳號</text>
+    <text class="t sm" x="76" y="236">想到什麼就傳一則，例如「下午跟 A 客戶談交期」</text>
+    <text class="t sm" x="76" y="255">機器人回「✓ 已記錄」</text>
+    <text class="t sm" x="76" y="271" fill="#04913E" font-weight="700">這是你自己的日報材料</text>
+
+    <!-- 輸入 3 -->
+    <rect x="30" y="298" width="300" height="96" rx="10" fill="#E7FAEF" stroke="#A9E8C4" stroke-width="1.5"/>
+    <circle cx="56" cy="326" r="11" fill="#06C755"/><text class="t" x="56" y="331" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">卡</text>
+    <text class="t bx" x="76" y="331">外勤打卡（跑外面的同仁）</text>
+    <text class="t sm" x="76" y="352">出門按「開始外勤」，每到一站按一次</text>
+    <text class="t sm" x="76" y="371">系統自動算出每段路程公里數</text>
+    <text class="t sm" x="76" y="387" fill="#04913E" font-weight="700">不用自己記里程</text>
+
+    <!-- 箭頭進中央 -->
+    <path d="M336 114 C 366 114 366 216 396 216" stroke="#06C755" stroke-width="2" fill="none" marker-end="url(#arg)"/>
+    <path d="M336 230 L 396 230" stroke="#06C755" stroke-width="2" fill="none" marker-end="url(#arg)"/>
+    <path d="M336 346 C 366 346 366 244 396 244" stroke="#06C755" stroke-width="2" fill="none" marker-end="url(#arg)"/>
+
+    <!-- 中央處理 -->
+    <rect x="404" y="130" width="196" height="200" rx="14" fill="#0F1922"/>
+    <text class="t" x="502" y="164" font-size="13" fill="#9FE8C0" text-anchor="middle" font-weight="700" letter-spacing="1">每天固定時間</text>
+    <text class="t mn" x="502" y="196" font-size="30" fill="#fff" text-anchor="middle" font-weight="600">18:00</text>
+    <text class="t" x="502" y="220" font-size="11.5" fill="#8296A8" text-anchor="middle">（時間可由總經理室調整）</text>
+    <line x1="432" y1="238" x2="572" y2="238" stroke="#2A3947" stroke-width="1"/>
+    <text class="t" x="502" y="262" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">AI 讀一遍當天對話</text>
+    <text class="t" x="502" y="284" font-size="11.5" fill="#A9BAC8" text-anchor="middle">分類 → 抽出事項 → 標記把握程度</text>
+    <text class="t" x="502" y="304" font-size="11.5" fill="#A9BAC8" text-anchor="middle">每一筆都記下「出自哪幾則訊息」</text>
+
+    <path d="M604 200 C 634 200 634 122 664 122" stroke="#4F46E5" stroke-width="2" fill="none" marker-end="url(#ari)"/>
+    <path d="M604 218 C 634 218 634 208 664 208" stroke="#4F46E5" stroke-width="2" fill="none" marker-end="url(#ari)"/>
+    <path d="M604 242 C 634 242 634 294 664 294" stroke="#4F46E5" stroke-width="2" fill="none" marker-end="url(#ari)"/>
+    <path d="M604 262 C 634 262 634 380 664 380" stroke="#4F46E5" stroke-width="2" fill="none" marker-end="url(#ari)"/>
+
+    <!-- 產出 -->
+    <rect x="672" y="88" width="298" height="70" rx="10" fill="#EDEDFD" stroke="#C7C6FA" stroke-width="1.5"/>
+    <text class="t bx" x="692" y="116">任務看板</text>
+    <text class="t sm" x="692" y="138">有把握、而且需要有人跟的事 → 變成一張卡</text>
+    <text class="t" x="950" y="116" font-size="11" fill="#3730A3" text-anchor="end" font-weight="700">主管</text>
+
+    <rect x="672" y="172" width="298" height="70" rx="10" fill="#EDEDFD" stroke="#C7C6FA" stroke-width="1.5"/>
+    <text class="t bx" x="692" y="200">群組日誌</text>
+    <text class="t sm" x="692" y="222">每個群當天整理出的所有紀錄，含沒變任務的</text>
+    <text class="t" x="950" y="200" font-size="11" fill="#3730A3" text-anchor="end" font-weight="700">主管 / 總經理室</text>
+
+    <rect x="672" y="256" width="298" height="70" rx="10" fill="#EDEDFD" stroke="#C7C6FA" stroke-width="1.5"/>
+    <text class="t bx" x="692" y="284">素材看板</text>
+    <text class="t sm" x="692" y="306">群組裡傳過的照片、單據、影片，都存在這裡</text>
+    <text class="t" x="950" y="284" font-size="11" fill="#3730A3" text-anchor="end" font-weight="700">主管 / 總經理室</text>
+
+    <rect x="672" y="340" width="298" height="86" rx="10" fill="#F4F4FE" stroke="#C7C6FA" stroke-width="1.5" stroke-dasharray="5 3"/>
+    <text class="t bx" x="692" y="368">我的日報 · 我的行程</text>
+    <text class="t sm" x="692" y="390">你自己看得到、主管看得到你的</text>
+    <text class="t sm" x="692" y="409">手機（LINE 內）或電腦都可以開</text>
+    <text class="t" x="950" y="368" font-size="11" fill="#04913E" text-anchor="end" font-weight="700">本人＋主管</text>
+
+    <!-- 底註 -->
+    <rect x="30" y="424" width="940" height="42" rx="8" fill="#FFF7EA" stroke="#F0D9AE"/>
+    <text class="t" x="50" y="442" font-size="12.5" fill="#C2710A" font-weight="900">重點</text>
+    <text class="t" x="90" y="442" font-size="12.5" fill="#5A4A2E">每一筆整理出來的紀錄，都可以點開看「AI 是根據哪幾則原始訊息寫的」——不是黑箱，隨時可以對照原文。</text>
+    <text class="t" x="90" y="459" font-size="12.5" fill="#5A4A2E">缺的欄位一律留空白，系統不會自己編一個看起來合理的數字或人名。</text>
+  </svg>
+  <figcaption><b>怎麼讀這張圖：</b>左邊三塊是「東西怎麼進系統」，全部發生在手機的 LINE 裡，員工幾乎不用改變習慣；中間是每天一次的整理；右邊是主管在電腦上看得到的四個地方。</figcaption>
+  </figure>
+
+  <h3 id="c0-day">0.3　一天的節奏</h3>
+  <p>這是一套<b>每天整理一次</b>的系統，不是即時的。理解這個節奏，就不會誤會「怎麼剛剛講的還沒出現」。</p>
+
+  <figure>
+  <svg viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="一天的時間軸：白天大家照常用 LINE，18:00 AI 整理，18:05 之後主管在後台看到結果">
+    <style>
+      .t{font-family:'Noto Sans TC',sans-serif}
+      .h{font-size:14px;font-weight:900;fill:#16202B}
+      .s{font-size:11.5px;fill:#6B7C8C}
+      .m{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600}
+    </style>
+    <rect width="1000" height="300" fill="#fff"/>
+
+    <!-- 軸 -->
+    <line x1="60" y1="150" x2="940" y2="150" stroke="#DCE3E9" stroke-width="3"/>
+    <rect x="60" y="147" width="500" height="6" fill="#06C755" rx="3"/>
+    <rect x="560" y="147" width="80" height="6" fill="#0F1922" rx="3"/>
+    <rect x="640" y="147" width="300" height="6" fill="#4F46E5" rx="3"/>
+
+    <text class="t" x="300" y="132" font-size="11.5" fill="#04913E" text-anchor="middle" font-weight="900" letter-spacing="1">白天 · 大家照常用 LINE</text>
+    <text class="t" x="600" y="132" font-size="11.5" fill="#16202B" text-anchor="middle" font-weight="900" letter-spacing="1">AI 整理</text>
+    <text class="t" x="790" y="132" font-size="11.5" fill="#3730A3" text-anchor="middle" font-weight="900" letter-spacing="1">晚上到隔天 · 主管處理</text>
+
+    <!-- 節點 -->
+    <g>
+      <circle cx="130" cy="150" r="8" fill="#06C755" stroke="#fff" stroke-width="3"/>
+      <text class="t m" x="130" y="188" fill="#04913E" text-anchor="middle">整天</text>
+      <text class="t h" x="130" y="212" text-anchor="middle" font-size="13">群組討論</text>
+      <text class="t s" x="130" y="232" text-anchor="middle">什麼都不用做</text>
+    </g>
+    <g>
+      <circle cx="330" cy="150" r="8" fill="#06C755" stroke="#fff" stroke-width="3"/>
+      <text class="t m" x="330" y="188" fill="#04913E" text-anchor="middle">隨時</text>
+      <text class="t h" x="330" y="212" text-anchor="middle" font-size="13">私訊回報</text>
+      <text class="t s" x="330" y="232" text-anchor="middle">想到就傳一則給官方帳號</text>
+    </g>
+    <g>
+      <circle cx="500" cy="150" r="8" fill="#06C755" stroke="#fff" stroke-width="3"/>
+      <text class="t m" x="500" y="188" fill="#04913E" text-anchor="middle">下班前</text>
+      <text class="t h" x="500" y="212" text-anchor="middle" font-size="13">外勤同仁收工打卡</text>
+      <text class="t s" x="500" y="232" text-anchor="middle">里程自動算好</text>
+    </g>
+    <g>
+      <rect x="576" y="134" width="48" height="32" rx="8" fill="#0F1922"/>
+      <text class="t m" x="600" y="156" fill="#fff" text-anchor="middle" font-size="12">18:00</text>
+      <text class="t h" x="600" y="212" text-anchor="middle" font-size="13">系統自動整理</text>
+      <text class="t s" x="600" y="232" text-anchor="middle">約 5–10 分鐘</text>
+      <text class="t s" x="600" y="250" text-anchor="middle" fill="#C2710A">時間可調</text>
+    </g>
+    <g>
+      <circle cx="740" cy="150" r="8" fill="#4F46E5" stroke="#fff" stroke-width="3"/>
+      <text class="t m" x="740" y="188" fill="#3730A3" text-anchor="middle">18:10</text>
+      <text class="t h" x="740" y="212" text-anchor="middle" font-size="13">員工查看並送出日報</text>
+      <text class="t s" x="740" y="232" text-anchor="middle">在 LINE 裡打「日報」</text>
+    </g>
+    <g>
+      <circle cx="900" cy="150" r="8" fill="#4F46E5" stroke="#fff" stroke-width="3"/>
+      <text class="t m" x="900" y="188" fill="#3730A3" text-anchor="middle">隔天早上</text>
+      <text class="t h" x="900" y="212" text-anchor="middle" font-size="13">主管簽核任務</text>
+      <text class="t s" x="900" y="232" text-anchor="middle">3 分鐘掃完看板</text>
+    </g>
+
+    <!-- 上方註 -->
+    <rect x="60" y="34" width="880" height="64" rx="10" fill="#F5F7F9" stroke="#DCE3E9"/>
+    <text class="t" x="80" y="58" font-size="13" fill="#16202B" font-weight="900">為什麼不做即時？</text>
+    <text class="t" x="80" y="80" font-size="12.5" fill="#4A5A6A">因為一件事常常橫跨好幾則訊息、隔一段時間才有結論。當下就下判斷反而容易誤判；等一天結束整批看，前後文完整得多。</text>
+  </svg>
+  <figcaption>綠色是員工的時段（在 LINE 裡），靛色是主管的時段（在後台）。中間那個黑點就是每天唯一一次的自動整理。</figcaption>
+  </figure>
+
+  <div class="note n-info">
+    <b class="t">如果等不到 18:00</b>
+    <p>主管可以在「群組日誌」頁按<b>「立即分析」</b>、員工可以在日報頁按<b>「重新生成」</b>，馬上跑一次，約 5–10 秒到 1 分鐘。</p>
+  </div>
+
+  <h3>0.4　為什麼不是每一筆都變成任務？</h3>
+  <p>
+    AI 整理完之後，會用<b>兩個問題</b>決定這筆紀錄要放哪裡，兩個都要成立才會變成任務卡。
+    這是刻意設計的——<b>寧可少給，不給錯的</b>。
+  </p>
+
+  <figure>
+  <svg viewBox="0 0 1000 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="分流表：把握程度（高中低）乘以需不需要有人跟，決定變成任務卡、待確認、存查或不建立">
+    <style>
+      .t{font-family:'Noto Sans TC',sans-serif}
+      .hh{font-size:13px;font-weight:900;fill:#16202B}
+      .cell{font-size:14px;font-weight:900}
+      .cs{font-size:11px;fill:#6B7C8C}
+    </style>
+    <rect width="1000" height="330" fill="#fff"/>
+    <text class="t" x="40" y="38" font-size="13" font-weight="900" fill="#16202B">兩個問題決定去處</text>
+    <text class="t" x="40" y="60" font-size="12" fill="#6B7C8C">直向：AI 對這筆抽得準不準　　橫向：這件事需不需要有人繼續跟</text>
+
+    <!-- 表頭 -->
+    <text class="t hh" x="330" y="104" text-anchor="middle">需要有人跟</text>
+    <text class="t cs" x="330" y="122" text-anchor="middle">（進行中 · 待處理）</text>
+    <text class="t hh" x="650" y="104" text-anchor="middle">不需要有人跟</text>
+    <text class="t cs" x="650" y="122" text-anchor="middle">（公告 · 已經結束了）</text>
+
+    <!-- 列標 -->
+    <text class="t hh" x="160" y="168" text-anchor="end">把握高</text>
+    <text class="t cs" x="160" y="185" text-anchor="end">欄位完整、話講得明確</text>
+    <text class="t hh" x="160" y="238" text-anchor="end">把握中</text>
+    <text class="t cs" x="160" y="255" text-anchor="end">有推斷成分</text>
+    <text class="t hh" x="160" y="300" text-anchor="end">把握低</text>
+    <text class="t cs" x="160" y="317" text-anchor="end">訊息本身就很模糊</text>
+
+    <!-- 儲存格 -->
+    <rect x="180" y="140" width="300" height="58" rx="9" fill="#EDEDFD" stroke="#4F46E5" stroke-width="2"/>
+    <text class="t cell" x="330" y="166" text-anchor="middle" fill="#3730A3">任務卡 · 待簽核</text>
+    <text class="t cs" x="330" y="186" text-anchor="middle" fill="#4F46E5">出現在任務看板，等主管確認</text>
+
+    <rect x="500" y="140" width="300" height="58" rx="9" fill="#F5F7F9" stroke="#DCE3E9"/>
+    <text class="t cell" x="650" y="166" text-anchor="middle" fill="#6B7C8C">存查</text>
+    <text class="t cs" x="650" y="186" text-anchor="middle">查得到，但不會來打擾主管</text>
+
+    <rect x="180" y="210" width="300" height="58" rx="9" fill="#FFF7EA" stroke="#C2710A" stroke-width="2"/>
+    <text class="t cell" x="330" y="236" text-anchor="middle" fill="#C2710A">待確認</text>
+    <text class="t cs" x="330" y="256" text-anchor="middle" fill="#8A5E14">請主管看一眼，認了才算數</text>
+
+    <rect x="500" y="210" width="300" height="58" rx="9" fill="#FAFBFC" stroke="#EDF1F4"/>
+    <text class="t cell" x="650" y="242" text-anchor="middle" fill="#AAB8C4">不建立</text>
+
+    <rect x="180" y="280" width="300" height="42" rx="9" fill="#FAFBFC" stroke="#EDF1F4"/>
+    <text class="t cell" x="330" y="306" text-anchor="middle" fill="#AAB8C4">不建立（只留在日誌）</text>
+
+    <rect x="500" y="280" width="300" height="42" rx="9" fill="#FAFBFC" stroke="#EDF1F4"/>
+    <text class="t cell" x="650" y="306" text-anchor="middle" fill="#AAB8C4">不建立</text>
+
+    <!-- 右註 -->
+    <rect x="826" y="140" width="150" height="182" rx="9" fill="#E7FAEF" stroke="#A9E8C4"/>
+    <text class="t" x="846" y="166" font-size="12" font-weight="900" fill="#04913E">為什麼要問</text>
+    <text class="t" x="846" y="182" font-size="12" font-weight="900" fill="#04913E">第二個問題？</text>
+    <text class="t" x="846" y="208" font-size="11.5" fill="#2F5C42">早期只看把握度，</text>
+    <text class="t" x="846" y="226" font-size="11.5" fill="#2F5C42">結果「開會通知」</text>
+    <text class="t" x="846" y="244" font-size="11.5" fill="#2F5C42">這種抽得很準的</text>
+    <text class="t" x="846" y="262" font-size="11.5" fill="#2F5C42">公告也跑去排隊</text>
+    <text class="t" x="846" y="280" font-size="11.5" fill="#2F5C42">等主管簽。加上</text>
+    <text class="t" x="846" y="298" font-size="11.5" fill="#2F5C42">這一問，看板上</text>
+    <text class="t" x="846" y="316" font-size="11.5" fill="#2F5C42">才只剩真的待辦。</text>
+  </svg>
+  <figcaption>沒變成任務的紀錄<b>不是被丟掉</b>，它們留在「群組日誌」裡隨時查得到，只是不主動推到主管面前。</figcaption>
+  </figure>
+
+  <h3 id="c0-limit">0.5　它<u>不會</u>做的四件事（請一起記住）</h3>
+  <p>把界線先講清楚，比事後解釋容易得多。以下四件目前確實做不到：</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:24%">做不到的事</th><th>實際情況</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>不會讀照片裡的內容</b></td>
+        <td>照片、影片、檔案<b>都有完整保存下來</b>，後台「素材看板」看得到、也可以刪掉誤傳的。<br>
+            但 AI 在整理的時候<b>不會去看照片裡面寫什麼</b>。<br>
+            <span style="color:var(--warn)">注意用詞：不要說「照片讀不到」，會被聽成「照片沒存到」。正確講法是<b>照片有保存、看得到，但 AI 不讀內容</b>。</span></td>
+      </tr>
+      <tr>
+        <td><b>不能問它問題</b></td>
+        <td>它是單向的：讀對話 → 整理 → 顯示。<br>
+            不能問「這個月接了幾張單」「某客戶的應收帳款多少」——那要另外接公司的 ERP 系統。</td>
+      </tr>
+      <tr>
+        <td><b>不會判斷對錯、不會自動催辦</b></td>
+        <td>它會記下「A 說會處理」，但不會判斷 A 到底處理了沒，也不會自動催。<br>
+            要追進度，靠主管在任務看板上看，或當事人自己在 LINE 回報完成。</td>
+      </tr>
+      <tr>
+        <td><b>不是即時的</b></td>
+        <td>每天固定時間整理一次（預設 18:00）。剛剛講的話要等那一輪之後才會出現。<br>
+            等不及可以手動按「立即分析」／「重新生成」。</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note n-ok">
+    <b class="t">可以放心的地方</b>
+    <p>
+      · <b>不會亂編</b>：對話裡沒提到的欄位一律留空白，不會生一個看起來合理的數字。<br>
+      · <b>不會亂認人</b>：負責人只能填公司名冊裡有的名字，分不出來就留空。<br>
+      · <b>可以追原文</b>：每一筆紀錄都記著出自哪幾則訊息，點開就能對照。
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════ 第 1 章 · 員工 ═══════════════ -->
+<section id="c1" data-roles="emp mgr it">
+  <div class="ch-head" data-w="phone">
+    <div class="ch-num">1</div>
+    <div>
+      <h2>員工：全部在 LINE 裡完成</h2>
+      <div class="who">
+        給誰看：所有同仁 · 約 10 分鐘 ·
+        <span class="where w-phone">手機 · LINE</span>
+        不需要帳號密碼、不需要開電腦、不需要安裝任何 App
+      </div>
+    </div>
+  </div>
+
+  <div class="quick">
+    <h4>你只要記住這四件事</h4>
+    <ul>
+      <li><b>第一次</b><span>加公司官方帳號好友 → 點「開始綁定」→ 確認姓名 → 完成。<b style="color:#fff">一輩子只做一次。</b></span></li>
+      <li><b>每天</b><span>想到什麼工作就私訊一則給官方帳號，它會回「✓ 已記錄」。</span></li>
+      <li><b>下班前</b><span>傳兩個字「<b style="color:#fff">日報</b>」→ 點按鈕 → 看 AI 整理好的內容 → 改一改 → 送出。</span></li>
+      <li><b>跑外面時</b><span>出門按「開始外勤」，每到一個地方按「記錄這一站」，里程自動算。</span></li>
+    </ul>
+  </div>
+
+  <h3 data-w="phone">1.1　第一次使用：加好友並綁定</h3>
+  <p>
+    綁定是為了讓系統知道「LINE 上這個人 ＝ 公司裡的哪一位同仁」。
+    沒有綁定，你傳的訊息系統認不出是誰，日報就出不來。
+  </p>
+
+  <figure>
+  <svg viewBox="0 0 1000 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="綁定流程三步手機畫面：加好友收到歡迎訊息、確認姓名與常用群組、綁定成功">
+    <style>
+      .t{font-family:'Noto Sans TC',sans-serif}
+      .lbl{font-size:12px;font-weight:900;fill:#04913E;letter-spacing:.1em}
+      .b1{font-size:12.5px;fill:#16202B}
+      .b2{font-size:11px;fill:#6B7C8C}
+      .btn{font-size:12.5px;font-weight:700;fill:#fff}
+    </style>
+    <rect width="1000" height="540" fill="#fff"/>
+
+    <!-- ── 手機 1 ── -->
+    <text class="t lbl" x="60" y="30">STEP 1　加好友</text>
+    <rect x="60" y="44" width="248" height="452" rx="22" fill="#0F1922"/>
+    <rect x="68" y="52" width="232" height="436" rx="16" fill="#8CABC0"/>
+    <rect x="68" y="52" width="232" height="34" rx="16" fill="#06C755"/>
+    <rect x="68" y="70" width="232" height="16" fill="#06C755"/>
+    <text class="t" x="184" y="74" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">台灣福祉 AI 助手</text>
+    <!-- 訊息泡泡 -->
+    <rect x="80" y="100" width="180" height="52" rx="10" fill="#fff"/>
+    <text class="t b1" x="92" y="122">歡迎加入！請點下方</text>
+    <text class="t b1" x="92" y="141">按鈕完成綁定</text>
+    <rect x="80" y="160" width="200" height="82" rx="10" fill="#fff"/>
+    <text class="t b1" x="92" y="184">點按鈕開始綁定</text>
+    <rect x="92" y="198" width="176" height="30" rx="8" fill="#06C755"/>
+    <text class="t btn" x="180" y="218" text-anchor="middle">開始綁定</text>
+    <text class="t b2" x="80" y="266">↑ 加好友的當下就會收到</text>
+    <text class="t b2" x="80" y="284">（不是幾分鐘後）</text>
+    <rect x="80" y="308" width="200" height="70" rx="9" fill="#FFF7EA" stroke="#F0D9AE"/>
+    <text class="t" x="92" y="330" font-size="11.5" font-weight="900" fill="#C2710A">找不到官方帳號？</text>
+    <text class="t" x="92" y="350" font-size="11" fill="#5A4A2E">請公司資訊窗口把 QR Code</text>
+    <text class="t" x="92" y="367" font-size="11" fill="#5A4A2E">或帳號 ID 傳給你。</text>
+
+    <!-- ── 手機 2 ── -->
+    <text class="t lbl" x="376" y="30">STEP 2　確認你是誰</text>
+    <rect x="376" y="44" width="248" height="452" rx="22" fill="#0F1922"/>
+    <rect x="384" y="52" width="232" height="436" rx="16" fill="#F5F7F9"/>
+    <rect x="384" y="52" width="232" height="34" rx="16" fill="#fff"/>
+    <rect x="384" y="70" width="232" height="16" fill="#fff"/>
+    <text class="t" x="500" y="74" font-size="11.5" fill="#6B7C8C" text-anchor="middle">在 LINE 裡開啟 · 不會跳出去</text>
+    <line x1="384" y1="86" x2="616" y2="86" stroke="#DCE3E9"/>
+
+    <text class="t" x="400" y="116" font-size="14" font-weight="900" fill="#16202B">系統已認出你的 LINE 資料</text>
+    <text class="t b2" x="400" y="136">確認一下就好</text>
+
+    <text class="t b2" x="400" y="168">姓名（可以改）</text>
+    <rect x="400" y="176" width="200" height="34" rx="7" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t b1" x="412" y="198">王愛麗絲</text>
+
+    <text class="t b2" x="400" y="240">你最常出現的群組</text>
+    <rect x="400" y="248" width="200" height="30" rx="7" fill="#E7FAEF" stroke="#A9E8C4"/>
+    <text class="t" x="412" y="268" font-size="11.5" fill="#04913E" font-weight="700">✓ ○○—品保部　85%</text>
+    <rect x="400" y="284" width="200" height="30" rx="7" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t" x="412" y="304" font-size="11.5" fill="#6B7C8C">　 ○○集團-業務部　15%</text>
+    <text class="t b2" x="400" y="336">系統依此自動把你歸到部門</text>
+
+    <rect x="400" y="360" width="200" height="38" rx="9" fill="#06C755"/>
+    <text class="t btn" x="500" y="384" text-anchor="middle" font-size="13.5">確認綁定</text>
+    <text class="t b2" x="400" y="424">名字打錯不要緊，之後主管</text>
+    <text class="t b2" x="400" y="442">可以幫你改。</text>
+
+    <!-- ── 手機 3 ── -->
+    <text class="t lbl" x="692" y="30">STEP 3　完成</text>
+    <rect x="692" y="44" width="248" height="452" rx="22" fill="#0F1922"/>
+    <rect x="700" y="52" width="232" height="436" rx="16" fill="#F5F7F9"/>
+    <circle cx="816" cy="176" r="42" fill="#E7FAEF" stroke="#06C755" stroke-width="3"/>
+    <path d="M796 176 l14 15 l26 -30" stroke="#06C755" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="t" x="816" y="248" font-size="17" font-weight="900" fill="#16202B" text-anchor="middle">綁定成功</text>
+    <text class="t b2" x="816" y="274" text-anchor="middle">王愛麗絲 · 品保部</text>
+    <rect x="716" y="300" width="200" height="118" rx="9" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t" x="732" y="324" font-size="12" font-weight="900" fill="#16202B">接下來你可以</text>
+    <text class="t b2" x="732" y="348">· 私訊回報今天做了什麼</text>
+    <text class="t b2" x="732" y="370">· 傳「日報」查看整理結果</text>
+    <text class="t b2" x="732" y="392">· 外勤時打卡記里程</text>
+    <text class="t b2" x="732" y="410" fill="#04913E" font-weight="700">這一步之後不用再做第二次</text>
+  </svg>
+  <figcaption>綁定頁是<b>在 LINE App 裡面</b>打開的，不會跳到 Chrome 或 Safari。如果跳出去了，代表設定有問題，請告訴資訊窗口。</figcaption>
+  </figure>
+
+  <div class="note n-stop">
+    <b class="t">綁定失敗時對照這裡</b>
+    <p>
+      · 畫面說「<b>缺 botId 參數</b>」→ 你是直接開網址進來的。回 LINE 聊天室，點機器人推的那顆按鈕。<br>
+      · 畫面說「<b>400 · developer role</b>」或「載入失敗」→ 是系統端設定，請截圖給資訊窗口，不用自己試。<br>
+      · <b>沒收到歡迎訊息</b> → 先確認真的加成好友了（聊天室清單裡看得到）。還是沒有就找資訊窗口。
+    </p>
+  </div>
+
+  <h3 data-w="phone">1.2　每天怎麼記工作</h3>
+  <p>
+    打開<b>你和公司官方帳號的一對一聊天室</b>（不是群組），想到什麼就傳一則。不用連貫、不用寫得漂亮。
+  </p>
+
+  <div class="two">
+    <div class="card">
+      <h4 style="color:var(--ok);margin-top:0">這樣傳最好用</h4>
+      <ul style="margin-bottom:0">
+        <li>早上 9 點跟 A 客戶開會，討論 Q3 交期</li>
+        <li>台中智障者協會 2 區，一台更換後鏡頭 3,500</li>
+        <li>下午跟人資申請 2 名檢驗人力</li>
+        <li>昨天那批不良品已回工廠，明日補送</li>
+      </ul>
+      <p style="font-size:13.5px;color:var(--ink-3);margin:12px 0 0">
+        重點是寫清楚<b>時間、事項、結果</b>三件事，AI 就整理得準。
+      </p>
+    </div>
+    <div class="card">
+      <h4 style="color:var(--ink-3);margin-top:0">這些目前沒有用</h4>
+      <ul style="margin-bottom:0">
+        <li><b>貼圖</b>——系統會回你綁定提示或不處理，不會變成日報內容</li>
+        <li><b>只傳照片沒有文字</b>——照片會存下來，但不會變成日報的一項</li>
+        <li><b>「早安」「收到」</b>這類問候</li>
+      </ul>
+      <p style="font-size:13.5px;color:var(--ink-3);margin:12px 0 0">
+        想用照片交代事情，請<b>照片＋一句文字說明</b>一起傳。
+      </p>
+    </div>
+  </div>
+
+  <div class="expect" style="max-width:none">
+    <b>你會看到什麼</b>
+    每傳一則，機器人會馬上回：<code>✓ 已記錄</code>，第一則還會多告訴你「傳『日報』可隨時查看今日記錄 · 18:00 由 AI 整理成日報」。
+    <b style="display:inline;color:var(--ink-2)">回得很快是正常的</b>——那只代表「收到了」，AI 整理是晚上那一輪的事。
+  </div>
+
+  <h3 data-w="phone">1.3　查看並送出今天的日報</h3>
+  <p>在同一個聊天室，傳兩個字：<code>日報</code>。（打<code>我的日報</code>、<code>看日報</code>、<code>查日報</code>、<code>daily</code> 也可以。）</p>
+
+  <figure>
+  <svg viewBox="0 0 1000 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="日報流程三步：私訊記錄、傳日報二字取得按鈕、在 LIFF 頁檢視編輯後送出">
+    <style>
+      .t{font-family:'Noto Sans TC',sans-serif}
+      .lbl{font-size:12px;font-weight:900;fill:#04913E;letter-spacing:.1em}
+      .b1{font-size:12px;fill:#16202B}
+      .b2{font-size:10.5px;fill:#6B7C8C}
+      .btn{font-size:12.5px;font-weight:700;fill:#fff}
+    </style>
+    <rect width="1000" height="540" fill="#fff"/>
+
+    <!-- 手機 1：私訊 -->
+    <text class="t lbl" x="60" y="30">白天　隨手記</text>
+    <rect x="60" y="44" width="248" height="452" rx="22" fill="#0F1922"/>
+    <rect x="68" y="52" width="232" height="436" rx="16" fill="#8CABC0"/>
+    <rect x="68" y="52" width="232" height="34" rx="16" fill="#06C755"/><rect x="68" y="70" width="232" height="16" fill="#06C755"/>
+    <text class="t" x="184" y="74" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">台灣福祉 AI 助手</text>
+
+    <rect x="112" y="98" width="176" height="46" rx="10" fill="#B7E4C7"/>
+    <text class="t b1" x="124" y="118">早上 9 點跟 A 客戶</text>
+    <text class="t b1" x="124" y="136">開會，討論 Q3 交期</text>
+    <rect x="80" y="152" width="128" height="60" rx="10" fill="#fff"/>
+    <text class="t b1" x="92" y="172">✓ 已記錄</text>
+    <text class="t b2" x="92" y="192">傳「日報」可隨時查看</text>
+    <text class="t b2" x="92" y="206">今日記錄</text>
+
+    <rect x="128" y="222" width="160" height="30" rx="10" fill="#B7E4C7"/>
+    <text class="t b1" x="140" y="242">下午申請 2 名檢驗</text>
+    <rect x="80" y="260" width="90" height="30" rx="10" fill="#fff"/>
+    <text class="t b1" x="92" y="280">✓ 已記錄</text>
+
+    <rect x="118" y="298" width="170" height="30" rx="10" fill="#B7E4C7"/>
+    <text class="t b1" x="130" y="318">不良品已回工廠</text>
+    <rect x="80" y="336" width="90" height="30" rx="10" fill="#fff"/>
+    <text class="t b1" x="92" y="356">✓ 已記錄</text>
+
+    <rect x="80" y="386" width="208" height="72" rx="9" fill="#E7FAEF" stroke="#A9E8C4"/>
+    <text class="t" x="94" y="408" font-size="11.5" font-weight="900" fill="#04913E">不用等下班一次寫</text>
+    <text class="t b2" x="94" y="428">想到就傳，三則五則都行。</text>
+    <text class="t b2" x="94" y="446">系統晚上會自己合併整理。</text>
+
+    <!-- 手機 2：叫出日報 -->
+    <text class="t lbl" x="376" y="30">下班前　傳「日報」</text>
+    <rect x="376" y="44" width="248" height="452" rx="22" fill="#0F1922"/>
+    <rect x="384" y="52" width="232" height="436" rx="16" fill="#8CABC0"/>
+    <rect x="384" y="52" width="232" height="34" rx="16" fill="#06C755"/><rect x="384" y="70" width="232" height="16" fill="#06C755"/>
+    <text class="t" x="500" y="74" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">台灣福祉 AI 助手</text>
+
+    <rect x="516" y="104" width="88" height="34" rx="10" fill="#B7E4C7"/>
+    <text class="t" x="560" y="126" font-size="15" fill="#16202B" text-anchor="middle" font-weight="900">日報</text>
+
+    <rect x="396" y="152" width="200" height="92" rx="10" fill="#fff"/>
+    <text class="t b1" x="408" y="176">點按鈕看今日 AI 整理</text>
+    <text class="t b1" x="408" y="194">的日報 · 可編輯後送出</text>
+    <text class="t b1" x="408" y="212">主管</text>
+    <rect x="396" y="248" width="200" height="42" rx="10" fill="#fff"/>
+    <rect x="408" y="256" width="176" height="26" rx="7" fill="#06C755"/>
+    <text class="t btn" x="496" y="274" text-anchor="middle">查看我的日報</text>
+
+    <rect x="396" y="318" width="200" height="150" rx="9" fill="#F5F7F9" stroke="#DCE3E9"/>
+    <text class="t" x="410" y="342" font-size="12" font-weight="900" fill="#16202B">如果 AI 還沒整理</text>
+    <text class="t b2" x="410" y="364">頁面上方會出現橘色提示：</text>
+    <text class="t" x="410" y="386" font-size="11" fill="#C2710A" font-weight="700">「你今日已私訊 3 則 ·</text>
+    <text class="t" x="410" y="402" font-size="11" fill="#C2710A" font-weight="700">　AI 尚未整理」</text>
+    <text class="t b2" x="410" y="424">下面會列出機器人收到的</text>
+    <text class="t b2" x="410" y="440">原始訊息，你可以先確認</text>
+    <text class="t b2" x="410" y="456">沒漏。按「重新生成」即可。</text>
+
+    <!-- 手機 3：日報頁 -->
+    <text class="t lbl" x="692" y="30">檢查　→　送出</text>
+    <rect x="692" y="44" width="248" height="452" rx="22" fill="#0F1922"/>
+    <rect x="700" y="52" width="232" height="436" rx="16" fill="#F5F7F9"/>
+    <rect x="700" y="52" width="232" height="46" rx="16" fill="#fff"/><rect x="700" y="80" width="232" height="18" fill="#fff"/>
+    <text class="t" x="716" y="76" font-size="13" font-weight="900" fill="#16202B">王愛麗絲 · 我的日報</text>
+    <text class="t b2" x="716" y="92">2026-07-23（週四）· AI 已整理 3 項</text>
+    <line x1="700" y1="98" x2="932" y2="98" stroke="#DCE3E9"/>
+
+    <rect x="712" y="110" width="208" height="66" rx="8" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t" x="724" y="130" font-size="10.5" fill="#4F46E5" font-weight="700">09:00–10:30</text>
+    <text class="t" x="724" y="148" font-size="12" font-weight="700" fill="#16202B">A 客戶 Q3 交期討論</text>
+    <text class="t b2" x="724" y="166">客戶要求提早 15 天</text>
+    <text class="t" x="908" y="130" font-size="10.5" fill="#6B7C8C" text-anchor="end">編輯</text>
+
+    <rect x="712" y="184" width="208" height="52" rx="8" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t" x="724" y="204" font-size="10.5" fill="#4F46E5" font-weight="700">15:00</text>
+    <text class="t" x="724" y="222" font-size="12" font-weight="700" fill="#16202B">申請 2 名檢驗人力</text>
+    <text class="t" x="908" y="204" font-size="10.5" fill="#6B7C8C" text-anchor="end">編輯</text>
+
+    <rect x="712" y="244" width="208" height="40" rx="8" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t" x="724" y="268" font-size="12" font-weight="700" fill="#16202B">不良品已回工廠</text>
+
+    <rect x="712" y="292" width="208" height="26" rx="7" fill="#EDF1F4" stroke="#DCE3E9" stroke-dasharray="4 3"/>
+    <text class="t" x="816" y="309" font-size="11.5" fill="#6B7C8C" text-anchor="middle">＋ 手動加一項</text>
+
+    <rect x="712" y="330" width="208" height="66" rx="8" fill="#FAFBFC" stroke="#EDF1F4"/>
+    <text class="t" x="724" y="350" font-size="10.5" font-weight="900" fill="#6B7C8C">主管將看到 · 預覽</text>
+    <text class="t b2" x="724" y="368">王愛麗絲 · 個人日報 · 共 3 項</text>
+    <text class="t b2" x="724" y="384">（隨你編輯即時更新）</text>
+
+    <rect x="712" y="408" width="66" height="34" rx="8" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t" x="745" y="430" font-size="11" fill="#4A5A6A" text-anchor="middle">重新生成</text>
+    <rect x="784" y="408" width="60" height="34" rx="8" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t" x="814" y="430" font-size="11" fill="#4A5A6A" text-anchor="middle">存草稿</text>
+    <rect x="850" y="408" width="70" height="34" rx="8" fill="#06C755"/>
+    <text class="t btn" x="885" y="430" text-anchor="middle" font-size="12">送出日報</text>
+
+    <text class="t b2" x="712" y="466">送出前還會再跳一次確認視窗，</text>
+    <text class="t b2" x="712" y="482">裡面是主管會看到的完整內容。</text>
+  </svg>
+  <figcaption><b>送出後就不能改了</b>，所以確認視窗裡會把主管將收到的完整內容再顯示一次。若送出後又補傳了新訊息並按「重新生成」，系統會允許你再送一次新版本。</figcaption>
+  </figure>
+
+  <div class="steps" data-w="phone">
+    <div class="step">
+      <h5>檢查每一項對不對</h5>
+      <p>AI 整理的內容可能有小誤差。點「編輯」可以改文字，不要的整項刪掉。漏掉的按「＋ 手動加一項」補。</p>
+    </div>
+    <div class="step">
+      <h5>看一眼下方的「主管將看到 · 預覽」</h5>
+      <p>那就是主管會收到的樣子，會隨你的編輯即時變動。</p>
+    </div>
+    <div class="step">
+      <h5>按「送出日報」，再按「確定送出」</h5>
+      <p>確認視窗會把完整內容再列一次。確定沒問題再按。</p>
+      <div class="expect"><b>你會看到什麼</b>畫面顯示「日報已送出 · 主管會立即收到 LINE 通知」，1 秒後自動關閉回到聊天室。<br>之後再打「日報」查，上方會顯示「已於 18:12 送出主管」。</div>
+    </div>
+    <div class="step">
+      <h5>主管那邊會發生什麼</h5>
+      <p>你的部門主管的 LINE 會馬上收到一則通知：「王愛麗絲 已送出 2026-07-23 個人日報 · 3 項」。<br>
+      <b>主管沒收到通知的話</b>，多半是主管自己還沒綁定 LINE，請主管走 1.1 綁一次。</p>
+    </div>
+  </div>
+
+  <h3 data-w="phone">1.4　外勤打卡與里程（跑外面的同仁）</h3>
+  <p>
+    如果公司的官方帳號聊天室底部有<b>選單列</b>，點「打卡」即可；沒有的話請資訊窗口提供連結。
+    設計原則是<b>畫面上一次只有一顆主要按鈕</b>——不用判斷該按哪一個。
+  </p>
+
+  <figure>
+  <svg viewBox="0 0 1000 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="外勤打卡三步：開始外勤、每到一站記錄這一站並填地點、查看今日移動紀錄與里程">
+    <style>
+      .t{font-family:'Noto Sans TC',sans-serif}
+      .lbl{font-size:12px;font-weight:900;fill:#04913E;letter-spacing:.1em}
+      .b1{font-size:12px;fill:#16202B}
+      .b2{font-size:10.5px;fill:#6B7C8C}
+    </style>
+    <rect width="1000" height="470" fill="#fff"/>
+
+    <text class="t lbl" x="60" y="28">出門時</text>
+    <rect x="60" y="42" width="248" height="392" rx="22" fill="#0F1922"/>
+    <rect x="68" y="50" width="232" height="376" rx="16" fill="#fff"/>
+    <text class="t" x="86" y="84" font-size="15" font-weight="900" fill="#16202B">外勤打卡</text>
+    <text class="t b2" x="86" y="108">出門時按一下「開始外勤」，</text>
+    <text class="t b2" x="86" y="126">之後每到一個地方再記錄一次，</text>
+    <text class="t b2" x="86" y="144">系統會自動算出各段路程。</text>
+    <rect x="86" y="168" width="196" height="46" rx="9" fill="#4F46E5"/>
+    <text class="t" x="184" y="197" font-size="14.5" fill="#fff" text-anchor="middle" font-weight="700">開始外勤</text>
+    <text class="t b2" x="86" y="242">今日移動紀錄</text>
+    <rect x="86" y="254" width="196" height="70" rx="8" fill="#F5F7F9" stroke="#EDF1F4"/>
+    <text class="t b2" x="184" y="284" text-anchor="middle">今天還沒有移動紀錄</text>
+    <text class="t b2" x="184" y="304" text-anchor="middle">按上方「開始外勤」開始</text>
+    <rect x="86" y="344" width="196" height="60" rx="8" fill="#FFF7EA" stroke="#F0D9AE"/>
+    <text class="t" x="98" y="366" font-size="11" font-weight="900" fill="#C2710A">會要求定位權限</text>
+    <text class="t b2" x="98" y="386">第一次請按「允許」，否則</text>
+    <text class="t b2" x="98" y="402">算不出里程。</text>
+
+    <text class="t lbl" x="376" y="28">每到一站</text>
+    <rect x="376" y="42" width="248" height="392" rx="22" fill="#0F1922"/>
+    <rect x="384" y="50" width="232" height="376" rx="16" fill="#fff"/>
+    <text class="t" x="402" y="84" font-size="15" font-weight="900" fill="#16202B">外勤打卡</text>
+    <text class="t b2" x="402" y="108">每到一個地方就按一下，系統</text>
+    <text class="t b2" x="402" y="126">會自動算出從上一站到這裡的</text>
+    <text class="t b2" x="402" y="144">路程。</text>
+    <text class="t b2" x="402" y="176">這一站是哪裡？（選填）</text>
+    <rect x="402" y="186" width="196" height="34" rx="7" fill="#fff" stroke="#4F46E5" stroke-width="1.5"/>
+    <text class="t b1" x="414" y="208">員榮醫</text>
+    <rect x="402" y="222" width="196" height="72" rx="7" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t b1" x="414" y="243">彰化員榮醫院</text>
+    <text class="t b2" x="586" y="243" text-anchor="end">去過 7 次</text>
+    <line x1="402" y1="252" x2="598" y2="252" stroke="#EDF1F4"/>
+    <text class="t b1" x="414" y="271">員榮醫院二院區</text>
+    <text class="t b2" x="586" y="271" text-anchor="end">去過 2 次</text>
+    <text class="t b2" x="414" y="288">找不到就直接打字，一樣可送出</text>
+    <rect x="402" y="306" width="196" height="46" rx="9" fill="#4F46E5"/>
+    <text class="t" x="500" y="335" font-size="14.5" fill="#fff" text-anchor="middle" font-weight="700">記錄這一站</text>
+    <text class="t b2" x="402" y="378">沒填地點也可以按，之後到</text>
+    <text class="t b2" x="402" y="396">「我的行程」補填就好。</text>
+
+    <text class="t lbl" x="692" y="28">收工看數字</text>
+    <rect x="692" y="42" width="248" height="392" rx="22" fill="#0F1922"/>
+    <rect x="700" y="50" width="232" height="376" rx="16" fill="#fff"/>
+    <text class="t" x="718" y="82" font-size="13" font-weight="900" fill="#16202B">你這個月</text>
+    <rect x="718" y="92" width="196" height="56" rx="9" fill="#EDEDFD"/>
+    <text class="t" x="762" y="120" font-size="19" fill="#3730A3" text-anchor="middle" font-weight="900" font-family="'JetBrains Mono',monospace">18</text>
+    <text class="t b2" x="762" y="138" text-anchor="middle">趟</text>
+    <text class="t" x="816" y="120" font-size="19" fill="#3730A3" text-anchor="middle" font-weight="900" font-family="'JetBrains Mono',monospace">642</text>
+    <text class="t b2" x="816" y="138" text-anchor="middle">公里</text>
+    <text class="t" x="874" y="120" font-size="19" fill="#3730A3" text-anchor="middle" font-weight="900" font-family="'JetBrains Mono',monospace">9</text>
+    <text class="t b2" x="874" y="138" text-anchor="middle">天外出</text>
+    <text class="t b2" x="718" y="168">最常跑：彰化員榮醫院 · 本月 7 次</text>
+
+    <text class="t b2" x="718" y="200">今日移動紀錄</text>
+    <rect x="718" y="210" width="196" height="30" rx="7" fill="#F5F7F9"/>
+    <text class="t b1" x="730" y="230">第 1 段</text>
+    <text class="t" x="902" y="230" font-size="12" fill="#16202B" text-anchor="end" font-weight="700" font-family="'JetBrains Mono',monospace">32.4 km</text>
+    <rect x="718" y="244" width="196" height="30" rx="7" fill="#F5F7F9"/>
+    <text class="t b1" x="730" y="264">第 2 段 · 原地打卡</text>
+    <text class="t" x="902" y="264" font-size="12" fill="#6B7C8C" text-anchor="end" font-weight="700" font-family="'JetBrains Mono',monospace">0.0 km</text>
+    <rect x="718" y="278" width="196" height="30" rx="7" fill="#EDEDFD"/>
+    <text class="t b1" x="730" y="298" font-weight="700">今日合計</text>
+    <text class="t" x="902" y="298" font-size="12" fill="#3730A3" text-anchor="end" font-weight="700" font-family="'JetBrains Mono',monospace">32.4 km</text>
+
+    <rect x="718" y="322" width="196" height="86" rx="8" fill="#FFF7EA" stroke="#F0D9AE"/>
+    <text class="t" x="730" y="344" font-size="11.5" font-weight="900" fill="#C2710A">為什麼距離是 0？</text>
+    <text class="t b2" x="730" y="364">因為兩次打卡在同一個地方，</text>
+    <text class="t b2" x="730" y="380">中間沒有移動。這不是壞掉，</text>
+    <text class="t b2" x="730" y="396">是照實記錄。</text>
+  </svg>
+  <figcaption>里程是<b>沿實際道路</b>算的，不是直線距離。你自己的月統計只有你看得到，不會拿去跟別人比較。</figcaption>
+  </figure>
+
+  <h3 data-w="phone">1.5　任務做完了怎麼回報</h3>
+  <p>
+    如果主管在後台把一件任務指派給你，你的 LINE 會收到一則通知。
+    做完之後，<b>直接在私訊裡回一句就好</b>，例如「好了」「已完成」「處理完了」。
+  </p>
+  <ul>
+    <li>如果你手上只有一件，系統會直接回覆確認，例如：<code>已記錄完成：南部維修需求…</code></li>
+    <li>如果同時有好幾件，系統會推一組按鈕問你「是哪一件做完了」，點一下即可。</li>
+    <li>回報錯了？傳「<b>更正</b>」，系統會把 24 小時內剛回報的那件改回進行中。</li>
+  </ul>
+  <div class="note n-info">
+    <b class="t">為什麼要你按一下</b>
+    <p>系統<b>不會自己判斷你做完了沒</b>。AI 從對話裡讀到「應該是好了」跟你本人說「我做完了」是兩件事，前者是推測、後者是承諾。系統只認後者。</p>
+  </div>
+
+  <h3 data-w="phone">1.6　選配：用電腦看自己的日報</h3>
+  <p>大部分人不需要這一段。如果你想在大螢幕上編輯多筆日報：</p>
+  <ol>
+    <li>打開公司給的系統網址</li>
+    <li>點<b>「以 LINE 登入」</b>——不用帳號密碼，用你已綁定的 LINE 帳號授權即可</li>
+    <li>登入後直接進到「我的日報」；側邊欄只會有「我的日報」「我的行程」兩項</li>
+  </ol>
+  <p>想改用 email＋密碼登入的話，在 LINE 私訊裡傳「<code>設密碼</code>」，機器人會給你設定按鈕。<b>這是選配，不設也完全能用。</b></p>
+
+  <h3 data-w="phone">1.7　員工常見問題</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:30%">問題</th><th>回答</th></tr></thead>
+    <tbody>
+      <tr><td>我在群組講的話會被監聽嗎？</td><td>系統讀的是<b>公司工作群組</b>的對話，跟你的私人聊天無關。哪些群組有開啟分析，可以請主管在後台「LINE 群組」頁查給你看。分析結果只會給你的部門主管與總經理室看。</td></tr>
+      <tr><td>我傳的私訊誰看得到？</td><td>你私訊機器人的內容用來產生<b>你自己的日報</b>。日報要<b>你按下「送出」之後</b>主管才看得到；沒送出就只有你自己看得到。</td></tr>
+      <tr><td>今天忘了送日報怎麼辦？</td><td>隔天打開日報頁，右上角可以切換日期，補送舊日期的日報。</td></tr>
+      <tr><td>日報內容 AI 寫錯了</td><td>直接點「編輯」改掉，或整項刪除。<b>送出的是你確認過的版本，不是 AI 的版本。</b></td></tr>
+      <tr><td>打「日報」機器人沒反應</td><td>八成是還沒綁定。先傳一則普通文字看看——如果回你綁定提示，就是還沒綁。</td></tr>
+      <tr><td>換手機 / 換 LINE 帳號</td><td>需要重新綁定，並請資訊窗口把舊的綁定解除，否則會對到兩個身分。</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 第 2 章 · 主管 ═══════════════ -->
+<section id="c2" data-roles="mgr gm it">
+  <div class="ch-head">
+    <div class="ch-num">2</div>
+    <div>
+      <h2>部門主管：每天 3 分鐘</h2>
+      <div class="who">
+        給誰看：各部門主管（系統裡的角色叫「部門主管」）· 約 12 分鐘 ·
+        <span class="where w-desk">電腦 · 後台網頁</span>
+        你只會看到<b>自己部門</b>的資料
+      </div>
+    </div>
+  </div>
+
+  <h3 data-w="desk">2.1　登入與畫面認識</h3>
+  <p>
+    打開公司給的網址，用 email＋密碼登入。<b>第一次登入會強制你改一組新密碼</b>，設一個好記的。
+    （也可以用「以 LINE 登入」，但主管建議用 email，安全性較高。）
+  </p>
+
+  <figure>
+  <svg viewBox="0 0 1000 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="後台介面總覽：左側選單分為我的、營運、設定三組，上方麵包屑與重新整理，中間是主要內容區">
+    <style>
+      .t{font-family:'Noto Sans TC',sans-serif}
+      .nv{font-size:12px;fill:#4A5A6A}
+      .nva{font-size:12px;fill:#3730A3;font-weight:700}
+      .gp{font-size:9.5px;fill:#8296A8;font-weight:700;letter-spacing:.12em}
+      .cal{font-size:11.5px;fill:#C2710A;font-weight:700}
+    </style>
+    <rect width="1000" height="540" fill="#fff"/>
+    <rect x="30" y="30" width="720" height="480" rx="10" fill="#EDF0F3" stroke="#DCE3E9"/>
+
+    <!-- 側欄 -->
+    <rect x="30" y="30" width="180" height="480" rx="10" fill="#fff"/>
+    <rect x="200" y="30" width="10" height="480" fill="#fff"/>
+    <line x1="210" y1="30" x2="210" y2="510" stroke="#DCE3E9"/>
+    <rect x="44" y="44" width="24" height="24" rx="6" fill="#0F1922"/>
+    <text class="t" x="56" y="61" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">台</text>
+    <text class="t" x="76" y="61" font-size="12.5" fill="#16202B" font-weight="700">台灣福祉</text>
+    <line x1="30" y1="80" x2="210" y2="80" stroke="#DCE3E9"/>
+
+    <text class="t gp" x="46" y="102">我的</text>
+    <text class="t nv" x="46" y="124">我的日報</text>
+    <text class="t nv" x="46" y="146">我的行程</text>
+
+    <text class="t gp" x="46" y="176">營運</text>
+    <rect x="38" y="184" width="164" height="24" rx="6" fill="#EDEDFD"/>
+    <text class="t nva" x="46" y="200">任務看板</text>
+    <text class="t nv" x="46" y="224">總覽儀表</text>
+    <text class="t nv" x="46" y="246">群組日誌</text>
+    <text class="t nv" x="46" y="268">部門日報</text>
+    <text class="t nv" x="46" y="290">素材</text>
+
+    <text class="t gp" x="46" y="320">設定</text>
+    <text class="t nv" x="46" y="342" fill="#AAB8C4">部門/成員　（總經理室才有）</text>
+    <text class="t nv" x="46" y="364">通訊管道</text>
+
+    <line x1="30" y1="466" x2="210" y2="466" stroke="#DCE3E9"/>
+    <text class="t" x="46" y="486" font-size="10.5" fill="#8296A8">aiproot 技術支援　v0.1</text>
+
+    <!-- 頂欄 -->
+    <rect x="210" y="30" width="540" height="40" fill="#fff"/>
+    <line x1="210" y1="70" x2="750" y2="70" stroke="#DCE3E9"/>
+    <text class="t" x="228" y="55" font-size="12" fill="#16202B"><tspan font-weight="700">營運</tspan><tspan fill="#AAB8C4"> › </tspan><tspan>任務看板</tspan></text>
+    <circle cx="620" cy="50" r="10" fill="#F5F7F9" stroke="#DCE3E9"/><text class="t" x="620" y="54" font-size="10" fill="#4A5A6A" text-anchor="middle">?</text>
+    <circle cx="648" cy="50" r="10" fill="#F5F7F9" stroke="#DCE3E9"/><text class="t" x="648" y="54" font-size="10" fill="#4A5A6A" text-anchor="middle">⟳</text>
+    <circle cx="682" cy="50" r="11" fill="#4F46E5"/><text class="t" x="682" y="54" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">WA</text>
+    <text class="t" x="700" y="47" font-size="10.5" fill="#16202B" font-weight="700">王主管</text>
+    <text class="t" x="700" y="60" font-size="9.5" fill="#8296A8">部門主管</text>
+
+    <!-- 內容區 -->
+    <text class="t" x="230" y="104" font-size="17" fill="#16202B" font-weight="900">任務看板</text>
+    <text class="t" x="230" y="124" font-size="11" fill="#8296A8">下方三欄是需要您簽核的任務 · 點卡片可展開原始對話對照</text>
+    <rect x="230" y="140" width="500" height="1" fill="#DCE3E9"/>
+    <rect x="230" y="158" width="160" height="330" rx="8" fill="#fff" stroke="#DCE3E9"/>
+    <rect x="400" y="158" width="160" height="330" rx="8" fill="#fff" stroke="#DCE3E9"/>
+    <rect x="570" y="158" width="160" height="330" rx="8" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t" x="310" y="330" font-size="12" fill="#AAB8C4" text-anchor="middle">（內容見下一張圖）</text>
+
+    <!-- 標註 -->
+    <text class="t cal" x="782" y="130">① 左邊選單依「這是誰的東西」分組</text>
+    <text class="t" x="782" y="150" font-size="11" fill="#4A5A6A">「我的」是你自己的日報與行程；</text>
+    <text class="t" x="782" y="167" font-size="11" fill="#4A5A6A">「營運」是每天要看的東西；</text>
+    <text class="t" x="782" y="184" font-size="11" fill="#4A5A6A">「設定」依你的權限決定顯不顯示。</text>
+    <text class="t" x="782" y="201" font-size="11" fill="#4A5A6A">看不到某一項＝你沒有那個權限，</text>
+    <text class="t" x="782" y="218" font-size="11" fill="#4A5A6A">不是壞掉。</text>
+
+    <text class="t cal" x="782" y="256">② 上方是你現在在哪一頁</text>
+    <text class="t" x="782" y="276" font-size="11" fill="#4A5A6A">「?」是運作原理說明，</text>
+    <text class="t" x="782" y="293" font-size="11" fill="#4A5A6A">「⟳」是重新整理資料。</text>
+
+    <text class="t cal" x="782" y="330">③ 右上角是你自己</text>
+    <text class="t" x="782" y="350" font-size="11" fill="#4A5A6A">點開可以改顯示名稱、改密碼、</text>
+    <text class="t" x="782" y="367" font-size="11" fill="#4A5A6A">登出。角色也顯示在這裡。</text>
+
+    <text class="t cal" x="782" y="404">④ 選單項目旁邊的灰字</text>
+    <text class="t" x="782" y="424" font-size="11" fill="#4A5A6A">寫「原：今日日誌」代表這一項</text>
+    <text class="t" x="782" y="441" font-size="11" fill="#4A5A6A">改過名字。點過一次就不再出現，</text>
+    <text class="t" x="782" y="458" font-size="11" fill="#4A5A6A">不是有東西被拿掉了。</text>
+  </svg>
+  <figcaption>整個後台就是這個骨架：<b>左選單 → 上麵包屑 → 中內容</b>。所有頁面都長這樣，學會一次就通用。</figcaption>
+  </figure>
+
+  <h3 data-w="desk">2.2　任務看板：你每天真正要看的地方</h3>
+  <p>這是整套系統每天在產出的東西。三欄分別代表三種處理順序。</p>
+
+  <figure>
+  <svg viewBox="0 0 1000 624" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="任務看板三欄：待簽核、逾時警示、已簽核，以及一張任務卡的各部位說明">
+    <style>
+      .t{font-family:'Noto Sans TC',sans-serif}
+      .ch{font-size:13px;font-weight:900;fill:#16202B}
+      .cn{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;fill:#6B7C8C}
+      .cs{font-size:11.5px;fill:#16202B;font-weight:700}
+      .cm{font-size:10px;fill:#6B7C8C}
+      .cal{font-size:11px;fill:#C2710A;font-weight:700}
+    </style>
+    <rect width="1000" height="624" fill="#fff"/>
+
+    <!-- 篩選列 -->
+    <rect x="30" y="26" width="120" height="26" rx="13" fill="#0F1922"/>
+    <text class="t" x="90" y="43" font-size="11.5" fill="#fff" text-anchor="middle" font-weight="700">全部　68</text>
+    <rect x="158" y="26" width="104" height="26" rx="13" fill="#F5F7F9" stroke="#DCE3E9"/>
+    <circle cx="176" cy="39" r="4" fill="#4F46E5"/><text class="t" x="188" y="43" font-size="11.5" fill="#4A5A6A">維保異常 24</text>
+    <rect x="270" y="26" width="96" height="26" rx="13" fill="#F5F7F9" stroke="#DCE3E9"/>
+    <circle cx="288" cy="39" r="4" fill="#059669"/><text class="t" x="300" y="43" font-size="11.5" fill="#4A5A6A">採購 18</text>
+    <rect x="374" y="26" width="104" height="26" rx="13" fill="#F5F7F9" stroke="#DCE3E9"/>
+    <circle cx="392" cy="39" r="4" fill="#D97706"/><text class="t" x="404" y="43" font-size="11.5" fill="#4A5A6A">研發討論 14</text>
+    <text class="t" x="492" y="43" font-size="11" fill="#8296A8">← 一次只看一類，68 張才掃得完</text>
+
+    <rect x="760" y="26" width="112" height="26" rx="6" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t" x="816" y="43" font-size="11.5" fill="#4A5A6A" text-anchor="middle">只看卡住的（9）</text>
+    <rect x="880" y="26" width="90" height="26" rx="6" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t" x="925" y="43" font-size="11.5" fill="#4A5A6A" text-anchor="middle">存查　132</text>
+
+    <!-- 三欄 -->
+    <g>
+      <rect x="30" y="70" width="300" height="326" rx="10" fill="#FAFBFC" stroke="#DCE3E9"/>
+      <circle cx="50" cy="94" r="5" fill="#D97706"/>
+      <text class="t ch" x="64" y="98">待簽核</text>
+      <text class="t cn" x="310" y="98" text-anchor="end">13</text>
+      <line x1="30" y1="110" x2="330" y2="110" stroke="#EDF1F4"/>
+      <text class="t" x="46" y="130" font-size="11" fill="#6B7C8C">▾ ● 維保異常　7 張</text>
+
+      <rect x="46" y="140" width="268" height="76" rx="8" fill="#fff" stroke="#DCE3E9"/>
+      <rect x="46" y="140" width="4" height="76" rx="2" fill="#D97706"/>
+      <text class="t cs" x="62" y="162">南部維修需求：旅玩家側門</text>
+      <text class="t cs" x="62" y="178">扶手治具協調</text>
+      <rect x="62" y="186" width="76" height="16" rx="8" fill="#F5F7F9"/><text class="t cm" x="100" y="197" text-anchor="middle">技術開發組</text>
+      <rect x="144" y="186" width="46" height="16" rx="8" fill="#FFF7EA"/><text class="t cm" x="167" y="197" text-anchor="middle" fill="#C2710A">信度中</text>
+      <circle cx="70" cy="210" r="7" fill="#4F46E5"/><text class="t" x="70" y="213" font-size="8" fill="#fff" text-anchor="middle">江</text>
+      <text class="t cm" x="82" y="213">江冠毅</text>
+      <text class="t cm" x="300" y="213" text-anchor="end">技術工程部</text>
+
+      <rect x="46" y="226" width="268" height="62" rx="8" fill="#fff" stroke="#DCE3E9"/>
+      <rect x="46" y="226" width="4" height="62" rx="2" fill="#D97706"/>
+      <text class="t cs" x="62" y="248">彰化員榮醫院詢價：側踏</text>
+      <rect x="62" y="256" width="64" height="16" rx="8" fill="#F5F7F9"/><text class="t cm" x="94" y="267" text-anchor="middle">業務二部</text>
+      <rect x="132" y="256" width="92" height="16" rx="8" fill="#FFF0F3"/>
+      <circle cx="142" cy="264" r="3" fill="#DC2743"/><text class="t cm" x="180" y="267" text-anchor="middle" fill="#DC2743">卡住 4 天 · 待指派</text>
+      <text class="t cm" x="62" y="284" fill="#C2710A">待認領：汪</text>
+
+      <text class="t" x="46" y="312" font-size="11" fill="#6B7C8C">▸ ● 採購　4 張</text>
+      <text class="t" x="46" y="336" font-size="11" fill="#6B7C8C">▸ ● 研發討論　2 張</text>
+      <text class="t" x="46" y="372" font-size="10.5" fill="#AAB8C4">前兩組預設展開，其餘收合</text>
+    </g>
+
+    <g>
+      <rect x="346" y="70" width="300" height="326" rx="10" fill="#FAFBFC" stroke="#DCE3E9"/>
+      <circle cx="366" cy="94" r="5" fill="#DC2743"/>
+      <text class="t ch" x="380" y="98">逾時警示</text>
+      <text class="t cn" x="626" y="98" text-anchor="end">2</text>
+      <line x1="346" y1="110" x2="646" y2="110" stroke="#EDF1F4"/>
+      <rect x="362" y="126" width="268" height="62" rx="8" fill="#fff" stroke="#DCE3E9"/>
+      <rect x="362" y="126" width="4" height="62" rx="2" fill="#DC2743"/>
+      <text class="t cs" x="378" y="148">T7 技轉：請派生技人員支援</text>
+      <rect x="378" y="156" width="64" height="16" rx="8" fill="#FFF0F3"/><text class="t cm" x="410" y="167" text-anchor="middle" fill="#DC2743">逾時 6 天</text>
+      <circle cx="386" cy="182" r="7" fill="#059669"/><text class="t" x="386" y="185" font-size="8" fill="#fff" text-anchor="middle">李</text>
+      <text class="t cm" x="398" y="185">李誼裕</text>
+      <text class="t" x="496" y="250" font-size="11.5" fill="#AAB8C4" text-anchor="middle">逾時的先處理</text>
+      <text class="t" x="496" y="270" font-size="11.5" fill="#AAB8C4" text-anchor="middle">「逾時 N 天」的 N 是</text>
+      <text class="t" x="496" y="288" font-size="11.5" fill="#AAB8C4" text-anchor="middle">排序依據——逾 1 天</text>
+      <text class="t" x="496" y="306" font-size="11.5" fill="#AAB8C4" text-anchor="middle">與逾 15 天差很多</text>
+    </g>
+
+    <g>
+      <rect x="662" y="70" width="300" height="326" rx="10" fill="#FAFBFC" stroke="#DCE3E9"/>
+      <circle cx="682" cy="94" r="5" fill="#059669"/>
+      <text class="t ch" x="696" y="98">已簽核</text>
+      <text class="t cn" x="942" y="98" text-anchor="end">41</text>
+      <line x1="662" y1="110" x2="962" y2="110" stroke="#EDF1F4"/>
+      <text class="t" x="678" y="130" font-size="10.5" fill="#8296A8">顯示最近 30 筆 · 共 41</text>
+      <rect x="678" y="142" width="268" height="56" rx="8" fill="#fff" stroke="#DCE3E9"/>
+      <rect x="678" y="142" width="4" height="56" rx="2" fill="#059669"/>
+      <text class="t cs" x="694" y="164">滅火器貼紙議題結案</text>
+      <text class="t cm" x="694" y="186">廖蘭萱Alice</text>
+      <text class="t cm" x="932" y="186" text-anchor="end">王主管 已簽核</text>
+      <text class="t" x="812" y="260" font-size="11.5" fill="#AAB8C4" text-anchor="middle">這一欄是回顧用</text>
+      <text class="t" x="812" y="280" font-size="11.5" fill="#AAB8C4" text-anchor="middle">簽核 ≠ 已完成</text>
+      <text class="t" x="812" y="298" font-size="11.5" fill="#AAB8C4" text-anchor="middle">見下方 2.3 說明</text>
+    </g>
+
+    <!-- 卡片解剖 -->
+    <line x1="30" y1="424" x2="962" y2="424" stroke="#DCE3E9" stroke-dasharray="5 4"/>
+    <text class="t" x="30" y="452" font-size="13" font-weight="900" fill="#16202B">一張任務卡怎麼讀</text>
+
+    <rect x="30" y="466" width="330" height="112" rx="9" fill="#fff" stroke="#4F46E5" stroke-width="1.5"/>
+    <rect x="30" y="466" width="5" height="112" rx="2.5" fill="#D97706"/>
+    <text class="t" x="50" y="492" font-size="13" font-weight="700" fill="#16202B">南部維修需求：旅玩家側門</text>
+    <text class="t" x="50" y="510" font-size="13" font-weight="700" fill="#16202B">扶手治具協調</text>
+    <rect x="50" y="520" width="76" height="17" rx="8.5" fill="#F5F7F9"/><text class="t cm" x="88" y="532" text-anchor="middle">技術開發組</text>
+    <rect x="132" y="520" width="46" height="17" rx="8.5" fill="#FFF7EA"/><text class="t cm" x="155" y="532" text-anchor="middle" fill="#C2710A">信度中</text>
+    <rect x="184" y="520" width="92" height="17" rx="8.5" fill="#FFF0F3"/><text class="t cm" x="230" y="532" text-anchor="middle" fill="#DC2743">卡住 4 天 · 無回報</text>
+    <circle cx="60" cy="556" r="8" fill="#4F46E5"/><text class="t" x="60" y="559" font-size="9" fill="#fff" text-anchor="middle">江</text>
+    <text class="t cm" x="74" y="559" font-size="11">江冠毅</text>
+    <text class="t cm" x="344" y="559" text-anchor="end" font-size="11">技術工程部</text>
+
+    <g stroke="#C2710A" stroke-width="1.4" fill="none" stroke-dasharray="3 3">
+      <path d="M368 496 L 420 496"/><path d="M368 530 L 420 530"/><path d="M368 556 L 420 556"/>
+    </g>
+    <text class="t cal" x="428" y="482">① 標題</text>
+    <text class="t" x="428" y="500" font-size="11" fill="#4A5A6A">AI 從對話抽出的一句話。點卡片可展開右側抽屜，看它是根據哪幾則訊息寫的。</text>
+
+    <text class="t cal" x="428" y="524">② 標籤列</text>
+    <text class="t" x="428" y="542" font-size="11" fill="#4A5A6A">來源群組 ｜ 信度中／低才會標（沒標＝高） ｜ 逾時 N 天 ｜ 卡住 N 天（待指派或無回報）</text>
+
+    <text class="t cal" x="428" y="566">③ 誰在負責</text>
+    <text class="t" x="428" y="584" font-size="11" fill="#4A5A6A">有頭像＝已對到系統帳號，進得了他的日報；「待認領」＝AI 抽到人名但對不到帳號，需要你手動指派；</text>
+    <text class="t" x="428" y="602" font-size="11" fill="#4A5A6A">「未指派」＝連人名都沒抽到。</text>
+  </svg>
+  <figcaption>三欄的計數<b>永遠是真實總數</b>，套了篩選也不會變——這樣你才分得清是被篩掉了還是真的少了。</figcaption>
+  </figure>
+
+  <h3 data-w="desk">2.3　把任務簽掉：一個很重要的觀念</h3>
+  <div class="note n-warn">
+    <b class="t">「已簽核」不等於「已完成」</b>
+    <p>
+      <b>簽核</b>＝你確認「AI 這一張抽對了，這件事確實存在」。<br>
+      <b>完成</b>＝負責人本人回報「我做完了」。<br>
+      一張卡完全可能<b>已簽核，但工作根本還沒開始</b>。這兩件事在系統裡是分開記的，不要混為一談。
+    </p>
+  </div>
+
+  <div class="steps" data-w="desk">
+    <div class="step">
+      <h5>點開卡片，看右側抽屜</h5>
+      <p>抽屜裡會顯示這張任務的完整摘要，以及<b>原始 LINE 訊息</b>——AI 是根據哪幾則寫出這張卡的，一句一句對得上。</p>
+    </div>
+    <div class="step">
+      <h5>信度標「中」或「低」的，一定要對照原文再簽</h5>
+      <p>沒標信度的就是高信度（本看板的預設），可以快速掃過。</p>
+    </div>
+    <div class="step">
+      <h5>需要有人做的，指派給人</h5>
+      <p>在抽屜裡選指派對象。下拉選單會<b>先標示誰通知得到</b>（已綁定 LINE 的人），選之前就知道。</p>
+      <div class="expect"><b>對方會收到什麼</b>指派完成後，那位同仁的 LINE 會立刻收到一則私訊通知。<br>如果對方沒綁定，系統會<b>明白告訴你「無法通知」</b>，而不是假裝送出去了。</div>
+    </div>
+    <div class="step">
+      <h5>按「簽核此筆」</h5>
+      <p>卡片移到「已簽核」欄，底部會顯示是誰簽的。</p>
+    </div>
+  </div>
+
+  <h4>看板上的其他按鈕</h4>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:22%">按鈕</th><th>做什麼</th></tr></thead>
+    <tbody>
+      <tr><td><b>只看卡住的（N）</b></td><td>只留下超過寬限期還沒人認領、或認領了但一直沒回報的卡。<b>如果你只有 1 分鐘，就看這個。</b></td></tr>
+      <tr><td><b>分類標籤</b>（維保異常／採購…）</td><td>一次只看一類。不同類別的判斷方式不同（維保要判「派給誰」、研發討論要判「這算不算任務」），分開看比較快。</td></tr>
+      <tr><td><b>存查</b></td><td>公告、已完成、已忽略的紀錄。不需要簽核，偶爾查一下就好，所以放在獨立的次頁而不是壓在看板下面。</td></tr>
+      <tr><td><b>待確認佇列</b></td><td>出現在看板上方。這些是 AI 把握程度「中」的紀錄，等你決定要不要變成正式任務。</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 data-w="desk">2.4　群組日誌：確認 AI 有沒有看到我的訊息</h3>
+  <p>
+    任務看板只放「該追的事」；<b>群組日誌放的是當天整理出的全部紀錄</b>，包含沒變成任務的。
+    如果有同仁問「我明明講了，怎麼沒看到？」，答案就在這一頁。
+  </p>
+  <ul>
+    <li>頂端一行摘要：<b>今日 8 群有活動 · 2 群需注意 · 共 34 筆</b></li>
+    <li>可切「近 7 天 / 近 30 天」</li>
+    <li>當天無活動的群會收在一起，點「展開」才顯示——避免一整排空白</li>
+    <li>右上角有<b>「立即分析」</b>：不想等 18:00 就按它，AI 會馬上掃當日訊息</li>
+  </ul>
+
+  <h3 data-w="desk">2.5　部門日報：看下屬今天做了什麼</h3>
+  <p>員工在 LINE 送出日報後，這裡就會出現。你只看得到<b>自己部門</b>的成員。</p>
+  <ul>
+    <li>一列一個人，點一列展開看內容（時間、事項、詳情、追蹤事項）</li>
+    <li>狀態欄分「已送出／草稿／未回報」，可以用上方的標籤篩選</li>
+    <li>「當日無內容」的預設隱藏，切到「未回報」才看得到有哪些人沒交</li>
+  </ul>
+  <div class="note n-info">
+    <b class="t">主管只看，不簽</b>
+    <p>個人日報<b>不需要主管簽核</b>。它是員工自己確認過才送出的，你負責看與追。</p>
+  </div>
+
+  <h3 data-w="desk">2.6　你的每天三分鐘</h3>
+  <div class="quick">
+    <h4>建議動線</h4>
+    <ul>
+      <li><b>第 1 分鐘</b><span>任務看板 → 按「只看卡住的」→ 有沒有該指派卻沒指派的？</span></li>
+      <li><b>第 2 分鐘</b><span>看「逾時警示」欄 → 逾越多天的先處理。</span></li>
+      <li><b>第 3 分鐘</b><span>「待簽核」欄由上往下掃 → 標了「信度中／低」的點開對照原文，其餘直接簽。</span></li>
+      <li><b>有空再看</b><span>部門日報（誰沒交）、群組日誌（AI 有沒有漏掉重要的事）。</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════ 第 3 章 · 總經理室 ═══════════════ -->
+<section id="c3" data-roles="gm it">
+  <div class="ch-head">
+    <div class="ch-num">3</div>
+    <div>
+      <h2>總經理室：管全公司</h2>
+      <div class="who">
+        給誰看：總經理室（系統裡的角色叫「總經理室」）· 約 15 分鐘 ·
+        <span class="where w-desk">電腦 · 後台網頁</span>
+        你看得到<b>整間公司</b>，也負責把組織設定好
+      </div>
+    </div>
+  </div>
+
+  <h3 data-w="desk">3.1　總覽儀表：三個圓環怎麼看</h3>
+
+  <figure>
+  <svg viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="總覽儀表的三個圓環：本日簽核率、部門健康度、AI 高信心比例，三者分母不同">
+    <style>
+      .t{font-family:'Noto Sans TC',sans-serif}
+      .gv{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:600}
+      .gl{font-size:14px;font-weight:900;fill:#16202B}
+      .gf{font-size:11.5px;fill:#6B7C8C}
+      .gx{font-size:11.5px;fill:#4A5A6A}
+    </style>
+    <rect width="1000" height="400" fill="#fff"/>
+    <text class="t" x="40" y="38" font-size="17" font-weight="900" fill="#16202B">總覽儀表</text>
+    <text class="t" x="40" y="58" font-size="11.5" fill="#8296A8">當前配置 6 個部門 · 每日 AI 分類結果匯總</text>
+
+    <!-- 環 1 -->
+    <g transform="translate(170,168)">
+      <circle r="58" fill="none" stroke="#EDF1F4" stroke-width="13"/>
+      <circle r="58" fill="none" stroke="#4F46E5" stroke-width="13" stroke-linecap="round"
+              stroke-dasharray="243 365" transform="rotate(-90)"/>
+      <text class="t gv" y="10" fill="#4F46E5" text-anchor="middle">67%</text>
+    </g>
+    <text class="t gl" x="170" y="256" text-anchor="middle">本日簽核率</text>
+    <text class="t gf" x="170" y="278" text-anchor="middle">4 / 6 個部門已簽</text>
+    <rect x="60" y="296" width="220" height="66" rx="8" fill="#F5F7F9"/>
+    <text class="t gx" x="76" y="318">分母是<tspan font-weight="900">部門數</tspan>。</text>
+    <text class="t gx" x="76" y="338">六個部門裡有四個部門的主管</text>
+    <text class="t gx" x="76" y="356">今天已經把待簽的都簽掉了。</text>
+
+    <!-- 環 2 -->
+    <g transform="translate(500,168)">
+      <circle r="58" fill="none" stroke="#EDF1F4" stroke-width="13"/>
+      <circle r="58" fill="none" stroke="#059669" stroke-width="13" stroke-linecap="round"
+              stroke-dasharray="304 365" transform="rotate(-90)"/>
+      <text class="t gv" y="10" fill="#059669" text-anchor="middle">83%</text>
+    </g>
+    <text class="t gl" x="500" y="256" text-anchor="middle">部門健康度</text>
+    <text class="t gf" x="500" y="278" text-anchor="middle">5 / 6 個部門綠燈</text>
+    <rect x="390" y="296" width="220" height="66" rx="8" fill="#F5F7F9"/>
+    <text class="t gx" x="406" y="318">分母也是<tspan font-weight="900">部門數</tspan>，</text>
+    <text class="t gx" x="406" y="338">但問的是不同的事：這個部門</text>
+    <text class="t gx" x="406" y="356">有沒有積壓、有沒有低信心待處理。</text>
+
+    <!-- 環 3 -->
+    <g transform="translate(830,168)">
+      <circle r="58" fill="none" stroke="#EDF1F4" stroke-width="13"/>
+      <circle r="58" fill="none" stroke="#D97706" stroke-width="13" stroke-linecap="round"
+              stroke-dasharray="102 365" transform="rotate(-90)"/>
+      <text class="t gv" y="10" fill="#D97706" text-anchor="middle">28%</text>
+    </g>
+    <text class="t gl" x="830" y="256" text-anchor="middle">AI 高信心比例</text>
+    <text class="t gf" x="830" y="278" text-anchor="middle">17 / 60 筆已標記</text>
+    <rect x="720" y="296" width="220" height="66" rx="8" fill="#FFF7EA" stroke="#F0D9AE"/>
+    <text class="t gx" x="736" y="318" fill="#8A5E14">分母是<tspan font-weight="900">紀錄筆數</tspan>，不是部門！</text>
+    <text class="t gx" x="736" y="338" fill="#8A5E14">所以這個數字<tspan font-weight="900">不能跟左邊兩個</tspan></text>
+    <text class="t gx" x="736" y="356" fill="#8A5E14"><tspan font-weight="900">互相比較</tspan>。28% 不代表「差」。</text>
+
+    <line x1="330" y1="110" x2="330" y2="366" stroke="#EDF1F4"/>
+    <line x1="660" y1="110" x2="660" y2="366" stroke="#EDF1F4"/>
+  </svg>
+  <figcaption><b>最容易誤會的地方：</b>三個環的分母不一樣。前兩個是「幾個部門」，第三個是「幾筆紀錄」。28% 的高信心比例是正常的——AI 刻意保守，把握不夠的不當成事實。</figcaption>
+  </figure>
+
+  <p>
+    儀表下方是<b>「負責人每日最終確認」</b>清單，一列一個部門。有待辦的那幾列會特別跳出來，
+    展開可以逐筆看、也可以整個部門一次簽掉。
+    <b>系統沒把握的那幾筆會被自動攔下來</b>，不會混在批次簽核裡跟著簽掉。
+  </p>
+
+  <h3 data-w="desk">3.2　開始之前：把組織設定好</h3>
+  <p>這四步有先後順序，跳過任何一步後面都會出問題。</p>
+
+  <figure>
+  <svg viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="設定四步驟：建部門、建部門主管、把 LINE 群組分派到部門、員工自行綁定">
+    <style>
+      .t{font-family:'Noto Sans TC',sans-serif}
+      .n{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:600;fill:#fff}
+      .h{font-size:14px;font-weight:900;fill:#16202B}
+      .s{font-size:11.5px;fill:#6B7C8C}
+      .w{font-size:10.5px;font-weight:700}
+    </style>
+    <rect width="1000" height="300" fill="#fff"/>
+    <line x1="118" y1="96" x2="882" y2="96" stroke="#DCE3E9" stroke-width="2"/>
+
+    <g><circle cx="118" cy="96" r="30" fill="#4F46E5"/><text class="t n" x="118" y="104" text-anchor="middle">1</text></g>
+    <text class="t h" x="118" y="158" text-anchor="middle">建立部門</text>
+    <text class="t s" x="118" y="180" text-anchor="middle">設定 → 部門/成員</text>
+    <text class="t s" x="118" y="198" text-anchor="middle">→ 部門配置 → ＋新增部門</text>
+    <text class="t s" x="118" y="222" text-anchor="middle" fill="#C2710A">部門名建議跟 LINE 群名對應</text>
+    <text class="t s" x="118" y="240" text-anchor="middle" fill="#C2710A">（群「○○—品保部」→ 部門「品保部」）</text>
+
+    <g><circle cx="373" cy="96" r="30" fill="#4F46E5"/><text class="t n" x="373" y="104" text-anchor="middle">2</text></g>
+    <text class="t h" x="373" y="158" text-anchor="middle">建立部門主管</text>
+    <text class="t s" x="373" y="180" text-anchor="middle">同一頁切「成員」→ ＋新增成員</text>
+    <text class="t s" x="373" y="198" text-anchor="middle">角色選「部門主管」、指定所屬部門</text>
+    <text class="t s" x="373" y="222" text-anchor="middle" fill="#C2710A">角色下拉只會有「部門主管」</text>
+    <text class="t s" x="373" y="240" text-anchor="middle" fill="#C2710A">要再開一個總經理室級帳號請找 aiproot</text>
+
+    <g><circle cx="628" cy="96" r="30" fill="#4F46E5"/><text class="t n" x="628" y="104" text-anchor="middle">3</text></g>
+    <text class="t h" x="628" y="158" text-anchor="middle">把 LINE 群組分派到部門</text>
+    <text class="t s" x="628" y="180" text-anchor="middle">設定 → 通訊管道 → LINE 群組</text>
+    <text class="t s" x="628" y="198" text-anchor="middle">每一群選一個部門</text>
+    <text class="t s" x="628" y="222" text-anchor="middle" fill="#DC2743">沒分派的群，分析結果會被丟掉</text>
+    <text class="t s" x="628" y="240" text-anchor="middle" fill="#DC2743">（系統不知道該放進誰的看板）</text>
+
+    <g><circle cx="882" cy="96" r="30" fill="#06C755"/><text class="t n" x="882" y="104" text-anchor="middle">4</text></g>
+    <text class="t h" x="882" y="158" text-anchor="middle">員工自己綁定</text>
+    <text class="t s" x="882" y="180" text-anchor="middle">員工加機器人好友 → 點按鈕綁定</text>
+    <text class="t s" x="882" y="198" text-anchor="middle">系統依最活躍的群自動歸部門</text>
+    <text class="t s" x="882" y="222" text-anchor="middle" fill="#04913E">不需要你一個一個建帳號</text>
+    <text class="t s" x="882" y="240" text-anchor="middle" fill="#04913E">歸錯了你可以在成員頁改</text>
+
+    <rect x="60" y="34" width="880" height="30" rx="8" fill="#F5F7F9"/>
+    <text class="t" x="80" y="54" font-size="12" fill="#4A5A6A"><tspan font-weight="900">順序不能顛倒：</tspan>沒有部門就沒得指定主管；群組沒分派部門，AI 分析出來的東西沒有去處；員工綁定要有群組資料才推導得出部門。</text>
+  </svg>
+  <figcaption>第 1～3 步你自己做，第 4 步是員工做的。加 LINE 機器人進群組這件事由 aiproot 協助完成。</figcaption>
+  </figure>
+
+  <h3 data-w="desk">3.3　部門 / 成員</h3>
+  <p>這一頁有三個分頁：<b>部門配置</b>、<b>成員</b>、<b>組織圖</b>。</p>
+
+  <h4>你可以自己做的</h4>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:30%">動作</th><th>說明</th></tr></thead>
+    <tbody>
+      <tr><td>新增 / 編輯 / 刪除部門</td><td>建議 5–10 個，對應實際組織。</td></tr>
+      <tr><td>新增部門主管</td><td>填 email、顯示名、所屬部門、初始密碼（6 字元以上）。對方首次登入會被要求改密碼。</td></tr>
+      <tr><td><b>調整成員的所屬部門</b></td><td>員工綁定時系統會自動推導部門；推導錯了在這裡改。<b>你手動改過的，之後自動推導不會再覆蓋掉。</b></td></tr>
+      <tr><td>調整成員角色</td><td>只能在「員工 ↔ 部門主管」之間切換。</td></tr>
+      <tr><td>刪除成員</td><td>只能刪員工與部門主管。</td></tr>
+      <tr><td>看組織圖</td><td>公司 → 總經理室 → 部門 → 成員的四層關係圖。</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h4>要找 aiproot 的</h4>
+  <div class="note n-warn">
+    <b class="t">這幾件事故意不開放給客戶端自己做</b>
+    <p>
+      · <b>新增另一位「總經理室」級帳號</b>——避免公司內部互相開權限，統一由 aiproot 開並留下紀錄。打通電話約 3 分鐘就好。<br>
+      · <b>重設別人的密碼、解鎖被鎖住的帳號、改別人的 email</b>——屬於敏感操作。<br>
+      · <b>刪除 LINE 機器人、改語言模型設定</b>——平台層設定。
+    </p>
+  </div>
+
+  <h3 data-w="desk">3.4　通訊管道：LINE 群組要分派部門</h3>
+  <p>
+    <b>這是最常見的設定漏洞。</b>一個群組如果沒有指定所屬部門，
+    AI 分析出來的紀錄系統不知道該放進誰的看板，<b>會直接跳過</b>。
+  </p>
+  <div class="steps" data-w="desk">
+    <div class="step">
+      <h5>設定 → 通訊管道 → LINE 群組</h5>
+      <p>清單上方會直接告訴你<b>「N 群未分派部門」</b>。</p>
+    </div>
+    <div class="step">
+      <h5>逐群在「所屬部門」下拉選一個部門</h5>
+      <p>閒聊群不用分派，只分派你要 AI 分析的工作群就好。</p>
+    </div>
+    <div class="step">
+      <h5>確認「AI 分析」開關</h5>
+      <p>每一群可以獨立開關。測試群、閒聊群建議關掉，省成本也避免雜訊。</p>
+      <div class="expect"><b>改完之後</b>之後的分析就會歸到正確部門。<b>先前被跳過的那幾天要請 aiproot 重新分析才補得回來。</b></div>
+    </div>
+  </div>
+  <p>同一頁的<b>「員工綁定」</b>分頁可以查誰綁了、誰還沒綁。<b>還沒綁定的人，系統認不出他是誰</b>——他的日報出不來、任務也指派不到他。</p>
+
+  <h3 data-w="desk">3.5　任務設定與自動化</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:24%">頁面</th><th>你可以調什麼</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>任務設定</b></td>
+        <td>任務分類的管理、以及「多久沒動作算卡住」「什麼時候提醒」這類節奏設定。<br>
+            <span style="color:var(--ink-3)">把握程度的門檻<b>不開放調整</b>——那是系統的品質底線，開放會讓不同部門的標準漂移。</span></td>
+      </tr>
+      <tr>
+        <td><b>自動化</b><br><span style="font-size:12px;color:var(--ink-3)">（原本叫「定時任務」）</span></td>
+        <td>調整每天自動整理的時間。有兩條排程：<br>
+            · <b>群組日誌 · 每日整理</b>（預設 18:00）<br>
+            · <b>個人日報 · 每日整理</b><br>
+            可以設定「訊息數少於 N 則就不觸發」來控制成本。<br>
+            <span style="color:var(--danger)">停用會讓下游的主管 LINE 通知一起斷掉，關閉前會跳出提醒。</span></td>
+      </tr>
+      <tr><td><b>稽核記錄</b></td><td>誰在什麼時候做了什麼（登入、簽核、改設定、看檔案）都有紀錄。發生爭議時查這裡。</td></tr>
+      <tr><td><b>資料來源</b></td><td>客戶名冊等主檔的來源設定。名冊愈完整，AI 認人、認客戶就愈準。</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 data-w="desk">3.6　素材看板</h3>
+  <p>
+    群組裡傳過的照片、單據、影片都在這裡，可依類型篩選、點開看原圖、分頁瀏覽。
+    誤傳的可以刪除，<b>30 天內都能在「已刪除」裡還原</b>。
+  </p>
+  <div class="note n-info">
+    <b class="t">刪除的界線</b>
+    <p>在這裡刪除只會移除<b>系統裡的副本</b>；<b>LINE 群組裡的那則訊息仍然存在</b>。而且系統會留下「這個檔案被誰在何時清除」的紀錄。</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 第 4 章 · 助理 ═══════════════ -->
+<section id="c4" data-roles="asst it">
+  <div class="ch-head">
+    <div class="ch-num">4</div>
+    <div>
+      <h2>助理：設定 Ragic 表單異動通知</h2>
+      <div class="who">
+        給誰看：負責通知設定的助理 · 約 8 分鐘 ·
+        <span class="where w-desk">電腦 · 後台網頁</span>
+        這是一個獨立的功能，跟前面的 AI 分析沒有關係
+      </div>
+    </div>
+  </div>
+
+  <h3 data-w="desk">4.1　一條規則在做什麼</h3>
+  <p>用一句話說：<b>「Ragic 上的某張表單有人改了 → 就發一則訊息到某個 LINE 群組」。</b></p>
+
+  <figure>
+  <svg viewBox="0 0 1000 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="通知規則的四個組成：來源表單、觸發條件、要顯示的欄位、通知對象">
+    <defs><marker id="ar2" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto"><path d="M0 1 L8 4.5 L0 8 z" fill="#4F46E5"/></marker></defs>
+    <style>
+      .t{font-family:'Noto Sans TC',sans-serif}
+      .h{font-size:13px;font-weight:900;fill:#16202B}
+      .s{font-size:11.5px;fill:#6B7C8C}
+      .p{font-size:10.5px;font-weight:700;fill:#3730A3;letter-spacing:.1em}
+    </style>
+    <rect width="1000" height="240" fill="#fff"/>
+
+    <rect x="30" y="60" width="200" height="112" rx="10" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t p" x="46" y="84">來源</text>
+    <text class="t h" x="46" y="108">哪張 Ragic 表單</text>
+    <text class="t s" x="46" y="130">例：中部維修保養單</text>
+    <text class="t s" x="46" y="150">要先有 Ragic 帳號的 API 金鑰</text>
+
+    <rect x="266" y="60" width="200" height="112" rx="10" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t p" x="282" y="84">條件</text>
+    <text class="t h" x="282" y="108">什麼樣的異動要通知</text>
+    <text class="t s" x="282" y="130">新增一筆 / 修改 / 特定欄位變動</text>
+    <text class="t s" x="282" y="150">勾選即可，不用寫程式</text>
+
+    <rect x="502" y="60" width="200" height="112" rx="10" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t p" x="518" y="84">內容</text>
+    <text class="t h" x="518" y="108">訊息裡要放哪些欄位</text>
+    <text class="t s" x="518" y="130">系統自動列出該表單的欄位</text>
+    <text class="t s" x="518" y="150">勾要顯示的，順序可調</text>
+
+    <rect x="738" y="60" width="200" height="112" rx="10" fill="#E7FAEF" stroke="#A9E8C4"/>
+    <text class="t p" x="754" y="84" fill="#04913E">對象</text>
+    <text class="t h" x="754" y="108">通知誰</text>
+    <text class="t s" x="754" y="130">某個 LINE 群組，或某個人</text>
+    <text class="t s" x="754" y="150">群組 ID 要由技術端提供</text>
+
+    <line x1="234" y1="116" x2="262" y2="116" stroke="#4F46E5" stroke-width="2" marker-end="url(#ar2)"/>
+    <line x1="470" y1="116" x2="498" y2="116" stroke="#4F46E5" stroke-width="2" marker-end="url(#ar2)"/>
+    <line x1="706" y1="116" x2="734" y2="116" stroke="#4F46E5" stroke-width="2" marker-end="url(#ar2)"/>
+
+    <text class="t" x="30" y="36" font-size="13" font-weight="900" fill="#16202B">設定精靈就是照這四步走，一步一張卡</text>
+    <rect x="30" y="192" width="908" height="34" rx="8" fill="#FFF7EA" stroke="#F0D9AE"/>
+    <text class="t" x="48" y="214" font-size="12" fill="#8A5E14"><tspan font-weight="900">最容易卡住的一步：</tspan>LINE 群組 ID 沒辦法自己在 LINE 裡查到，必須請技術端提供（或用「群組 ID 小幫手」機器人取得）。設定前先把它要到手。</text>
+  </svg>
+  <figcaption>設定完成後，系統會給你一段網址，要回到 Ragic 那邊貼上去，兩邊才接得起來。這一步請照 aiproot 提供的〈Ragic → LINE 通知設定手冊〉操作。</figcaption>
+  </figure>
+
+  <h3 data-w="desk">4.2　設定完之後怎麼驗證</h3>
+  <div class="steps" data-w="desk">
+    <div class="step">
+      <h5>到 Ragic 上真的改一筆資料</h5>
+      <p>改一筆你剛剛設定的那張表單的紀錄，隨便改一個欄位存檔。</p>
+      <div class="expect"><b>應該看到</b>幾秒內，指定的 LINE 群組收到一則格式化訊息，最下面附 Ragic 該筆紀錄的連結，點得進去。</div>
+    </div>
+    <div class="step">
+      <h5>沒收到？照這個順序查</h5>
+      <p>① 後台「通知設定 → 紀錄」有沒有這一筆？<br>
+         　<b>有紀錄但沒收到</b> → 群組 ID 錯了，或機器人不在那個群裡。<br>
+         　<b>連紀錄都沒有</b> → Ragic 那邊的網址沒貼好，或表單設定沒生效。<br>
+         ② Ragic 的設定<b>存檔後不會立刻生效，要登出再重新登入</b>一次。這是 Ragic 本身的行為。</p>
+    </div>
+    <div class="step">
+      <h5>之後要修改規則</h5>
+      <p>回到同一頁編輯即可。改欄位、改對象都不用重貼網址；<b>只有換表單才要重來一次</b>。</p>
+    </div>
+  </div>
+  <div class="note n-info">
+    <b class="t">你的權限範圍</b>
+    <p>助理這個角色<b>只有通知設定</b>這一項功能，看不到任務看板、部門日報、成員管理。這是刻意設計的——職責單純，也不會誤動到別的設定。</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 第 5 章 · 資訊窗口 ═══════════════ -->
+<section id="c5" data-roles="it">
+  <div class="ch-head">
+    <div class="ch-num">5</div>
+    <div>
+      <h2>資訊窗口：導入與日常巡檢</h2>
+      <div class="who">
+        給誰看：公司資訊窗口 / 專案負責人 · 約 10 分鐘 ·
+        <span class="where w-desk">電腦 · 後台網頁</span>
+        建議你<b>比所有人先走一次全流程</b>，別讓總經理和員工先踩到問題
+      </div>
+    </div>
+  </div>
+
+  <h3 data-w="desk">5.1　導入節奏建議</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:16%">階段</th><th style="width:22%">範圍</th><th>做什麼</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>階段 A</b><br>小範圍測試</td><td>1–2 個群組<br>3–5 位同仁</td>
+        <td>建部門 → 建 1 位主管 → 分派 1 個群組 → 找 3 位同仁綁定並私訊幾則 → 手動觸發分析 → 確認任務看板真的出東西。<br>
+            <b>先確認整條路走得通，再擴大。</b></td>
+      </tr>
+      <tr>
+        <td><b>階段 B</b><br>全員導入</td><td>全部工作群<br>全體同仁</td>
+        <td>把所有工作群分派完部門 → 在各群公告綁定方式 → 追綁定率（通訊管道 → 員工綁定）→ 兩週後檢視使用狀況。</td>
+      </tr>
+      <tr>
+        <td><b>階段 C</b><br>調校</td><td>—</td>
+        <td>檢視抽取品質、調整自動整理時間、決定是否關掉低價值群組的分析。</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note n-warn">
+    <b class="t">導入期最該盯的一個數字：綁定率</b>
+    <p>
+      沒綁定的同仁，系統認不出是誰。後果是連鎖的——<b>他的日報出不來、任務指派不到他、AI 抽到的人名對不上帳號</b>（看板上會顯示「待認領」）。
+      綁定率上不去，其他功能的價值全部打折。這不是技術問題，是推動問題。
+    </p>
+  </div>
+
+  <h3 data-w="desk">5.2　系統健康：四個分頁</h3>
+  <p>側邊欄「平台 → 系統健康」（需要相對應權限，通常由 aiproot 或顧問查看）。這四頁互相解釋，所以放在同一個地方。</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:22%">分頁</th><th>回答什麼問題</th></tr></thead>
+    <tbody>
+      <tr><td><b>抽取健康度</b></td><td>各欄位的填出率。例如「對口是誰」填出 72%、「機台編號」只有 7%——<b>填出率長期偏低通常代表抽取欄位跟貴公司的實際回報格式不合</b>，該調整欄位而不是責怪 AI。</td></tr>
+      <tr><td><b>任務完成追蹤</b></td><td>任務有沒有真的被指派、被回報完成。長期是 0 代表流程沒跑起來。</td></tr>
+      <tr><td><b>對話分析歷程</b></td><td>每一批分析跑了沒、有沒有失敗、可以重跑。</td></tr>
+      <tr><td><b>AI 成本</b></td><td>每天花多少。確認在預算內。</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 data-w="desk">5.3　你的月度自檢清單</h3>
+  <ul>
+    <li>☐ 通訊管道 → LINE 群組：<b>有沒有新的群沒分派部門</b>（頁面上方會直接顯示未分派數）</li>
+    <li>☐ 通訊管道 → 員工綁定：<b>新報到的同仁綁定了嗎</b></li>
+    <li>☐ 部門/成員：<b>離職的同仁刪掉了嗎、調部門的改了嗎</b></li>
+    <li>☐ 系統健康 → AI 成本：在預算內嗎</li>
+    <li>☐ 稽核記錄：有沒有異常的存取</li>
+    <li>☐ LINE 機器人的憑證是否即將到期（此項請 aiproot 協助確認）</li>
+  </ul>
+
+  <h3 data-w="desk">5.4　什麼時候該找 aiproot</h3>
+  <div class="two">
+    <div class="card">
+      <h4 style="margin-top:0;color:var(--ok)">你自己就能處理</h4>
+      <ul style="margin-bottom:0">
+        <li>群組沒分派部門</li>
+        <li>成員歸錯部門、要調角色</li>
+        <li>要新增部門主管</li>
+        <li>要調整每天自動整理的時間</li>
+        <li>要關掉某個群的 AI 分析</li>
+        <li>誤傳的檔案要刪除</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0;color:var(--danger)">請聯繫 aiproot</h4>
+      <ul style="margin-bottom:0">
+        <li>畫面白屏、一直轉圈、出現英文錯誤訊息</li>
+        <li>綁定顯示「400 developer role」</li>
+        <li>要新增總經理室級帳號</li>
+        <li>要幫人重設密碼、解鎖帳號</li>
+        <li>機器人要加入新的 LINE 群組</li>
+        <li>要補跑過去某幾天的分析</li>
+        <li>要調整 AI 抽取的欄位（例如改成貴公司的服務工單格式）</li>
+      </ul>
+    </div>
+  </div>
+  <p style="font-size:14px;color:var(--ink-3)">
+    回報問題時請附上：<b>①</b> 問題畫面截圖　<b>②</b> 你點了什麼、期待看到什麼、實際看到什麼　<b>③</b> 大概發生時間。
+    這三樣齊全，處理速度會差很多。
+  </p>
+</section>
+
+<!-- ═══════════════ 第 6 章 · 名詞表 ═══════════════ -->
+<section id="c6" data-roles="emp mgr gm asst it">
+  <div class="ch-head">
+    <div class="ch-num">6</div>
+    <div>
+      <h2>名詞對照表</h2>
+      <div class="who">開會時大家講的是不是同一件事，看這裡</div>
+    </div>
+  </div>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:20%">名詞</th><th style="width:44%">白話解釋</th><th>常見誤會</th></tr></thead>
+    <tbody>
+      <tr><td><b>任務卡</b></td><td>AI 從對話裡整理出的一件「需要有人跟的事」，顯示在任務看板上。</td><td>不是每一筆紀錄都會變任務卡。</td></tr>
+      <tr><td><b>簽核</b></td><td>主管確認「AI 這一張抽對了」。</td><td class="warn" style="color:var(--warn)"><b>不是</b>「這件事做完了」。</td></tr>
+      <tr><td><b>完成回報</b></td><td>負責人本人在 LINE 私訊裡回「好了」。</td><td>系統不會自己判斷完成，只認本人回報。</td></tr>
+      <tr><td><b>把握程度<br>（信度）</b></td><td>AI 對這一筆抽得準不準，分高／中／低三級。</td><td>沒有可調的分數門檻，也不是準確率。</td></tr>
+      <tr><td><b>群組日誌</b></td><td>某個 LINE 群當天整理出的<b>全部</b>紀錄。</td><td>比任務看板多，因為含沒變任務的。</td></tr>
+      <tr><td><b>個人日報</b></td><td>員工私訊機器人的內容，由 AI 整理、<b>本人確認後</b>送給主管。</td><td>沒按送出，主管看不到。</td></tr>
+      <tr><td><b>綁定</b></td><td>把「LINE 上的這個人」對應到「公司裡的這位同仁」。</td><td>一輩子做一次；換手機要重綁。</td></tr>
+      <tr><td><b>待認領</b></td><td>AI 抽到了人名，但對不到系統帳號（多半是還沒綁定）。</td><td>需要主管手動指派才有著落。</td></tr>
+      <tr><td><b>卡住 N 天</b></td><td>這張卡超過寬限期沒人認領，或認領了一直沒回報。</td><td>跟「逾時」不同：逾時是過了截止日。</td></tr>
+      <tr><td><b>存查</b></td><td>公告、已完成、已忽略的紀錄，不需簽核。</td><td>不是垃圾桶，是可查詢的歸檔。</td></tr>
+      <tr><td><b>素材</b></td><td>群組裡傳過的照片、檔案、影片。</td><td>有存下來看得到，但 AI 不讀裡面的內容。</td></tr>
+      <tr><td><b>LIFF</b></td><td>在 LINE App<b>裡面</b>打開的小網頁。</td><td>不會跳到 Chrome／Safari。跳出去就是設定有問題。</td></tr>
+      <tr><td><b>租戶</b></td><td>系統裡的一間公司。</td><td>不同公司的資料完全隔離。</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 第 7 章 · 疑難排解 ═══════════════ -->
+<section id="c7" data-roles="emp mgr gm asst it">
+  <div class="ch-head">
+    <div class="ch-num">7</div>
+    <div>
+      <h2>疑難排解</h2>
+      <div class="who">先照這張圖判斷，再看下面的對照表</div>
+    </div>
+  </div>
+
+  <figure>
+  <svg viewBox="0 0 1000 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="疑難排解決策樹：任務看板空的、日報出不來、通知沒收到三條路徑">
+    <defs><marker id="ar3" markerWidth="8" markerHeight="8" refX="6.8" refY="4" orient="auto"><path d="M0 1 L7 4 L0 7 z" fill="#8296A8"/></marker></defs>
+    <style>
+      .t{font-family:'Noto Sans TC',sans-serif}
+      .q{font-size:12.5px;font-weight:900;fill:#16202B}
+      .a{font-size:11.5px;fill:#4A5A6A}
+      .yn{font-size:10.5px;font-weight:900;fill:#8296A8}
+    </style>
+    <rect width="1000" height="470" fill="#fff"/>
+
+    <rect x="30" y="30" width="200" height="52" rx="10" fill="#0F1922"/>
+    <text class="t" x="130" y="53" font-size="13" fill="#fff" text-anchor="middle" font-weight="900">看板上沒有任何任務</text>
+    <text class="t" x="130" y="71" font-size="11" fill="#9FE8C0" text-anchor="middle">最常見的三個原因</text>
+
+    <path d="M130 86 L 130 118 L 300 118" stroke="#8296A8" stroke-width="1.6" fill="none" marker-end="url(#ar3)"/>
+    <path d="M130 118 L 130 226 L 300 226" stroke="#8296A8" stroke-width="1.6" fill="none" marker-end="url(#ar3)"/>
+    <path d="M130 226 L 130 334 L 300 334" stroke="#8296A8" stroke-width="1.6" fill="none" marker-end="url(#ar3)"/>
+
+    <rect x="308" y="96" width="250" height="70" rx="9" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t q" x="324" y="120">① 今天過 18:00 了嗎？</text>
+    <text class="t a" x="324" y="140">還沒到自動整理時間，當然是空的。</text>
+    <text class="t a" x="324" y="158">等不及就到「群組日誌」按「立即分析」。</text>
+
+    <rect x="308" y="204" width="250" height="70" rx="9" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t q" x="324" y="228">② 群組分派部門了嗎？</text>
+    <text class="t a" x="324" y="248">沒分派的群，分析結果會被跳過。</text>
+    <text class="t a" x="324" y="266">到「通訊管道 → LINE 群組」查未分派數。</text>
+
+    <rect x="308" y="312" width="250" height="70" rx="9" fill="#fff" stroke="#DCE3E9"/>
+    <text class="t q" x="324" y="336">③ 對話內容夠明確嗎？</text>
+    <text class="t a" x="324" y="356">全是問候、貼圖、照片的話抽不出東西。</text>
+    <text class="t a" x="324" y="374">到「群組日誌」看該群當天有沒有紀錄。</text>
+
+    <path d="M566 131 L 610 131" stroke="#8296A8" stroke-width="1.6" marker-end="url(#ar3)"/>
+    <path d="M566 239 L 610 239" stroke="#8296A8" stroke-width="1.6" marker-end="url(#ar3)"/>
+    <path d="M566 347 L 610 347" stroke="#8296A8" stroke-width="1.6" marker-end="url(#ar3)"/>
+
+    <rect x="618" y="106" width="180" height="50" rx="9" fill="#E7FAEF" stroke="#A9E8C4"/>
+    <text class="t" x="708" y="128" font-size="12" fill="#04913E" text-anchor="middle" font-weight="900">自己就能解決</text>
+    <text class="t" x="708" y="146" font-size="11" fill="#2F5C42" text-anchor="middle">按一下即可</text>
+
+    <rect x="618" y="214" width="180" height="50" rx="9" fill="#E7FAEF" stroke="#A9E8C4"/>
+    <text class="t" x="708" y="236" font-size="12" fill="#04913E" text-anchor="middle" font-weight="900">總經理室可自行處理</text>
+    <text class="t" x="708" y="254" font-size="11" fill="#2F5C42" text-anchor="middle">分派完要請 aiproot 補跑</text>
+
+    <rect x="618" y="322" width="180" height="50" rx="9" fill="#FFF7EA" stroke="#F0D9AE"/>
+    <text class="t" x="708" y="344" font-size="12" fill="#C2710A" text-anchor="middle" font-weight="900">這是正常的</text>
+    <text class="t" x="708" y="362" font-size="11" fill="#8A5E14" text-anchor="middle">系統寧可少給，不給錯的</text>
+
+    <rect x="828" y="96" width="142" height="286" rx="10" fill="#F5F7F9" stroke="#DCE3E9"/>
+    <text class="t" x="844" y="122" font-size="12" font-weight="900" fill="#16202B">三個都排除了？</text>
+    <text class="t a" x="844" y="146">截圖 + 說明步驟</text>
+    <text class="t a" x="844" y="166">聯繫 aiproot。</text>
+    <line x1="844" y1="182" x2="954" y2="182" stroke="#DCE3E9"/>
+    <text class="t" x="844" y="206" font-size="12" font-weight="900" fill="#16202B">同樣的三問也適用</text>
+    <text class="t a" x="844" y="230">日報出不來 →</text>
+    <text class="t a" x="844" y="248">綁定了嗎 / 有私訊嗎 /</text>
+    <text class="t a" x="844" y="266">按過「重新生成」嗎</text>
+    <text class="t a" x="844" y="296">通知沒收到 →</text>
+    <text class="t a" x="844" y="314">對方綁定了嗎 /</text>
+    <text class="t a" x="844" y="332">機器人在那個群嗎 /</text>
+    <text class="t a" x="844" y="350">後台有沒有通知紀錄</text>
+
+    <rect x="30" y="404" width="940" height="42" rx="8" fill="#EDEDFD" stroke="#C7C6FA"/>
+    <text class="t" x="50" y="422" font-size="12" fill="#3730A3" font-weight="900">通用判斷法</text>
+    <text class="t" x="50" y="440" font-size="12" fill="#3730A3">先問「資料進來了嗎」→ 再問「設定對了嗎」→ 最後才問「AI 抽到了嗎」。八成的問題停在前兩問。</text>
+  </svg>
+  </figure>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:26%">症狀</th><th style="width:30%">最可能的原因</th><th>怎麼處理</th></tr></thead>
+    <tbody>
+      <tr><td>登入顯示帳號或密碼錯誤</td><td>密碼打錯，或連錯 5 次被鎖 10 分鐘</td><td>等 10 分鐘再試；要重設密碼請找 aiproot</td></tr>
+      <tr><td>登入後畫面白屏</td><td>系統端問題</td><td>截圖聯繫 aiproot，不要重複重整</td></tr>
+      <tr><td>側邊欄少了某一項</td><td>你的角色沒有那個權限</td><td>這是正常的。需要的話請總經理室或 aiproot 調整</td></tr>
+      <tr><td>選單項目旁有灰色小字「原：○○」</td><td>那一項改過名字</td><td>點一次就不再顯示。功能沒有被拿掉</td></tr>
+      <tr><td>加機器人好友沒收到訊息</td><td>不確定是否真的加成好友，或系統端未連線</td><td>先確認聊天室清單裡有它；沒有就重加。仍無反應找 aiproot</td></tr>
+      <tr><td>綁定顯示「缺 botId 參數」</td><td>直接開網址進入，沒走機器人的按鈕</td><td>回 LINE 點機器人推的按鈕</td></tr>
+      <tr><td>綁定顯示「400 developer role」</td><td>系統端設定未開放</td><td>聯繫 aiproot</td></tr>
+      <tr><td>綁定頁跳到 Chrome / Safari</td><td>LIFF 設定問題</td><td>聯繫 aiproot</td></tr>
+      <tr><td>打「日報」機器人沒反應</td><td>尚未綁定，或字打錯</td><td>先傳一則普通文字測試；回綁定提示就是還沒綁</td></tr>
+      <tr><td>日報是空的</td><td>當天沒私訊，或只傳了貼圖／照片</td><td>先私訊幾則文字，再打「日報」</td></tr>
+      <tr><td>日報上方顯示「AI 尚未整理」</td><td>還沒到自動整理時間</td><td>按「重新生成」，5–10 秒即可</td></tr>
+      <tr><td>員工送了日報，主管沒收到通知</td><td>主管自己還沒綁定 LINE</td><td>主管走一次綁定流程</td></tr>
+      <tr><td>任務卡顯示「待認領」</td><td>AI 抽到人名但對不到帳號（多半沒綁定）</td><td>主管手動指派；同時推動該同仁綁定</td></tr>
+      <tr><td>打卡里程顯示 0.0 km</td><td>兩次打卡在同一個地方，中間沒移動</td><td>正常。畫面會標「原地打卡」</td></tr>
+      <tr><td>打卡顯示「里程計算中」</td><td>地圖服務金鑰尚未設定</td><td>聯繫 aiproot 設定，之後的新打卡才會算</td></tr>
+      <tr><td>打卡說定位權限被拒</td><td>手機沒允許 LINE 使用定位</td><td>手機設定 → 允許 LINE 定位 → 重試</td></tr>
+      <tr><td>Ragic 通知沒發出</td><td>Ragic 設定存檔後未重新登入；或群組 ID 錯誤</td><td>Ragic 登出再登入；核對群組 ID；查後台通知紀錄</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 第 8 章 · 權限 ═══════════════ -->
+<section id="c8" data-roles="mgr gm it">
+  <div class="ch-head">
+    <div class="ch-num">8</div>
+    <div>
+      <h2>誰看得到什麼</h2>
+      <div class="who">資料範圍與權限說明 · 同仁問起隱私問題時可以直接引用這一章</div>
+    </div>
+  </div>
+
+  <h3>8.1　五種角色</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:16%">角色</th><th style="width:16%">誰在用</th><th style="width:20%">看得到哪些資料</th><th>一句話</th></tr></thead>
+    <tbody>
+      <tr><td><b>總經理室</b></td><td>公司高層</td><td><b>整間公司</b></td><td>管自己公司的部門、成員、看全公司戰情室</td></tr>
+      <tr><td><b>部門主管</b></td><td>各部門主管</td><td><b>只有自己部門</b></td><td>看／簽自己部門的任務，看部門日報</td></tr>
+      <tr><td><b>助理</b></td><td>負責通知設定的助理</td><td>只有通知設定</td><td>職責單純，碰不到其他功能</td></tr>
+      <tr><td><b>員工</b></td><td>全體同仁</td><td><b>只有自己</b></td><td>看／送自己的日報與行程</td></tr>
+      <tr><td><b>AIPROOT 管理員<br>／顧問</b></td><td>系統供應商</td><td>依合約範圍</td><td>開通、維運、技術支援；所有存取都留稽核紀錄</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>8.2　常見隱私問題的標準回答</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:32%">同仁會問</th><th>可以這樣回答</th></tr></thead>
+    <tbody>
+      <tr><td>「我的私訊誰看得到？」</td><td>私訊內容用來產生<b>你自己的日報</b>。日報要<b>你按下送出</b>之後，你的部門主管與總經理室才看得到。沒送出就只有你自己看得到。</td></tr>
+      <tr><td>「群組對話會被誰看？」</td><td>被納入分析的群組是<b>公司工作群</b>，可以請主管在後台把清單調出來給大家看。分析出來的紀錄，部門主管只看得到自己部門的。</td></tr>
+      <tr><td>「主管看得到別部門嗎？」</td><td>看不到。系統在資料層就限制住了，不是靠介面隱藏。</td></tr>
+      <tr><td>「打卡是在監控我嗎？」</td><td>打卡記錄的是<b>你自己按下按鈕的那一刻</b>的位置，不是持續追蹤。沒按就沒有紀錄。你的月統計只有你自己看得到。</td></tr>
+      <tr><td>「AI 會不會亂寫我的事？」</td><td>每一筆紀錄都記著出自哪幾則訊息，隨時可以點開對照原文。抽不確定的它會標「信度中／低」，主管必須看過原文才簽。</td></tr>
+      <tr><td>「誰動過我的資料查得到嗎？」</td><td>查得到。所有寫入操作與檔案存取都會留下「誰、什麼時候、做了什麼」的稽核紀錄。</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note n-ok">
+    <b class="t">系統層面的三道保護</b>
+    <p>
+      <b>①</b> 不同公司的資料完全隔離。<br>
+      <b>②</b> 部門主管的資料範圍限制寫在資料庫層，介面繞不過去。<br>
+      <b>③</b> 所有寫入與檔案存取都有稽核紀錄，含操作者、時間、對象、結果。
+    </p>
+  </div>
+</section>
+
+<footer>
+  <p style="max-width:none">
+    <b style="color:var(--ink)">LINE AI 戰情室 · 全員使用手冊 v1.0</b><br>
+    本手冊依系統實際程式碼與畫面撰寫。系統持續更新，若畫面與本手冊不符，以實際畫面為準，並請告知資訊窗口更新本文件。<br>
+    技術支援：aiproot 交付團隊　·　公司內部窗口：請填寫 ______________
+  </p>
+</footer>
+
+</main>
+</div>
+
+<script>
+(function(){
+  // ── 角色篩選：本手冊的招牌互動 ──────────────────────
+  var btns = document.querySelectorAll('.rolebar button');
+  var secs = document.querySelectorAll('section[data-roles]');
+  var links = document.querySelectorAll('.toc a[data-roles]');
+  var active = null;
+
+  function apply(role){
+    if(role === null){
+      document.body.classList.remove('filtering');
+      secs.forEach(function(s){ s.classList.remove('match'); });
+      links.forEach(function(a){ a.classList.remove('match'); });
+      return;
+    }
+    document.body.classList.add('filtering');
+    secs.forEach(function(s){
+      s.classList.toggle('match', s.dataset.roles.split(' ').indexOf(role) > -1);
+    });
+    links.forEach(function(a){
+      a.classList.toggle('match', a.dataset.roles.split(' ').indexOf(role) > -1);
+    });
+  }
+
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      var role = b.dataset.role;
+      if(active === role){ active = null; } else { active = role; }
+      btns.forEach(function(x){ x.classList.toggle('on', x.dataset.role === active); });
+      apply(active);
+    });
+  });
+
+  // ── 目錄跟隨捲動 ────────────────────────────────────
+  var tocLinks = Array.prototype.slice.call(document.querySelectorAll('.toc a[href^="#"]'));
+  var targets = tocLinks.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(!e.isIntersecting) return;
+      var i = targets.indexOf(e.target);
+      if(i < 0) return;
+      tocLinks.forEach(function(a){ a.classList.remove('on'); });
+      tocLinks[i].classList.add('on');
+    });
+  }, { rootMargin: '-10% 0px -75% 0px' });
+  targets.forEach(function(t){ if(t) io.observe(t); });
+})();
+</script>
+</body>
+</html>

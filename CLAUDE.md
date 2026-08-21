@@ -199,6 +199,7 @@ Solo dev 不走 PR ceremony（見 memory `feedback_no_pr_workflow.md`）；上�
 | Ragic HTTP API 手冊（離線查閱） | `docs/ragic-http-api-手冊.md` |
 | Ragic → LINE 通知 · 操作流程手冊（v1 手貼 JS） | `docs/sop/notify-ragic-line-操作流程.md` |
 | 通知設定（自助 v2）· UI 使用指南 | `docs/sop/notify-selfserve-使用指南.md` |
+| **全員使用手冊**（給客戶的人看 · 5 種角色）| `web/public/handbook.html` → 公開網址 `/handbook.html` |
 | 開發工時（投入成本估算）| `docs/開發工時.md` · 重算 `python3 scripts/effort-report.py` |
 
 ---
