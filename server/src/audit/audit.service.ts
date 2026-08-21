@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { sql } from "drizzle-orm";
+import { AUDIT_ACTOR_LABEL as ROLE_LABEL } from "../auth/role-label.js";
 import { currentTx } from "../db/client.js";
 
 // 稽核記錄 · 讀 audit_log（TenantTxInterceptor 每個請求寫一筆 · CLAUDE.md R5）
@@ -28,14 +29,7 @@ export type AuditScope = "all" | "write" | "login";
 
 const PAGE_SIZE = 50;
 
-const ROLE_LABEL: Record<string, string> = {
-  aiproot_admin: "平台管理員",
-  consultant: "顧問",
-  tenant_admin: "總經理室",
-  group_owner: "群組負責人",
-  employee: "同仁",
-  system: "系統",
-};
+
 
 // 路徑前綴 → 中文。長的排前面，比對取第一個命中。
 const PATH_LABEL: [string, string][] = [
