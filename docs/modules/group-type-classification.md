@@ -1,7 +1,9 @@
 # 設計文件 · 群組類型：哪些群定義組織，哪些不定義（M0）
 
-> 狀態：✅ **M0 APPROVED v0.4**（2026-08-21）· **OQ-GTC-1..10 全採建議**（v0.3–v0.4 新增的 **OQ-11／12／13 待裁定**）· 待客戶回答 C1–C4 · 下一步 M0.5
-> UI mockup：[`../mockup/group-type-org-after.html`](../mockup/group-type-org-after.html)（待 review）
+> 狀態：**M1–M4 ＋ M3.5 已上線**（2026-08-21）· **但 prod 22 個群全部仍是預設 `department`＝行為未變**
+> · OQ-GTC-1..10 全採建議 · OQ-11／12 待裁定（**OQ-13 已裁定：只做已綁定的人，PII 不觸發**）
+> · **卡在客戶回答 C1–C4** —— 拿到才能回填、才會有可見變化 · 待做：M0.5、M5
+> UI mockup：[`../mockup/group-type-org-after.html`](../mockup/group-type-org-after.html)（已 review）
 > 對象：`line_group`、`org-overview.service.ts`、部門健康度／簽核率分母、`ticket-materializer`
 > 相關：[`org-overview.md`](org-overview.md)、[`member-department-assignment.md`](member-department-assignment.md)、
 > [`warroom-task-board.md`](warroom-task-board.md)、[`design-research-org-chart-layout.md`](design-research-org-chart-layout.md)
@@ -271,6 +273,27 @@ ALTER TABLE line_group
 「**在群裡講過話的 56 個人，含他們的 LINE 暱稱**」。
 那是合理的（都是他公司的人），但**性質變了** —— 要跟客戶說一聲，不是默默打開（OQ-GTC-13）。
 
+#### ✅ 落地形狀（2026-08-21 · M3.5 完成）
+
+用戶裁定：**只做已綁定的 12 個人，不列沒帳號的** —— 也就是上面那段 PII 疑慮
+（OQ-GTC-13）**直接不觸發**，畫面上出現的名字全都是本來就有系統帳號的人。
+`line_member` 這次一列都沒用到。
+
+| 檔 | 做了什麼 |
+|---|---|
+| `server/src/tenant-admin/member-group-activity.service.ts` | `user_line_binding` → `line_message` → `line_group` · 回 `userId → 群清單`（發言數多到少）|
+| `GET /tenant-admin/users/group-activity` | `@RequirePermission("users:view")` · 與成員清單同權限 |
+| `web/src/settings/depts-members/Members.tsx` | 「所屬部門」下方的依據區塊 · 三種狀態：自動判定／手動指派／沒發言 |
+| `server/test/member-group-activity.test.ts` | 4 條 · 釘住「沒帳號的不出現」與「非部門群要回但標不計入」|
+
+⭐ **兩個實作時才確定的形狀**：
+
+1. **查詢必須跟 `employee-binding.service.ts` 走同一條 join**（`user_line_binding` 而非
+   `line_message.sender_user_id`、同樣 `chat_context='group'`、同樣近 30 天）。
+   差一個條件，畫面顯示的數字就不是當初做決定用的那組，使用者會拿它來質疑歸錯部門。
+2. **非部門群要回傳但標「不計入」，不是不回傳。** 不回傳的話「他明明在那個群，
+   為什麼沒算」在畫面上沒有答案 —— 而那正是廠商當場問的那一題。
+
 #### 另外兩個位置（本次不做，記著）
 
 - **組織圖的成員 chip 標「＋2 群」** · 輕，但資訊密度低，只適合當輔助
@@ -312,16 +335,19 @@ ALTER TABLE line_group
 
 ## 7. 落地順序
 
-| 里程碑 | 內容 | 前置 |
-|---|---|---|
-| **M0** | 本文 · 待裁定 OQ · 待客戶回答 C1–C4 | — |
-| **M0.5** | 補跑「排除報工及車輛調度」的數字（§2.3）· 修「台灣福祉機器人測試群」的錯誤分派（§2.4）| — |
-| **M1** | migration 0066 加 `group_type` ＋ 回填（人工判斷）**＋ §4.5 的推導那一行** | C1–C3 |
-| **M2** | 組織圖只吃 `department` 型 ＋ 另開「跨部門群組」區 | M1 |
-| **M3** | 部門健康度／簽核率分母排除非部門群 ＋ 變更對照說明 | M2 |
-| **M3.5** | 成員頁的「所屬部門」補出推導依據（§4.6）· **必須排在 M1 之後** | M1 |
-| **M4** | 通訊管道頁的類型下拉（讓客戶自己維護）| M2 |
-| **M5** | FMEA 覆核（R17）＋ MODULES.md | — |
+| 里程碑 | 內容 | 前置 | 狀態 |
+|---|---|---|---|
+| **M0** | 本文 · 待裁定 OQ · 待客戶回答 C1–C4 | — | ✅ v0.4 |
+| **M0.5** | 補跑「排除報工及車輛調度」的數字（§2.3）· 修「台灣福祉機器人測試群」的錯誤分派（§2.4）| — | ⏳ 待做 |
+| **M1** | migration **0068** 加 `group_type` ＋ 回填（人工判斷）**＋ §4.5 的推導那一行** | C1–C3 | ✅ `e9b70a9`（**回填未做** · 等 C1–C3）|
+| **M2** | 組織圖只吃 `department` 型 ＋ 另開「跨部門群組」區 | M1 | ✅ `e9b70a9`+`c87aeaf` |
+| **M3** | 部門健康度／簽核率分母排除非部門群 ＋ 變更對照說明 | M2 | ✅ `e9b70a9`（對照說明併入回填當下）|
+| **M3.5** | 成員頁的「所屬部門」補出推導依據（§4.6）· **必須排在 M1 之後** | M1 | ✅ 2026-08-21 |
+| **M4** | 通訊管道頁的類型下拉（讓客戶自己維護）| M2 | ✅ `c87aeaf` |
+| **M5** | FMEA 覆核（R17）＋ MODULES.md | — | ⏳ 待做 |
+
+> ⚠️ M1–M4 的程式都上線了，但 **prod 22 個群全部還是預設值 `department`**
+> ＝行為與上線前完全相同。要等 C1–C3 回填才會有可見變化，這是刻意的、不是壞掉。
 
 ---
 
@@ -369,6 +395,7 @@ ALTER TABLE line_group
 
 | 日期 | 版本 | 變更 |
 |---|---|---|
+| 2026-08-21 | v0.5 | M1–M4 落地（`e9b70a9` / `c87aeaf`）· M3.5 完成：成員頁補出部門推導依據 · 用戶裁定**只做已綁定的 12 人**→ OQ-GTC-13（PII）不觸發、`line_member` 未使用 · 里程碑表補狀態欄（避免文件漂移）|
 | 2026-08-21 | v0.4 | 補 §4.6：`line_member` 目前一列都沒進到畫面，所以廠商問「他是不是跨多部門」時答不出來 · 做法＝在「所屬部門」下補出推導依據（他在哪些群、各發言幾則）· 併進本模組是因為那句話只有在 `group_type` 修好後才是真的 · 加 M3.5 與 OQ-13（PII 曝露要先告知客戶）|
 | 2026-08-21 | v0.3 | 補 §2.6／§2.7／§4.5：查證發現「主要部門」的推導早就存在（發言最多的群），資料層本來就不需要多部門 · 但推導會被全員群汙染，且只在綁定當下跑一次 · 加 OQ-11／12 與一條 FMEA |
 | 2026-08-21 | v0.2 | 用戶「全採建議」裁定 OQ-GTC-1..10 · 加 UI mockup（`mockup/group-type-org-after.html`）待 review |
