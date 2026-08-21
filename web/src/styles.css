@@ -2585,54 +2585,72 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .ts-no-link { padding:9px 11px; border-radius:6px; font-size:12.5px; line-height:1.6;
   background:var(--warn-tint); border:1px solid var(--warn); color:#78350F; }
 
-/* ── 組織關係圖（org-overview M1）· 對照 docs/mockup/org-graph-data-driven.html ── */
+/* ── 組織關係圖（org-overview · 2026-08-21 改左右樹）──
+   版型依據：docs/mockup/org-chart-horizontal.html（用戶選定 C）
+   研究依據：docs/modules/design-research-org-chart-layout.md
+   ⚠️ 舊的上下樹樣式（.og-lanes / .og-lane / .og-band / .og-scroll / .og-zoomwrap / .og-stage / .og-zoom）
+      已整組移除 —— 那是「13 部門排一列 = 2900px、要縮到 40%」的來源。 */
 .og-wrap{ position:relative; }
-.og-scroll{ overflow:auto; padding:6px 0 16px; }
-/* zoomwrap 用「縮放後的尺寸」定義捲動範圍（含 overflow:hidden 裁掉 stage 的原生 layout 溢位）·
-   margin-inline:auto → 內容比視窗窄時置中（部門少 / 全覽縮小後），寬時靠左可捲。*/
-.og-zoomwrap{ position:relative; overflow:hidden; margin-inline:auto; }
-/* stage 撐到內容真實寬度、絕對定位讓 zoomwrap 的顯式尺寸主導捲動範圍 · transform:scale 由 JS 給。
-   縮放不影響 layout 寬度，所以量座標（getBoundingClientRect）除以 zoom 還原（見 OrgGraph draw）。*/
-.og-stage{ position:absolute; top:0; left:0; width:max-content; padding:8px 20px 20px; transform-origin:0 0; }
-/* 縮放控制列 */
-.og-zoom{ position:absolute; top:4px; right:8px; z-index:4; display:flex; align-items:center; gap:1px;
-  background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:2px; box-shadow:0 2px 8px rgba(15,23,42,.08); }
-.og-zoom button{ width:28px; height:28px; border:0; background:transparent; color:var(--ink-2); font-size:15px; line-height:1; cursor:pointer; border-radius:6px; }
-.og-zoom button:hover:not(:disabled){ background:var(--well); }
-.og-zoom button:disabled{ opacity:.35; cursor:default; }
-.og-zoom button.fit{ width:auto; padding:0 11px; font-size:12px; font-weight:600; color:var(--primary); }
-.og-zoom span{ font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; min-width:40px; text-align:center; }
+.og-bar{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.og-seg{ display:flex; border:1px solid var(--line); border-radius:var(--r); overflow:hidden; }
+.og-seg button{ border:0; background:var(--surface); color:var(--ink-2); font:inherit; font-size:12.5px;
+  padding:6px 13px; cursor:pointer; }
+.og-seg button+button{ border-left:1px solid var(--line); }
+.og-seg button.on{ background:var(--primary-tint); color:var(--primary-2); font-weight:600; }
+.og-srch{ border:1px solid var(--line); border-radius:var(--r); padding:6px 12px; font-size:12.5px;
+  font-family:inherit; color:var(--ink); background:var(--surface); min-width:200px; }
+.og-srch:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-tint); }
+
+/* 左欄放公司＋總經理室（sticky，捲動時不跑掉）· 右欄一列一部門 */
+.og-grid{ position:relative; display:grid; grid-template-columns:186px 1fr; gap:0 34px; align-items:start; }
 .og-edges{ position:absolute; inset:0; overflow:visible; z-index:0; pointer-events:none; }
-.og-layer{ position:relative; z-index:1; }
-.og-band{ display:flex; flex-direction:column; align-items:center; margin-bottom:40px; }
-.og-company{ padding:12px 28px; border-radius:15px; color:#fff; text-align:center;
-  background:linear-gradient(135deg,#1E293B,#0F172A); box-shadow:0 12px 30px rgba(15,23,42,.26); }
-.og-company .t{ font-size:10.5px; letter-spacing:2px; color:#93A5C4; font-weight:600; }
-.og-company .n{ font-size:18px; font-weight:720; margin-top:2px; }
-.og-gm{ margin-top:40px; display:flex; align-items:center; gap:9px; padding:8px 18px 8px 9px; border-radius:13px;
-  background:#fff; border:1.5px solid #8B5CF6; box-shadow:0 10px 26px rgba(124,58,237,.16); }
-.og-gm .av{ width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#7C3AED,#8B5CF6);
-  color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; flex:none; }
-.og-gm .n{ font-size:14.5px; font-weight:720; } .og-gm .r{ font-size:11px; color:#7C3AED; font-weight:600; }
-.og-lanes{ display:flex; gap:26px; align-items:flex-start; justify-content:center; }
-.og-lane{ width:196px; flex:none; display:flex; flex-direction:column; align-items:center; }
-.og-dept{ width:196px; border-radius:13px; background:#fff; border:1px solid var(--line);
-  box-shadow:0 9px 24px rgba(15,23,42,.10); overflow:hidden; }
-.og-dept .bar{ height:5px; } .og-dept .body{ padding:10px 14px 11px; }
-.og-dept .n{ font-size:15px; font-weight:680; } .og-dept .cnt{ float:right; font-size:11px; color:var(--ink-3); margin-top:2px; }
-.og-dept .grp{ display:inline-block; margin-top:6px; margin-right:5px; font-size:11px; font-weight:600; border-radius:6px; padding:3px 9px; }
-.og-dept .grp.warn{ color:#B45309; background:#FFFBEB; }
-.og-members{ display:flex; flex-direction:column; gap:12px; margin-top:44px; align-items:center; }
-.og-mem{ display:flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--line); border-radius:999px;
-  padding:4px 12px 4px 4px; box-shadow:0 4px 12px rgba(15,23,42,.08); white-space:nowrap; }
-.og-mem .av{ width:26px; height:26px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:700; flex:none; }
-.og-mem .nm{ font-size:13px; font-weight:600; } .og-mem.lead .nm{ font-weight:720; }
-.og-mem.warn{ border-color:#FDE68A; background:#FFFBEB; }
-.og-badge{ font-size:9px; font-weight:700; color:#fff; border-radius:5px; padding:1px 6px; margin-left:2px; }
-.og-nolink{ font-size:9.5px; color:#B45309; background:#FEF3C7; border-radius:5px; padding:1px 6px; margin-left:2px; }
-.og-more{ background:#F1F5F9; border:1px dashed #CBD5E1; border-radius:999px; padding:6px 14px; font-size:12px;
-  font-weight:600; color:var(--ink-2); cursor:pointer; box-shadow:0 4px 12px rgba(15,23,42,.06); }
-.og-orphan{ margin-top:34px; border:1.5px dashed #FCD34D; background:#FFFBEB; border-radius:12px; padding:11px 18px;
-  max-width:640px; margin-left:auto; margin-right:auto; box-shadow:0 8px 20px rgba(217,119,6,.12); }
+.og-root{ position:sticky; top:14px; z-index:1; }
+.og-company{ padding:11px 16px; border-radius:12px; color:#fff; text-align:center;
+  background:linear-gradient(135deg,#1E293B,#0F172A); box-shadow:0 8px 22px rgba(15,23,42,.22); }
+.og-company .t{ font-size:10px; letter-spacing:2px; color:#93A5C4; font-weight:600; }
+.og-company .n{ font-size:16px; font-weight:720; margin-top:2px; }
+.og-gm{ margin-top:10px; display:flex; align-items:center; gap:8px; background:#F5F3FF; border:1px solid #DDD6FE;
+  border-radius:11px; padding:9px 11px; }
+.og-gm .av{ width:26px; height:26px; border-radius:8px; background:#7C3AED; color:#fff; font-size:12px;
+  display:flex; align-items:center; justify-content:center; font-weight:700; flex:none; }
+.og-gm .n{ font-size:13px; font-weight:700; line-height:1.3; }
+.og-gm .r{ font-size:11px; color:#6D28D9; }
+
+.og-rows{ display:flex; flex-direction:column; gap:9px; position:relative; z-index:1; }
+/* 296px 是關鍵數字：舊版 196px 塞不下「福祉集團-業務二部(含售服)」這類標籤，會被擠成兩三行 */
+.og-row{ display:grid; grid-template-columns:296px 1fr; gap:0 26px; align-items:center; }
+.og-dept{ display:flex; align-items:center; gap:11px; background:var(--surface); border:1px solid var(--line);
+  border-radius:11px; box-shadow:0 3px 10px rgba(15,23,42,.05); padding:10px 13px; position:relative; overflow:hidden; }
+.og-dept .lbar{ position:absolute; left:0; top:0; bottom:0; width:5px; }
+.og-dept .txt{ flex:1; min-width:0; padding-left:4px; }
+.og-dept .n{ font-size:14.5px; font-weight:670; line-height:1.35; display:block; }
+.og-dept .grp{ display:inline-block; margin-top:3px; margin-right:4px; font-size:11px; padding:1px 8px;
+  border-radius:999px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }
+.og-dept .grp.warn{ background:var(--warn-tint); color:#B45309; }
+.og-dept .cnt{ font-size:11.5px; color:var(--ink-3); flex:none; align-self:flex-start; }
+
+.og-mems{ display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
+.og-mem{ display:inline-flex; align-items:center; gap:7px; background:var(--well); border:1px solid var(--line-2);
+  border-radius:999px; padding:4px 12px 4px 4px; font-size:12.5px; white-space:nowrap; }
+.og-mem .av{ width:22px; height:22px; border-radius:50%; color:#fff; font-size:11px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; flex:none; }
+.og-mem .nm{ font-weight:600; }
+.og-mem.warn{ background:var(--warn-tint); border-color:#FDE68A; }
+.og-badge{ font-size:9px; font-weight:700; color:#fff; border-radius:5px; padding:1px 6px; }
+.og-nolink{ font-size:10.5px; color:#B45309; border:1px solid #FDE68A; border-radius:5px; padding:0 5px; }
+.og-none{ font-size:11.5px; color:#B6BCC7; }
+.og-more{ background:#F1F5F9; border:1px dashed #CBD5E1; border-radius:999px; padding:4px 13px; font-size:12px;
+  font-family:inherit; color:var(--ink-2); cursor:pointer; }
+.og-more:hover{ background:var(--well); }
+
+.og-orphan{ margin-top:16px; margin-left:220px; border:1.5px dashed #FCD34D; background:#FFFBEB;
+  border-radius:12px; padding:11px 18px; }
 .og-orphan .t{ font-size:12.5px; font-weight:700; color:#B45309; }
 .og-orphan .s{ font-size:11.5px; color:#A16207; margin-top:2px; line-height:1.6; }
+@media(max-width:820px){
+  .og-grid{ grid-template-columns:1fr; gap:14px; }
+  .og-root{ position:static; }
+  .og-row{ grid-template-columns:1fr; gap:7px; }
+  .og-edges{ display:none; }   /* 單欄時連線沒有意義，畫了只會亂 */
+  .og-orphan{ margin-left:0; }
+}
