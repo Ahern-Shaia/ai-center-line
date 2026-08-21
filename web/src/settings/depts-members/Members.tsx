@@ -307,6 +307,18 @@ function DeptCell({ user, depts, editable, saving, onChange, activity }: {
 
   // ⭐ §4.6 · 光說「系統自動判定」不夠 —— 要說出依據，否則
   //    「為什麼他在這個部門」「他是不是跨多個群」這兩題畫面上都答不出來。
+  //
+  // ⚠️ 但**預設只顯示決定性的那一個群**。第一版把所有群都攤開，真實資料下
+  //    有人待在 9 個群 → 那一列高度暴增到三行 chips，把姓名擠成三行、
+  //    「未設」擠成「未／設」兩行。看依據是偶爾為之的事，不該讓每一列都付代價。
+  //    其餘收進原生 <details>（不需要 per-row state）。
+  const rest = [...counted.slice(1), ...notCounted];
+  const groupChip = (a: MemberGroupActivity, i: number) => (
+    <span className={`dm-grp${a.countsTowardDepartment ? "" : " out"}`} key={i}>
+      {a.groupName} <b>{a.messageCount}</b> 則
+    </span>
+  );
+
   const why = (
     <div className="dm-dept-why">
       {unassigned ? (
@@ -321,24 +333,20 @@ function DeptCell({ user, depts, editable, saving, onChange, activity }: {
           <span className="dm-dept-src">
             · 系統自動判定{counted.length > 0 && ` · 依 ${counted.length} 個部門群中發言最多的`}
           </span>
-          {counted.length > 0 && (
-            <span className="dm-grp-line">
-              {counted.map((a, i) => (
-                <span className="dm-grp" key={i}>{a.groupName} <b>{a.messageCount}</b> 則</span>
-              ))}
-            </span>
-          )}
+          {counted.length > 0 && <span className="dm-grp-line">{groupChip(counted[0], 0)}</span>}
         </>
       )}
-      {/* 非部門群也列出來 —— 不列的話，「他明明在那個群為什麼沒算」沒有答案 */}
-      {notCounted.length > 0 && (
-        <span className="dm-grp-line muted">
-          {notCounted.map((a, i) => (
-            <span className="dm-grp out" key={i}>{a.groupName} <b>{a.messageCount}</b> 則</span>
-          ))}
-          <span className="dm-dept-note">不計入部門判定（非部門群）</span>
-        </span>
+
+      {rest.length > 0 && (
+        <details className="dm-why-more">
+          <summary>其他 {rest.length} 個群</summary>
+          <span className="dm-grp-line">{rest.map(groupChip)}</span>
+          {notCounted.length > 0 && (
+            <span className="dm-dept-note">畫線的不計入部門判定（非部門群）</span>
+          )}
+        </details>
       )}
+
       {activity.length === 0 && !unassigned && user.departmentSource !== "manual" && (
         <span className="dm-dept-note">近 30 天沒有在任何群發言</span>
       )}

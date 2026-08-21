@@ -1597,6 +1597,17 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 /* 非部門群 · 刪除線講明「算了但不計入」—— 不畫出來的話「他明明在那個群」沒有答案 */
 .dm-grp.out { background:var(--warn-tint, #FFFBEB); color:#B45309; text-decoration:line-through; }
 .dm-grp.out b { color:#B45309; }
+/* 其餘的群收起來 · 有人待在 9 個群，全攤開會把整列撐到三行高 */
+.dm-why-more > summary { font-size:11px; color:var(--ink-3); cursor:pointer; margin-top:2px;
+  list-style:none; width:fit-content; }
+.dm-why-more > summary::-webkit-details-marker { display:none; }
+.dm-why-more > summary::before { content:"▸ "; }
+.dm-why-more[open] > summary::before { content:"▾ "; }
+.dm-why-more > summary:hover { color:var(--ink-2); text-decoration:underline; }
+/* 依據區塊給上限，免得把「密碼」欄擠到換行（未／設） */
+.dm-dept-why { max-width:440px; }
+.dm-table th:first-child, .dm-table td:first-child { min-width:120px; }
+.dm-tag-set, .dm-tag-unset { white-space:nowrap; }
 .dm-dept-unset { color:var(--warn); font-weight:600; }
 .dm-dept-edit { display:flex; flex-direction:column; gap:2px; }
 .dm-cell-actions { text-align:right; white-space:nowrap; }
