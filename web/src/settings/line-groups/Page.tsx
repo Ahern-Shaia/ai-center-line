@@ -13,6 +13,7 @@ import { usePermissions } from "../../permission/PermissionContext";
 import { useToast } from "../../Toast";
 import ConfirmDialog from "../../shared/ConfirmDialog";
 import StyledSelect from "../../shared/StyledSelect";
+import { GROUP_TYPE_LABEL, GROUP_TYPE_HINT, type LineGroupType } from "../../api";
 import { useTenantPicker } from "../../shared/TenantPicker";
 
 // tenant_admin「LINE 群組」頁
@@ -93,6 +94,29 @@ export default function LineGroupsPage() {
     }
   }
 
+  /**
+   * 0068 · 改群組類型（docs/modules/group-type-classification.md）
+   *
+   * 只有 department 型會決定成員的部門歸屬、健康度分母與部門推導；
+   * 其餘類型照常分析、照常出任務 —— 改這個不會讓任何資料消失。
+   */
+  async function handleGroupType(groupRegistryId: string, groupType: LineGroupType) {
+    setSavingIds((s) => new Set(s).add(groupRegistryId));
+    try {
+      const res = await patchLineGroup(groupRegistryId, { groupType });
+      setGroups((s) => s.map((g) => g.groupRegistryId === groupRegistryId ? res.group : g));
+      toast.show(`已改為「${GROUP_TYPE_LABEL[groupType]}」`, "ok");
+    } catch (err) {
+      toast.show(err instanceof ApiError ? err.message : "更新失敗", "danger");
+    } finally {
+      setSavingIds((s) => {
+        const next = new Set(s);
+        next.delete(groupRegistryId);
+        return next;
+      });
+    }
+  }
+
   async function handleToggle(
     groupRegistryId: string, field: "analyzeEnabled" | "replyEnabled", enabled: boolean,
   ) {
@@ -151,6 +175,7 @@ export default function LineGroupsPage() {
             <tr>
               <th style={{ minWidth: 180 }}>群組</th>
               <th style={{ minWidth: 160 }}>部門</th>
+              <th style={{ minWidth: 150 }}>群組類型</th>
               <th style={{ minWidth: 90 }}>AI 分析</th>
               <th style={{ minWidth: 100 }}>群組回話</th>
               <th style={{ minWidth: 90, textAlign: "right" }}>訊息數</th>
@@ -190,6 +215,24 @@ export default function LineGroupsPage() {
                       />
                     ) : (
                       <span>{g.departmentName ?? "(未分派)"}</span>
+                    )}
+                  </td>
+                  <td>
+                    {canAssign ? (
+                      <>
+                        <StyledSelect
+                          items={(Object.keys(GROUP_TYPE_LABEL) as LineGroupType[])
+                            .map((t) => ({ id: t, label: GROUP_TYPE_LABEL[t] }))}
+                          value={g.groupType}
+                          onChange={(v) => void handleGroupType(g.groupRegistryId, v as LineGroupType)}
+                          ariaLabel={`「${g.displayName ?? g.groupId}」的群組類型`}
+                          disabled={saving}
+                        />
+                        {/* 少了這句沒人知道該選哪個 —— 四個類型的差別不在字面上 */}
+                        <div className="lg-type-hint">{GROUP_TYPE_HINT[g.groupType]}</div>
+                      </>
+                    ) : (
+                      <span>{GROUP_TYPE_LABEL[g.groupType]}</span>
                     )}
                   </td>
                   <ToggleCell

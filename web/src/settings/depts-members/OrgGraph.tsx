@@ -1,6 +1,6 @@
 import Spinner from "../../shared/Spinner";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { getOrgOverview, ApiError, type OrgOverview, type OrgMember } from "../../api";
+import { getOrgOverview, ApiError, GROUP_TYPE_LABEL, type OrgOverview, type OrgMember, type LineGroupType } from "../../api";
 import { useToast } from "../../Toast";
 
 // 組織關係圖（org-overview M1 → 2026-08-21 改左右樹）· 資料驅動 · 座標用量不用排。
@@ -188,6 +188,31 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
           )}
         </div>
       </div>
+
+      {/* 0068 · 跨部門群組 —— 仍然分析、仍然出任務，只是不宣稱「這些人屬於那個部門」
+          （group-type-classification.md §4.2）。放在部門樹之後、未分派之前。 */}
+      {data.crossGroups.length > 0 && (
+        <div className="og-cross">
+          <div className="t">跨部門群組 · {data.crossGroups.length} 個</div>
+          <div className="s">
+            這些群的成員橫跨多個部門，<b>不代表組織歸屬</b>，所以不畫進上面的部門樹、
+            也不計入部門健康度的分母。但它們<b>照常分析、照常產出任務</b>。
+          </div>
+          <div className="og-cross-list">
+            {data.crossGroups.map((g, i) => (
+              <div className="og-cross-item" key={i}>
+                <div className="n">
+                  {g.name}
+                  <span className={`og-cross-badge ${g.groupType}`}>
+                    {GROUP_TYPE_LABEL[g.groupType as LineGroupType] ?? g.groupType}
+                  </span>
+                </div>
+                <div className="m">{g.memberCount} 人</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {hasOrphan && (
         <div className="og-orphan">

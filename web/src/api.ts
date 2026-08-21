@@ -952,6 +952,22 @@ export interface LineBotDto {
   groupCount: number;
 }
 
+/** 0068 · 群組類型 · 只有 department 定義組織 */
+export type LineGroupType = "department" | "process" | "announcement" | "test";
+export const GROUP_TYPE_LABEL: Record<LineGroupType, string> = {
+  department: "部門群",
+  process: "流程群",
+  announcement: "公告群",
+  test: "測試群",
+};
+/** 下拉旁邊那句說明 —— 少了它，使用者無從判斷該選哪個 */
+export const GROUP_TYPE_HINT: Record<LineGroupType, string> = {
+  department: "這群人就是那個部門 · 唯一會決定成員部門歸屬的類型",
+  process: "一件跨部門的事（報工、排車）· 成員來自各部門",
+  announcement: "全員或大範圍佈達 · 幾乎所有人都在裡面",
+  test: "測試或一對一 · 不屬於組織",
+};
+
 export interface LineGroupRow {
   groupRegistryId: string;
   botId: string;
@@ -962,6 +978,8 @@ export interface LineGroupRow {
   analyzeEnabled: boolean;
   /** bot 在這個群要不要回話（完成回報確認 / 每日回報清單）· 與 analyzeEnabled 是兩件事 */
   replyEnabled: boolean;
+  /** 0068 · 只有 department 型會定義組織歸屬（group-type-classification.md）*/
+  groupType: LineGroupType;
   firstSeenAt: string;
   lastEventAt: string;
   eventCount: number;
@@ -1038,6 +1056,8 @@ export const patchLineGroup = (groupRegistryId: string, patch: {
   replyEnabled?: boolean;
   /** 把「已離開的群」移出清單（隱藏，非刪除 · 歷史資料仍保留群名）*/
   hidden?: boolean;
+  /** 0068 · 群組類型 · 只有 department 定義組織歸屬 */
+  groupType?: LineGroupType;
 }) =>
   req<{ group: LineGroupRow }>(`/line-groups/${groupRegistryId}`, {
     method: "PATCH",
@@ -1148,10 +1168,13 @@ export const deleteTenantUser = (userId: string, tenantId: string) =>
 
 // 組織關係圖（org-overview M1）· aiproot 帶 tenantId 看任一家 / tenant_admin 鎖自租戶
 export interface OrgMember { name: string; role: string; hasLineBinding: boolean; departmentSource: "auto" | "manual" }
+/** 0068 · 不定義組織的群 · 不畫進部門樹、不進健康度分母 */
+export interface OrgCrossGroup { name: string; groupType: string; memberCount: number }
 export interface OrgOverview {
   company: string;
   gm: string[];
   departments: Array<{ name: string; groups: string[]; members: OrgMember[] }>;
+  crossGroups: OrgCrossGroup[];
   unassigned: { groups: string[]; members: OrgMember[] };
 }
 export const getOrgOverview = (tenantId?: string) =>
