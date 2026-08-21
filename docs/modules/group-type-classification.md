@@ -1,6 +1,7 @@
 # 設計文件 · 群組類型：哪些群定義組織，哪些不定義（M0）
 
-> 狀態：📋 **M0 DRAFT v0.1**（2026-08-21）· **待裁定 OQ-GTC-1..10**
+> 狀態：✅ **M0 APPROVED v0.2**（2026-08-21）· **OQ-GTC-1..10 全採建議** · 待客戶回答 C1–C4 · 下一步 M0.5
+> UI mockup：[`../mockup/group-type-org-after.html`](../mockup/group-type-org-after.html)（待 review）
 > 對象：`line_group`、`org-overview.service.ts`、部門健康度／簽核率分母、`ticket-materializer`
 > 相關：[`org-overview.md`](org-overview.md)、[`member-department-assignment.md`](member-department-assignment.md)、
 > [`warroom-task-board.md`](warroom-task-board.md)、[`design-research-org-chart-layout.md`](design-research-org-chart-layout.md)
@@ -77,9 +78,14 @@
 
 ### 2.4 一個資料衛生問題
 
-「**台灣福祉機器人測試群**」的 `department_id` **不是 NULL** —— 一個測試群被分派到了
-某個真實部門，4 個人跟著算進該部門的人數與健康度。
+「**台灣福祉機器人測試群**」的 `department_id` **不是 NULL** —— 一個測試群被分派到了某個真實部門。
 其他測試群與兩個一對一聊天（`AI-TWBRAUN, 柏淵`／`鮮湧, 柏淵`）都是未分派，只有這個漏網。
+
+> ⚠️ **v0.2 更正**：v0.1 寫「4 個人跟著算進該部門的人數與健康度」，**那句沒有查證就寫了**。
+> 組織圖的查詢有 `WHERE lg.status = 'active'`（`org-overview.service.ts:49`），
+> 若該群不是 active 就根本不會被算進去。
+> **實際有沒有汙染，取決於它的 `status`，M0.5 要查**（OQ-GTC-2 同批）。
+> 但無論如何「測試群不該掛在真部門下」這件事本身仍要修。
 
 ### 2.5 更大的落差：56 人 vs 12 個帳號
 
@@ -210,9 +216,12 @@ ALTER TABLE line_group
 
 ---
 
-## 8. 開放問題（OQ-GTC-N）
+## 8. 開放問題（OQ-GTC-N）— ✅ 2026-08-21 全採建議
 
-| # | 問題 | 建議 |
+> 下欄「建議」即為裁定結果。落地形狀見
+> [`../mockup/group-type-org-after.html`](../mockup/group-type-org-after.html)。
+
+| # | 問題 | 裁定（＝原建議）|
 |---:|---|---|
 | **1** | `group_type` 要哪幾個值？ | `department` / `process` / `announcement` / `test` 四個 · 夠用且語意清楚 |
 | **2** | §2.3「報工及車輛調度是流程群」誰驗？ | M0.5 補跑數字 ＋ 問客戶（C2）· **不要憑名字判斷** |
@@ -247,4 +256,5 @@ ALTER TABLE line_group
 
 | 日期 | 版本 | 變更 |
 |---|---|---|
+| 2026-08-21 | v0.2 | 用戶「全採建議」裁定 OQ-GTC-1..10 · 加 UI mockup（`mockup/group-type-org-after.html`）待 review |
 | 2026-08-21 | v0.1 | M0 DRAFT · 起於廠商展示指出「一位員工跨多部門」· prod 實測 66% 跨部門、「有你真好」40 人＝71%（全員群）· 根因＝三種群語意被塞進同一個模型 · 設計＝加 `group_type` 而非 `users` 多對多 · ⚠️ `tickets.department_id` NOT NULL 否決了「流程群不掛部門」的直覺解 · 待裁定 OQ-GTC-1..10 · 待客戶回答 C1–C4 |
