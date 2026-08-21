@@ -3,6 +3,7 @@ import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { UserService } from "./user.service.js";
+import { MemberGroupActivityService } from "./member-group-activity.service.js";
 import { AssignDepartmentSchema, AssignRoleSchema, UserCreateSchema, UserDeleteSchema, UserUpdateSchema } from "./dto/user.dto.js";
 import { resolveTenantId } from "../auth/resolve-tenant-id.js";
 
@@ -15,7 +16,10 @@ const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 // 對照 docs/roles-permissions-matrix.md §2 + §3.5
 @Controller("tenant-admin/users")
 export class UserController {
-  constructor(private readonly svc: UserService) {}
+  constructor(
+    private readonly svc: UserService,
+    private readonly activity: MemberGroupActivityService,
+  ) {}
 
   @Get()
   @RequirePermission("users:view")
@@ -27,6 +31,23 @@ export class UserController {
     }
     const users = await this.svc.list(t);
     return { users };
+  }
+
+  /**
+   * 每個已綁定成員近 30 天在各群的發言數 · 供成員頁顯示「所屬部門是怎麼推出來的」
+   * （group-type-classification.md §4.6）
+   *
+   * 沿用 users:view —— 這是同一份名單的附加資訊，不是新的資料面。
+   * 只含已綁定的人；沒帳號的群成員不在這裡（那是 OQ-GTC-13 另一個決定）。
+   */
+  @Get("group-activity")
+  @RequirePermission("users:view")
+  async groupActivity(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
+    const t = resolveTenantId(user, tenantId);
+    if (!uuidRegex.test(t)) {
+      throw new BadRequestException({ status: "tenant_id_required", message: "需傳 tenantId" });
+    }
+    return { activity: await this.activity.byUser(t) };
   }
 
   @Post()
