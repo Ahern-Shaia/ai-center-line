@@ -20,6 +20,7 @@ import { useToast } from "../../Toast";
 import { usePermissions } from "../../permission/PermissionContext";
 import Drawer from "../../shared/Drawer";
 import StyledSelect from "../../shared/StyledSelect";
+import { InfoTip } from "../../shared/InfoTip";
 import { ROLE_LABEL } from "../../shared/roleLabel";
 
 // tenant_admin 能內嵌調整的角色（碰不到 總經理室/助理/aiproot）· 對齊後端 0055 護欄
@@ -308,48 +309,48 @@ function DeptCell({ user, depts, editable, saving, onChange, activity }: {
   // ⭐ §4.6 · 光說「系統自動判定」不夠 —— 要說出依據，否則
   //    「為什麼他在這個部門」「他是不是跨多個群」這兩題畫面上都答不出來。
   //
-  // ⚠️ 但**預設只顯示決定性的那一個群**。第一版把所有群都攤開，真實資料下
-  //    有人待在 9 個群 → 那一列高度暴增到三行 chips，把姓名擠成三行、
-  //    「未設」擠成「未／設」兩行。看依據是偶爾為之的事，不該讓每一列都付代價。
-  //    其餘收進原生 <details>（不需要 per-row state）。
-  const rest = [...counted.slice(1), ...notCounted];
-  const groupChip = (a: MemberGroupActivity, i: number) => (
-    <span className={`dm-grp${a.countsTowardDepartment ? "" : " out"}`} key={i}>
-      {a.groupName} <b>{a.messageCount}</b> 則
-    </span>
+  // ⚠️⚠️ 但**依據不可以長在表格列裡**。前兩版都栽在這：
+  //    v1 把所有群攤開 → 有人待在 9 個群，列高衝到 ~200px；
+  //    v2 收進 <details> → 展開後一樣爆，而且 details 的開闔狀態沒人管，
+  //       預設就是開的；更糟的是「所屬部門」欄被撐寬，把右邊三欄推到天邊，
+  //       中間留一大片空白 —— 使用者的說法是「雜亂、擁擠」。
+  //    v3（本版）：**列裡只留一行結論，完整依據進 tooltip**（沿用 shared/InfoTip，
+  //    warroom 已經在用同一個元件）。列高從此固定兩行，跟其他欄對得齊。
+  const detail = (
+    <div className="dm-why-tip">
+      <div className="dm-why-tip-h">
+        {user.departmentSource === "manual" ? "手動指派 · 自動判定不會覆寫" : "近 30 天在各群的發言"}
+      </div>
+      {activity.map((a, i) => (
+        <div className={`dm-why-tip-row${a.countsTowardDepartment ? "" : " out"}`} key={i}>
+          <span>{a.groupName}</span>
+          <b>{a.messageCount} 則</b>
+        </div>
+      ))}
+      {notCounted.length > 0 && (
+        <div className="dm-why-tip-f">畫線的是非部門群 · 不計入判定</div>
+      )}
+    </div>
+  );
+
+  // 一行結論 —— **要短**。細節全在 tooltip 裡。
+  // 摘要寫長了（例如「依 8 個部門群中發言最多的（另有 1 個非部門群不計入）」）
+  // 會把整個「所屬部門」欄撐寬，右邊的密碼／刪除被推到天邊、中間一大片空白。
+  const summary = unassigned ? (
+    <span className="dm-dept-src warn">⚠ 請指派</span>
+  ) : user.departmentSource === "manual" ? (
+    <span className="dm-dept-src ok">· 手動指派</span>
+  ) : counted.length > 0 ? (
+    <span className="dm-dept-src">· 自動判定 · {counted.length} 群</span>
+  ) : (
+    <span className="dm-dept-src">· 30 天內無發言</span>
   );
 
   const why = (
     <div className="dm-dept-why">
-      {unassigned ? (
-        <span className="dm-dept-src warn">⚠ 系統推不出，請指派</span>
-      ) : user.departmentSource === "manual" ? (
-        <>
-          <span className="dm-dept-src ok">· 手動指派</span>
-          <span className="dm-dept-note">系統的自動判定不會再覆寫</span>
-        </>
-      ) : (
-        <>
-          <span className="dm-dept-src">
-            · 系統自動判定{counted.length > 0 && ` · 依 ${counted.length} 個部門群中發言最多的`}
-          </span>
-          {counted.length > 0 && <span className="dm-grp-line">{groupChip(counted[0], 0)}</span>}
-        </>
-      )}
-
-      {rest.length > 0 && (
-        <details className="dm-why-more">
-          <summary>其他 {rest.length} 個群</summary>
-          <span className="dm-grp-line">{rest.map(groupChip)}</span>
-          {notCounted.length > 0 && (
-            <span className="dm-dept-note">畫線的不計入部門判定（非部門群）</span>
-          )}
-        </details>
-      )}
-
-      {activity.length === 0 && !unassigned && user.departmentSource !== "manual" && (
-        <span className="dm-dept-note">近 30 天沒有在任何群發言</span>
-      )}
+      {activity.length > 0 ? (
+        <InfoTip content={detail}><span className="dm-why-hint">{summary}</span></InfoTip>
+      ) : summary}
     </div>
   );
 
