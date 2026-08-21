@@ -21,16 +21,23 @@ export class PermissionController {
     return { permissions: Array.from(perms), displayName };
   }
 
-  // GET /permissions · 全部 · 給建 role 用
+  // GET /permissions · 全部 64 項（含 platform）· aiproot 側建 role 用
+  //
+  // ⚠️ 2026-08-21 把 tenant_admin 從這裡拿掉：這支會回 platform 那 34 項
+  //    （含 binding:aiproot-view「跨租戶檢視 LINE 綁定稽核」）。
+  //    租戶要看權限清單請走 GET /tenant-roles/permissions —— 那支只回 26 項。
   @Get("permissions")
-  @Roles("aiproot_admin", "consultant", "tenant_admin")
+  @Roles("aiproot_admin", "consultant")
   async listAll() {
     return { permissions: await this.svc.listAllPermissions() };
   }
 
-  // GET /roles · aiproot 看全 · tenant_admin 看 own tenant + 內建
+  // GET /roles · aiproot 看全部 6 個內建角色 + 各租戶的副本
+  //
+  // ⚠️ 同上，tenant_admin 已移除：這支會回 aiproot_admin / consultant / tenant_admin
+  //    這幾個租戶不該編輯的角色。租戶請走 GET /tenant-roles（只回可編輯的三個）。
   @Get("roles")
-  @Roles("aiproot_admin", "consultant", "tenant_admin")
+  @Roles("aiproot_admin", "consultant")
   async listRoles(@CurrentUser() user: JwtUser) {
     return { roles: await this.svc.listRoles(user.tenant_id) };
   }
