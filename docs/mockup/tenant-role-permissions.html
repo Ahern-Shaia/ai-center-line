@@ -61,7 +61,7 @@ h2.sec:first-of-type{border-top:none;padding-top:0;}
 .ritem{padding:11px 15px;border-top:1px solid var(--line-2);cursor:pointer;}
 .ritem.on{background:var(--primary-tint);}
 .ritem .n{font-size:13.5px;font-weight:650;}
-.ritem .k{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:1px;}
+.ritem .k{display:none;}   /* 租戶視角不顯示角色代號 employee/group_owner —— 那是我們除錯用的 */
 .ritem .c{font-size:11.5px;color:var(--ink-3);margin-top:2px;}
 .bdg{font-size:10px;font-weight:600;padding:1px 7px;border-radius:999px;margin-left:5px;vertical-align:1px;}
 .bdg.sys{background:var(--well);color:var(--ink-3);}
@@ -69,15 +69,14 @@ h2.sec:first-of-type{border-top:none;padding-top:0;}
 .rbody{background:var(--surface);border:1px solid var(--line);border-radius:11px;overflow:hidden;}
 .rhead{padding:14px 18px 12px;border-bottom:1px solid var(--line);}
 .rhead .n{font-size:16px;font-weight:700;}
-.rhead .k{font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-top:3px;}
+.rhead .k{display:none;}
 .rhead .cus-note{margin-top:9px;background:var(--warn-tint);border:1px solid #FDE68A;border-radius:7px;
  padding:8px 12px;font-size:11.5px;color:#92400E;display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 11px;
  font-size:12px;font-family:inherit;color:var(--ink-2);cursor:pointer;white-space:nowrap;}
 .btn-p{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600;}
 .plist{max-height:520px;overflow-y:auto;padding:4px 0;}
-.pgrp{font-size:11px;color:var(--ink-3);font-weight:600;background:var(--well);padding:7px 18px;
- text-transform:uppercase;letter-spacing:.04em;}
+.pgrp{font-size:11.5px;color:var(--ink-2);font-weight:700;background:var(--well);padding:7px 18px;}
 .prow{display:flex;align-items:flex-start;gap:11px;padding:9px 18px;}
 .prow:hover{background:#FCFCFD;}
 .cb{width:17px;height:17px;border-radius:4px;border:1.5px solid var(--line);flex:none;margin-top:1px;
@@ -85,10 +84,10 @@ h2.sec:first-of-type{border-top:none;padding-top:0;}
 .cb.on{background:var(--primary);border-color:var(--primary);}
 .cb svg{width:11px;height:11px;stroke:#fff;fill:none;stroke-width:2.6;}
 .prow .d{font-size:13px;}
-.prow .id{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:2px;}
-.prow .id .sc{font-size:10px;padding:0 6px;border-radius:999px;margin-left:5px;}
-.sc.ten{background:var(--ok-tint);color:var(--ok);}
-.sc.dep{background:var(--primary-tint);color:var(--primary-2);}
+/* 說明句：非顯而易見的權限才寫，寫了就要是白話 */
+.prow .why{display:block;font-size:11.5px;color:var(--ink-3);margin-top:2px;line-height:1.6;}
+.prow .scope{font-size:10.5px;background:var(--primary-tint);color:var(--primary-2);
+  padding:1px 7px;border-radius:999px;margin-left:6px;vertical-align:1px;}
 .foot{display:flex;align-items:center;justify-content:space-between;padding:11px 18px;
  border-top:1px solid var(--line);background:var(--surface);}
 .foot .cnt{font-size:12.5px;color:var(--ink-3);}
@@ -117,7 +116,7 @@ footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.8;}
 <p class="doc-sub">
   對應 <b>docs/modules/tenant-role-permissions.md</b> v0.2（OQ-TRP-1..10 全採建議 · 2026-08-21）<br>
   <b>畫面依據</b>：版面沿用現行的 <code>RolesManagement.tsx</code>（左角色清單／右權限勾選／底部計數）·
-  26 項權限的代號與說明<b>逐字取自 migration</b>（<code>scope IN ('tenant','department')</code>）·
+  26 項權限<b>逐項改寫成使用者看得懂的中文</b>（migration 原文是給開發者看的，見底部說明）·
   角色與權限項數取自 prod。
 </p>
 
@@ -154,7 +153,7 @@ footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.8;}
 
 <!-- ═══════════════ -->
 <h2 class="sec">② 總經理視角的完整畫面</h2>
-<p class="sec-s">麵包屑在「設定」不在「平台」· 三個角色 · 26 項權限 · 每一項的 scope 標籤只會是「租戶」或「部門」。</p>
+<p class="sec-s">麵包屑在「設定」不在「平台」· 三個角色 · 26 項權限 · 全中文、不出現任何權限代號 · 只有「僅限自己部門」這種對使用者有意義的範圍才標。</p>
 
 <div class="app">
   <div class="topbar">
@@ -174,16 +173,16 @@ footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.8;}
           <div class="k">employee</div><div class="c">2 項權限</div></div>
         <div class="ritem"><div class="n">助理<span class="bdg sys">系統預設</span></div>
           <div class="k">assistant</div><div class="c">2 項權限</div></div>
-        <div class="ritem on"><div class="n">群組負責人<span class="bdg cus">已自訂</span></div>
+        <div class="ritem on"><div class="n">群組負責人<span class="bdg cus">已自行調整</span></div>
           <div class="k">group_owner</div><div class="c">11 項權限</div></div>
       </div>
 
       <div class="rbody">
         <div class="rhead">
-          <div class="n">群組負責人 <span class="bdg cus">已自訂</span></div>
+          <div class="n">群組負責人 <span class="bdg cus">已自行調整</span></div>
           <div class="k">group_owner</div>
           <div class="cus-note">
-            <span>這個角色已由貴公司自訂，<b>不再跟隨系統預設更新</b>（2026-08-21 由 測試帳號 調整）</span>
+            <span>這個角色已由貴公司自行調整過。日後 AIPROOT 為這個角色新增功能時，<b>不會自動套用到貴公司</b>（2026-08-21 由 測試帳號 調整）</span>
             <button class="btn">還原成系統預設</button>
           </div>
         </div>
@@ -204,9 +203,9 @@ footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.8;}
   <div>
     <div class="dlg">
       <h4>這是貴公司第一次調整這個角色</h4>
-      <p>調整後，「群組負責人」會變成<b>貴公司專屬</b>的設定，之後<b>不再跟隨系統預設更新</b> ——
-        我們日後為這個角色新增的權限不會自動套用到貴公司。<br>
-        隨時可以按「還原成系統預設」改回來。</p>
+      <p>調整之後，「群組負責人」就變成<b>貴公司專屬</b>的設定。<br>
+        日後我們為這個角色新增功能時，<b>不會自動套用到貴公司</b> —— 需要的話再請通知我們。<br>
+        隨時可以按「還原成系統預設」改回原本的設定。</p>
       <div class="acts"><button class="btn">取消</button><button class="btn btn-p">了解，繼續調整</button></div>
     </div>
     <p class="sec-s" style="margin-top:9px">
@@ -217,7 +216,7 @@ footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.8;}
   <div>
     <div class="dlg" style="border-color:#FECDD3">
       <h4 style="color:var(--danger)">這會讓 4 位成員看不到戰情室</h4>
-      <p>你正要移除「檢視戰情室」<code>warroom:view</code>。
+      <p>你正要移除「查看總覽儀表」。
         目前有 <b>4 位</b>成員使用「群組負責人」這個角色，他們儲存後<b>會立刻失去戰情室的所有頁面</b>。<br>
         確定要移除嗎？</p>
       <div class="acts"><button class="btn">先不要</button><button class="btn" style="border-color:#FECDD3;color:var(--danger)">仍要移除</button></div>
@@ -230,23 +229,42 @@ footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.8;}
 </div>
 
 <!-- ═══════════════ -->
-<h2 class="sec">④ 這份 mockup 沒有畫、但同等重要的事</h2>
+<h2 class="sec">④ 文案怎麼來的 · 以及沒畫但同等重要的事</h2>
+<p class="sec-s">
+  這一節本身就是踩過的坑：<b>第一版 mockup 直接把資料庫裡的權限說明搬上畫面</b>，
+  結果是「管理自 tenant 部門 CRUD」「檢視任務看板 Kanban」這種只有工程師看得懂的字。
+</p>
+<table>
+  <tr><th style="width:36%">資料庫原文（給開發者）</th><th>畫面文案（給總經理）</th></tr>
+  <tr><td>管理自 tenant 部門 CRUD</td><td><b>新增、修改、刪除部門</b></td></tr>
+  <tr><td>檢視任務看板 Kanban</td><td><b>查看任務看板</b><br><span style="color:var(--ink-3)">AI 從對話整理出來的待辦事項</span></td></tr>
+  <tr><td>簽核 tickets</td><td><b>簽核項目</b><br><span style="color:var(--ink-3)">確認 AI 整理的內容是對的</span></td></tr>
+  <tr><td>改自 tenant 定時任務設定（除成本欄位）</td><td><b>調整自動分析的時間</b><br><span style="color:var(--ink-3)">例如每天下午 6 點跑分析</span></td></tr>
+  <tr><td>建立 group_owner 帳號 (自 tenant)</td><td><b>建立部門主管帳號</b><br><span style="color:var(--ink-3)">只能建部門主管，不能建總經理</span></td></tr>
+</table>
+<div class="note" style="margin-top:12px">
+  <span class="h">三條原則</span>
+  <b>不出現代號。</b><code>audit:view</code> 這種是我們除錯用的，租戶視角完全不顯示（角色代號 <code>group_owner</code> 也一樣）。<br>
+  <b>分組照側邊欄，不照資料表。</b>使用者認得的是「戰情室」「部門與成員」，不是 <code>AUDIT</code>／<code>SCHEDULER-CONFIG</code>。<br>
+  <b>不明顯的才加一句說明。</b>「查看知識庫」不必解釋；「簽核項目」要講清楚是在確認什麼。
+</div>
+
+<h2 class="sec">⑤ 沒畫但同等重要的事</h2>
 <table>
   <tr><th style="width:30%">項目</th><th>說明</th></tr>
   <tr><td><b>後端才是閘門</b></td>
-      <td>3 個角色、26 項權限都是<b>後端依呼叫者決定回什麼</b>。可編輯的角色白名單
-        <code>['employee','assistant','group_owner']</code> 寫在後端；平台權限根本不進 API 回應。
-        <b>前端隱藏擋不住改請求的人</b>（[[pitfall_permission_code_is_not_tenant_boundary]]）。</td></tr>
-  <tr><td><b>分岔要跟 <code>role_id</code> 同一交易</b></td>
-      <td>複製角色之後，該租戶用該角色的使用者 <code>users.role_id</code> 必須全部指到副本。
-        漏掉的人會<b>靜默沿用內建角色</b>，而畫面上看起來一切正常 —— FMEA 的第四個 P0。</td></tr>
+      <td>3 個角色、26 項權限都是<b>後端依呼叫者決定回什麼</b>。可編輯的角色白名單寫在後端；
+        平台權限根本不進 API 回應。<b>前端隱藏擋不住改請求的人。</b></td></tr>
+  <tr><td><b>分岔要跟使用者的角色指向同一交易</b></td>
+      <td>複製角色之後，該租戶用該角色的使用者必須全部指到副本。
+        漏掉的人會<b>靜默沿用系統預設</b>，而畫面上看起來一切正常 —— 這是唯一沒有結構解的 P0。</td></tr>
   <tr><td><b>存檔後要清快取</b></td>
-      <td>權限有 5 分鐘 in-memory 快取。不清的話使用者會在那 5 分鐘裡以為「改了沒用」再改一次。</td></tr>
+      <td>權限有 5 分鐘暫存。不清的話使用者會在那 5 分鐘裡以為「改了沒用」再改一次。</td></tr>
   <tr><td><b>AIPROOT 仍看得到租戶改了什麼</b></td>
-      <td>客戶改壞了打電話來，我們得看得到他改成什麼、也要能改回去（OQ-9）。</td></tr>
-  <tr><td><b>這不解凍 <code>custom-roles</code></b></td>
+      <td>客戶改壞了打電話來，我們得看得到他改成什麼、也要能改回去。</td></tr>
+  <tr><td><b>這不解凍「自訂角色」</b></td>
       <td>本模組是「調整既有角色的權限」，不是「建立新角色」。
-        頂部那句「需要新的角色請聯繫 AIPROOT」就是這條界線的使用者版說法。</td></tr>
+        頁面上那句「需要新的角色請聯繫 AIPROOT」就是這條界線的使用者版說法。</td></tr>
 </table>
 
 <footer>
@@ -256,34 +274,61 @@ footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.8;}
 </div>
 
 <script>
-// 26 項 · scope IN ('tenant','department') · 逐字取自 migration 0019/0020/0037…
-const P=[
- ["Audit",[["audit:view","檢視稽核記錄","t",0]]],
- ["Binding",[["binding:view","檢視 LINE 綁定記錄","t",0]]],
- ["Categories",[["categories:view","檢視分類","t",0]]],
- ["Departments",[["departments:view","檢視部門","t",0],["departments:manage-tenant","管理自 tenant 部門 CRUD","t",0]]],
- ["KM",[["km:view","知識庫","t",1]]],
- ["Line-Groups",[["line-groups:view","檢視 LINE 群列表 (自 tenant)","t",1]]],
- ["Map",[["map:view","客戶地圖","t",1]]],
- ["Media",[["media:view","素材看板","t",1]]],
- ["Personal-Report",[["personal-report:mine","檢視 / 編輯自己的日報","t",1],["personal-report:team","主管看部門員工日報","d",1]]],
- ["RAG",[["rag:view","智慧檢索","t",1]]],
- ["Scheduler-Config",[["scheduler-config:view","看定時任務設定","t",0],["scheduler-config:manage-tenant","改自 tenant 定時任務設定（除成本欄位）","t",0]]],
- ["Signoff",[["signoff:view","檢視待簽核 tickets","t",1],["signoff:action","簽核 tickets","t",1]]],
- ["Task-Config",[["task-config:view","檢視任務設定","t",0],["task-config:timing","改任務時間設定（寬限期／提醒階梯）","t",0]]],
- ["Tenant-Config",[["tenant-config:view","檢視租戶設定","t",0],["tenant-config:manage","管理租戶設定","t",0]]],
- ["Trips",[["trips:mine","檢視自己的外勤行程","t",0]]],
- ["Users",[["users:view","檢視使用者","t",0],["users:create-group-owner","建立 group_owner 帳號 (自 tenant)","t",0]]],
- ["Warroom",[["warroom:view","檢視戰情室","t",1]]],
- ["Warroom-Daily",[["warroom-daily:view","檢視今日日誌","t",1]]],
- ["Warroom-Tasks",[["warroom-tasks:view","檢視任務看板 Kanban","t",1]]],
+// 26 項權限的「使用者版」文案
+// ⚠️ 分組不照 resource（那是資料表的分法），照側邊欄 —— 使用者認得的是側邊欄
+// ⚠️ 租戶視角不顯示權限代號（audit:view 那種），那是我們除錯用的
+// ⚠️ 「tenant」一律講「公司」；「tickets」講「項目」；「Kanban」拿掉
+const ZH=[
+ ["戰情室", [
+  ["warroom:view",        "查看總覽儀表",     "每天的簽核率、部門健康度那一頁", "t", 1],
+  ["warroom-tasks:view",  "查看任務看板",     "AI 從對話整理出來的待辦事項",   "t", 1],
+  ["warroom-daily:view",  "查看群組日誌",     "確認 AI 有沒有讀到某則訊息",     "t", 1],
+  ["signoff:view",        "查看待簽核項目",   "",                              "t", 1],
+  ["signoff:action",      "簽核項目",         "確認 AI 整理的內容是對的",      "t", 1],
+  ["personal-report:team","查看部門同仁的日報","只看得到自己部門的",           "d", 1],
+ ]],
+ ["資料與知識", [
+  ["rag:view",  "使用智慧檢索", "用問答的方式查公司的對話與文件", "t", 1],
+  ["media:view","查看素材",     "群組裡傳過的照片與檔案",         "t", 1],
+  ["km:view",   "查看知識庫",   "",                               "t", 1],
+  ["map:view",  "查看客戶地圖", "",                               "t", 1],
+ ]],
+ ["個人", [
+  ["personal-report:mine","填寫與查看自己的日報","", "t", 0],
+  ["trips:mine",          "查看自己的外勤行程",  "", "t", 0],
+ ]],
+ ["部門與成員", [
+  ["departments:view",          "查看部門",           "",                          "t", 0],
+  ["departments:manage-tenant", "新增、修改、刪除部門","",                          "t", 0],
+  ["users:view",                "查看成員名單",       "",                          "t", 0],
+  ["users:create-group-owner",  "建立部門主管帳號",   "只能建部門主管，不能建總經理","t", 0],
+ ]],
+ ["通訊管道", [
+  ["line-groups:view","查看公司的 LINE 群組",   "",                           "t", 1],
+  ["binding:view",    "查看誰綁定了 LINE 帳號", "看得到哪些同仁還沒綁定",     "t", 0],
+ ]],
+ ["任務設定", [
+  ["categories:view",  "查看分類設定",       "AI 會把對話分成哪幾類",        "t", 0],
+  ["task-config:view", "查看任務設定",       "",                             "t", 0],
+  ["task-config:timing","調整任務的時間規則","逾期幾天算超時、什麼時候提醒", "t", 0],
+ ]],
+ ["自動化與公司設定", [
+  ["scheduler-config:view",         "查看自動分析的排程","",                        "t", 0],
+  ["scheduler-config:manage-tenant","調整自動分析的時間","例如每天下午 6 點跑分析", "t", 0],
+  ["tenant-config:view",            "查看公司設定",     "",                        "t", 0],
+  ["tenant-config:manage",          "修改公司設定",     "",                        "t", 0],
+ ]],
+ ["稽核", [
+  ["audit:view","查看操作紀錄","誰在什麼時候改了什麼","t",0],
+ ]],
 ];
+
 const CK='<svg viewBox="0 0 14 14"><path d="M2 7l3.5 3.5L12 4"/></svg>';
-document.getElementById("plist").innerHTML=P.map(([g,items])=>
- `<div class="pgrp">${g}</div>`+items.map(([id,desc,sc,on])=>
+document.getElementById("plist").innerHTML=ZH.map(([g,items])=>
+ `<div class="pgrp">${g}</div>`+items.map(([id,name,why,sc,on])=>
   `<div class="prow"><span class="cb${on?" on":""}">${on?CK:""}</span>
-    <span><span class="d">${desc}</span>
-    <span class="id">${id}<span class="sc ${sc==="t"?"ten":"dep"}">${sc==="t"?"租戶":"部門"}</span></span></span></div>`).join("")
+    <span><span class="d">${name}</span>${sc==="d"?'<span class="scope">僅限自己部門</span>':""}
+    ${why?`<span class="why">${why}</span>`:""}</span></div>`).join("")
 ).join("");
 </script>
 </body></html>
