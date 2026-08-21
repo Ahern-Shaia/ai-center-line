@@ -84,6 +84,11 @@ button { cursor:pointer; }
 .sb-foot { padding:10px 16px; border-top:1px solid var(--line); font-size:11px; color:var(--ink-3); line-height:1.5; }
 .sb-foot-brand { color:var(--ink-2); font-weight:600; letter-spacing:.02em; }
 .sb-foot-ver { opacity:.7; margin-top:1px; }
+/* 使用手冊（web/public/handbook.html）· 開新分頁，別把人踢出登入狀態 */
+.sb-foot-guide { display:inline-block; margin-bottom:6px; color:var(--brand, #4338CA);
+  font-weight:600; text-decoration:none; }
+.sb-foot-guide::before { content:"📖 "; }
+.sb-foot-guide:hover { text-decoration:underline; }
 
 /* main column */
 .main { display:flex; flex-direction:column; min-width:0; }

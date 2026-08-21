@@ -290,6 +290,11 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
           })}
         </nav>
         <div className="sb-foot">
+          {/* 手冊是靜態頁不是路由 —— 掛進上面那份權限控管的 nav 會卡，
+              而且每個角色都該讀得到，本來就不需要權限判斷。求助資訊已經在這一塊。 */}
+          <a className="sb-foot-guide" href="/handbook.html" target="_blank" rel="noreferrer">
+            使用手冊
+          </a>
           <div><span className="sb-foot-brand">aiproot</span> 技術支援</div>
           <div className="sb-foot-ver">v0.1</div>
         </div>
