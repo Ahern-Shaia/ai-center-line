@@ -1,6 +1,7 @@
 # 設計文件 · 權限管理開放給租戶自己調（M0）
 
-> 狀態：📋 **M0 DRAFT v0.1**（2026-08-21）· **待裁定 OQ-TRP-1..10**
+> 狀態：✅ **M0 APPROVED v0.2**（2026-08-21）· **OQ-TRP-1..10 全採建議** · 下一步 M1
+> UI mockup：[`../mockup/tenant-role-permissions.html`](../mockup/tenant-role-permissions.html)（待 review）
 > 對象：`roles`、`role_permissions`、`permission.service.ts`、`RolesManagement.tsx`、`users.role_id`
 > 相關：[`permission-engine.md`](permission-engine.md)、[`custom-roles.md`](custom-roles.md)（🧊 凍結 · **界線見 §2**）、
 > [`member-department-assignment.md`](member-department-assignment.md)、[`../roles-permissions-matrix.md`](../roles-permissions-matrix.md)
@@ -194,9 +195,12 @@ ON CONFLICT DO NOTHING;
 
 ---
 
-## 7. 開放問題（OQ-TRP-N）
+## 7. 開放問題（OQ-TRP-N）— ✅ 2026-08-21 全採建議
 
-| # | 問題 | 建議 |
+> 下欄「建議」即為裁定結果。落地形狀見
+> [`../mockup/tenant-role-permissions.html`](../mockup/tenant-role-permissions.html)。
+
+| # | 問題 | 裁定（＝原建議）|
 |---:|---|---|
 | **1** | 分岔時機：編輯時 vs 開通時 | **編輯時**（§4.2）· 沒改過的跟著系統更新走 |
 | **2** | 租戶可編輯哪些角色？ | `employee` / `assistant` / `group_owner` 三個 · **`tenant_admin` 不可**（P0-C） |
@@ -234,4 +238,5 @@ ON CONFLICT DO NOTHING;
 
 | 日期 | 版本 | 變更 |
 |---|---|---|
+| 2026-08-21 | v0.2 | 用戶「全採建議」裁定 OQ-TRP-1..10 · 加 UI mockup（`mockup/tenant-role-permissions.html`）待 review |
 | 2026-08-21 | v0.1 | M0 DRAFT · 起於用戶「我只是要開放權限管理給租戶自己管理」（第四次提租戶自治）· 查證三個 P0：角色全域共用、34/60 項是平台權限（含跨租戶查詢）、可自我提權 · 設計＝fork on edit ＋ scope 過濾 ＋ 白名單排除 `tenant_admin` · `roles.tenant_id` 與 `users.role_id` 早在 0010 就留好了，結構不用改 · 明確劃清與 custom-roles（仍凍結）的界線 |
