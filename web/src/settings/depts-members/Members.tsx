@@ -15,6 +15,9 @@ import {
   type UserRole,
   listMemberGroupActivity,
   type MemberGroupActivity,
+  listCustomRoles,
+  assignCustomRole,
+  type CustomRoleDto,
 } from "../../api";
 import { useToast } from "../../Toast";
 import { usePermissions } from "../../permission/PermissionContext";
@@ -83,20 +86,25 @@ export function Members({
   const [confirmDelete, setConfirmDelete] = useState<TenantUserDto | null>(null);
   // §4.6 · 每個已綁定成員近 30 天在各群的發言數 · 用來說明部門是怎麼推出來的
   const [activity, setActivity] = useState<Record<string, MemberGroupActivity[]>>({});
+  // custom-roles M6 · 角色下拉要列出本公司自建的角色
+  const [customRoles, setCustomRoles] = useState<CustomRoleDto[]>([]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
       // 群組活動只是「部門是怎麼判的」的說明 —— 它掛掉不該讓整份成員名單消失，
       // 所以自己吞掉錯誤（畫面退回沒有依據那行），不進下面的 catch
-      const [usersRes, deptsRes, actRes] = await Promise.all([
+      const [usersRes, deptsRes, actRes, crRes] = await Promise.all([
         listTenantUsers(tenantId),
         listDepartments(tenantId),
         listMemberGroupActivity(tenantId).catch(() => ({ activity: {} })),
+        // 同樣自己吞掉：沒有自建角色不該讓整份名單消失
+        listCustomRoles().catch(() => ({ roles: [] as CustomRoleDto[] })),
       ]);
       setUsers(usersRes.users);
       setDepts(deptsRes.departments);
       setActivity(actRes.activity);
+      setCustomRoles(crRes.roles);
     } catch (err) {
       toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
     } finally {
@@ -121,11 +129,18 @@ export function Members({
     }
   }
 
-  // 0055 · 直接在列上改角色（員工↔部門主管）· 只有 canAssignRole 的人看得到下拉
-  async function changeRole(u: TenantUserDto, role: "employee" | "group_owner") {
+  // 0055 · 直接在列上改角色 · 只有 canAssignRole 的人看得到下拉
+  // custom-roles M6：`c:<roleId>` ＝ 自建角色，走另一支端點；其餘是內建角色
+  async function changeRole(u: TenantUserDto, sel: string) {
     setSavingRole(u.userId);
     try {
-      await assignMemberRole(u.userId, { tenantId, role });
+      if (sel.startsWith("c:")) {
+        await assignCustomRole(u.userId, sel.slice(2));
+      } else {
+        // 從自建角色換回內建角色時，要先把 role_id 清掉，否則權限還停在舊的自建角色
+        if (u.roleId) await assignCustomRole(u.userId, null);
+        await assignMemberRole(u.userId, { tenantId, role: sel as "employee" | "group_owner" });
+      }
       toast.show("已調整角色", "ok");
       await refresh();
       onChanged();
@@ -172,9 +187,10 @@ export function Members({
                   <td>
                     <RoleCell
                       user={u}
+                      customRoles={customRoles}
                       editable={canAssignRole && !canManageFull && !isSelf(u) && MEMBER_EDITABLE_ROLES.includes(u.role)}
                       saving={savingRole === u.userId}
-                      onChange={(r) => void changeRole(u, r)}
+                      onChange={(sel) => void changeRole(u, sel)}
                     />
                   </td>
                   <td>
@@ -267,23 +283,36 @@ function MemberEmail({ email }: { email: string | null }) {
 }
 
 // 0055 · 一列的「角色」格 · tenant_admin 可內嵌改 員工↔部門主管；其餘（高階/aiproot 視角）顯示靜態標籤
-function RoleCell({ user, editable, saving, onChange }: {
+//
+// custom-roles v0.3 M6：清單多一段本公司自建的角色。
+// ⚠️ 兩種角色走**不同的端點**（內建 assignMemberRole／自建 assignCustomRole），
+//    所以 onChange 要能分辨。用 `c:<roleId>` 前綴區分 —— 兩邊的 id 空間不同，不能混用。
+function RoleCell({ user, editable, saving, customRoles, onChange }: {
   user: TenantUserDto;
   editable: boolean;
   saving: boolean;
-  onChange: (role: "employee" | "group_owner") => void;
+  customRoles: CustomRoleDto[];
+  onChange: (sel: string) => void;
 }) {
+  const mine = user.roleId ? customRoles.find((c) => c.roleId === user.roleId) : undefined;
+
   if (!editable) {
-    return <span>{ROLE_LABEL[user.role] ?? user.role}</span>;
+    // 有自訂角色就顯示它的名字 —— 顯示基準角色的話畫面會說「部門主管」而實際是「品保組長」
+    return <span>{mine?.roleName ?? ROLE_LABEL[user.role] ?? user.role}</span>;
   }
   return (
     <StyledSelect
       ariaLabel="角色"
-      value={user.role}
+      value={mine ? `c:${mine.roleId}` : user.role}
       disabled={saving}
-      width={120}
-      items={MEMBER_EDITABLE_ROLES.map((r) => ({ id: r, label: ROLE_LABEL[r] }))}
-      onChange={(v) => onChange(v as "employee" | "group_owner")}
+      width={130}
+      items={[
+        ...MEMBER_EDITABLE_ROLES.map((r) => ({ id: r, label: ROLE_LABEL[r] })),
+        // StyledSelect 沒有分組，用 hint（右側灰字）標出來源 ——
+        // 不標的話「品保組長」混在內建角色裡，沒人知道那是自己公司建的
+        ...customRoles.map((c) => ({ id: `c:${c.roleId}`, label: c.roleName, hint: "本公司自建" })),
+      ]}
+      onChange={onChange}
     />
   );
 }

@@ -2371,6 +2371,20 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .rm-perm-meta { font-size:11px; color:var(--ink-3); display:flex; gap:8px; margin-top:2px; align-items:center; }
 /* 「這個角色的人怎麼來的」· 比權限數再淡一階，是說明不是資料 */
 .rm-role-source { font-size:11px; color:var(--ink-3); opacity:.75; margin-top:3px; }
+/* 建立角色 · 資料範圍三選一（custom-roles v0.3 M6）
+   ⚠️ radio 必須覆寫寬度 —— .field input{width:100%} 是為文字框寫的，
+   不覆寫的話 radio 會被撐成滿版、把右邊文字擠成直排（畫 mockup 時實際踩到）。*/
+.cr-scope { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border:1px solid var(--line);
+  border-radius:var(--r); margin-bottom:6px; cursor:pointer; }
+.cr-scope.on { border-color:var(--primary); background:var(--primary-tint); }
+.cr-scope input[type=radio] { width:auto; flex:none; margin:3px 0 0; min-height:0; }
+.cr-scope > span { flex:1; }
+.cr-scope-lb { display:block; font-size:13px; font-weight:600; color:var(--ink); }
+.cr-scope-hi { display:block; font-size:11.5px; color:var(--ink-3); margin-top:2px; line-height:1.6; }
+/* 角色清單裡的自訂角色 */
+.rm-group-gap { margin-top:10px; }
+.rm-create { margin-top:6px; width:100%; justify-content:center; }
+.rm-empty-hint { font-size:11.5px; color:var(--ink-3); padding:6px 12px; }
 .rm-perm-scope { padding:1px 6px; border-radius:2px; font-size:10px; }
 .rm-scope-platform { background:#EEF2FF; color:#3730A3; }
 .rm-scope-tenant { background:#ECFDF5; color:#065F46; }

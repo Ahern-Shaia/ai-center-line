@@ -2,12 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError, listTenantPermissions, listTenantRoles,
   updateTenantRolePermissions, resetTenantRole,
-  type TenantPermissionDto, type TenantRoleDto,
+  listCustomRoles, updateCustomRolePermissions, deleteCustomRole,
+  type TenantPermissionDto, type TenantRoleDto, type CustomRoleDto,
 } from "../../api";
 import { useToast } from "../../Toast";
 import Spinner from "../../shared/Spinner";
 import ConfirmDialog from "../../shared/ConfirmDialog";
 import { PERMISSION_GROUPS, PERMISSION_HINT, CRITICAL_PERMISSION_IDS } from "./labels";
+import RoleList from "./RoleList";
+import CreateRoleDrawer from "./CreateRoleDrawer";
+import type { ViewRole } from "./types";
 
 // 權限管理（租戶端）· docs/modules/tenant-role-permissions.md v0.2
 // 版面沿用 aiproot 側 RolesManagement 的 rm-* class —— 兩邊是同一個東西的兩種可見範圍，
@@ -19,6 +23,11 @@ import { PERMISSION_GROUPS, PERMISSION_HINT, CRITICAL_PERMISSION_IDS } from "./l
 // ⚠️ 這裡刻意沒有 assistant —— 「助理」是 AIPROOT 內部角色，2026-08-21 已從
 //    TENANT_EDITABLE_ROLE_KEYS 移除（它的權限都是 platform scope，而那些表的
 //    policy 沒有租戶條件）。後端不會再回傳它，前端也不留殘影。
+// 自建角色清單第三行用 · 跟後端 GET /baselines 的 label 一致
+const BASELINE_LABEL: Record<string, string> = {
+  employee: "只有自己", group_owner: "只有自己部門", tenant_admin: "全公司",
+};
+
 const ROLE_SOURCE: Record<string, string> = {
   employee: "同仁綁定 LINE 後自動成為員工",
   group_owner: "在「部門/成員」頁新增",
@@ -27,6 +36,9 @@ const ROLE_SOURCE: Record<string, string> = {
 export default function RolePermissionsPage() {
   const [perms, setPerms] = useState<TenantPermissionDto[]>([]);
   const [roles, setRoles] = useState<TenantRoleDto[]>([]);
+  const [customRoles, setCustomRoles] = useState<CustomRoleDto[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<ViewRole | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [draft, setDraft] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -40,10 +52,11 @@ export default function RolePermissionsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [p, r] = await Promise.all([listTenantPermissions(), listTenantRoles()]);
+      const [p, r, c] = await Promise.all([listTenantPermissions(), listTenantRoles(), listCustomRoles()]);
       setPerms(p.permissions);
       setRoles(r.roles);
-      setSelected((cur) => cur ?? r.roles[0]?.roleKey ?? null);
+      setCustomRoles(c.roles);
+      setSelected((cur) => cur ?? (r.roles[0] ? `b:${r.roles[0].roleKey}` : null));
     } catch (e) {
       toast.show(e instanceof ApiError ? e.message : "載入權限設定失敗", "danger");
     } finally {
@@ -53,7 +66,25 @@ export default function RolePermissionsPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const role = roles.find((r) => r.roleKey === selected) ?? null;
+  // 內建與自建走兩支不同的 API，但畫面上是同一份清單、同一個編輯器 ——
+  // 先攤平成統一視圖，下面的編輯器就不必到處分岔。
+  const builtinView = useMemo<ViewRole[]>(() => roles.map((r) => ({
+    sel: `b:${r.roleKey}`, name: r.roleName, permissions: r.permissions,
+    memberCount: r.memberCount, isCustom: false, isCustomized: r.isCustomized,
+    roleKey: r.roleKey, sourceHint: ROLE_SOURCE[r.roleKey] ?? "",
+  })), [roles]);
+
+  const customView = useMemo<ViewRole[]>(() => customRoles.map((r) => ({
+    sel: `c:${r.roleId}`, name: r.roleName, permissions: r.permissions,
+    memberCount: r.memberCount, isCustom: true, isCustomized: false,
+    roleKey: r.roleKey, roleId: r.roleId,
+    sourceHint: `看得到：${BASELINE_LABEL[r.baselineRole] ?? r.baselineRole}`,
+  })), [customRoles]);
+
+  const role = useMemo(
+    () => [...builtinView, ...customView].find((r) => r.sel === selected) ?? null,
+    [builtinView, customView, selected],
+  );
   useEffect(() => { setDraft(new Set(role?.permissions ?? [])); }, [role]);
 
   const byId = useMemo(() => new Map(perms.map((p) => [p.permissionId, p])), [perms]);
@@ -86,7 +117,8 @@ export default function RolePermissionsPage() {
     const removedCritical = role.permissions
       .filter((id) => !draft.has(id) && CRITICAL_PERMISSION_IDS.has(id));
     if (removedCritical.length > 0) { setCriticalWarn(removedCritical); return; }
-    if (!role.isCustomized) { setForkNotice(true); return; }
+    // 自建角色本來就是這家公司的，沒有「分岔成專屬設定」這件事要說明
+    if (!role.isCustom && !role.isCustomized) { setForkNotice(true); return; }
     void save();
   };
 
@@ -94,10 +126,15 @@ export default function RolePermissionsPage() {
     if (!role) return;
     setSaving(true);
     try {
-      const res = await updateTenantRolePermissions(role.roleKey, [...draft]);
-      toast.show(res.forked
-        ? `已儲存 · 「${role.roleName}」現在是貴公司專屬的設定`
-        : "已儲存", "ok");
+      if (role.isCustom) {
+        await updateCustomRolePermissions(role.roleId!, [...draft]);
+        toast.show("已儲存", "ok");
+      } else {
+        const res = await updateTenantRolePermissions(role.roleKey, [...draft]);
+        toast.show(res.forked
+          ? `已儲存 · 「${role.name}」現在是貴公司專屬的設定`
+          : "已儲存", "ok");
+      }
       setForkNotice(false); setCriticalWarn(null);
       await load();
     } catch (e) {
@@ -112,7 +149,7 @@ export default function RolePermissionsPage() {
     setSaving(true);
     try {
       await resetTenantRole(role.roleKey);
-      toast.show(`「${role.roleName}」已還原成系統預設`, "ok");
+      toast.show(`「${role.name}」已還原成系統預設`, "ok");
       setResetting(false);
       await load();
     } catch (e) {
@@ -133,45 +170,33 @@ export default function RolePermissionsPage() {
         </div>
       </div>
 
-      <div className="rm-note">
-        需要新的角色？請聯繫 AIPROOT 並說明這個角色要做哪些事 —— 我們會幫你建立。
-      </div>
-
       <div className="rm-layout">
-        <div className="rm-sidebar">
-          <div className="rm-sidebar-hdr">角色（{roles.length}）</div>
-          {roles.map((r) => (
-            <button
-              key={r.roleKey}
-              className={`rm-role-item${selected === r.roleKey ? " active" : ""}`}
-              onClick={() => setSelected(r.roleKey)}
-            >
-              <div className="rm-role-name">
-                {r.roleName}
-                <span className={`rm-role-badge ${r.isCustomized ? "custom" : ""}`}>
-                  {r.isCustomized ? "已自行調整" : "系統預設"}
-                </span>
-              </div>
-              <div className="rm-perm-meta">
-                {r.permissions.length} 項權限 · {r.memberCount} 位成員
-              </div>
-              {/* 這頁有三個角色、「新增成員」卻只有一個選項 —— 不說明的話，
-                  看起來就像設定沒同步。講清楚「這個角色的人怎麼來的」比較實在。 */}
-              <div className="rm-role-source">{ROLE_SOURCE[r.roleKey] ?? ""}</div>
-            </button>
-          ))}
-        </div>
+        <RoleList
+          builtin={builtinView} custom={customView}
+          selected={selected} onSelect={setSelected}
+          onCreate={() => setCreating(true)}
+        />
 
         {role && (
           <div className="rm-editor">
             <div className="rm-editor-hdr">
               <div className="rm-editor-title">
-                {role.roleName}
-                <span className={`rm-role-badge ${role.isCustomized ? "custom" : ""}`}>
-                  {role.isCustomized ? "已自行調整" : "系統預設"}
+                {role.name}
+                <span className={`rm-role-badge ${role.isCustom || role.isCustomized ? "custom" : ""}`}>
+                  {role.isCustom ? "本公司自建" : role.isCustomized ? "已自行調整" : "系統預設"}
                 </span>
               </div>
-              {role.isCustomized && (
+              {role.isCustom && (
+                <div className="rm-custom-note">
+                  <span>看得到的資料：<b>{BASELINE_LABEL[
+                    customRoles.find((c) => c.roleId === role.roleId)?.baselineRole ?? ""
+                  ] ?? "—"}</b> · 這一項建立後不能改</span>
+                  <button className="btn small" onClick={() => setConfirmDelete(role)} disabled={saving}>
+                    刪除這個角色
+                  </button>
+                </div>
+              )}
+              {!role.isCustom && role.isCustomized && (
                 <div className="rm-custom-note">
                   <span>
                     這個角色已由貴公司自行調整過。日後 AIPROOT 為這個角色新增功能時，
@@ -229,7 +254,7 @@ export default function RolePermissionsPage() {
         title="這是貴公司第一次調整這個角色"
         confirmLabel="了解，繼續調整"
         body={<>
-          調整之後，「{role?.roleName}」就變成<b>貴公司專屬</b>的設定。<br />
+          調整之後，「{role?.name}」就變成<b>貴公司專屬</b>的設定。<br />
           日後我們為這個角色新增功能時，<b>不會自動套用到貴公司</b> —— 需要的話再請通知我們。<br />
           隨時可以按「還原成系統預設」改回原本的設定。
         </>}
@@ -244,7 +269,7 @@ export default function RolePermissionsPage() {
         body={<>
           你正要移除
           {criticalWarn?.map((id) => `「${byId.get(id)?.description ?? id}」`).join("、")}。<br />
-          目前有 <b>{role?.memberCount ?? 0} 位</b>成員使用「{role?.roleName}」這個角色，
+          目前有 <b>{role?.memberCount ?? 0} 位</b>成員使用「{role?.name}」這個角色，
           他們儲存後<b>會立刻失去對應的頁面</b>。
         </>}
       />
@@ -255,8 +280,50 @@ export default function RolePermissionsPage() {
         title="還原成系統預設？"
         confirmLabel="還原"
         body={<>
-          「{role?.roleName}」會回到 AIPROOT 的預設設定，貴公司目前的調整<b>會被覆蓋</b>。<br />
+          「{role?.name}」會回到 AIPROOT 的預設設定，貴公司目前的調整<b>會被覆蓋</b>。<br />
           之後這個角色會重新跟隨系統更新。
+        </>}
+      />
+
+      {creating && (
+        <CreateRoleDrawer
+          onClose={() => setCreating(false)}
+          onCreated={async (roleKey) => {
+            setCreating(false);
+            await load();
+            // 建完直接切到那個角色 —— 下一步就是勾它可以做哪些事，
+            // 不切的話使用者得自己在清單裡找剛剛建的那一個
+            const created = (await listCustomRoles()).roles.find((r) => r.roleKey === roleKey);
+            if (created) setSelected(`c:${created.roleId}`);
+          }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={confirmDelete !== null} busy={saving} tone="danger"
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={async () => {
+          if (!confirmDelete?.roleId) return;
+          setSaving(true);
+          try {
+            await deleteCustomRole(confirmDelete.roleId);
+            toast.show(`「${confirmDelete.name}」已刪除`, "ok");
+            setConfirmDelete(null);
+            setSelected(null);
+            await load();
+          } catch (e) {
+            toast.show(e instanceof ApiError ? e.message : "刪除失敗", "danger");
+          } finally {
+            setSaving(false);
+          }
+        }}
+        title={`刪除「${confirmDelete?.name ?? ""}」？`}
+        confirmLabel="刪除" cancelLabel="先不要"
+        body={<>
+          這個角色會從清單與成員的角色下拉中消失。<br />
+          {(confirmDelete?.memberCount ?? 0) > 0
+            ? <>目前有 <b>{confirmDelete?.memberCount} 位</b>成員在使用，<b>要先幫他們改成別的角色才能刪除</b>。</>
+            : <>目前沒有人使用這個角色。</>}
         </>}
       />
     </div>

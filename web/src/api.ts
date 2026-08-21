@@ -1098,6 +1098,8 @@ export interface TenantUserDto {
   lineUserId: string | null;
   createdAt: string;
   hasPassword: boolean;
+  /** 自訂角色的 role_id · null ＝ 用內建角色（custom-roles v0.3）*/
+  roleId?: string | null;
 }
 
 export const listDepartments = (tenantId: string) =>
@@ -1306,6 +1308,57 @@ export const resetTenantRole = (roleKey: string) =>
   req<{ restored: boolean }>(`/tenant-roles/${encodeURIComponent(roleKey)}/reset`, {
     method: "POST",
   });
+
+// ── 租戶自建角色 · docs/modules/custom-roles.md v0.3（方案 A）────────────────
+// 跟上面那組的分工：上面是「改內建角色的權限」，這組是「建立／指派新角色」。
+export interface CustomRoleDto {
+  roleId: string;
+  roleKey: string;
+  roleName: string;
+  /** 資料範圍基準：employee / group_owner / tenant_admin · 建立後不可改 */
+  baselineRole: string;
+  permissions: string[];
+  memberCount: number;
+}
+export interface BaselineDto {
+  id: string;
+  label: string;
+  hint: string;
+}
+
+export const listCustomRoles = () =>
+  req<{ roles: CustomRoleDto[] }>("/tenant-custom-roles");
+
+/** 三個資料範圍的文案由後端給 · 前端不自己編一套（兩邊會漂移） */
+export const listBaselines = () =>
+  req<{ baselines: BaselineDto[] }>("/tenant-custom-roles/baselines");
+
+/** 沒有 roleKey —— 那是程式用的識別字，後端自動產生，使用者看不到也不用填 */
+export const createCustomRole = (args: {
+  roleName: string;
+  baselineRole: string;
+  permissionIds: string[];
+}) =>
+  req<{ roleId: string; roleKey: string }>("/tenant-custom-roles", {
+    method: "POST",
+    body: JSON.stringify(args),
+  });
+
+/** roleId = null 代表取消自訂角色，退回基準角色 */
+export const assignCustomRole = (userId: string, roleId: string | null) =>
+  req<{ role: string }>(`/tenant-custom-roles/assignments/${encodeURIComponent(userId)}`, {
+    method: "PUT",
+    body: JSON.stringify({ roleId }),
+  });
+
+export const updateCustomRolePermissions = (roleId: string, permissionIds: string[]) =>
+  req<{ count: number }>(`/tenant-custom-roles/${encodeURIComponent(roleId)}/permissions`, {
+    method: "PUT",
+    body: JSON.stringify({ permissionIds }),
+  });
+
+export const deleteCustomRole = (roleId: string) =>
+  req<{ ok: true }>(`/tenant-custom-roles/${encodeURIComponent(roleId)}`, { method: "DELETE" });
 
 export const listPermissions = () =>
   req<{ permissions: PermissionDto[] }>("/permissions");
