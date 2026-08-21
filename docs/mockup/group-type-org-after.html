@@ -104,6 +104,15 @@ tr:last-child td{border-bottom:none;}
 .sel{display:inline-flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);
  border-radius:6px;padding:4px 10px;font-size:12.5px;background:var(--surface);min-width:120px;color:var(--ink);}
 .sel .cv{color:var(--ink-3);font-size:10px;}
+.mem-tbl td{vertical-align:top;}
+.dept-cell .sel{min-width:150px;}
+.dept-why{font-size:11.5px;color:var(--ink-3);margin-top:5px;line-height:1.75;}
+.dept-why .src{color:var(--ok);font-weight:600;}
+.dept-why .src.man{color:var(--primary-2);}
+.grp-line{display:block;margin-top:3px;color:var(--ink-2);}
+.grp-line .g{display:inline-block;background:var(--well);border-radius:5px;padding:0 7px;margin-right:5px;}
+.grp-line .g b{color:var(--ink);font-variant-numeric:tabular-nums;}
+.grp-line .g.out{background:var(--warn-tint);color:#B45309;text-decoration:line-through;}
 .num{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2);}
 .mono{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);}
 footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.8;}
@@ -112,7 +121,7 @@ footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.8;}
 
 <h1 class="doc">群組類型 · 分類後的預期成果（mockup）</h1>
 <p class="doc-sub">
-  對應 <b>docs/modules/group-type-classification.md</b> v0.3（OQ-GTC-1..10 全採建議 · 11/12 待裁定 · 2026-08-21）<br>
+  對應 <b>docs/modules/group-type-classification.md</b> v0.4（OQ-GTC-1..10 全採建議 · 11/12/13 待裁定 · 2026-08-21）<br>
   <b>畫面依據</b>：組織圖沿用 2026-08-21 剛上線的左右樹版型（<code>OrgGraph.tsx</code>）·
   數字全部取自 prod 實查 · 成員姓名假名化（保留長度與中英 emoji 混排）。
 </p>
@@ -282,7 +291,67 @@ footer{margin-top:26px;font-size:11.5px;color:var(--ink-3);line-height:1.8;}
   其餘的人從來沒走過這條路。那是帳號覆蓋率的問題，不是分類的問題。
 </div>
 
-<h2 class="sec">⑤ 這份 mockup 沒有解決的事</h2>
+<h2 class="sec">⑤ 那怎麼看得出「他在多個群」？（成員頁）</h2>
+<p class="sec-s">
+  現在 <code>line_member</code> <b>一列都沒有進到任何使用者看得到的畫面</b> ——
+  所以廠商當場問「這個人是不是跨多個部門」時，畫面上答不出來，只能下 SQL。<br>
+  做法是在「所屬部門」下面<b>補出推導依據</b>：他在哪些群、各發言幾則、所以被歸到哪一個。
+</p>
+
+<table class="mem-tbl">
+  <tr><th style="width:20%">顯示名稱</th><th style="width:12%">角色</th><th style="width:44%">所屬部門</th><th>LINE 綁定</th></tr>
+  <tr>
+    <td><b>淑惠Sandra三爪❤️台灣福祉</b></td>
+    <td>員工</td>
+    <td class="dept-cell">
+      <span class="sel">業務助理 <span class="cv">▾</span></span>
+      <div class="dept-why">
+        · <span class="src">系統自動判定</span> · 依 <b>3 個部門群</b>中發言最多的
+        <span class="grp-line">
+          <span class="g">福祉業務助理小組 <b>42</b> 則</span>
+          <span class="g">福祉集團-業務部 <b>11</b> 則</span>
+          <span class="g">福祉集團-人資總務群 <b>3</b> 則</span>
+        </span>
+        <span class="grp-line" style="color:#B45309">
+          <span class="g out">有你真好 <b>96</b> 則</span>
+          不列入 —— 公告群，成員橫跨所有部門
+        </span>
+      </div>
+    </td>
+    <td>已綁定</td>
+  </tr>
+  <tr>
+    <td><b>派翠克</b></td>
+    <td>員工</td>
+    <td class="dept-cell">
+      <span class="sel">售後服務 <span class="cv">▾</span></span>
+      <div class="dept-why">
+        · <span class="src man">主管手動指派</span> · 系統的自動判定<b>不會再覆寫</b>
+        <span class="grp-line" style="color:var(--ink-3)">（他近 30 天沒有在任何部門群發言，系統推不出來）</span>
+      </div>
+    </td>
+    <td>尚未綁定</td>
+  </tr>
+</table>
+
+<div class="note" style="margin-top:12px">
+  <span class="h">這一格同時回答了三個問題</span>
+  <b>他在哪些群？</b>列出來了。<br>
+  <b>為什麼被歸到這個部門？</b>因為在那裡發言最多 —— 而且看得到差距（42 vs 11 vs 3）。<br>
+  <b>為什麼「有你真好」96 則卻不算？</b>刪除線那行講明白了：公告群不參與推導。
+  <span style="color:var(--ink-3)">這是修好 <code>group_type</code> 之後才說得出口的話 ——
+  現在的系統會把那 96 則算進去，把她歸到「有你真好」。</span>
+</div>
+
+<div class="note warn" style="margin-top:12px">
+  <span class="h">⚠ 這會把 LINE 暱稱曝露到畫面上 —— 上線前要跟客戶說一聲</span>
+  現在總經理看得到的是<b>有系統帳號的 12 個人</b>；這頁開了之後，群組欄位裡會出現
+  <b>在群裡講過話的 56 個人</b>的 LINE 暱稱。<br>
+  那是合理的（都是他公司的人），但<b>性質變了</b>。要讓他有機會說
+  「那幾個是外包／客戶，不要顯示」—— 不是默默打開（OQ-13）。
+</div>
+
+<h2 class="sec">⑥ 這份 mockup 沒有解決的事</h2>
 <table>
   <tr><th style="width:34%">問題</th><th>為什麼不在這裡解</th></tr>
   <tr><td><b>56 人在群裡，只有 12 個有系統帳號</b><br>
