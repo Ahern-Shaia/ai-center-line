@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, confirmSignoff, getWarroom, type Warroom, type WarroomGroup, type WarroomTicket } from "../api";
 import { useToast } from "../Toast";
+import OnboardingChecklist from "./OnboardingChecklist";
 import SourceDrawer from "./SourceDrawer";
 import { InfoTip } from "../shared/InfoTip";
 import Gauge from "../shared/Gauge";
@@ -109,6 +110,9 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
           <div className="sub">當前配置 {wr.dept_count} 個部門 · 每日 AI 分類結果匯總（可於「部門/成員」自行新增）</div>
         </div>
       </div>
+
+      {/* 導入進度 · 四項都完成後自己消失（見 OnboardingChecklist） */}
+      <OnboardingChecklist />
 
       <div className="tiles">
         {/* ⚠️ 三個環的分母不同（部門 / 部門 / 已標記筆數），
