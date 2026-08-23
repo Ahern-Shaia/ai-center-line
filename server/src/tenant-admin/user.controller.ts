@@ -4,6 +4,7 @@ import type { JwtUser } from "../auth/jwt-user.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { UserService } from "./user.service.js";
 import { MemberGroupActivityService } from "./member-group-activity.service.js";
+import { OnboardingProgressService } from "./onboarding-progress.service.js";
 import { AssignDepartmentSchema, AssignRoleSchema, UserCreateSchema, UserDeleteSchema, UserUpdateSchema } from "./dto/user.dto.js";
 import { resolveTenantId } from "../auth/resolve-tenant-id.js";
 
@@ -19,6 +20,7 @@ export class UserController {
   constructor(
     private readonly svc: UserService,
     private readonly activity: MemberGroupActivityService,
+    private readonly onboarding: OnboardingProgressService,
   ) {}
 
   @Get()
@@ -40,6 +42,21 @@ export class UserController {
    * 沿用 users:view —— 這是同一份名單的附加資訊，不是新的資料面。
    * 只含已綁定的人；沒帳號的群成員不在這裡（那是 OQ-GTC-13 另一個決定）。
    */
+  /**
+   * 導入進度 · 給總覽儀表頂端的 checklist 用
+   *
+   * 沿用 users:view —— 看得到成員名單的人就看得到導入進度，不另立權限。
+   */
+  @Get("onboarding-progress")
+  @RequirePermission("users:view")
+  async onboardingProgress(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
+    const t = resolveTenantId(user, tenantId);
+    if (!uuidRegex.test(t)) {
+      throw new BadRequestException({ status: "tenant_id_required", message: "需傳 tenantId" });
+    }
+    return this.onboarding.get(t);
+  }
+
   @Get("group-activity")
   @RequirePermission("users:view")
   async groupActivity(@CurrentUser() user: JwtUser, @Query("tenantId") tenantId?: string) {
