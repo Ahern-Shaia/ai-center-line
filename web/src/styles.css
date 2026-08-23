@@ -2392,24 +2392,6 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .kb-board-empty-h { font-size:15px; font-weight:600; color:var(--ink); }
 .kb-board-empty-b { font-size:13px; color:var(--ink-2); line-height:1.9; margin:8px auto 16px; max-width:520px; }
 .so-empty-hint { font-size:11.5px; color:var(--ink-3); margin-top:4px; }
-/* 導入進度 checklist · tour 看完就忘，清單會一直在直到做完 */
-.obp-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
-  padding:14px 16px; margin-bottom:14px; }
-.obp-hdr { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; }
-.obp-title { font-size:13.5px; font-weight:600; color:var(--ink); }
-.obp-count { font-size:12px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
-.obp-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
-.obp-item { display:flex; gap:10px; align-items:flex-start; }
-.obp-mark { flex:none; width:17px; height:17px; margin-top:1px; border-radius:50%;
-  border:1.5px solid var(--line); display:grid; place-items:center;
-  font-size:11px; color:transparent; }
-.obp-item.is-done .obp-mark { background:var(--ok, #059669); border-color:var(--ok, #059669); color:#fff; }
-.obp-body { display:flex; flex-direction:column; min-width:0; }
-.obp-label { font-size:13px; color:var(--ink); }
-.obp-item.is-done .obp-label { color:var(--ink-3); }
-.obp-num { margin-left:8px; font-variant-numeric:tabular-nums; color:var(--ink-2); }
-.obp-item.is-done .obp-num { color:var(--ink-3); font-weight:400; }
-.obp-hint { font-size:11.5px; color:var(--ink-3); margin-top:2px; line-height:1.6; }
 .rm-perm-scope { padding:1px 6px; border-radius:2px; font-size:10px; }
 .rm-scope-platform { background:#EEF2FF; color:#3730A3; }
 .rm-scope-tenant { background:#ECFDF5; color:#065F46; }

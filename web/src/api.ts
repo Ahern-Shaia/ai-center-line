@@ -1566,20 +1566,6 @@ export interface MemberGroupActivity {
   /** 只有部門群且有分派部門的才算進部門判定 */
   countsTowardDepartment: boolean;
 }
-// 導入進度 checklist · 總覽儀表頂端 · 四項都完成就不再顯示
-export interface OnboardingStep {
-  key: "departments" | "groups" | "leads" | "binding";
-  label: string;
-  done: number;
-  /** null ＝「有就算過」，不是比例 */
-  total: number | null;
-  complete: boolean;
-  hint: string;
-}
-export const getOnboardingProgress = (tenantId?: string) =>
-  req<{ steps: OnboardingStep[]; allDone: boolean }>(
-    `/tenant-admin/users/onboarding-progress${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
-
 export const listMemberGroupActivity = (tenantId?: string) =>
   req<{ activity: Record<string, MemberGroupActivity[]> }>(
     `/tenant-admin/users/group-activity${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`);
