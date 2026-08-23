@@ -156,15 +156,26 @@ export default function SchedulerConfigPage() {
 
       {loading && <Spinner block />}
 
-      {!loading && configs.length === 0 && !canManagePlatform && (
-        <div className="dm-empty">尚未建立排程 · 請聯繫 AIPROOT 技術支援</div>
+      {/* ⚠️ 原本這裡寫「請聯繫 AIPROOT 技術支援」而下面的草稿卡片**不渲染給租戶**
+          （`active` 那行只在 canManagePlatform 時給 draft）—— 租戶明明有
+          `scheduler-config:manage-tenant` 權限，卻只看得到一句死路。
+          現在草稿卡對租戶也給，這裡改成說明「沒有排程會怎樣」。 */}
+      {!loading && configs.length === 0 && (
+        <div className="dm-empty">
+          還沒有分析排程
+          <div className="dm-empty-hint">
+            沒有排程的話，<b>群組訊息收得到、但不會被整理成任務與日報</b>。<br />
+            下方是建議設定（每天 18:00），確認後按儲存就會開始運作。
+          </div>
+        </div>
       )}
 
       {!loading && (["pdr", "group_batch"] as SchedulerId[]).map((sid) => {
         // 沒有現成設定時給一份草稿（停用中），讓這家可以從零建立 ——
         // 否則平台端會看到「請聯繫技術支援」，而自己就是技術支援
         const existing = activeCfg(sid);
-        const active = existing ?? (canManagePlatform ? draftCfg(sid) : null);
+        // 草稿對**租戶也給** —— 他有 manage-tenant 權限，看得到才建得起來
+        const active = existing ?? ((canManagePlatform || canManageTenant) ? draftCfg(sid) : null);
         if (!active) return null;
         const isOverride = resolved.get(sid)?.override !== null && resolved.get(sid)?.override !== undefined;
         const title = sid === "pdr" ? "個人日報 · 每日整理" : "群組日誌 · 每日整理";

@@ -101,7 +101,16 @@ export default function DailyLog() {
       />
 
       {loading && !data && <Spinner block />}
-      {data && data.days.length === 0 && <div className="dm-empty">此期間內無日誌</div>}
+      {data && data.days.length === 0 && (
+        <div className="dm-empty">
+          這段期間沒有紀錄
+          {/* 剛導入的頭幾天一定是空的 —— 只說「無日誌」會讓人以為是壞了 */}
+          <div className="dm-empty-hint">
+            AI 每天固定時間整理一次群組對話 · 剛導入的頭幾天是空的很正常。<br />
+            想確認 AI 有沒有讀到某則訊息 → 把上方的時間範圍拉大。
+          </div>
+        </div>
+      )}
 
       {/* V4 · 摘要條：一眼知道今天要不要細看（掃描型摘要的入口）*/}
       {data && data.days.length > 0 && <SummaryBar day={data.days[0]} />}
@@ -205,7 +214,10 @@ function TimelineDay({ day, today }: { day: WarroomDailyDays["days"][number]; to
             <div className="dl-quiet"><button className="dl-quiet-toggle" onClick={() => setShowQuiet(false)}>收合無活動的 {quiet.length} 群</button></div>
           )}
           {shown.length === 0 && quiet.length === 0 && (
-            <div className="dm-empty" style={{ padding: "10px 0" }}>當日無資料</div>
+            <div className="dm-empty" style={{ padding: "10px 0" }}>
+              這一天沒有紀錄
+              <div className="dm-empty-hint">當天群組沒有對話，或分析還沒跑到這一天</div>
+            </div>
           )}
         </div>
       )}

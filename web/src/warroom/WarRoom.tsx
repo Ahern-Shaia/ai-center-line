@@ -226,7 +226,10 @@ function DeptItem({
       {expanded && (
         <div className="so-detail">
           {g.today_tickets.length === 0 && (
-            <div className="so-empty">今日群組尚無 AI 產出</div>
+            <div className="so-empty">
+              這個群今天還沒有 AI 產出
+              <div className="so-empty-hint">群裡沒人講到「要做的事」時，這裡就是空的 —— 不是漏讀</div>
+            </div>
           )}
           {g.today_tickets.map((t) => {
             const conf = t.confidence ?? "medium";

@@ -64,8 +64,15 @@ export function Departments({
         <Spinner block />
       ) : rows.length === 0 ? (
         <div className="dm-empty">
-          <div>此租戶尚無部門</div>
-          {canEdit && <div className="dm-empty-hint">點右上「新增部門」建立</div>}
+          <div>還沒有建立部門</div>
+          {/* 只說「點右上新增」沒回答「為什麼要建」—— 部門是整套系統的切分依據，
+              不先建，後面分派群組／看板／權限全都卡住 */}
+          <div className="dm-empty-hint">
+            <b>部門是整套系統的切分依據</b> —— 任務、日報、看得到什麼，都是照部門分的。<br />
+            建議跟 LINE 群名對應（群「○○—品保部」→ 部門「品保部」），
+            之後在「通訊管道」把各群分派進來。<br />
+            {canEdit && <>從右上的「新增部門」開始。</>}
+          </div>
         </div>
       ) : (
         <div className="dm-table-wrap">

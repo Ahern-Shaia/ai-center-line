@@ -163,8 +163,15 @@ export function Members({
         <Spinner block />
       ) : users.length === 0 ? (
         <div className="dm-empty">
-          <div>此租戶尚無成員</div>
-          {canEdit && <div className="dm-empty-hint">點右上「新增成員」建立</div>}
+          <div>還沒有任何成員</div>
+          {/* ⚠️ 原本寫「點右上『新增成員』建立」是**會把人導進死路的**：
+              員工不是手建的（LINE 綁定後自動產生），而「新增成員」的角色下拉裡
+              根本沒有「員工」這個選項 —— 照著做會點進去然後困惑。 */}
+          <div className="dm-empty-hint">
+            <b>員工不用手動建</b> —— 同仁用 LINE 加公司官方帳號、完成綁定後，
+            就會自動出現在這裡。<br />
+            {canEdit && <>要指定<b>部門主管</b>時，才用右上的「新增成員」。</>}
+          </div>
         </div>
       ) : (
         <div className="dm-table-wrap">

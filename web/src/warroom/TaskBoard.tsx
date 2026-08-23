@@ -4,6 +4,7 @@ import {
   ApiError,
   confirmSignoff,
   getWarroomTasks,
+  triggerWarroomBatchRerun,
   type WarroomKanbanTicket,
   type WarroomTaskBoard,
 } from "../api";
@@ -165,6 +166,20 @@ export default function TaskBoard() {
         onOpen={setDrawer}
         onDecided={() => void refresh()}
       />
+
+      {/* ⭐ 整份看板都空的時候，逐欄各說一次「目前沒有…的任務」對新客戶等於沒說。
+          新客戶第一天開這一頁一定是空的 —— 那正是最該解釋「這頁的東西從哪來」的時機。 */}
+      {board.counts.pending === 0 && board.counts.overdue === 0 && board.counts.signed === 0
+        && board.kanban.unconfirmed.length === 0 && (
+        <div className="kb-board-empty">
+          <div className="kb-board-empty-h">還沒有任何任務</div>
+          <div className="kb-board-empty-b">
+            任務是 AI 從你們的 LINE 群組對話裡讀出來的「有人要做的事」——
+            系統每天固定時間整理一次，<b>明天早上這裡就會開始有東西</b>。
+          </div>
+          <TriggerAnalysisButton />
+        </div>
+      )}
 
       <div className="kanban">
         <KanbanColumn
@@ -581,4 +596,38 @@ function formatDate(iso: string): string {
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("zh-TW", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+// 空看板上的「立即分析」· custom onboarding（空狀態當老師）
+//
+// ⚠️ 不自己做防連點：後端 `POST /warroom/batches/rerun` 已有**每租戶 5 分鐘限流**，
+//    自己再做一套只會兩邊不一致。這裡只負責把 429 的中文訊息好好呈現。
+function TriggerAnalysisButton() {
+  const toast = useToast();
+  const [running, setRunning] = useState(false);
+  return (
+    <button
+      className="btn btn-primary"
+      disabled={running}
+      onClick={async () => {
+        setRunning(true);
+        try {
+          const r = await triggerWarroomBatchRerun();
+          toast.show(
+            r.completed > 0
+              ? `分析完成 · 讀了 ${r.total} 個群組，${r.completed} 個有產出`
+              : `分析完成 · 讀了 ${r.total} 個群組，今天還沒有可以整理成任務的對話`,
+            r.completed > 0 ? "ok" : "info",
+          );
+          window.location.reload();
+        } catch (e) {
+          toast.show(e instanceof ApiError ? e.message : "觸發失敗", "danger");
+        } finally {
+          setRunning(false);
+        }
+      }}
+    >
+      {running ? "分析中…（約 1 分鐘）" : "立即分析今天的對話"}
+    </button>
+  );
 }
