@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>頁面用途說明 · UI mockup</title>
+<link rel="stylesheet" href="../../web/src/styles.css" />
+<style>
+  body { background:#F5F6F8; margin:0; padding:26px; font-family:"Noto Sans TC",-apple-system,sans-serif; }
+  .mk { max-width:1080px; margin:0 auto; }
+  .mk-h { font-size:19px; font-weight:700; color:#111827; margin:0 0 4px; }
+  .mk-sub { font-size:13px; color:#6B7280; margin:0 0 20px; }
+  .basis { background:#F9FAFB; border-left:3px solid #4F46E5; padding:12px 14px; font-size:12px;
+    color:#4B5563; line-height:1.9; margin-bottom:22px; border-radius:0 4px 4px 0; }
+  .basis b { color:#111827; }
+  .sec { margin-bottom:26px; }
+  .sec > h2 { font-size:13px; font-weight:700; color:#111827; margin:0 0 4px; }
+  .sec > .why { font-size:12px; color:#6B7280; margin:0 0 12px; line-height:1.7; }
+  .screen { background:#fff; border:1px solid #E5E7EB; border-radius:6px; padding:20px 22px; }
+
+  /* ── 提議的元件（實作時進 styles.css）───────────────── */
+  .pg-toggle { font-size:12px; color:var(--ink-3); background:transparent; border:0;
+    cursor:pointer; padding:2px 0; margin-left:10px; vertical-align:3px; }
+  .pg-toggle:hover { color:var(--primary-2); text-decoration:underline; }
+  .pg-panel { background:#F8F9FB; border:1px solid #E5E7EB; border-left:3px solid #4F46E5;
+    border-radius:0 6px 6px 0; padding:14px 18px; margin:0 0 16px; }
+  .pg-row { display:flex; gap:12px; padding:5px 0; font-size:13px; line-height:1.8; }
+  .pg-k { flex:none; width:104px; color:#6B7280; font-size:12px; padding-top:1px; }
+  .pg-v { color:#374151; }
+  .pg-v b { color:#111827; }
+  .pg-foot { margin-top:10px; padding-top:9px; border-top:1px solid #E9EBEF;
+    display:flex; justify-content:space-between; align-items:center; }
+  .pg-hide { font-size:12px; color:#6B7280; background:transparent; border:0; cursor:pointer; }
+  .pg-more { font-size:12px; color:#4338CA; text-decoration:none; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin:14px 0 0; }
+  .chip { font-size:12px; background:#F3F4F6; color:#374151; border-radius:20px; padding:3px 11px; }
+  .chip.on { background:#111827; color:#fff; }
+</style>
+</head>
+<body>
+<div class="mk">
+  <h1 class="mk-h">每一頁自己說明用途</h1>
+  <p class="mk-sub">取代逐頁口頭講解 · 對照 2026-08-24 任務看板實際畫面</p>
+
+  <div class="basis">
+    <b>畫面依據</b>（抄現況）<br>
+    · 標題／副標／分類 chip／「請您確認」提示條 ＝ <b>web/src/warroom/TaskBoard.tsx</b> 現行實作<br>
+    · 樣式直接連 <b>web/src/styles.css</b>（`.pane-hdr` / `.sub` / `.btn` 都是實際的）<br>
+    · 只有 `.pg-*` 是新的（實作時進 styles.css）
+  </div>
+
+  <!-- ① 日常：收合 -->
+  <div class="sec">
+    <h2>① 日常（收合）—— 只多一顆文字按鈕，不佔版面</h2>
+    <p class="why">關掉之後就記住了。每天在用的人不會被說明卡著。</p>
+    <div class="screen">
+      <div class="pane-hdr">
+        <div>
+          <h1>任務看板<button class="pg-toggle">這一頁做什麼？</button></h1>
+          <div class="sub">下方三欄是需要您簽核的任務 · 點卡片可展開原始對話對照</div>
+        </div>
+        <div class="actions">
+          <button class="btn">只看卡住的（48）</button>
+          <button class="btn">存查 128</button>
+          <button class="btn">重新整理</button>
+        </div>
+      </div>
+      <div class="chips">
+        <span class="chip on">全部 175</span><span class="chip">維保異常 80</span>
+        <span class="chip">業務 36</span><span class="chip">資訊支援 17</span>
+        <span class="chip">報工日報 17</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 講解時：展開 -->
+  <div class="sec">
+    <h2>② 要講解時按一下（展開）</h2>
+    <p class="why">
+      <b>刻意不用彈窗</b> —— 你的場景是「邊講邊指畫面」，彈窗會蓋住你要指的東西。<br>
+      四段固定：<b>回答什麼問題 / 資料從哪來 / 你通常會做什麼 / 誰看得到</b>。
+      最後一段是講給別人聽時最常被問的。
+    </p>
+    <div class="screen">
+      <div class="pane-hdr">
+        <div>
+          <h1>任務看板<button class="pg-toggle">▾ 收起說明</button></h1>
+          <div class="sub">下方三欄是需要您簽核的任務 · 點卡片可展開原始對話對照</div>
+        </div>
+        <div class="actions"><button class="btn">重新整理</button></div>
+      </div>
+
+      <div class="pg-panel">
+        <div class="pg-row"><span class="pg-k">回答什麼問題</span>
+          <span class="pg-v"><b>今天有哪些事需要我確認或處理？</b></span></div>
+        <div class="pg-row"><span class="pg-k">資料從哪來</span>
+          <span class="pg-v">AI 每天固定時間讀一次各 LINE 群組的對話，把「有人要做的事」整理成一張張卡片。<b>沒有人需要另外填表</b>。</span></div>
+        <div class="pg-row"><span class="pg-k">你通常會做什麼</span>
+          <span class="pg-v">看「待簽核」那一欄 → 點卡片對照原始對話 → 沒問題就簽掉。<b>每天約 3 分鐘</b>。</span></div>
+        <div class="pg-row"><span class="pg-k">誰看得到</span>
+          <span class="pg-v">部門主管只看得到自己部門的；總經理室看得到全公司。</span></div>
+        <div class="pg-foot">
+          <button class="pg-hide">知道了，不用再顯示</button>
+          <a class="pg-more" href="#">看完整運作流程 →</a>
+        </div>
+      </div>
+
+      <div class="chips">
+        <span class="chip on">全部 175</span><span class="chip">維保異常 80</span>
+        <span class="chip">業務 36</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 設定頁 -->
+  <div class="sec">
+    <h2>③ 設定頁的例子（新客戶第一次進來會自動展開）</h2>
+    <p class="why">設定類的頁最需要「為什麼要做這件事」—— 那正是你現在花最多時間解釋的。</p>
+    <div class="screen">
+      <div class="pane-hdr">
+        <div>
+          <h1>LINE 群組<button class="pg-toggle">▾ 收起說明</button></h1>
+          <div class="sub">哪些 LINE 群要被 AI 分析、各自屬於哪個部門</div>
+        </div>
+      </div>
+      <div class="pg-panel">
+        <div class="pg-row"><span class="pg-k">回答什麼問題</span>
+          <span class="pg-v"><b>哪些 LINE 群要納入分析？各自算哪個部門的？</b></span></div>
+        <div class="pg-row"><span class="pg-k">資料從哪來</span>
+          <span class="pg-v">把機器人加進 LINE 群之後，群裡<b>第一則訊息</b>就會讓它自動出現在這份清單。</span></div>
+        <div class="pg-row"><span class="pg-k">你通常會做什麼</span>
+          <span class="pg-v">導入時把每個群分派到對應部門，<b>做一次就好</b>。沒分派的群，它的任務不會出現在任何人的看板上。</span></div>
+        <div class="pg-row"><span class="pg-k">誰看得到</span>
+          <span class="pg-v">總經理室可以改；部門主管只能看。</span></div>
+        <div class="pg-foot">
+          <button class="pg-hide">知道了，不用再顯示</button>
+          <a class="pg-more" href="#">看完整運作流程 →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="basis" style="border-left-color:#B45309;background:#FFFBEB">
+    <b>三個要你裁定的</b><br>
+    <b>A · 預設開還關？</b> 建議：<b>新租戶前 14 天預設展開，之後預設收合</b>；
+    使用者按「知道了」就永久記住（存 localStorage，換裝置會再出現一次 —— 要跨裝置就得存後端，多一張表）。<br>
+    <b>B · 13 頁都要寫嗎？</b> 建議：<b>先寫 6 頁</b>（任務看板／總覽儀表／群組日誌／部門/成員／LINE 群組／分析排程）——
+    那是你實際會逐頁講的那幾頁。其餘等有人問再補。<br>
+    <b>C · 要不要一併修「側欄名字 ≠ 頁內標題」？</b>（通訊管道 vs LINE 群組、自動化 vs 定時任務設定）
+    建議：<b>要</b>，否則說明寫得再好，使用者還是先被兩個名字絆一下。
+  </div>
+</div>
+</body>
+</html>
