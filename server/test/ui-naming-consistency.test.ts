@@ -39,7 +39,24 @@ const RETIRED: Array<{ old: string; now: string }> = [
   { old: "通訊管道", now: "LINE 群組" },
   { old: "定時任務設定", now: "分析排程" },
   { old: "素材看板", now: "素材" },
+  // 2026-08-25 · 三條軸各用不同的詞（OQ-TWH-1）
+  //   軸1 要不要追 → 待判定 ｜ 軸2 內容對不對 → 待核對/已核對 ｜ 軸3 做完沒 → 進行中/已完成
+  // ⚠️ DB 值沒改（tickets.confirm_status 仍是 待確認/待簽核/已簽核）——
+  //    所以下面的 isDbLiteral 要放行那些比對，只抓「顯示用」的舊字。
+  { old: "簽核", now: "核對" },
 ];
+
+/**
+ * DB 值的比對／型別宣告／對照表的 key —— 那些**必須**留舊字串，不算漏改。
+ * ⚠️ 對照表的 key（`待簽核: "待核對"`）也在此列：key 是 DB 值，改了對照就失效。
+ */
+function isDbLiteral(line: string): boolean {
+  return /===\s*"[^"]*(簽核|待確認)"/.test(line)
+    || /"[^"]*(簽核|待確認)"\s*\|/.test(line)
+    || /\|\s*"[^"]*(簽核|待確認)"/.test(line)
+    || /^\s*(待簽核|已簽核|待確認|逾時警示|已忽略|存查):/.test(line)   // 對照表的 key
+    || /confirm_status|string_to_array|\$type<|ANY\(/.test(line);
+}
 
 test("⭐⭐ 改過名的項目 · 舊名字不可以留在使用者看得到的字串裡", () => {
   const bad: string[] = [];
@@ -49,6 +66,8 @@ test("⭐⭐ 改過名的項目 · 舊名字不可以留在使用者看得到的
       for (const line of code.split("\n")) {
         if (!line.includes(old)) continue;
         if (line.includes("renamedFrom")) continue;   // 刻意保留的改名提示
+        if (isDbLiteral(line)) continue;              // DB 值必須留舊字串
+        if (line.includes("簽章") || line.includes("簽下去")) continue;  // 不同語意的「簽」
         bad.push(`${f.replace(WEB, "")} · 「${old}」應為「${now}」\n      ${line.trim().slice(0, 90)}`);
       }
     }

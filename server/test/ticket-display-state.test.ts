@@ -41,8 +41,9 @@ test("沒指派就是待指派，不是進行中", () => {
   assert.equal(displayState({ ...base, assignStatus: "unclaimed" }), "待指派");
 });
 
-test("簽核佇列外的狀態各自顯示", () => {
-  assert.equal(displayState({ ...base, confirmStatus: "待確認" }), "待確認是不是任務");
+test("核對佇列外的狀態各自顯示", () => {
+  // ⚠️ 比對用 DB 值「待確認」，顯示是「待判定」（2026-08-25 改名 · 軸1）
+  assert.equal(displayState({ ...base, confirmStatus: "待確認" }), "待判定是不是任務");
   assert.equal(displayState({ ...base, confirmStatus: "存查" }), "存查");
   assert.equal(displayState({ ...base, confirmStatus: "已忽略" }), "已忽略");
 });

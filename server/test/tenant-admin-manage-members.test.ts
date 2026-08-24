@@ -135,7 +135,7 @@ test("⭐⭐ 被任務記為簽核人的成員 · 擋下來並說人話（不是
   await assert.rejects(
     () => runAsTenant(() => svc.deleteMember(SIGNER, T1, ADMIN1)),
     (err: Error) => {
-      assert.match(err.message, /被 1 張任務記為簽核人或指派人/, "要講清楚是幾張、為什麼");
+      assert.match(err.message, /被 1 張任務記為核對人或指派人/, "要講清楚是幾張、為什麼");
       assert.doesNotMatch(err.message, /fkey|constraint|violates/i, "不可洩漏 Postgres 原文");
       return true;
     },
