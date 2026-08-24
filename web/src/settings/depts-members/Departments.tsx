@@ -70,7 +70,7 @@ export function Departments({
           <div className="dm-empty-hint">
             <b>部門是整套系統的切分依據</b> —— 任務、日報、看得到什麼，都是照部門分的。<br />
             建議跟 LINE 群名對應（群「○○—品保部」→ 部門「品保部」），
-            之後在「通訊管道」把各群分派進來。<br />
+            之後在「LINE 群組」把各群分派進來。<br />
             {canEdit && <>從右上的「新增部門」開始。</>}
           </div>
         </div>

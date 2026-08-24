@@ -253,7 +253,7 @@ export default function App() {
           {/* 通訊管道 · 兩頁合一（M4）。群組與員工綁定都是「誰在哪個管道上」，
               未來接 Discord 等就是同一頁多一個 tab（對齊 channel-adapter 的方向）。 */}
           {route.page === "channels" && (
-            <PageTabs ariaLabel="通訊管道" tabs={[
+            <PageTabs ariaLabel="LINE 群組" tabs={[
               { key: "groups", label: "LINE 群組", perm: "line-groups:view", render: () => <LineGroupsPage /> },
               { key: "binding", label: "員工綁定", perm: "binding:view", render: () => <TenantBindingAudit /> },
               // aiproot 的跨租戶版。原本是另一個側欄項目「LINE 綁定稽核」——

@@ -119,7 +119,7 @@ export default function GroupCard(props: GroupRowProps) {
           {!departmentId && (
             <div className="dl-card-nodept">
               此群尚未分派部門 · 分析結果<b>不會變成任務</b>
-              <span className="dl-card-nodept-hint">到「設定 → 通訊管道 → LINE 群組」分派部門後，下次分析才會建立任務</span>
+              <span className="dl-card-nodept-hint">到「設定 → LINE 群組」分派部門後，下次分析才會建立任務</span>
             </div>
           )}
           {/* ⚠️ 分析沒完成 ≠ 那天很閒 —— 說「還沒好」不是「壞了」 */}

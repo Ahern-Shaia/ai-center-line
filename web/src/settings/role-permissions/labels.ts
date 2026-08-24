@@ -30,7 +30,7 @@ export const PERMISSION_GROUPS: Array<{ title: string; ids: string[] }> = [
     ids: ["departments:view", "departments:manage-tenant", "users:view", "users:create-group-owner"],
   },
   {
-    title: "通訊管道",
+    title: "LINE 群組",
     ids: ["line-groups:view", "binding:view"],
   },
   {

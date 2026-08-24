@@ -127,7 +127,7 @@ export default function PermissionSetupGuide({ onNavigate, onDone }: Props) {
               <span className="ob-title">把 LINE 群組分派到部門</span>
             </div>
             <div className="ob-desc">
-              這一步決定「哪個 LINE 群的對話，算哪個部門的任務」。到「通訊管道」的
+              這一步決定「哪個 LINE 群的對話，算哪個部門的任務」。到「LINE 群組」的
               <b> LINE 群組</b>分頁，每個群右邊的「部門」下拉選好。上方若顯示「N 群未分派部門」，就是還沒選完。
             </div>
             <div className="psg-warn">
