@@ -21,5 +21,12 @@ export const CATEGORY_LABEL: Record<string, string> = {
  */
 export const catLabel = (c: string, registryName?: string | null): string => {
   if (registryName && registryName !== c) return registryName;
-  return CATEGORY_LABEL[c] ?? c;
+  const known = CATEGORY_LABEL[c];
+  if (known) return known;
+  // ⚠️ 最後一道：**不要把英文 slug 印給客戶**（UI 中文優先鐵則）。
+  //    2026-08-24 台灣福祉畫面上出現 production_meeting / document_control /
+  //    facility_management —— 根因在後端 prompt（已修），但那只對之後的分析生效，
+  //    已經存下來的 ticket.category 仍是英文。這裡把它變成看得懂的字。
+  //    中文的分類名照原樣顯示（AI 現在會直接命名中文）。
+  return /^[a-z0-9_-]+$/i.test(c) ? `其他（${c.replace(/_/g, " ")}）` : c;
 };
