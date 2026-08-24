@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ApiError, deleteMedia, fetchMediaBlobUrl, getSession, listMedia, purgeMedia, restoreMedia,
   type MediaItem, type MediaKind, type MediaListResult,
+  downloadMedia,
 } from "../api";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import { useToast } from "../Toast";
@@ -206,12 +207,31 @@ export default function MediaLibrary() {
                       </button>
                     )}
                   </div>
-                ) : canDelete && (
+                ) : (
+                  /* ⚠️ 下載給**所有看得到素材的人**（media:view），不要綁在 canDelete 裡 ——
+                     那是刪除權限，跟能不能把檔案存下來是兩件事 */
                   <div className="ml-card-act">
                     <button className="btn" disabled={busy}
-                      onClick={() => setConfirm({ item: f, mode: "delete" })}>
-                      刪除
+                      /* 不走 run()：那個 helper 會 setConfirm(null) + 重載整份清單，
+                         下載不需要動到畫面（重載反而會讓捲動位置跳掉） */
+                      onClick={async () => {
+                        setBusy(true);
+                        try {
+                          await downloadMedia(f.mediaId, f.filename);
+                        } catch (e) {
+                          toast.show(e instanceof ApiError ? e.message : "下載失敗", "danger");
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}>
+                      下載
                     </button>
+                    {canDelete && (
+                      <button className="btn" disabled={busy}
+                        onClick={() => setConfirm({ item: f, mode: "delete" })}>
+                        刪除
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

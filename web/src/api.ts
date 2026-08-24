@@ -1750,6 +1750,32 @@ export async function fetchMediaBlobUrl(mediaId: string): Promise<string> {
   return URL.createObjectURL(await res.blob());
 }
 
+/**
+ * 下載素材檔案。
+ *
+ * ⚠️ 為什麼是 blob 而不是 `<a href>`：檔案要帶 JWT 才拿得到，而純連結送不出
+ * Authorization header —— 直接連過去會 401。同 fetchMediaBlobUrl 的理由。
+ * 拿到 blob 之後用同源的 object URL，`download` 屬性才會生效
+ * （跨來源時瀏覽器會忽略它，變成開新分頁、沒下載到東西）。
+ */
+export async function downloadMedia(mediaId: string, filename: string | null): Promise<void> {
+  const url = `${API_BASE ? API_BASE : "/api"}/media/${encodeURIComponent(mediaId)}/content`;
+  const res = await fetch(url, { headers: token ? { authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) throw new ApiError(res.status, friendlyStatusMessage(res.status));
+  const objUrl = URL.createObjectURL(await res.blob());
+  try {
+    const a = document.createElement("a");
+    a.href = objUrl;
+    a.download = filename || `media-${mediaId}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    // 不 revoke 的話整包檔案會留在記憶體裡
+    URL.revokeObjectURL(objUrl);
+  }
+}
+
 // 稽核記錄 · 讀 audit_log（原本這頁是編造的事件）
 export interface AuditItem {
   id: string;

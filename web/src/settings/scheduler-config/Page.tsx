@@ -381,11 +381,16 @@ function SchedulerCard({
         </div>
       </div>
 
-      {schedulerId === "group_batch" && (
+      {/* ⚠️ 成本控管欄位對租戶**整塊不渲染**（2026-08-25 · OQ-TWH-3）。
+          原本是渲染出來再 disabled ＋ 標「由 AIPROOT 調整」—— 但客戶看到「併發限制」
+          回報「這是什麼功能」。改不了卻看得到＝純困惑來源，
+          跟 08-21 那個「助理角色看得到、改不動、也用不了」同一類。
+          後端本來就擋著（scheduler-config.service.ts 的欄位級 whitelist），這裡只是不顯示。 */}
+      {canEditCost && schedulerId === "group_batch" && (
         <div className="sc-row">
           <div className="sc-row-lbl">
             失敗補跑天數
-            <span className="sc-row-hint">前一次執行失敗時，往前補跑幾天的資料{canEditCost ? "" : "（進階設定 · 由 AIPROOT 調整）"}</span>
+            <span className="sc-row-hint">前一次執行失敗時，往前補跑幾天的資料</span>
           </div>
           <div className="sc-row-val">
             <input
@@ -400,22 +405,24 @@ function SchedulerCard({
         </div>
       )}
 
-      <div className="sc-row">
-        <div className="sc-row-lbl">
-          併發限制
-          <span className="sc-row-hint">同時處理幾個群組 · 設太高可能超出 AI 服務限制{canEditCost ? "" : "（進階設定 · 由 AIPROOT 調整）"}</span>
+      {canEditCost && (
+        <div className="sc-row">
+          <div className="sc-row-lbl">
+            併發限制
+            <span className="sc-row-hint">同時處理幾個群組 · 設太高可能超出 AI 服務限制</span>
+          </div>
+          <div className="sc-row-val">
+            <input
+              className="tf"
+              type="number"
+              value={concurrency}
+              onChange={(e) => setConcurrency(Number(e.target.value))}
+              disabled={busy || !canEditCost}
+              style={{ width: 60 }}
+            /> 個
+          </div>
         </div>
-        <div className="sc-row-val">
-          <input
-            className="tf"
-            type="number"
-            value={concurrency}
-            onChange={(e) => setConcurrency(Number(e.target.value))}
-            disabled={busy || !canEditCost}
-            style={{ width: 60 }}
-          /> 個
-        </div>
-      </div>
+      )}
 
       <div className="sc-row">
         <div className="sc-row-lbl">上次執行</div>
