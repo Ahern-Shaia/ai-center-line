@@ -115,6 +115,44 @@ export class AssignNotifyService {
   }
 
   /**
+   * 知會其他人（⑤ 台灣福祉 2026-08-24 · OQ-TWH-5 裁定：只發個人私訊，不碰群組）。
+   *
+   * ⚠️⚠️ **文案必須跟指派通知明確區隔。**
+   *    指派通知結尾是「做完後回我一句『好了』就行」—— 那句話對被知會的人是錯的，
+   *    他不是當責人。而且 private-completion 是用 `assignee_user_id` 比對，
+   *    他就算回「好了」也對不到這張任務（結構上安全，但文案不能誤導他去回）。
+   *
+   * ⚠️ 送不到不算失敗：逐一回報每個人的結果，讓主管知道誰沒收到 ——
+   *    「已通知」但其實沒送到，主管會以為對方知道了（同 A-1 的判準）。
+   */
+  async notifyOthers(tx: Db, args: {
+    ticketId: string; summary: string; actorName: string;
+    assigneeName: string | null; userIds: string[];
+  }): Promise<Array<{ userId: string; name: string | null; notified: boolean; reason: string | null }>> {
+    const cfg = await this.taskConfig.forCurrentTenant(tx);
+    const out: Array<{ userId: string; name: string | null; notified: boolean; reason: string | null }> = [];
+
+    for (const userId of args.userIds) {
+      const target = await this.lookupTarget(tx, userId);
+      if (!cfg.assignNotify) { out.push({ userId, name: null, notified: false, reason: "disabled" }); continue; }
+      if (!target) { out.push({ userId, name: null, notified: false, reason: "no_binding" }); continue; }
+
+      const who = args.assigneeName ? `目前由 ${args.assigneeName} 負責` : "目前還沒指定負責人";
+      const text = `👀 ${args.actorName} 讓你知道一件事\n\n${args.summary}\n\n${who}\n`
+        + "（這則只是知會，不用回覆）";
+
+      const nameRow = await tx.execute<{ display_name: string | null }>(sql`
+        SELECT display_name FROM users WHERE user_id = ${userId}::uuid LIMIT 1`);
+      const sent = await this.push(target, text, args.ticketId);
+      out.push({
+        userId, name: nameRow.rows[0]?.display_name ?? null,
+        notified: sent !== false, reason: sent === false ? "push_failed" : null,
+      });
+    }
+    return out;
+  }
+
+  /**
    * 跟原本被推播過的那個人說「這件事不用你跟了」。
    *
    * ⚠️ 送不到只記 log，不可以讓指派／改派失敗（同 A-8）——

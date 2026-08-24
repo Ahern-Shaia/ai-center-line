@@ -544,6 +544,45 @@ export class WarroomTasksService {
    * ⚠️ 通知結果一定要回傳。送不出去而畫面沒說的話，**主管會以為對方知道了**，
    *    事情就卡在那裡 —— 那是本模組 FMEA 的 A-1（P0）。
    */
+  /**
+   * 知會其他人（不改變當責人）· 只發個人私訊。
+   *
+   * ⚠️ 只擋同租戶：RLS 已限 tickets，這裡再擋 users —— 不擋的話可以拿別家的 userId 打私訊。
+   * ⚠️ 排除當責人本人：他已經收過指派通知了，再收一則「知會」只會讓他困惑。
+   */
+  async notifyOthers(ticketId: string, userIds: string[], actorUserId: string): Promise<{
+    results: Array<{ userId: string; name: string | null; notified: boolean; reason: string | null }>;
+  }> {
+    const tx = currentTx();
+    const meta = await tx.execute<{
+      summary: string; actor: string | null; assignee: string | null; assignee_id: string | null;
+    }>(sql`
+      SELECT t.summary,
+             (SELECT display_name FROM users WHERE user_id = ${actorUserId}::uuid) AS actor,
+             (SELECT display_name FROM users WHERE user_id = t.assignee_user_id) AS assignee,
+             t.assignee_user_id::text AS assignee_id
+        FROM tickets t WHERE t.ticket_id = ${ticketId}::uuid`);
+    const m = meta.rows[0];
+    if (!m) throw new NotFoundException("找不到這張任務，或你沒有權限操作");
+
+    // 同租戶檢查（RLS 已 scope tickets，users 要自己擋）
+    const valid = await tx.execute<{ user_id: string }>(sql`
+      SELECT user_id::text FROM users
+       WHERE user_id = ANY(string_to_array(${userIds.join(",")}, ',')::uuid[])`);
+    const validSet = new Set(valid.rows.map((r) => r.user_id));
+
+    const targets = userIds.filter((id) => validSet.has(id) && id !== m.assignee_id);
+    if (targets.length === 0) {
+      throw new NotFoundException("沒有可通知的對象（可能已是當責人，或不屬於貴公司）");
+    }
+
+    const results = await this.assignNotify.notifyOthers(tx, {
+      ticketId, summary: m.summary, actorName: m.actor ?? "主管",
+      assigneeName: m.assignee, userIds: targets,
+    });
+    return { results };
+  }
+
   async assignTicket(ticketId: string, assigneeUserId: string | null, actorUserId: string): Promise<{
     ticketId: string; assignStatus: string; assigneeUserId: string | null; assigneeName: string | null;
     notified: boolean; notifySkipReason: string | null;

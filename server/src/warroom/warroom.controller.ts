@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Param, Patch, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { currentTx } from "../db/client.js";
 import { schedulerTimeLabel } from "../scheduler-config/scheduler-time.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
@@ -69,6 +69,34 @@ export class WarroomController {
     const a = body?.assigneeUserId ?? null;
     if (a !== null && !UUID_RE.test(a)) throw new BadRequestException("assigneeUserId 格式不正確");
     return this.tasksService.assignTicket(ticketId, a, user.user_id);
+  }
+
+  /**
+   * 知會其他人（⑤ 台灣福祉 2026-08-24）· 只發個人私訊，不碰群組（OQ-TWH-5）。
+   *
+   * 刻意做成**指派之外的獨立動作**，不塞進 PATCH assignee：
+   * 指派現在是「一次點擊、零個選擇」，加勾選會讓每次指派都多一輪判斷 ——
+   * 而「要知會別人」是少數情況（memory feedback_novice_comfort_is_the_moat）。
+   *
+   * 上限 5 人：這是知會不是廣播。沒有上限的話一次點錯就是全公司收到私訊。
+   */
+  @Post("tickets/:ticketId/notify-others")
+  @RequirePermission("warroom-tasks:view")
+  async notifyOthers(
+    @CurrentUser() user: JwtUser,
+    @Param("ticketId") ticketId: string,
+    @Body() body: { userIds?: string[] },
+  ) {
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
+    const ids = body?.userIds;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new BadRequestException({ status: "no_recipient", message: "請至少選一個人" });
+    }
+    if (ids.length > 5) {
+      throw new BadRequestException({ status: "too_many", message: "一次最多知會 5 個人" });
+    }
+    if (ids.some((id) => !UUID_RE.test(id))) throw new BadRequestException("userIds 格式不正確");
+    return this.tasksService.notifyOthers(ticketId, [...new Set(ids)], user.user_id);
   }
 
   /**
