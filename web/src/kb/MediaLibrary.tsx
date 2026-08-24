@@ -135,7 +135,7 @@ export default function MediaLibrary() {
               onClick={() => { setTrash(!trash); setPage(1); setFilter("all"); }}
               disabled={loading}
             >
-              {trash ? "回到素材看板" : "已刪除"}
+              {trash ? "回到素材" : "已刪除"}
             </button>
           </div>
         )}
@@ -247,7 +247,7 @@ export default function MediaLibrary() {
             {confirm.mode === "purge" ? (
               <p>檔案會立刻從儲存空間移除，<b>無法還原</b>。系統會留下「這個檔案被誰在何時清除」的紀錄。</p>
             ) : (
-              <p>檔案會從素材看板移除，<b>30 天內都可以在「已刪除」裡還原</b>，到期後自動清除。</p>
+              <p>檔案會從素材移除，<b>30 天內都可以在「已刪除」裡還原</b>，到期後自動清除。</p>
             )}
             {/* 一定要講：使用者對「刪除」的直覺是「收回」，但 LINE 不讓 bot 收回別人的訊息 */}
             <p style={{ color: "var(--ink-3)", fontSize: 12.5, marginTop: 8 }}>

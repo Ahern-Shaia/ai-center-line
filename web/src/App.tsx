@@ -2,7 +2,7 @@ import Spinner from "./shared/Spinner";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePermissions } from "./permission/PermissionContext";
 import Login from "./Login";
-import Shell, { canOpenPage, firstAllowedPage, PAGE_GROUP } from "./Shell";
+import Shell, { canOpenPage, firstAllowedPage, NAV_TITLE, PAGE_GROUP } from "./Shell";
 import WarRoom from "./warroom/WarRoom";
 import TaskBoard from "./warroom/TaskBoard";
 import DailyLog from "./warroom/DailyLog";
@@ -80,37 +80,15 @@ type Route =
 // crumb 顯示上層分類（非當前頁名），避免與 pane h1 重複。
 // pane h1 對應 PAGE_TITLE，同步設定 document.title 提供瀏覽器 tab 辨識。
 // ⚠️ 分組名從 Shell 的 NAV 推導，不在這裡手抄一份 —— 抄的那份改了分組就會對不上。
-const PAGE_TITLE: Record<Route["page"], string> = {
-  warroom: "總覽儀表",
-  "task-board": "任務看板",
-  "daily-log": "群組日誌",
-  "task-config": "任務設定",
-  "system-health": "系統健康",
-  channels: "通訊管道",
-  rag: "智慧檢索",
+const PAGE_TITLE: Record<string, string> = {
+  // 側欄有的頁一律用側欄那個名字 —— 手抄第二份就是下次改名漏掉的地方
+  ...NAV_TITLE,
+  // 以下是**不在側欄**的頁（從別處點進來的子頁）
   onboarding: "運作原理",
   "permission-guide": "權限設定教學",
-  media: "素材",
-  km: "知識庫",
   map: "客戶地圖",
-  depts: "部門 / 成員",
-  "role-permissions": "權限管理",
-  audit: "稽核記錄",
-  "scheduler-config": "自動化",
-  "master-data": "資料來源",
-  "convo-list": "分析列表",
-  "convo-upload": "上傳新對話",
   "convo-detail": "分析詳情",
   "convo-insights": "抽取準確率",
-  "llm-settings": "語言模型設定",
-  "line-bots": "LINE 機器人管理",
-  "tenant-mgmt": "租戶管理",
-  "map-config": "地圖里程設定",
-  "notify-config": "通知設定",
-  "my-daily-report": "我的日報",
-  "team-report": "部門日報",
-  "my-trips": "我的行程",
-  "roles-mgmt": "權限管理",
 };
 
 // 權限還沒載回來時的暫時落地頁 · 載回來後由 firstAllowedPage 修正（見下方守衛）

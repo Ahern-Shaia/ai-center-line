@@ -102,6 +102,18 @@ const NAV: Array<{
   },
 ];
 
+/**
+ * 頁面 → 顯示名稱（麵包屑 / document.title 用）。
+ *
+ * ⚠️ **從 NAV 推導，不要手抄。** 2026-08-24 實際踩到：App.tsx 有一份手抄的
+ *    PAGE_TITLE，側欄改名後它沒跟著改 —— 使用者點「分析排程」，
+ *    瀏覽器分頁與麵包屑卻寫「自動化」。那正是這次要修的「改名只改一半」，
+ *    而且同一個檔案的註解早就寫了「分組名不要手抄」，卻只套用在分組、沒套用在標題。
+ */
+export const NAV_TITLE: Record<string, string> = Object.fromEntries(
+  NAV.flatMap((g) => g.items.map((it) => [it.key, it.label] as const)),
+);
+
 /** 頁面 → 所屬分組（麵包屑用）。手抄一份的話，改了分組名就會兩邊對不上 */
 export const PAGE_GROUP: Record<string, string> = Object.fromEntries(
   NAV.flatMap((g) => g.items.map((it) => [it.key, g.group] as const)),
