@@ -15,8 +15,9 @@ import { assignTicket, getAssignableMembers, getTicketSource, type AssignableMem
 import { ArchivedList, UnconfirmedQueue } from "./TaskTriage";
 import { WorkStatusBox } from "./WorkTracking";
 import { usePageGuide } from "../shared/usePageGuide";
+import { confirmLabel } from "../shared/confirmStatusLabel";
 
-// WTB-M4 · 任務看板 Kanban 3 欄 (待簽核 / 逾時 / 已簽核)
+// WTB-M4 · 任務看板 Kanban 3 欄 (待核對 / 逾時 / 已核對)
 // 對照 docs/modules/warroom-task-board.md §7.2
 export default function TaskBoard() {
   const guide = usePageGuide("task-board");
@@ -52,11 +53,11 @@ export default function TaskBoard() {
     setSigning((s) => new Set(s).add(ticket.ticketId));
     try {
       await confirmSignoff([ticket.ticketId]);
-      toast.show(`已簽核：${ticket.summary.slice(0, 20)}`, "ok");
+      toast.show(`已核對：${ticket.summary.slice(0, 20)}`, "ok");
       setDrawer(null);
       void refresh();
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "簽核失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : "核對失敗", "danger");
     } finally {
       setSigning((s) => {
         const next = new Set(s);
@@ -79,7 +80,7 @@ export default function TaskBoard() {
               <button className="btn btn-sm" onClick={() => setShowArchive(false)}>← 任務看板</button>
               <span style={{ marginLeft: 10 }}>存查</span>
             </h1>
-            <div className="sub">公告 / 已完成 / 已忽略 · 不需簽核的紀錄 · 偶爾查閱</div>
+            <div className="sub">公告 / 已完成 / 已忽略 · 不需核對的紀錄 · 偶爾查閱</div>
           </div>
           <button className="btn" onClick={() => void refresh()} disabled={loading}>重新整理</button>
         </div>
@@ -101,7 +102,7 @@ export default function TaskBoard() {
     return catFilter ? byStuck.filter((t) => (t.category || UNCAT) === catFilter) : byStuck;
   };
 
-  // 分類篩選 chip 的來源＝待處理的兩欄（已簽核是回顧用，不影響 triage 的分類視野）
+  // 分類篩選 chip 的來源＝待處理的兩欄（已核對是回顧用，不影響 triage 的分類視野）
   const catChips = groupByCategory([...board.kanban.pending, ...board.kanban.overdue]);
   const catTotal = board.kanban.pending.length + board.kanban.overdue.length;
 
@@ -122,7 +123,7 @@ export default function TaskBoard() {
       <div className="pane-hdr">
         <div>
           <h1>任務看板{guide.toggle}</h1>
-          <div className="sub">下方三欄是需要您簽核的任務 · 點卡片可展開原始對話對照</div>
+          <div className="sub">下方三欄是需要您核對的任務 · 點卡片可展開原始對話對照</div>
         </div>
         <div className="kb-viewbar">
           {board.counts.stuck > 0 && (
@@ -186,7 +187,7 @@ export default function TaskBoard() {
 
       <div className="kanban">
         <KanbanColumn
-          title="待簽核"
+          title="待核對"
           tone="warn"
           count={board.counts.pending}
           tickets={pick(board.kanban.pending)}
@@ -206,7 +207,7 @@ export default function TaskBoard() {
           onToggleGroup={toggleGroup}
         />
         <KanbanColumn
-          title="已簽核"
+          title="已核對"
           tone="ok"
           count={board.counts.signed}
           tickets={pick(board.kanban.signed)}
@@ -228,7 +229,7 @@ export default function TaskBoard() {
   );
 }
 
-/** 已簽核欄的註腳 · 只在超過顯示上限時才講 */
+/** 已核對欄的註腳 · 只在超過顯示上限時才講 */
 function signedNote(board: WarroomTaskBoard): string | undefined {
   return board.counts.signed > 30 ? `顯示最近 30 筆 · 共 ${board.counts.signed}` : undefined;
 }
@@ -246,7 +247,7 @@ function KanbanColumn({
   onOpen: (t: WarroomKanbanTicket) => void;
   note?: string;
   emptyLabel?: string;
-  /** V5 · 依分類收攏（待簽核／逾時這種要 triage 的欄才開；已簽核是回顧用，平鋪即可）*/
+  /** V5 · 依分類收攏（待核對／逾時這種要 triage 的欄才開；已核對是回顧用，平鋪即可）*/
   grouped?: boolean;
   isCollapsed?: (colTitle: string, catKey: string, idx: number) => boolean;
   onToggleGroup?: (colTitle: string, catKey: string) => void;
@@ -306,9 +307,9 @@ function TicketCard({ t, tone, onOpen, inGroup }: {
 }) {
   // 高信度是本看板預設（sub 已說明）· 逐卡標「信度高」反成雜訊 · 只在中/低時提醒審核者留意
   const confChip = t.confidence === "medium"
-    ? { label: "信度中", level: "mid", tip: "AI 對這張任務的把握程度為「中」· 建議點開卡片對照原始訊息再簽核" }
+    ? { label: "信度中", level: "mid", tip: "AI 對這張任務的把握程度為「中」· 建議點開卡片對照原始訊息再核對" }
     : t.confidence === "low"
-      ? { label: "信度低", level: "low", tip: "AI 對這張任務的把握程度為「低」· 語意較模糊，簽核前務必點開對照原始訊息" }
+      ? { label: "信度低", level: "low", tip: "AI 對這張任務的把握程度為「低」· 語意較模糊，核對前務必點開對照原始訊息" }
       : null;
   // 逾時要顯「量級」不只是「在逾時欄」—— 逾 1 天和逾 15 天的處理順序完全不同
   // ⚠️ 改吃後端算好的 overdueDays：prod 的 due_at 100% 是 null，
@@ -370,8 +371,8 @@ function TicketCard({ t, tone, onOpen, inGroup }: {
           </span>
         ) : <span className="kb-who kb-unassigned">未指派</span>}
         {/* 不顯示「已同步到某某系統」—— 各家用的系統不同，而且我方目前也沒有同步功能。
-            已簽核欄改顯示誰簽的。*/}
-        <span>{tone === "ok" && t.confirmedByName ? `${t.confirmedByName} 已簽核` : t.departmentName ?? ""}</span>
+            已核對欄改顯示誰核對的。*/}
+        <span>{tone === "ok" && t.confirmedByName ? `${t.confirmedByName} 已核對` : t.departmentName ?? ""}</span>
       </div>
     </button>
   );
@@ -556,13 +557,13 @@ function TicketDrawer({
             {ticket.assigneeDisplayName && (<><dt>指派</dt><dd>{ticket.assigneeDisplayName}</dd></>)}
             {ticket.dueAt && (<><dt>截止</dt><dd>{formatDate(ticket.dueAt)}</dd></>)}
             <dt>建立</dt><dd>{created}</dd>
-            {ticket.confirmedAt && (<><dt>簽核</dt><dd>{ticket.confirmedByName ?? "—"} · {confirmed}</dd></>)}
-            <dt>狀態</dt><dd>{ticket.confirmStatus}</dd>
+            {ticket.confirmedAt && (<><dt>核對</dt><dd>{ticket.confirmedByName ?? "—"} · {confirmed}</dd></>)}
+            <dt>狀態</dt><dd>{confirmLabel(ticket.confirmStatus)}</dd>
           </dl>
 
           <AssignBox ticket={ticket} onAssigned={onAssigned} />
 
-          {/* 簽核的人一定要看得到原文 —— AI 只是輔助，看不到原文就是幫 AI 背書 */}
+          {/* 核對的人一定要看得到原文 —— AI 只是輔助，看不到原文就是幫 AI 背書 */}
           <SourceMessages ticketId={ticket.ticketId} />
 
           {ticket.sourceUploadId && canOpenConvoDetail() && (
@@ -575,14 +576,14 @@ function TicketDrawer({
           )}
         </div>
         <div className="drawer-foot">
-          {/* 工作狀態（第四條軸）· 只有已簽核的才有意義 ——
-              還在簽核佇列的，主管的動作是「簽核」不是「補登結束」 */}
+          {/* 工作狀態（第四條軸）· 只有已核對的才有意義 ——
+              還在核對佇列的，主管的動作是「核對」不是「補登結束」 */}
           {ticket.confirmStatus === "已簽核" && (
             <WorkStatusBox ticket={ticket} onChanged={onAssigned} />
           )}
           {ticket.confirmStatus === "待簽核" || ticket.confirmStatus === "逾時警示" ? (
             <button className="btn btn-primary" onClick={() => onSignoff(ticket)} disabled={signing}>
-              {signing ? "簽核中…" : "簽核此筆"}
+              {signing ? "核對中…" : "核對此筆"}
             </button>
           ) : (
             <span className="drawer-note">已確認 · 正式列入紀錄</span>

@@ -40,7 +40,7 @@ export class SignoffService {
       const r = byId.get(id);
       if (!r) { skipped.push(id); continue; } // RLS 範圍外或不存在
       if (r.status !== "待簽核") { skipped.push(id); continue; } // 已簽或逾時
-      if (r.needsReview) { blocked.push({ ticket_id: id, reason: "低信心，須補件才可簽核" }); continue; }
+      if (r.needsReview) { blocked.push({ ticket_id: id, reason: "低信心，須補件才可核對" }); continue; }
       toConfirm.push(id);
     }
 

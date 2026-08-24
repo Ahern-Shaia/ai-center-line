@@ -126,7 +126,8 @@ export function displayState(t: DisplayStateInput): string {
   if (t.workStatus === "closed") {
     return t.workOutcome === "完成" ? "已完成" : `已結束（${t.workOutcome ?? "未註明"}）`;
   }
-  if (t.confirmStatus === "待確認") return "待確認是不是任務";
+  // ⚠️ 比對的是 DB 值「待確認」，顯示的是「待判定」（2026-08-25 改名 · 軸1）
+  if (t.confirmStatus === "待確認") return "待判定是不是任務";
   if (t.confirmStatus === "已忽略") return "已忽略";
   if (t.confirmStatus === "存查") return "存查";
   if (t.assignStatus !== "assigned") return "待指派";

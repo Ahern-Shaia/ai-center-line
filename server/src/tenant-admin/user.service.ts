@@ -155,7 +155,7 @@ export class UserService {
     const refs = await this.repo.countTicketReferences(tx, userId);
     if (refs > 0) {
       throw new ConflictException(
-        `${existing.displayName ?? "這位成員"}還被 ${refs} 張任務記為簽核人或指派人，因此無法刪除`
+        `${existing.displayName ?? "這位成員"}還被 ${refs} 張任務記為核對人或指派人，因此無法刪除`
         + " · 任務需要保留是誰經手的 · 請先處理掉那些任務，或改為保留帳號不用",
       );
     }

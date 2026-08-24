@@ -5,8 +5,8 @@ import { statusLabel } from "../shared/recordStatusLabel";
 import { ApiError, getTicketSource, type TicketSource } from "../api";
 import SourceMessageList from "./SourceMessageList";
 
-// 簽核前對照：AI 整理的內容 vs 當時的原始訊息。
-// 主管簽下去是要負責的 —— 看不到原文，簽核就只是幫 AI 背書。
+// 核對前對照：AI 整理的內容 vs 當時的原始訊息。
+// 主管簽下去是要負責的 —— 看不到原文，核對就只是幫 AI 背書。
 //
 // ⚠️ 2026-07-27 修：這支原本讀 mockdata/lineExcerpts（示範資料），
 //    真實任務查不到對應就整片空白。改接 GET /warroom/tickets/:id/source。

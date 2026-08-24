@@ -13,7 +13,7 @@ import { useToast } from "../Toast";
 
 const SCOPES: { id: AuditScope; label: string; hint: string }[] = [
   { id: "all", label: "全部", hint: "包含查看紀錄，筆數很多" },
-  { id: "write", label: "只看變更", hint: "簽核、派發、修改設定等會改到資料的操作" },
+  { id: "write", label: "只看變更", hint: "核對、派發、修改設定等會改到資料的操作" },
   { id: "login", label: "只看登入", hint: "誰在什麼時候登入" },
 ];
 

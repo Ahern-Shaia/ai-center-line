@@ -5,7 +5,7 @@ import { RECORD_STATUS_LABEL as STATUS_LABEL } from "../shared/recordStatusLabel
 
 // 任務看板的兩個附加區塊 · docs/modules/task-materialization-gate.md
 //
-// 為什麼不做成看板的第 4、5 欄：這兩區的動作跟簽核不一樣。
+// 為什麼不做成看板的第 4、5 欄：這兩區的動作跟核對不一樣。
 // 待確認要回答「這件事要不要追」，看板三欄回答「AI 抽得對不對」。
 // 混在同一排會讓人以為都是待辦佇列，而且五欄擠在一起誰也看不清楚。
 
@@ -36,7 +36,7 @@ export function UnconfirmedQueue({
     setBusy(t.ticketId);
     try {
       await decideTicket(t.ticketId, accept);
-      toast.show(accept ? "已收為任務，接著可以簽核" : "已標記為不用追", "ok");
+      toast.show(accept ? "已收為任務，接著可以核對" : "已標記為不用追", "ok");
       onDecided();
     } catch (e) {
       toast.show(e instanceof ApiError ? e.message : "操作失敗", "danger");
@@ -49,7 +49,7 @@ export function UnconfirmedQueue({
     <section className="tri-box tri-box-warn">
       <button className="tri-hdr" onClick={() => setOpen(!open)} aria-expanded={open}>
         <span className="kb-dot kb-dot-mid" aria-hidden />
-        <span className="tri-title">請您確認</span>
+        <span className="tri-title">請您判定</span>
         <span className="kb-col-count">{tickets.length}</span>
         <span className="tri-hint">
           AI 整理出這些事，但沒有十足把握。請看一下要不要追蹤。
@@ -86,7 +86,7 @@ export function UnconfirmedQueue({
 /**
  * 未列入待辦 · 公告、已完成、以及主管標「不用追」的。
  *
- * 這些**不是**被丟掉的東西——AI 多半抽得很準，只是它們不需要簽核。
+ * 這些**不是**被丟掉的東西——AI 多半抽得很準，只是它們不需要核對。
  * 預設收合但點得開，而且可以改回待辦：
  * 直接不建卡、或標了不用追就徹底消失，按錯了都沒有任何補救途徑（doc F-1 · P0）。
  */

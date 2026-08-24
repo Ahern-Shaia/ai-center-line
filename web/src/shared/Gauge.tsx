@@ -14,7 +14,7 @@ interface Props {
  *
  * 0% 時 RadialBar 什麼都不畫，整圈只剩 track ——
  * 中性灰會讓人以為元件沒載入或壞了（prod 截圖實際發生：
- * 「本日簽核率 0%」整圈死灰，看起來像還在轉圈）。
+ * 「本日核對率 0%」整圈死灰，看起來像還在轉圈）。
  * 染色之後，0 讀起來是「這個環是活的，值就是 0」。
  */
 function trackFill(color: string): string {

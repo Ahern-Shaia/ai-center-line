@@ -507,7 +507,7 @@ export const confirmSignoff = (ticket_ids: string[]) =>
 
 // === Warroom Task Board · WTB-M3 ===
 
-// 任務卡來源原文 · 簽核前對照 AI 抽取結果與原始訊息
+// 任務卡來源原文 · 核對前對照 AI 抽取結果與原始訊息
 export interface SourceMessage {
   id: number;
   time: string;

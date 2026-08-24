@@ -6,7 +6,7 @@
 // 這是呈現層的決定，放前端；後端不必知道畫面怎麼分組。
 //
 // 說明句（why）同理：資料庫的 description 已經是白話（0067 改寫過），
-// 這裡只補「不明顯的那幾項」——「查看知識庫」不必解釋，「簽核項目」要講清楚在確認什麼。
+// 這裡只補「不明顯的那幾項」——「查看知識庫」不必解釋，「核對項目」要講清楚在確認什麼。
 
 /** 分組順序＝側邊欄順序。沒列到的權限會落到「其他」，那代表這張表該補了。 */
 export const PERMISSION_GROUPS: Array<{ title: string; ids: string[] }> = [
@@ -52,7 +52,7 @@ export const PERMISSION_GROUPS: Array<{ title: string; ids: string[] }> = [
 
 /** 補充說明 · 只寫「光看名稱不知道在做什麼」的那幾項 */
 export const PERMISSION_HINT: Record<string, string> = {
-  "warroom:view": "每天的簽核率、部門健康度那一頁",
+  "warroom:view": "每天的核對率、部門健康度那一頁",
   "warroom-tasks:view": "AI 從對話整理出來的待辦事項",
   "warroom-daily:view": "確認 AI 有沒有讀到某則訊息",
   "signoff:action": "確認 AI 整理的內容是對的",

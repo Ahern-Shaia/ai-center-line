@@ -14,7 +14,7 @@ import { useTenantPicker } from "../../shared/TenantPicker";
  * 兩層模型（§1.4）：**權限由我司開放，內容是客戶自己的。**
  * 看得到這頁就代表 aiproot 開放了；看得到之後，幾天算逾時是客戶自己決定的。
  *
- * ⚠️ 沒有「要不要簽核」那一區（N-7）。它只在資料層預留，
+ * ⚠️ 沒有「要不要核對」那一區（N-7）。它只在資料層預留，
  *    UI 不放灰掉的假按鈕 —— 客戶問「這什麼時候有」的成本比少一個區塊高。
  */
 export default function TaskConfigPage() {
@@ -141,7 +141,7 @@ function TaskTiming({ tenantId, ready }: { tenantId?: string; ready: boolean }) 
         <div className="sc-row">
           <div className="sc-row-lbl">
             逾時寬限期
-            <span className="sc-row-hint">任務卡幾天沒簽核就標記逾時</span>
+            <span className="sc-row-hint">任務卡幾天沒核對就標記逾時</span>
           </div>
           <div className="sc-row-val">
             <input className="tf" type="number" min={1} max={90} style={{ width: 90 }}

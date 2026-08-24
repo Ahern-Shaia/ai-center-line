@@ -63,19 +63,19 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
     const pending = g.today_tickets.filter((t) => t.status === "待簽核");
     const confirmable = pending.filter((t) => !t.needs_review);
     if (!confirmable.length) {
-      toast.show(`${g.name}：無可簽核（${pending.length} 筆全為低信心攔截）`, "warn");
+      toast.show(`${g.name}：無可核對（${pending.length} 筆全為低信心攔截）`, "warn");
       return;
     }
     setConfirming(g.department_id);
     try {
       const r = await confirmSignoff(confirmable.map((t) => t.ticket_id));
       const parts: string[] = [];
-      if (r.confirmed.length) parts.push(`已簽核 ${r.confirmed.length} 筆`);
+      if (r.confirmed.length) parts.push(`已核對 ${r.confirmed.length} 筆`);
       if (pending.length - confirmable.length > 0) parts.push(`${pending.length - confirmable.length} 筆低信心攔截`);
       toast.show(`${g.name}：${parts.join("，")}`, r.blocked.length ? "warn" : "ok");
       await refresh();
     } catch (e) {
-      toast.show(e instanceof ApiError ? e.message : "簽核失敗", "danger");
+      toast.show(e instanceof ApiError ? e.message : "核對失敗", "danger");
     } finally {
       setConfirming(null);
     }
@@ -117,7 +117,7 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
         {/* ⚠️ 三個環的分母不同（部門 / 部門 / 已標記筆數），
             前兩個都是「部門」、第三個是「已標記的筆數」。
             不把單位寫完整的話，看的人會以為三個數字可以互相比較。 */}
-        <Gauge value={wr.signoff_rate} label="本日簽核率"
+        <Gauge value={wr.signoff_rate} label="本日核對率"
                frac={`${wr.signed_depts} / ${wr.dept_count} 個部門已簽`} color="#4F46E5" />
         <Gauge value={wr.health_rate} label="部門健康度"
                frac={`${wr.green_depts} / ${wr.dept_count} 個部門綠燈`} color="#059669" />
@@ -188,7 +188,7 @@ function DeptItem({
                 <span className="signer">已由</span>
                 <span className="signer-name">{g.signed_by_name ?? "—"}</span>
                 <span className="mono">{signedAt}</span>
-                <span className="signer">簽核</span>
+                <span className="signer">核對</span>
               </>
             ) : pending.length === 0 ? (
               <span style={{ color: "var(--ink-3)" }}>今日無待簽</span>
@@ -212,7 +212,7 @@ function DeptItem({
             是一整欄長得一樣、而且過半沒事可做的按鈕 ——
             使用者得先讀完文字才知道這顆不用按，那就是多一次判斷。 */}
         {g.signed_off ? (
-          <button className="btn confirmed-tag" disabled>已簽核</button>
+          <button className="btn confirmed-tag" disabled>已核對</button>
         ) : pending.length === 0 ? (
           <span className="so-noop">—</span>
         ) : (
@@ -221,7 +221,7 @@ function DeptItem({
             onClick={(e) => { e.stopPropagation(); onConfirm(); }}
             disabled={confirming}
           >
-            {confirming ? "簽核中…" : `確認 ${pending.length} 筆`}
+            {confirming ? "核對中…" : `確認 ${pending.length} 筆`}
           </button>
         )}
       </div>
@@ -261,7 +261,7 @@ function DeptItem({
           <div className="so-detail-foot">
             <span>確認後才會正式列入紀錄</span>
             {!g.signed_off && confirmable > 0 && (
-              <span>可簽核 <b>{confirmable}</b> 筆，低信心 <b>{lowCount}</b> 筆將被自動攔截</span>
+              <span>可核對 <b>{confirmable}</b> 筆，低信心 <b>{lowCount}</b> 筆將被自動攔截</span>
             )}
           </div>
         </div>

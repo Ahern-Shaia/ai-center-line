@@ -14,7 +14,7 @@ export interface TicketExcerpt {
   raw: LineMessage[];
   extracted: { field: string; value: string }[];
   confidenceReason: string;
-  ragicTarget: string;   // 簽核後同步至的記錄類型（客戶可懂的中文，非內部 schema）
+  ragicTarget: string;   // 核對後同步至的記錄類型（客戶可懂的中文，非內部 schema）
 }
 
 // 用 summary 字首當查表 key（各 entry 可用長度不一的字首）
@@ -70,7 +70,7 @@ export const EXCERPTS: Record<string, TicketExcerpt> = {
       { field: "任務", value: "扶手安裝 + 無障礙固定" },
       { field: "工時（推估）", value: "~2.0h ⚠ 原始為「大概」" },
     ],
-    confidenceReason: "工時填「大概 2h」「沒記很清楚」，數值可信度下降；姓名、車號、任務清楚。→ 標中信心，需簽核確認。",
+    confidenceReason: "工時填「大概 2h」「沒記很清楚」，數值可信度下降；姓名、車號、任務清楚。→ 標中信心，需核對確認。",
     ragicTarget: "報工日報記錄 · 7/2 陳○○（工時待確認）",
   },
   "T-004": {

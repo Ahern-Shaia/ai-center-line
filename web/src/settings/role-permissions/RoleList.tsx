@@ -39,7 +39,7 @@ export default function RoleList({ builtin, custom, selected, onSelect, onCreate
         <div className="rm-empty-hint">
           還沒有自建角色<br />
           內建的「員工／部門主管」不夠用時再建 ——
-          例如要一個「看得到全公司、但只能看不能簽核」的角色。
+          例如要一個「看得到全公司、但只能看不能核對」的角色。
         </div>
       ) : custom.map(item)}
       <button className="btn btn-ghost rm-create" onClick={onCreate}>＋ 建立角色</button>
