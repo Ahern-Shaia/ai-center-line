@@ -11,7 +11,7 @@ import {
 import { useToast } from "../Toast";
 import { catLabel } from "../shared/categoryLabel";
 import { canOpenConvoDetail, navigateTo } from "../nav";
-import { assignTicket, getAssignableMembers, getTicketSource, type AssignableMember, type TicketSource } from "../api";
+import { assignTicket, getAssignableMembers, getTicketSource, notifyOthers, type AssignableMember, type TicketSource } from "../api";
 import { ArchivedList, UnconfirmedQueue } from "./TaskTriage";
 import { WorkStatusBox } from "./WorkTracking";
 import { usePageGuide } from "../shared/usePageGuide";
@@ -423,6 +423,7 @@ function groupByCategory(tickets: WarroomKanbanTicket[]): Array<{ key: string; l
 function AssignBox({ ticket, onAssigned }: { ticket: WarroomKanbanTicket; onAssigned: () => void }) {
   const [members, setMembers] = useState<AssignableMember[] | null>(null);
   const [open, setOpen] = useState(false);
+  const [ccOpen, setCcOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
 
@@ -473,6 +474,22 @@ async function pick(userId: string | null) {
         </span>
         <button className="nc-lnk" onClick={() => void toggle()}>{open ? "取消" : current ? "改派" : "指派"}</button>
       </div>
+
+      {/* ⚠️ 知會刻意是**指派之外的獨立動作**（台灣福祉 ④ · OQ-TWH-5）：
+          指派現在是「一次點擊、零個選擇」，把勾選塞進去會讓每次指派都多一輪判斷，
+          而「要讓別人也知道」是少數情況。所以另開一列，不動主流程。 */}
+      <div className="ab-row">
+        <span className="ab-lbl">同時通知</span>
+        <span className="ab-val ab-hint">讓其他人也知道這件事（不改變當責人）</span>
+        <button className="nc-lnk" onClick={() => setCcOpen((v) => !v)}>{ccOpen ? "取消" : "選人"}</button>
+      </div>
+      {ccOpen && (
+        <CcPicker
+          ticketId={ticket.ticketId}
+          excludeUserId={ticket.assigneeUserId}
+          onDone={() => setCcOpen(false)}
+        />
+      )}
       {open && (
         <div className="ab-opts">
           {members === null ? <span className="ab-hint">載入中…</span>
@@ -633,5 +650,83 @@ function TriggerAnalysisButton() {
     >
       {running ? "分析中…（約 1 分鐘）" : "立即分析今天的對話"}
     </button>
+  );
+}
+
+/**
+ * 知會其他人 · 多選後一次送出。
+ *
+ * 自己載成員名單，不共用 AssignBox 的 `toggle()` —— 那個會順便打開指派面板。
+ * ⚠️ 排除當責人：他已經收過指派通知了（後端也會再擋一次，這裡是不要讓人選得到）。
+ */
+function CcPicker({ ticketId, excludeUserId, onDone }: {
+  ticketId: string;
+  excludeUserId: string | null;
+  onDone: () => void;
+}) {
+  const [members, setMembers] = useState<AssignableMember[] | null>(null);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+
+  useEffect(() => {
+    let alive = true;
+    getAssignableMembers()
+      .then((r) => { if (alive) setMembers(r.members.filter((m) => m.userId !== excludeUserId)); })
+      .catch(() => { if (alive) setMembers([]); });
+    return () => { alive = false; };
+  }, [excludeUserId]);
+
+  const toggleOne = (id: string) => setPicked((s) => {
+    const n = new Set(s);
+    if (n.has(id)) n.delete(id);
+    else if (n.size < 5) n.add(id);          // 後端上限 5，這裡先擋住不讓人白按
+    else toast.show("一次最多知會 5 個人", "warn");
+    return n;
+  });
+
+  async function send() {
+    if (picked.size === 0 || busy) return;
+    setBusy(true);
+    try {
+      const r = await notifyOthers(ticketId, [...picked]);
+      // ⚠️ 逐一講結果 —— 只說「已通知」而其中一個沒送到，
+      //    主管會以為對方都知道了（同指派通知那條 A-1 的判準）
+      const ok = r.results.filter((x) => x.notified);
+      const bad = r.results.filter((x) => !x.notified);
+      toast.show(
+        bad.length === 0
+          ? `已私訊通知 ${ok.map((x) => x.name ?? "").join("、")}`
+          : `已通知 ${ok.length} 人 · ${bad.map((x) => `${x.name ?? "有人"}沒收到`).join("、")}，請另外跟他說一聲`,
+        bad.length === 0 ? "ok" : "warn",
+      );
+      onDone();
+    } catch (e) {
+      toast.show(e instanceof ApiError ? e.message : "通知失敗", "danger");
+    } finally { setBusy(false); }
+  }
+
+  if (members === null) return <div className="ab-opts"><span className="ab-hint">載入中…</span></div>;
+  if (members.length === 0) return <div className="ab-opts"><span className="ab-hint">沒有其他可通知的成員</span></div>;
+
+  return (
+    <div className="ab-opts">
+      {members.map((m) => (
+        <button
+          key={m.userId}
+          className={`ab-opt${picked.has(m.userId) ? " is-picked" : ""}`}
+          onClick={() => toggleOne(m.userId)}
+          disabled={busy}
+        >
+          <span className="ab-check" aria-hidden>{picked.has(m.userId) ? "✓" : ""}</span>
+          {m.name}
+          {/* 沒綁 LINE 就收不到私訊 —— 先講，不要讓人選了才發現 */}
+          {!m.hasLineBinding && <span className="ab-nobind">未綁 LINE · 收不到</span>}
+        </button>
+      ))}
+      <button className="btn btn-primary ab-send" onClick={() => void send()} disabled={busy || picked.size === 0}>
+        {busy ? "傳送中…" : `私訊通知這 ${picked.size} 人`}
+      </button>
+    </div>
   );
 }

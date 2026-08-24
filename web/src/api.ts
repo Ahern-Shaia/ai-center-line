@@ -1,5 +1,16 @@
 // 後端 API client。dev 走 Vite proxy（/api → :3000）。
 
+/**
+ * 知會其他人（不改變當責人）· 只發個人私訊，不碰群組。
+ * ⚠️ 刻意是獨立端點而不是塞進 assignTicket —— 指派是「一次點擊、零個選擇」，
+ *    加勾選會讓每次指派都多一輪判斷，而知會別人是少數情況。
+ */
+export const notifyOthers = (ticketId: string, userIds: string[]) =>
+  req<{ results: Array<{ userId: string; name: string | null; notified: boolean; reason: string | null }> }>(
+    `/warroom/tickets/${ticketId}/notify-others`,
+    { method: "POST", body: JSON.stringify({ userIds }) },
+  );
+
 export interface WarroomTicket {
   ticket_id: string;
   summary: string;

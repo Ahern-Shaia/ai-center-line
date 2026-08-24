@@ -2408,6 +2408,10 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .pg-hide { font-size:12px; color:var(--ink-3); background:transparent; border:0; cursor:pointer; }
 .pg-hide:hover { color:var(--ink-2); }
 .pg-more { font-size:12px; color:var(--ink-3); }
+/* 知會其他人（台灣福祉 ④）· 多選 · 沿用 .ab-opt 的外觀，只加勾選狀態 */
+.ab-opt.is-picked { background:var(--primary-tint); color:var(--primary-2); font-weight:600; }
+.ab-check { display:inline-block; width:14px; color:var(--primary-2); }
+.ab-send { margin-top:8px; width:100%; justify-content:center; }
 @media (max-width:720px) {
   .pg-row { flex-direction:column; gap:1px; }
   .pg-k { width:auto; }
