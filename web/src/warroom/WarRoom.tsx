@@ -4,6 +4,7 @@ import { useToast } from "../Toast";
 import SourceDrawer from "./SourceDrawer";
 import { InfoTip } from "../shared/InfoTip";
 import Gauge from "../shared/Gauge";
+import { usePageGuide } from "../shared/usePageGuide";
 
 interface Props {
   onRegister: (fns: { refresh: () => Promise<void>; asOf: () => string | undefined }) => void;
@@ -13,6 +14,7 @@ interface Props {
 interface SourceOpen { ticketId: string; summary: string; confidence: WarroomTicket["confidence"]; needsReview: boolean }
 
 export default function WarRoom({ onRegister, onLoadingChange }: Props) {
+  const guide = usePageGuide("warroom");
   const [wr, setWr] = useState<Warroom | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,13 +104,14 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
     <>
       <div className="pane-hdr">
         <div>
-          <h1>總覽儀表</h1>
+          <h1>總覽儀表{guide.toggle}</h1>
           {/* ⚠️ 這個數字是 **departments 的筆數**（warroom.service.ts 的 N = depts.length），
               不是 LINE 群組數。本產品一個部門綁一個群，數字碰巧一樣，
               但名詞混用會讓客戶在「部門/成員」頁對不上帳。 */}
           <div className="sub">當前配置 {wr.dept_count} 個部門 · 每日 AI 分類結果匯總（可於「部門/成員」自行新增）</div>
         </div>
       </div>
+      {guide.panel}
 
       <div className="tiles">
         {/* ⚠️ 三個環的分母不同（部門 / 部門 / 已標記筆數），

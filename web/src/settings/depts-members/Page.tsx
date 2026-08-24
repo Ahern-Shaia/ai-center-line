@@ -17,6 +17,7 @@ import { useToast } from "../../Toast";
 import { Departments } from "./Departments";
 import { Members } from "./Members";
 import OrgGraph from "./OrgGraph";
+import { usePageGuide } from "../../shared/usePageGuide";
 
 type Tab = "dept" | "member" | "org";
 
@@ -24,6 +25,7 @@ type Tab = "dept" | "member" | "org";
 // 對照 docs/roles-permissions-matrix.md §3.5
 // initialTab：讓「權限設定教學」的「帶我去新增成員」能直接落在成員分頁
 export default function DepartmentsMembers({ initialTab, onOpenGuide }: { initialTab?: Tab; onOpenGuide?: () => void } = {}) {
+  const guide = usePageGuide("depts");
   const session = getSession();
   const toast = useToast();
   const perms = usePermissions();
@@ -89,7 +91,7 @@ export default function DepartmentsMembers({ initialTab, onOpenGuide }: { initia
     <div className="pane">
       <div className="pane-hdr">
         <div>
-          <h1>部門 / 成員</h1>
+          <h1>部門 / 成員{guide.toggle}</h1>
           <div className="sub">
             {canSwitchTenant
               ? "aiproot 側維護所有客戶方組織 · 部門建立後於「LINE 機器人管理」把群組分派到部門"
@@ -102,6 +104,7 @@ export default function DepartmentsMembers({ initialTab, onOpenGuide }: { initia
           </div>
         )}
       </div>
+      {guide.panel}
 
       {/* Tenant selector (只 aiproot / consultant 顯示) */}
       {canSwitchTenant && (

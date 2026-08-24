@@ -120,7 +120,7 @@ export default function MediaLibrary() {
       <div className="pane-hdr">
         <div>
           {/* 標題要跟著換 —— 只改副標的話，切過去第一眼看不出自己在哪一頁 */}
-          <h1>{trash ? "素材看板 · 已刪除" : "素材看板"}</h1>
+          <h1>{trash ? "素材 · 已刪除" : "素材"}</h1>
           <div className="sub">
             {trash
               ? "已刪除的檔案會保留 30 天，期限內可以還原，到期後自動清除"

@@ -14,10 +14,12 @@ import { canOpenConvoDetail, navigateTo } from "../nav";
 import { assignTicket, getAssignableMembers, getTicketSource, type AssignableMember, type TicketSource } from "../api";
 import { ArchivedList, UnconfirmedQueue } from "./TaskTriage";
 import { WorkStatusBox } from "./WorkTracking";
+import { usePageGuide } from "../shared/usePageGuide";
 
 // WTB-M4 · 任務看板 Kanban 3 欄 (待簽核 / 逾時 / 已簽核)
 // 對照 docs/modules/warroom-task-board.md §7.2
 export default function TaskBoard() {
+  const guide = usePageGuide("task-board");
   const [board, setBoard] = useState<WarroomTaskBoard | null>(null);
   // 「只看卡住的」· Linear 的 display options —— 要聚焦用篩選，不用另開一個容器
   const [onlyStuck, setOnlyStuck] = useState(false);
@@ -119,7 +121,7 @@ export default function TaskBoard() {
     <>
       <div className="pane-hdr">
         <div>
-          <h1>任務看板</h1>
+          <h1>任務看板{guide.toggle}</h1>
           <div className="sub">下方三欄是需要您簽核的任務 · 點卡片可展開原始對話對照</div>
         </div>
         <div className="kb-viewbar">
@@ -140,6 +142,7 @@ export default function TaskBoard() {
           <button className="btn" onClick={() => void refresh()} disabled={loading}>重新整理</button>
         </div>
       </div>
+      {guide.panel}
 
       {/* V5 · 分類篩選 · 68 張混雜時先讓主管一次只看一類（維保要判「派給誰」、研發討論要判「算不算任務」）*/}
       {catChips.length > 1 && (

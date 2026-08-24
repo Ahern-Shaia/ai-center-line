@@ -15,11 +15,13 @@ import ConfirmDialog from "../../shared/ConfirmDialog";
 import StyledSelect from "../../shared/StyledSelect";
 import { GROUP_TYPE_LABEL, GROUP_TYPE_HINT, type LineGroupType } from "../../api";
 import { useTenantPicker } from "../../shared/TenantPicker";
+import { usePageGuide } from "../../shared/usePageGuide";
 
 // tenant_admin「LINE 群組」頁
 // 對照 docs/roles-permissions-matrix.md §3.4 · perm=line-groups:view / assign
 // 為了 tenant 自己清楚哪個 LINE 群屬於哪個部門 · 提供分派 UI
 export default function LineGroupsPage() {
+  const guide = usePageGuide("channels");
   const session = getSession();
   const perms = usePermissions();
   const toast = useToast();
@@ -154,7 +156,7 @@ export default function LineGroupsPage() {
     <div className="pane">
       <div className="pane-hdr">
         <div>
-          <h1>LINE 群組</h1>
+          <h1>LINE 群組{guide.toggle}</h1>
           <div className="sub">
             {loading ? "載入中…" : `共 ${activeGroups.length} 個群組（啟用中）${leftGroups.length > 0 ? ` · ${leftGroups.length} 群已離開` : ""}`}
             {unassignedCount > 0 && <span style={{ color: "var(--warn)", marginLeft: 8 }}> · <b>{unassignedCount}</b> 群未分派部門</span>}
@@ -162,6 +164,7 @@ export default function LineGroupsPage() {
         </div>
         {picker}
       </div>
+      {guide.panel}
 
       {loading && <Spinner block />}
 

@@ -58,12 +58,17 @@ const NAV: Array<{
   {
     group: "設定",
     items: [
-      { key: "depts", label: "部門/成員", ic: iconTeam, done: true, permAny: ["departments:view", "users:view"] },
-      { key: "channels", label: "通訊管道", ic: iconChat, done: true, permAny: ["line-groups:view", "binding:view", "binding:aiproot-view"], renamedFrom: "LINE 群組" },
+      { key: "depts", label: "部門 / 成員", ic: iconTeam, done: true, permAny: ["departments:view", "users:view"] },
+      // ⚠️ 2026-08-24 改回「LINE 群組」。原本為了 Channel Adapter 的通道中立性改成
+      //    「通訊管道」，但 AGENTS.md 那條紀律管的是**程式碼**（表名／模組名／端點），
+      //    **使用者看得到的字串不在它的範圍**。對工廠客戶來說「LINE 群組」好懂太多 ——
+      //    不該為了我們某天可能接 Slack，讓客戶現在先學一個抽象詞。
+      //    而且頁內標題本來就一直是「LINE 群組」，側欄改了頁內沒改＝自相矛盾。
+      { key: "channels", label: "LINE 群組", ic: iconChat, done: true, permAny: ["line-groups:view", "binding:view", "binding:aiproot-view"], renamedFrom: "通訊管道" },
       { key: "task-config", label: "任務設定", ic: iconTask, done: true, permAny: ["task-config:view", "categories:view"] },
-      // 「定時任務」與本產品的核心產出「任務」撞名 —— 客戶點進去想找任務，
-      // 看到的是 cron 排程設定。改名就能解，是硬傷裡最便宜的一個。
-      { key: "scheduler-config", label: "自動化", ic: iconCog, done: true, perm: "scheduler-config:view", renamedFrom: "定時任務" },
+      // 「自動化」太抽象、「定時任務」跟本產品的「任務」撞名 —— 都叫「分析排程」，
+      // 說的是它實際在排的東西（AI 幾點去讀群組對話）。頁內標題同步改。
+      { key: "scheduler-config", label: "分析排程", ic: iconCog, done: true, perm: "scheduler-config:view", renamedFrom: "自動化" },
       // 租戶自管角色權限（docs/modules/tenant-role-permissions.md）·
       // aiproot 側另有「平台 → 權限管理」，兩者是同一件事的兩種可見範圍
       { key: "role-permissions", label: "權限管理", ic: iconShield, done: true, perm: "roles:manage-tenant" },

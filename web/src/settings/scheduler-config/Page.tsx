@@ -12,10 +12,12 @@ import { usePermissions } from "../../permission/PermissionContext";
 import { useToast } from "../../Toast";
 import ConfirmDialog from "../../shared/ConfirmDialog";
 import { useTenantPicker } from "../../shared/TenantPicker";
+import { usePageGuide } from "../../shared/usePageGuide";
 
 // scheduler-config M4 · 定時任務設定
 // 對照 docs/modules/scheduler-config.md §4 · v0.2 APPROVED
 export default function SchedulerConfigPage() {
+  const guide = usePageGuide("scheduler-config");
   const session = getSession();
   const perms = usePermissions();
   const toast = useToast();
@@ -133,7 +135,7 @@ export default function SchedulerConfigPage() {
   if (!canView) {
     return (
       <div className="pane">
-        <div className="pane-hdr"><div><h1>定時任務設定</h1></div></div>
+        <div className="pane-hdr"><div><h1>分析排程</h1></div></div>
         <div className="dm-empty">你的角色無權查看此頁 · 請聯繫管理員</div>
       </div>
     );
@@ -143,7 +145,7 @@ export default function SchedulerConfigPage() {
     <div className="pane">
       <div className="pane-hdr">
         <div>
-          <h1>定時任務設定</h1>
+          <h1>分析排程{guide.toggle}</h1>
           <div className="sub">
             {canManagePlatform
               ? "平台預設設定 · 可調整整體預設值與各公司的個別設定"
@@ -151,6 +153,7 @@ export default function SchedulerConfigPage() {
           </div>
         </div>
       </div>
+      {guide.panel}
 
       {tenantPicker && <div className="dm-tenant-picker">{tenantPicker}</div>}
 

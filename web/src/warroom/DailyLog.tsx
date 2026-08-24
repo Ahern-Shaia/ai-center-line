@@ -5,11 +5,13 @@ import { usePermissions } from "../permission/PermissionContext";
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import GroupCard from "./GroupCard";
+import { usePageGuide } from "../shared/usePageGuide";
 
 // WTB-M4 · 日誌 view · 按天列 · 每 upload 一 card
 // scheduler-config M4 · 加「立即分析」按鈕（tenant_admin / aiproot 可觸發）
 // 對照 docs/modules/warroom-task-board.md §7.3 · docs/modules/scheduler-config.md §6
 export default function DailyLog() {
+  const guide = usePageGuide("daily-log");
   const [data, setData] = useState<WarroomDailyDays | null>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState<7 | 30>(7);
@@ -57,7 +59,7 @@ export default function DailyLog() {
     <>
       <div className="pane-hdr">
         <div>
-          <h1>群組日誌</h1>
+          <h1>群組日誌{guide.toggle}</h1>
           <div className="sub">各 LINE 群組每日活動摘要 · 由 AI 從當日對話抽取</div>
         </div>
         <div className="hdr-toolbar">
@@ -81,6 +83,7 @@ export default function DailyLog() {
           )}
         </div>
       </div>
+      {guide.panel}
 
       <ConfirmDialog
         open={confirmAnalyze}
