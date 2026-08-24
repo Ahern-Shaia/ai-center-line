@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 import { parseLineExport, segmentMessages, type ChatMessage } from "./parser.js";
 import { analyzeSegment, analyzeExtraSection, addUsage, emptyUsage, type UsageStats } from "./classify.js";
 import { TWH_TENANT, type Tenant } from "./tenant-twh.js";
-import { DEFAULT_CATEGORIES, type AnalysisResultT } from "./schemas.js";
+import { DEFAULT_CATEGORIES, type AnalysisResultT, DEFAULT_CATEGORY_NAMES } from "./schemas.js";
 import { TEMPLATE_REGISTRY, resolveTemplate, DEFAULT_TEMPLATE, type ExtractionTemplate } from "./templates.js";
 import type { LLMProvider } from "../../llm/provider.interface.js";
 import { createLLMProvider, platformDefaultModel } from "../../llm/provider.factory.js";
@@ -156,7 +156,7 @@ async function loadTemplate(tenantId?: string): Promise<ExtractionTemplate> {
 // WTB-M2 helper · 讀 registry · 空則回 DEFAULT_CATEGORIES 提示
 async function loadKnownCategories(tenantId?: string): Promise<Array<{ slug: string; name: string }>> {
   if (!tenantId) {
-    return DEFAULT_CATEGORIES.map((s) => ({ slug: s, name: s }));
+    return DEFAULT_CATEGORIES.map((s) => ({ slug: s, name: DEFAULT_CATEGORY_NAMES[s] ?? s }));
   }
   try {
     const res = await withTenant({ tenantId, role: "tenant_admin" }, (tx) => tx.execute<{ slug: string; name: string }>(sql`
@@ -167,11 +167,11 @@ async function loadKnownCategories(tenantId?: string): Promise<Array<{ slug: str
       LIMIT 50
     `));
     if (res.rows.length === 0) {
-      return DEFAULT_CATEGORIES.map((s) => ({ slug: s, name: s }));
+      return DEFAULT_CATEGORIES.map((s) => ({ slug: s, name: DEFAULT_CATEGORY_NAMES[s] ?? s }));
     }
     return res.rows.map((r) => ({ slug: r.slug, name: r.name }));
   } catch {
-    return DEFAULT_CATEGORIES.map((s) => ({ slug: s, name: s }));
+    return DEFAULT_CATEGORIES.map((s) => ({ slug: s, name: DEFAULT_CATEGORY_NAMES[s] ?? s }));
   }
 }
 

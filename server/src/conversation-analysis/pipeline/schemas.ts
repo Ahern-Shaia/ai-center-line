@@ -29,6 +29,28 @@ export const CategoryEnum = z.enum([
 export type Category = z.infer<typeof CategoryEnum>;
 export const DEFAULT_CATEGORIES = CategoryEnum.options;
 
+/**
+ * 內建分類的中文名 · 與 `web/src/shared/categoryLabel.ts` 的 CATEGORY_LABEL 一致。
+ *
+ * ⚠️⚠️ 為什麼後端也要有一份：`loadKnownCategories` 在 registry 空的時候
+ *    回的是 `{slug, name: slug}` —— 於是 prompt 裡的「已知分類」變成
+ *    `- daily_report (daily_report)` 一整排英文。模型看著這個樣板造新分類，
+ *    自然生出 `production_meeting` / `document_control` 這種英文 slug，
+ *    然後直接印在客戶畫面上（2026-08-24 台灣福祉實際踩到）。
+ *
+ *    **中文名不能只存在前端** —— 模型看得到的是後端這一份。
+ */
+export const DEFAULT_CATEGORY_NAMES: Record<string, string> = {
+  daily_report: "報工日報",
+  attendance: "出勤異動",
+  chitchat: "閒聊",
+  maintenance: "維保異常",
+  rnd: "研發討論",
+  procurement: "採購",
+  sales: "業務",
+  it_support: "資訊支援",
+};
+
 const Confidence = z.enum(["high", "medium", "low"]);
 
 // ── L1 通用核心 ──────────────────────────────────────────────────

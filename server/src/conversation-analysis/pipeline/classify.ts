@@ -38,7 +38,12 @@ export async function analyzeSegment(
     .join("\n");
 
   const categoryHint = knownCategories && knownCategories.length > 0
-    ? `\n# 已知分類（依使用頻率 · 優先歸入 · 全新性質才自行命名）\n${knownCategories.map((c) => `- ${c.slug} (${c.name})`).join("\n")}\n`
+    // ⚠️ 「新分類一律用繁體中文」這句是必要的：範例本身長得像英文識別字，
+    //    模型會照著樣板造 —— 2026-08-24 台灣福祉實際生出 production_meeting /
+    //    document_control / facility_management 並直接印在客戶畫面上。
+    ? `\n# 已知分類（依使用頻率 · **優先歸入既有分類**）\n${knownCategories.map((c) => `- ${c.slug}（${c.name}）`).join("\n")}\n`
+      + `\n真的沒有任何一個既有分類放得下時，才自行命名新分類。新分類**必須用繁體中文**、2 到 6 個字\n`
+      + `（例如「生產會議」「文件管制」「廠務管理」）。**不可以用英文或拼音**。\n`
     : "";
 
   // 人名候選集 · 放 userMessage 不放 system（名單依租戶而異，放進穩定前綴會讓快取失效）
