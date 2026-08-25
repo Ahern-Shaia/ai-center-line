@@ -166,14 +166,38 @@ B 做完也抽不出任何決議 —— 那是花 L 的工做出一個空功能�
 
 腳本：[`scripts/meeting-probe.sql`](../../scripts/meeting-probe.sql)（唯讀）
 
-三段：
-1. 有多少「像會議」的任務、落在哪一區 → 看**數量級**，個位數就不急
-2. 這些任務的摘要長什麼樣 → 看 AI 現在把「一場會」抽成什麼
-3. ⭐ **會議當下的原始對話全文** → **決定性的一段**，判斷裡面有沒有決議
+```bash
+psql "<PROD_DATABASE_URL>" -f scripts/meeting-probe.sql
+# 租戶名稱對不上時：-v tenant='部分名稱'
+```
 
-⚠️ 每段都先 `SET app.current_tenant` —— `tickets` / `line_message` 是 AND-only policy，
-少設會**靜默回 0 列**（不報錯，回空的），然後我們會得出「他們根本沒開會」的錯誤結論
-（memory `rule_rls_silent_zero`，已踩 10 次）。
+六段：`診斷` → `列租戶` → **RLS 護欄** → 會議任務分布 → 摘要樣貌 → **原始對話全文**。
+決定性的是最後一段。
+
+### 6.1 ⚠️ v1 的教訓：這支腳本自己踩了它在警告的坑
+
+v1 把查 `tenants` 寫在 `SET` **之前**。實際 policy（`pg_policies` 查證）：
+
+| 表 | policy | 平台角色逃生門 |
+|---|---|---|
+| `tenants` | `tenant_id = current_tenant OR actor_role = 'aiproot_admin'` | ✅ 有 |
+| `line_message` | `… OR actor_role IN (aiproot_admin, consultant, system)` | ✅ 有 |
+| `tickets` | `tenant_id = current_tenant AND (…department…)` | ❌ **AND-only，沒有** |
+
+於是 v1 的第 0 段兩個條件都不成立 → **靜默回 0 列** → tenant_id 抓不到 →
+後面每一段都在查全零 UUID → 全空。
+
+**而最糟的不是抓不到，是抓不到之後繼續跑** —— 印出一整排 0 列，
+讀起來就是「客戶根本沒開會」。差一點就據此做出錯誤結論。
+
+v2 的三個修正：
+1. `SET` 移到所有 `SELECT` 之前
+2. `\set ON_ERROR_STOP on` —— 抓不到 tenant 就**當場中斷**，不產出會被誤讀的空表
+3. 加一段 **RLS 護欄**（這個租戶總共幾張票）—— 這裡是 0 的話，下面所有的 0 都沒有意義
+
+⚠️ **本機驗不到 RLS 那條路**：本機用 `postgres` 連線會繞過 RLS。
+兩條路徑（抓得到／抓不到）都在本機實測過，但「RLS 擋住」的情境只有 prod 才驗得到 ——
+所以護欄段才是必要的。
 
 ---
 
