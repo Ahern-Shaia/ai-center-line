@@ -17,6 +17,7 @@ import assert from "node:assert/strict";
 import pg from "pg";
 import { closeDb, withTenant, txStore, type Db } from "../src/db/client.js";
 import { ArchivedTasksService } from "../src/warroom/archived-tasks.service.js";
+import { WarroomTasksService } from "../src/warroom/warroom-tasks.service.js";
 import { TaskConfigService } from "../src/task-config/task-config.service.js";
 
 const svc = new ArchivedTasksService(new TaskConfigService());
@@ -200,4 +201,18 @@ test("⭐ 總經理室看得到全公司（含另一部門），但仍不含別�
   const r = await asTenant(() => svc.list({ from: "2026-04-12", to: "2026-04-12" }));
   assert.ok(r.items.some((t) => t.summary === "另一部門的存查"));
   assert.ok(!r.items.some((t) => t.summary === "別家租戶的存查"));
+});
+
+// ── 部署空窗期的相容契約 ────────────────────────────────────────
+// Render 是 rolling deploy，而前端是使用者瀏覽器裡快取的 bundle。
+// 新後端上線那段時間，還開著舊分頁的人會拿到新回應。
+
+test("⭐⭐ /warroom/tasks 仍要回 kanban.archived（空陣列）· 拿掉 key 會讓舊前端白畫面", async () => {
+  const board = await asTenant(() => new WarroomTasksService(new TaskConfigService()).listTasks({}));
+  assert.ok(Array.isArray(board.kanban.archived),
+    "舊前端會做 kanban.archived.map(...) —— key 不見就是 undefined.map，整頁掛掉");
+  assert.equal(board.kanban.archived.length, 0, "卡片走分頁端點，這裡不再塞 50 筆");
+  assert.equal(board.counts.archived, 64,
+    "數字要是**真實總數**（獨立 count），不是從看板那 500 筆數的 —— "
+    + "前端用 counts.archived > 0 決定畫不畫入口，數錯就整個入口消失");
 });

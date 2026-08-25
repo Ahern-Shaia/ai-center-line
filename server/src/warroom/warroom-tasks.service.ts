@@ -112,6 +112,18 @@ export class WarroomTasksService {
    */
   async listTasks(args: { includeSignedOff?: boolean } = {}): Promise<{
     kanban: {
+      /**
+       * ⚠️ 永遠是空陣列 · 保留只為了**部署空窗期**。
+       *
+       * Render 是 rolling deploy，而前端是使用者瀏覽器裡快取的 bundle ——
+       * 新後端上線的那段時間，還開著舊分頁的人會拿到新回應。
+       * 直接拿掉這個 key，舊前端的 `kanban.archived.map(...)` 就是 undefined → 整頁白畫面。
+       * 留一個空陣列，最差只是存查看起來空的（degraded，不是壞掉）。
+       *
+       * 卡片實際走 GET /warroom/tasks/archived（分頁＋篩選）。
+       * 確認沒有舊分頁在跑之後可以刪。
+       */
+      archived: never[];
       pending: WarroomTicket[];      // 待簽核
       signed: WarroomTicket[];       // 已簽核 (limit 30 · 最近的)
       overdue: WarroomTicket[];      // 逾時 · due_at 過期 or 建立 > 7d 且待簽
@@ -180,7 +192,7 @@ export class WarroomTasksService {
     `);
 
     return {
-      kanban: { pending, signed, overdue, unconfirmed },
+      kanban: { pending, signed, overdue, unconfirmed, archived: [] },
       counts: {
         pending: pending.length,
         // 這個數字要跟畫面上看得到的卡片數一致（超過 30 由前端註腳說明）
