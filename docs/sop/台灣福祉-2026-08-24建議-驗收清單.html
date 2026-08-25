@@ -1,0 +1,390 @@
+<!--
+  台灣福祉 · 2026-08-24 修改建議 驗收清單
+  ═══════════════════════════════════════════════════════════════
+
+  ⚠️ 這份**刻意不放 web/public/** —— 它含客戶真實營運資料
+     （工位車輛更換的案場與車號、帳號結構數字）。
+     web/public/ 是公開網址，handbook.html 當初就是為此做了去識別化；
+     而驗收文件不能去識別化（客戶要認得自己的東西）→ 走檔案交付。
+
+  設計依據：docs/modules/twh-feedback-2026-08-24.md §9（回覆稿）
+           樣式沿用 docs/sop/導入-checklist.html（同一套 token）
+
+  ⚠️ 指路文字全部對照過實際 UI（2026-08-25）：
+     · 側欄是「素材」不是「素材看板」、「LINE 群組」不是「通訊管道」
+     · 「待確認」在畫面上**不是一個欄**，是任務看板下方**預設收合**的區塊，
+       標題叫「請您判定」—— 寫成「待確認欄」客戶會找不到
+     · 簽核→核對已全站改名（migration 0069 / commit bbe74d8）
+
+  列印：瀏覽器 Cmd/Ctrl+P → 另存為 PDF（已有 @media print）
+-->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>驗收清單 · 2026-08-24 修改建議</title>
+<style>
+  :root{--bg:#f6f7f9;--surface:#fff;--line:#e4e7eb;--line-2:#f0f2f5;--ink:#171a1d;--ink-2:#4b5563;--ink-3:#6b7280;--faint:#9aa1ab;
+    --brand:#4f46e5;--brand-bg:#eef2ff;--ok:#047857;--ok-bg:#ecfdf5;--ok-bd:#a7f3d0;
+    --warn:#b45309;--warn-bg:#fffbeb;--warn-bd:#fde68a;--mono:ui-monospace,Menlo,monospace;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;font-size:14.5px;line-height:1.68;}
+  .wrap{max-width:860px;margin:0 auto;padding:34px 26px 60px;}
+  h1{font-size:23px;font-weight:680;margin:0 0 4px;}
+  .lede{color:var(--ink-2);font-size:14px;}
+  .meta{margin:12px 0 22px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--faint);}
+  h2{font-size:16px;font-weight:660;margin:30px 0 8px;display:flex;align-items:center;gap:9px;}
+  h2 .n{background:var(--brand);color:#fff;font-size:12.5px;border-radius:6px;padding:2px 10px;font-weight:700;flex:none;}
+  .tag{margin-left:auto;font-size:11.5px;font-weight:650;border-radius:5px;padding:2px 9px;flex:none;}
+  .tag.done{background:var(--ok-bg);color:var(--ok);}
+  .tag.had{background:var(--brand-bg);color:var(--brand);}
+  .tag.you{background:var(--warn-bg);color:var(--warn);}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:15px 18px;margin:8px 0 4px;}
+  .said{border-left:3px solid var(--line);padding:2px 0 2px 12px;margin:0 0 12px;color:var(--ink-3);font-size:13.5px;}
+  .said b{color:var(--ink-2);font-weight:600;}
+  .did{font-size:14px;margin:0 0 12px;}
+  .how{background:#fafbfc;border:1px solid var(--line-2);border-radius:8px;padding:12px 15px;margin-top:10px;}
+  .how h4{margin:0 0 8px;font-size:12.5px;font-weight:700;color:var(--ink-3);letter-spacing:.04em;}
+  ol{margin:0;padding-left:20px;} ol li{padding:3px 0;font-size:14px;}
+  .pass{margin-top:10px;padding:9px 12px;background:var(--ok-bg);border:1px solid var(--ok-bd);border-radius:7px;font-size:13.5px;color:#065f46;}
+  .pass b{color:#065f46;}
+  .chk{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:13px;color:var(--ink-3);}
+  .chk span{display:inline-block;width:15px;height:15px;border:1.5px solid #9aa1ab;border-radius:4px;vertical-align:-3px;margin-right:7px;background:#fff;}
+  .chk em{font-style:normal;margin-left:18px;}
+  .note{background:var(--warn-bg);border:1px solid var(--warn-bd);border-radius:8px;padding:11px 14px;margin:12px 0;font-size:13.5px;color:#78350f;}
+  .note b{color:#78350f;}
+  .big{background:#fff;border:2px solid var(--warn-bd);border-radius:10px;padding:16px 20px;margin:18px 0;}
+  .big h3{margin:0 0 8px;font-size:16px;color:#92400e;}
+  code{font-family:var(--mono);font-size:12.5px;background:#f1f3f5;padding:1px 6px;border-radius:4px;}
+  .path{font-weight:650;color:var(--brand);}
+  .foot{margin-top:30px;font-size:12.5px;color:var(--faint);border-top:1px solid var(--line);padding-top:14px;}
+  @media print{
+    body{background:#fff;font-size:12px}.wrap{padding:0;max-width:none}
+    h2{page-break-after:avoid}.card,.big{page-break-inside:avoid}
+    .card{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>驗收清單 · 2026-08-24 修改建議</h1>
+  <div class="lede">您提的 10 點，這份文件一項一項說明<b>做了什麼</b>，以及<b>您怎麼自己確認它真的好了</b>。</div>
+  <div class="meta">
+    對象：總經理室 ｜ 標示：
+    <span class="tag done">已完成</span>&nbsp;這次做的
+    <span class="tag had">本來就有</span>&nbsp;之前就能用，只是位置不明顯
+    <span class="tag you">需您設定</span>&nbsp;要麻煩您動一下
+  </div>
+
+  <div class="note">
+    <b>怎麼用這份文件：</b>照著每一項的「怎麼驗收」點一遍，看到的東西符合「通過的樣子」就打勾。
+    有任何一項對不上，<b>不用自己想辦法</b>，把那一項的編號告訴我們就好。
+  </div>
+
+  <!-- ══════════ 開始前 ══════════ -->
+  <div class="big">
+    <h3>⚠️ 開始前：兩件要麻煩您先設定</h3>
+    <p style="margin:0 0 10px;font-size:14px">
+      我們查了系統目前的帳號狀況：<b>26 個帳號裡，25 個是「員工」、1 個是「總經理室」，
+      還沒有任何人被設為「部門主管」。</b>
+    </p>
+    <p style="margin:0 0 12px;font-size:14px">
+      這剛好就是您第 ⑤ 點說的事 —— <b>不是系統不支援，是系統裡還沒有這個角色的人。</b>
+    </p>
+    <div class="how">
+      <h4>① 指定各部門主管</h4>
+      <ol>
+        <li>左側 <span class="path">設定 → 部門 / 成員</span></li>
+        <li>找到該部門的負責人那一列，把「角色」從<b>員工</b>改成<b>部門主管</b></li>
+      </ol>
+      <div class="pass">改完之後，他登入就只看得到自己部門的任務（現在所有人都是員工視角）。</div>
+    </div>
+    <div class="how" style="margin-top:12px">
+      <h4>② 總經理室帳號綁定 LINE</h4>
+      <ol>
+        <li>目前這個帳號<b>還沒綁 LINE</b>，所以任何 LINE 通知都送不到您這裡</li>
+        <li>綁定方式跟同仁一樣：加公司官方帳號好友 → 依指示完成綁定</li>
+      </ol>
+      <div class="pass">綁好之後，第 ④ 點的「同時通知」勾您才收得到。</div>
+    </div>
+    <p style="margin:12px 0 0;font-size:13px;color:#78350f">
+      順帶一提：貴公司的綁定狀況其實<b>很好</b> —— 26 個帳號有 23 個已經綁了，
+      光 8/25 當天就新增 12 個。缺的只有「部門主管」這個角色而已。
+    </p>
+  </div>
+
+  <!-- ══════════ ① ══════════ -->
+  <h2><span class="n">①</span>素材檔案可以下載<span class="tag done">已完成</span></h2>
+  <div class="card">
+    <div class="said"><b>您說：</b>素材的檔案希望可以下載。</div>
+    <div class="did">每個檔案卡片下方加了「下載」按鈕。開放給所有看得到素材的人，不限管理者。</div>
+    <div class="how">
+      <h4>怎麼驗收</h4>
+      <ol>
+        <li>左側 <span class="path">素材</span></li>
+        <li>任一個檔案卡片，下方有<b>「下載」</b>按鈕，點它</li>
+      </ol>
+      <div class="pass"><b>通過的樣子：</b>檔案存進電腦，中文檔名不會變成亂碼。</div>
+    </div>
+    <div class="chk"><span></span>驗收通過<em><span></span>有問題（說明：___________）</em></div>
+  </div>
+
+  <!-- ══════════ ② ══════════ -->
+  <h2><span class="n">②</span>素材加搜尋<span class="tag done">已完成</span></h2>
+  <div class="card">
+    <div class="said"><b>您說：</b>素材希望能用日期、關鍵字搜尋。</div>
+    <div class="did">
+      加了一列搜尋：<b>關鍵字 ＋ 開始日期 ＋ 結束日期 ＋ 群組</b>。
+      <br>⭐ 關鍵字除了比對檔名，也會比對<b>那張圖前後三分鐘的訊息內容</b> ——
+      照片本身通常沒有檔名，您找「報價單」時多半是靠當時群裡打的那句話找到的。
+    </div>
+    <div class="how">
+      <h4>怎麼驗收</h4>
+      <ol>
+        <li>左側 <span class="path">素材</span>，最上方有一列篩選</li>
+        <li>關鍵字打一個您記得的詞（例如「報價」），看清單有沒有縮小</li>
+        <li>再選一段日期範圍，確認清單跟著變</li>
+        <li>右上角的統計會從「共 N 個檔案」變成<b>「符合條件 N 個檔案」</b></li>
+      </ol>
+      <div class="pass"><b>通過的樣子：</b>類型分頁籤（全部／圖片／檔案）上的數字，會跟著篩選一起變 —— 不會出現「籤上寫 100、點下去只有 3 個」。</div>
+    </div>
+    <div class="chk"><span></span>驗收通過<em><span></span>有問題（說明：___________）</em></div>
+  </div>
+
+  <!-- ══════════ ③ ══════════ -->
+  <h2><span class="n">③</span>「已簽核」卻寫「卡住 24 天」<span class="tag done">已完成</span></h2>
+  <div class="card">
+    <div class="said"><b>您說：</b>已簽核了卻又顯示卡住 24 天，看起來矛盾。</div>
+    <div class="did">
+      查了之後發現<b>兩個講的是不同的事</b>：
+      <br>「已簽核」的原意是<b>主管確認 AI 整理得對</b>（這件事真的存在、內容沒抽錯）；
+      「卡住 24 天」講的是<b>事情本身還沒有人去做</b>。
+      <br>所以那句話邏輯是通的 —— 是「簽核」這個詞聽起來太像「處理完了」。
+      <br><br><b>已全站改名：簽核 → 核對。</b>畫面上的字會變，<b>資料完全沒有變動</b>。
+    </div>
+    <div class="how">
+      <h4>怎麼驗收</h4>
+      <ol>
+        <li>左側 <span class="path">任務看板</span></li>
+        <li>三個欄位標題現在是 <b>待核對 ／ 逾時警示 ／ 已核對</b></li>
+        <li>全站（含使用手冊、LINE 通知文字）都看不到「簽核」二字了</li>
+      </ol>
+      <div class="pass"><b>通過的樣子：</b>「已核對 ＋ 卡住 24 天」讀起來不再矛盾 —— 意思是「您確認過這件事是真的，但 24 天沒進度」。</div>
+    </div>
+    <div class="chk"><span></span>驗收通過<em><span></span>有問題（說明：___________）</em></div>
+  </div>
+
+  <!-- ══════════ ④ ══════════ -->
+  <h2><span class="n">④</span>指派時同時通知其他人<span class="tag done">已完成</span></h2>
+  <div class="card">
+    <div class="said"><b>您說：</b>指派任務時，希望能同時通知其他人。</div>
+    <div class="did">
+      指派任務時可以勾選要一起通知的人，各自收到一則 LINE <b>私訊</b>。
+      <br>⚠️ <b>只發個人私訊，不會在群組裡出聲</b> —— 群組訊息全員都看得到，那是打擾。
+    </div>
+    <div class="how">
+      <h4>怎麼驗收</h4>
+      <ol>
+        <li>左側 <span class="path">任務看板</span> → 點開任一張任務卡</li>
+        <li>指派區塊下方有<b>「同時通知」</b>，勾選一位同仁</li>
+        <li>請那位同仁確認有沒有收到 LINE 私訊</li>
+      </ol>
+      <div class="pass"><b>通過的樣子：</b>被勾的人收到私訊，內容會註明「這則只是知會，不用回覆」（回覆是當責人的動作）。</div>
+      <div class="note" style="margin:10px 0 0"><b>前提：</b>要收通知的人必須已綁定 LINE。您自己的帳號目前還沒綁（見上方「開始前」②）。</div>
+    </div>
+    <div class="chk"><span></span>驗收通過<em><span></span>有問題（說明：___________）</em></div>
+  </div>
+
+  <!-- ══════════ ⑤ ══════════ -->
+  <h2><span class="n">⑤</span>任務先給部門主管、需要才給總經理<span class="tag you">需您設定</span></h2>
+  <div class="card">
+    <div class="said"><b>您說：</b>任務先給部門主管，需要才給總經理。</div>
+    <div class="did">
+      這一項拆成三段：
+      <br><br>
+      <b>(1) 畫面 — 本來就是這樣。</b>部門主管只看得到自己部門的任務，只有總經理室看全公司。
+      <br>
+      <b>(2)「需要才給總經理」— 現在就能做。</b>用第 ④ 點的「同時通知」勾您即可，這就是往上報。
+      <br>
+      <b>(3)「先給部門主管」— 還沒有。</b>目前新任務出現時不會主動通知任何人。
+      我們規劃做成<b>每天一則彙總</b>（「您部門今天有 N 件待處理」）。
+      <br>⭐ 不做成「每張任務一則」是刻意的：您那邊平均<b>一天 15 件</b>，一張一則會變洗版。
+    </div>
+    <div class="note">
+      <b>這一項現在驗收不了</b> —— 系統裡還沒有任何人是「部門主管」（見上方「開始前」①）。
+      您指定完各部門主管，告訴我們一聲，我們才把彙總通知排進去。
+    </div>
+    <div class="chk"><span></span>已指定各部門主管，可以排彙總通知了</div>
+  </div>
+
+  <!-- ══════════ ⑥ ══════════ -->
+  <h2><span class="n">⑥</span>已核對的資料存在哪 ＋ 搜尋<span class="tag done">已完成</span></h2>
+  <div class="card">
+    <div class="said"><b>您說：</b>已簽核的資料存在哪裡？希望可以搜尋。</div>
+    <div class="did">
+      存在<b>「存查」</b>頁 —— 之前就有，只是入口不明顯。這次順便修了兩個實際問題：
+      <br>· 原本<b>只看得到最近 50 筆</b>、沒有翻頁 → 現在有分頁，全部翻得到
+      <br>· 原本沒有搜尋 → 現在有<b>關鍵字 ＋ 日期 ＋ 群組</b>（跟素材同一組）
+    </div>
+    <div class="how">
+      <h4>怎麼驗收</h4>
+      <ol>
+        <li>左側 <span class="path">任務看板</span> → 右上角有<b>「存查」</b>按鈕，點它</li>
+        <li>上方有搜尋列，下方有頁碼（第 1 / N 頁）</li>
+        <li>打個關鍵字，確認筆數跟著變</li>
+        <li>翻到最後一頁，確認翻得到<b>最舊</b>的紀錄</li>
+      </ol>
+      <div class="pass"><b>通過的樣子：</b>標題那行的總筆數，跟您實際翻得到的筆數一致（之前總數是錯的）。</div>
+    </div>
+    <div class="chk"><span></span>驗收通過<em><span></span>有問題（說明：___________）</em></div>
+  </div>
+
+  <!-- ══════════ ⑦ ══════════ -->
+  <h2><span class="n">⑦</span>「併發限制」是什麼功能<span class="tag done">已完成</span></h2>
+  <div class="card">
+    <div class="said"><b>您說：</b>「併發限制」這是什麼功能？</div>
+    <div class="did">
+      那是我們調整系統效能用的技術參數（一次同時分析幾個群組），<b>您本來就改不了</b>。
+      改不了卻看得到，只會造成困擾 —— <b>已經從您的畫面移除</b>。
+    </div>
+    <div class="how">
+      <h4>怎麼驗收</h4>
+      <ol>
+        <li>左側 <span class="path">設定 → 分析排程</span></li>
+        <li>頁面上<b>不應該再出現</b>「併發限制」與「回溯天數」</li>
+      </ol>
+      <div class="pass"><b>通過的樣子：</b>只剩下您真正需要設定的項目（每天幾點分析、訊息數門檻）。</div>
+    </div>
+    <div class="chk"><span></span>驗收通過<em><span></span>有問題（說明：___________）</em></div>
+  </div>
+
+  <!-- ══════════ ⑧ ══════════ -->
+  <h2><span class="n">⑧</span>會議記錄<span class="tag done">已完成</span></h2>
+  <div class="card">
+    <div class="said"><b>您說：</b>他們有一整坨的會議記錄，可能有回覆所以直接進到已簽核，但這個項目還沒完成。不知道會議記錄這部分能否讓 AI 判讀並且進到會議記錄區之類的。</div>
+    <div class="did">
+      這一項我們查了您的實際資料，結果<b>跟原本想的不一樣</b>，分三段說明：
+      <br><br>
+      <b>(1) 沒有「自動變成已核對」這回事。</b>那一定要人按才會。您看到的應該是「存查」區。
+      而它跑進存查，是因為 AI 把「有人回了『收到』」讀成「這件事做完了」——
+      <b>這一段已經修好</b>，往後不會再這樣判。
+      <br><br>
+      <b>(2) 會議裡的決議，其實一直都有被抽出來。</b>
+      我們原本以為 AI 把整場會議當成一件事、沒拆開。查了之後發現不是 ——
+      以 <b>8/20 那場生產會議</b>為例，AI 抽出了 7 張各自獨立的卡：
+      <div style="margin:8px 0 0;padding:10px 14px;background:#fafbfc;border-radius:7px;font-size:13px;color:var(--ink-2);line-height:1.9">
+        A1工位車輛更換：DE中華傳愛#4492→DE長安長照#4403<br>
+        A2工位車輛更換：DE一一一交通#4505→DE彰化慈恩#4564<br>
+        A3工位DE林鼎崴捐台中醫院#8206 QC指派<br>
+        B2工位車輛更換：TC寶春捐新北市政府#43867→KB頂立捐嘉義安仁#18155<br>
+        DE彰化慈恩 待複檢事項　／　DE林鼎崴 待複檢事項<br>
+        臨時工位DE長益達捐恆春#5911 車貼複判
+      </div>
+      <br>
+      <b>(3) 會議記錄現在有自己的分類了。</b>
+      之前這些卡顯示成「其他（production meeting）」，那是因為系統內建的分類清單裡
+      本來沒有「會議」，AI 只好自己造一個英文名字。現在補上<b>「會議記錄」</b>了。
+      （同樣補上的還有<b>「廠區設施」</b>—— 停車場、監視器、網路佈線那類。）
+    </div>
+
+    <div class="big" style="margin:16px 0 0;border-color:#c7d2fe;background:#f8faff">
+      <h3 style="color:#3730a3">⭐ 但有一件事您可能沒注意到 —— 這多半才是問題所在</h3>
+      <p style="margin:0 0 10px;font-size:14px">
+        上面那 9 張會議卡裡，<b>有 6 張在「請您判定」那一區</b>。
+      </p>
+      <p style="margin:0 0 10px;font-size:14px">
+        那一區在任務看板<b>下方</b>，而且<b>預設是收起來的</b> ——
+        您要點<b>「展開檢視 ▾」</b>才看得到裡面的卡片。
+      </p>
+      <p style="margin:0 0 10px;font-size:14px">
+        它的意思是：<b>AI 沒有十足把握這是不是一件要追的事，等您決定。</b>
+        您點「收為任務」它就進入正常追蹤；點「不用追」它就進存查。
+      </p>
+      <p style="margin:0;font-size:14px">
+        <b>所以那些決議不是沒被抽出來，是還在等您做一個決定</b> ——
+        而那一區是收合的，很容易整個被略過。
+      </p>
+    </div>
+
+    <div class="how">
+      <h4>怎麼驗收</h4>
+      <ol>
+        <li>左側 <span class="path">任務看板</span></li>
+        <li>往下捲，找到<b>「請您判定」</b>那一條（右邊有數字），點<b>「展開檢視 ▾」</b></li>
+        <li>裡面應該看得到會議的決議事項（工位車輛更換、複檢、QC 指派那些）</li>
+        <li>任選一張，點「收為任務」或「不用追」，看它有沒有離開這一區</li>
+        <li>再看看分類篩選那一列，應該出現<b>「會議記錄」</b></li>
+      </ol>
+      <div class="pass"><b>通過的樣子：</b>會議決議看得到、可以判定；分類不再顯示成英文。</div>
+    </div>
+
+    <div class="note">
+      <b>有一件事想先說清楚，免得您覺得我們沒做完：</b>
+      會議上談到的維保，我們仍然歸在<b>「維保」</b>而不是「會議記錄」。
+      否則您哪天要查維保紀錄時，那件事會因為「它是在會議上講的」而找不到。
+      只有純粹的會議協調事項（工位調度、複檢指派、開會通知）才會歸到會議記錄。
+    </div>
+    <div class="chk"><span></span>驗收通過<em><span></span>有問題（說明：___________）</em></div>
+  </div>
+
+  <!-- ══════════ ⑨ ══════════ -->
+  <h2><span class="n">⑨</span>後台人員管理開權限給人資<span class="tag had">本來就有</span></h2>
+  <div class="card">
+    <div class="said"><b>您說：</b>後台的人員管理，希望能開權限給人資。</div>
+    <div class="did">這個<b>已經可以做了</b>（自訂角色功能 8/21 上線），不用等我們開發。</div>
+    <div class="how">
+      <h4>怎麼驗收</h4>
+      <ol>
+        <li>左側 <span class="path">設定 → 權限管理</span> → <b>建立角色</b></li>
+        <li>名稱填「人資」</li>
+        <li><b>「看得到誰的資料」</b>三選一：看全公司 ／ 只看自己部門 ／ 只看自己 —— 您自己決定</li>
+        <li>勾選他能做的事（查看成員、分配部門⋯）</li>
+        <li>再到 <span class="path">設定 → 部門 / 成員</span>，把那位同仁的角色改成「人資」</li>
+      </ol>
+      <div class="pass"><b>通過的樣子：</b>那位同仁登入後只看得到您勾的功能。</div>
+      <div class="note" style="margin:10px 0 0">
+        <b>只提醒一點：</b>選「只看自己部門」的話，那位同仁要<b>先在「部門 / 成員」被指定部門</b>，
+        否則他登入後會什麼都看不到。
+      </div>
+    </div>
+    <div class="chk"><span></span>驗收通過<em><span></span>有問題（說明：___________）</em></div>
+  </div>
+
+  <!-- ══════════ ⑩ ══════════ -->
+  <h2><span class="n">⑩</span>總經理要改密碼<span class="tag had">本來就有</span></h2>
+  <div class="card">
+    <div class="said"><b>您說：</b>總經理要能改密碼。</div>
+    <div class="did"><b>一直都能改</b>，任何登入的人都可以自己改，不需要找我們。只是入口藏在頭像選單裡。</div>
+    <div class="how">
+      <h4>怎麼驗收</h4>
+      <ol>
+        <li>點畫面<b>右上角您的頭像</b></li>
+        <li>選單裡有<b>「變更密碼」</b></li>
+      </ol>
+      <div class="pass"><b>通過的樣子：</b>改完之後，用新密碼登得進來。</div>
+    </div>
+    <div class="chk"><span></span>驗收通過<em><span></span>有問題（說明：___________）</em></div>
+  </div>
+
+  <!-- ══════════ 收尾 ══════════ -->
+  <h2 style="margin-top:34px">驗收完之後</h2>
+  <div class="card">
+    <ol>
+      <li>有<b>任何一項對不上</b>：把編號告訴我們，附上您看到的畫面截圖最快。</li>
+      <li><b>「開始前」那兩件設定</b>做完請告訴我們一聲 —— 第 ⑤ 點才排得進去。</li>
+      <li>第 ⑧ 點的「請您判定」那一區，建議您<b>每天順手展開看一下</b>，
+          通常只要幾秒鐘。那裡面是 AI 拿不定主意、需要您一句話的事。</li>
+    </ol>
+  </div>
+
+  <div class="foot">
+    AIPROOT ｜ 對應您 2026-08-24 提出的 10 點修改建議 ｜ 本文件產出日：2026-08-25<br>
+    ⚠️ 本文件含貴公司營運資料，請勿轉發至公司外部。
+  </div>
+
+</div>
+</body>
+</html>
