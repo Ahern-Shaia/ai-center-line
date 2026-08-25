@@ -8,6 +8,7 @@ import {
 import ConfirmDialog from "../shared/ConfirmDialog";
 import StyledSelect from "../shared/StyledSelect";
 import { getTaipeiDate } from "../shared/taipeiDate";
+import { useDebounced } from "../shared/useDebounced";
 import { useToast } from "../Toast";
 
 // 素材看板 · docs/modules/media-and-vision.md §2
@@ -86,6 +87,9 @@ export default function MediaLibrary() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [groupId, setGroupId] = useState("");
+  // 關鍵字要 debounce —— 這是打 server 的搜尋，每個按鍵一次請求既浪費也會亂序
+  const [kw, setKw] = useState("");
+  const q = useDebounced(kw);
   const [data, setData] = useState<MediaListResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirm, setConfirm] = useState<{ item: MediaItem; mode: "delete" | "purge" } | null>(null);
@@ -97,16 +101,18 @@ export default function MediaLibrary() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setData(await listMedia(filter, page, trash, { from, to, groupId })); }
+    try { setData(await listMedia(filter, page, trash, { from, to, groupId, q })); }
     catch (e) { toast.show(e instanceof ApiError ? e.message : "載入失敗", "danger"); }
     finally { setLoading(false); }
-  }, [filter, page, trash, from, to, groupId, toast]);
+  }, [filter, page, trash, from, to, groupId, q, toast]);
   useEffect(() => { void load(); }, [load]);
+  // 關鍵字是 debounce 後才送出的，回第一頁要跟著 q 走而不是跟著打字
+  useEffect(() => { setPage(1); }, [q]);
 
   /** 改任何一個篩選都要回第一頁 —— 不然會停在第 5 頁而新條件只有 2 頁，看到空白 */
   const applyFilter = (fn: () => void) => { fn(); setPage(1); };
-  const hasFilter = !!(from || to || groupId);
-  const clearFilter = () => applyFilter(() => { setFrom(""); setTo(""); setGroupId(""); });
+  const hasFilter = !!(from || to || groupId || kw);
+  const clearFilter = () => applyFilter(() => { setFrom(""); setTo(""); setGroupId(""); setKw(""); });
 
   async function run(fn: () => Promise<unknown>, okMsg: string) {
     setBusy(true);
@@ -157,8 +163,22 @@ export default function MediaLibrary() {
         )}
       </div>
 
-      {/* 日期＋群組篩選 · 群組下拉只在真的有兩群以上時出現（只有一群時選它沒有意義） */}
+      {/* 關鍵字＋日期＋群組篩選（台灣福祉 ②）
+          · 群組下拉只在真的有兩群以上時出現（只有一群時選它沒有意義）
+          · 關鍵字比對「檔名 OR 圖片前後三分鐘的訊息」—— 照片沒有檔名，
+            光比檔名的話客戶想找的那張報價單永遠搜不到 */}
       <div className="ml-filterbar">
+        <div className="hdr-group ml-filter-search">
+          <label className="hdr-label" htmlFor="ml-kw">關鍵字</label>
+          <div className="nc-tb-search">
+            <span className="ic" aria-hidden>⌕</span>
+            <input
+              id="ml-kw" className="tf" value={kw}
+              onChange={(e) => setKw(e.target.value)}
+              placeholder="檔名，或圖片前後的訊息內容"
+            />
+          </div>
+        </div>
         <div className="hdr-group">
           <label className="hdr-label" htmlFor="ml-from">開始日期</label>
           <input

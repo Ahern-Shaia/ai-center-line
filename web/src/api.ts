@@ -660,12 +660,13 @@ export interface ArchivedTasksResult {
  * 看板只撈最近 500 筆，而存查的用途正是「找回三個月前那件事」。
  */
 export const getArchivedTasks = (
-  page: number, f: { from?: string; to?: string; groupId?: string } = {},
+  page: number, f: { from?: string; to?: string; groupId?: string; q?: string } = {},
 ) => {
   const q = new URLSearchParams({ page: String(page) });
   if (f.from) q.set("from", f.from);
   if (f.to) q.set("to", f.to);
   if (f.groupId) q.set("groupId", f.groupId);
+  if (f.q) q.set("q", f.q);
   return req<ArchivedTasksResult>(`/warroom/tasks/archived?${q}`);
 };
 
@@ -1757,7 +1758,7 @@ export interface MediaListResult {
   pageSize: number;
 }
 /** 日期是台灣時間的 YYYY-MM-DD · groupId 是 LINE 的 Cxxx… */
-export interface MediaFilters { from?: string; to?: string; groupId?: string }
+export interface MediaFilters { from?: string; to?: string; groupId?: string; q?: string }
 export const listMedia = (
   kind: MediaKind | "all", page: number, deleted = false, f: MediaFilters = {},
 ) => {
@@ -1767,6 +1768,7 @@ export const listMedia = (
   if (f.from) q.set("from", f.from);
   if (f.to) q.set("to", f.to);
   if (f.groupId) q.set("groupId", f.groupId);
+  if (f.q) q.set("q", f.q);
   return req<MediaListResult>(`/media?${q}`);
 };
 

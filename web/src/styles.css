@@ -734,6 +734,9 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .ml-filterbar { display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; margin-bottom:12px; padding:10px 12px; background:var(--well); border:1px solid var(--line); border-radius:3px; }
 .ml-filterbar .hdr-group + .hdr-group { border-left:none; padding-left:0; }
 .ml-filter-group { min-width:180px; }
+/* 關鍵字欄吃掉剩餘寬度 —— 它是最常用的一個，不該跟日期一樣窄 */
+.ml-filter-search { flex:1 1 240px; min-width:200px; }
+.ml-filter-search .nc-tb-search { min-width:0; }
 @media (max-width:760px) {
   .ml-filterbar { flex-direction:column; align-items:stretch; gap:10px; }
   .ml-filterbar .tf, .ml-filterbar .btn { width:100%; }

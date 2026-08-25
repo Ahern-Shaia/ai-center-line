@@ -6,6 +6,7 @@ import {
 import { useToast } from "../Toast";
 import StyledSelect from "../shared/StyledSelect";
 import { getTaipeiDate } from "../shared/taipeiDate";
+import { useDebounced } from "../shared/useDebounced";
 import { ArchivedList } from "./TaskTriage";
 
 // 存查次頁 · 台灣福祉 ⑥（M3b）
@@ -31,19 +32,23 @@ export default function ArchivePage({
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [groupId, setGroupId] = useState("");
+  // 打字要打 server，一定要 debounce（見 useDebounced 的註解）
+  const [kw, setKw] = useState("");
+  const q = useDebounced(kw);
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setData(await getArchivedTasks(page, { from, to, groupId })); }
+    try { setData(await getArchivedTasks(page, { from, to, groupId, q })); }
     catch (e) { toast.show(e instanceof ApiError ? e.message : "載入存查失敗", "danger"); }
     finally { setLoading(false); }
-  }, [page, from, to, groupId, toast]);
+  }, [page, from, to, groupId, q, toast]);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { setPage(1); }, [q]);
 
   /** 改任何篩選都要回第一頁 —— 不然會停在第 5 頁而新條件只有 2 頁，看到空白 */
   const applyFilter = (fn: () => void) => { fn(); setPage(1); };
-  const hasFilter = !!(from || to || groupId);
-  const clearFilter = () => applyFilter(() => { setFrom(""); setTo(""); setGroupId(""); });
+  const hasFilter = !!(from || to || groupId || kw);
+  const clearFilter = () => applyFilter(() => { setFrom(""); setTo(""); setGroupId(""); setKw(""); });
 
   const total = data?.total ?? 0;
   const pageSize = data?.pageSize ?? 50;
@@ -68,6 +73,17 @@ export default function ArchivePage({
 
       {/* 篩選列 · 與素材看板同一組條件與同一組樣式（用戶 2026-08-25 裁定日期＋群組） */}
       <div className="ml-filterbar">
+        <div className="hdr-group ml-filter-search">
+          <label className="hdr-label" htmlFor="arc-kw">關鍵字</label>
+          <div className="nc-tb-search">
+            <span className="ic" aria-hidden>⌕</span>
+            <input
+              id="arc-kw" className="tf" value={kw}
+              onChange={(e) => setKw(e.target.value)}
+              placeholder="搜尋任務摘要"
+            />
+          </div>
+        </div>
         <div className="hdr-group">
           <label className="hdr-label" htmlFor="arc-from">開始日期</label>
           <input
