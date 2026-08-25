@@ -2,6 +2,7 @@ import Spinner from "../shared/Spinner";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, getMapTileConfig, getSession, getTrips, relabelPunch, type PunchRow, type TripRow } from "../api";
 import { useToast } from "../Toast";
+import { getTaipeiDate } from "../shared/taipeiDate";
 import { SAME_LOCATION_LABEL, SAME_LOCATION_NEXT, SAME_LOCATION_REASON, SAME_LOCATION_WHY } from "../shared/mileageCopy";
 
 const TripMap = lazy(() => import("./TripMap"));
@@ -234,10 +235,6 @@ function PunchRowItem({ punch, onSaved }: { punch: PunchRow; onSaved: () => void
 // 目前這個 JWT 是誰（LIFF 綁定身分 vs 平台登入帳號可能不同）
 function whoami(): string | null {
   return getSession()?.email ?? null;
-}
-
-function getTaipeiDate(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
 }
 
 function formatDay(iso: string): string {

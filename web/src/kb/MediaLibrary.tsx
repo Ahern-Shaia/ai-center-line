@@ -6,6 +6,8 @@ import {
   downloadMedia,
 } from "../api";
 import ConfirmDialog from "../shared/ConfirmDialog";
+import StyledSelect from "../shared/StyledSelect";
+import { getTaipeiDate } from "../shared/taipeiDate";
 import { useToast } from "../Toast";
 
 // 素材看板 · docs/modules/media-and-vision.md §2
@@ -80,6 +82,10 @@ export default function MediaLibrary() {
   const [filter, setFilter] = useState<MediaKind | "all">("all");
   const [page, setPage] = useState(1);
   const [trash, setTrash] = useState(false);
+  // 日期＋群組篩選（台灣福祉 ② · 2026-08-25 裁定「先這兩個」）
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [groupId, setGroupId] = useState("");
   const [data, setData] = useState<MediaListResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [confirm, setConfirm] = useState<{ item: MediaItem; mode: "delete" | "purge" } | null>(null);
@@ -91,11 +97,16 @@ export default function MediaLibrary() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setData(await listMedia(filter, page, trash)); }
+    try { setData(await listMedia(filter, page, trash, { from, to, groupId })); }
     catch (e) { toast.show(e instanceof ApiError ? e.message : "載入失敗", "danger"); }
     finally { setLoading(false); }
-  }, [filter, page, trash, toast]);
+  }, [filter, page, trash, from, to, groupId, toast]);
   useEffect(() => { void load(); }, [load]);
+
+  /** 改任何一個篩選都要回第一頁 —— 不然會停在第 5 頁而新條件只有 2 頁，看到空白 */
+  const applyFilter = (fn: () => void) => { fn(); setPage(1); };
+  const hasFilter = !!(from || to || groupId);
+  const clearFilter = () => applyFilter(() => { setFrom(""); setTo(""); setGroupId(""); });
 
   async function run(fn: () => Promise<unknown>, okMsg: string) {
     setBusy(true);
@@ -126,18 +137,66 @@ export default function MediaLibrary() {
             {trash
               ? "已刪除的檔案會保留 30 天，期限內可以還原，到期後自動清除"
               : "LINE 群組傳的照片與檔案自動保存於此"}
-            {counts ? ` · 共 ${counts.all.toLocaleString()} 個檔案` : ""}
+            {/* 有篩選時不能只寫「共 N 個」—— 那會被讀成「總共就這麼多」，
+                看起來像檔案不見了 */}
+            {counts ? ` · ${hasFilter ? "符合條件" : "共"} ${counts.all.toLocaleString()} 個檔案` : ""}
           </div>
         </div>
         {canDelete && (
           <div className="hdr-toolbar">
             <button
               className={`btn${trash ? " btn-primary" : ""}`}
-              onClick={() => { setTrash(!trash); setPage(1); setFilter("all"); }}
+              /* 篩選一併清掉：兩個清單的群組選項不一樣，
+                 帶著「只有素材才有的那一群」切過來會直接是空白畫面 */
+              onClick={() => { setTrash(!trash); setPage(1); setFilter("all"); clearFilter(); }}
               disabled={loading}
             >
               {trash ? "回到素材" : "已刪除"}
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* 日期＋群組篩選 · 群組下拉只在真的有兩群以上時出現（只有一群時選它沒有意義） */}
+      <div className="ml-filterbar">
+        <div className="hdr-group">
+          <label className="hdr-label" htmlFor="ml-from">開始日期</label>
+          <input
+            id="ml-from" type="date" className="tf" value={from}
+            max={to || getTaipeiDate()}
+            onChange={(e) => applyFilter(() => setFrom(e.target.value))}
+            disabled={loading}
+          />
+        </div>
+        <div className="hdr-group">
+          <label className="hdr-label" htmlFor="ml-to">結束日期</label>
+          <input
+            id="ml-to" type="date" className="tf" value={to}
+            min={from || undefined} max={getTaipeiDate()}
+            onChange={(e) => applyFilter(() => setTo(e.target.value))}
+            disabled={loading}
+          />
+        </div>
+        {(data?.groups.length ?? 0) > 1 && (
+          <div className="hdr-group ml-filter-group">
+            <span className="hdr-label">群組</span>
+            <StyledSelect
+              items={(data?.groups ?? []).map((g) => ({ id: g.groupId, label: g.name }))}
+              value={groupId}
+              onChange={(v) => applyFilter(() => setGroupId(v))}
+              ariaLabel="依群組篩選"
+              allowEmpty
+              emptyLabel="全部群組"
+              placeholder="全部群組"
+              disabled={loading}
+            />
+          </div>
+        )}
+        {hasFilter && (
+          <div className="hdr-group">
+            {/* 佔位讓按鈕跟上面的輸入框對齊底線 */}
+            <span className="hdr-label" aria-hidden>&nbsp;</span>
+            <button className="btn" onClick={clearFilter} disabled={loading}>清除篩選</button>
           </div>
         )}
       </div>
@@ -164,14 +223,25 @@ export default function MediaLibrary() {
         <Spinner block />
       ) : total === 0 ? (
         <div className="dm-empty">
-          {trash
-            ? "沒有已刪除的檔案"
-            : filter === "all" ? "還沒有任何檔案" : `沒有${KIND_LABEL[filter as MediaKind]}類型的檔案`}
+          {/* ⚠️ 有篩選時一定要先講「是篩選的關係」——
+              寫「還沒有任何檔案」會被讀成檔案不見了，那是最糟的誤會 */}
+          {hasFilter
+            ? "沒有符合條件的檔案"
+            : trash
+              ? "沒有已刪除的檔案"
+              : filter === "all" ? "還沒有任何檔案" : `沒有${KIND_LABEL[filter as MediaKind]}類型的檔案`}
           <div className="dm-empty-hint">
-            {trash
-              ? "刪除的檔案會先放在這裡，30 天內都還救得回來"
-              : "群組裡傳的照片、影片、檔案會自動出現在這裡（貼圖不保存）"}
+            {hasFilter
+              ? "檔案都還在，只是不在這個範圍裡"
+              : trash
+                ? "刪除的檔案會先放在這裡，30 天內都還救得回來"
+                : "群組裡傳的照片、影片、檔案會自動出現在這裡（貼圖不保存）"}
           </div>
+          {hasFilter && (
+            <button className="btn btn-sm" style={{ marginTop: 10 }} onClick={clearFilter}>
+              清除篩選
+            </button>
+          )}
         </div>
       ) : (
         <>

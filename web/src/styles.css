@@ -729,6 +729,15 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 }
 
 /* ==================== MEDIA LIBRARY 素材看板 ==================== */
+/* 日期＋群組篩選列 · 沿用 .hdr-group / .hdr-label / .tf，這裡只給容器
+   （類型分頁籤是另一條軸，刻意分兩列 —— 混在同一列會讀不出哪個管哪個） */
+.ml-filterbar { display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; margin-bottom:12px; padding:10px 12px; background:var(--well); border:1px solid var(--line); border-radius:3px; }
+.ml-filterbar .hdr-group + .hdr-group { border-left:none; padding-left:0; }
+.ml-filter-group { min-width:180px; }
+@media (max-width:760px) {
+  .ml-filterbar { flex-direction:column; align-items:stretch; gap:10px; }
+  .ml-filterbar .tf, .ml-filterbar .btn { width:100%; }
+}
 .ml-filters { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
 .ml-filter { background:var(--surface); border:1px solid var(--line); border-radius:3px; padding:6px 12px; font-size:13px; color:var(--ink-2); font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all .12s var(--ease); }
 .ml-filter:hover { border-color:var(--primary); color:var(--primary-2); }

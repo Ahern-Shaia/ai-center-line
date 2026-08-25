@@ -1,4 +1,5 @@
 import Spinner from "../shared/Spinner";
+import { getTaipeiDate } from "../shared/taipeiDate";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiError,
@@ -514,10 +515,6 @@ function ReportPreview({
 function hasNewerAi(r: PersonalDailyReportRow): boolean {
   if (r.status !== "sent" || !r.sentAt || !r.aiGeneratedAt) return false;
   return new Date(r.aiGeneratedAt).getTime() > new Date(r.sentAt).getTime();
-}
-
-function getTaipeiDate(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Taipei" });
 }
 
 function formatDay(iso: string): string {

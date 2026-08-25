@@ -1723,17 +1723,29 @@ export interface MediaItem {
   daysLeft?: number;
   deletedByName?: string | null;
 }
+export interface MediaGroupOption { groupId: string; name: string }
 export interface MediaListResult {
   items: MediaItem[];
   total: number;
   counts: Record<MediaKind | "all", number>;
+  /** 有檔案的群 · 給篩選下拉用 */
+  groups: MediaGroupOption[];
   page: number;
   pageSize: number;
 }
-export const listMedia = (kind: MediaKind | "all", page: number, deleted = false) =>
-  req<MediaListResult>(
-    `/media?page=${page}${kind === "all" ? "" : `&kind=${kind}`}${deleted ? "&deleted=true" : ""}`,
-  );
+/** 日期是台灣時間的 YYYY-MM-DD · groupId 是 LINE 的 Cxxx… */
+export interface MediaFilters { from?: string; to?: string; groupId?: string }
+export const listMedia = (
+  kind: MediaKind | "all", page: number, deleted = false, f: MediaFilters = {},
+) => {
+  const q = new URLSearchParams({ page: String(page) });
+  if (kind !== "all") q.set("kind", kind);
+  if (deleted) q.set("deleted", "true");
+  if (f.from) q.set("from", f.from);
+  if (f.to) q.set("to", f.to);
+  if (f.groupId) q.set("groupId", f.groupId);
+  return req<MediaListResult>(`/media?${q}`);
+};
 
 export const deleteMedia = (mediaId: string, reason?: string) =>
   req<{ daysLeft: number }>(`/media/${mediaId}`, {
