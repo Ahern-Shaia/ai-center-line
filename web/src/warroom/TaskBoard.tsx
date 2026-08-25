@@ -12,7 +12,8 @@ import { useToast } from "../Toast";
 import { catLabel } from "../shared/categoryLabel";
 import { canOpenConvoDetail, navigateTo } from "../nav";
 import { assignTicket, getAssignableMembers, getTicketSource, notifyOthers, type AssignableMember, type TicketSource } from "../api";
-import { ArchivedList, UnconfirmedQueue } from "./TaskTriage";
+import { UnconfirmedQueue } from "./TaskTriage";
+import ArchivePage from "./ArchivePage";
 import { WorkStatusBox } from "./WorkTracking";
 import { usePageGuide } from "../shared/usePageGuide";
 import { confirmLabel } from "../shared/confirmStatusLabel";
@@ -71,22 +72,12 @@ export default function TaskBoard() {
   if (!board) return null;
 
   // V4 · 存查次頁：偶爾瀏覽、大量紀錄 → 獨立去處，不塞回主看板（判準見 mockup taskboard-v4-focus）
+  // M3b · 它有自己的分頁查詢與篩選狀態，所以是獨立元件，不是這裡的一個 if 分支
   if (showArchive) {
     return (
       <>
-        <div className="pane-hdr">
-          <div>
-            <h1>
-              <button className="btn btn-sm" onClick={() => setShowArchive(false)}>← 任務看板</button>
-              <span style={{ marginLeft: 10 }}>存查</span>
-            </h1>
-            <div className="sub">公告 / 已完成 / 已忽略 · 不需核對的紀錄 · 偶爾查閱</div>
-          </div>
-          <button className="btn" onClick={() => void refresh()} disabled={loading}>重新整理</button>
-        </div>
-        <ArchivedList
-          tickets={board.kanban.archived}
-          total={board.counts.archived}
+        <ArchivePage
+          onBack={() => setShowArchive(false)}
           onOpen={setDrawer}
           onDecided={() => void refresh()}
         />

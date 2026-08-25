@@ -91,14 +91,14 @@ export function UnconfirmedQueue({
  * 直接不建卡、或標了不用追就徹底消失，按錯了都沒有任何補救途徑（doc F-1 · P0）。
  */
 export function ArchivedList({
-  tickets, total, onOpen, onDecided,
+  tickets, onOpen, onDecided,
 }: {
   tickets: WarroomKanbanTicket[];
-  total: number;
   onOpen: (t: WarroomKanbanTicket) => void;
   onDecided: () => void;
 }) {
   // V4 · 存查改成獨立次頁（由 TaskBoard 的「存查」按鈕進來）· 不再收合、不再壓在看板底部。
+  // M3b · 空狀態與總數由 ArchivePage 負責（它才知道有沒有套篩選）；這裡只畫列。
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -113,10 +113,6 @@ export function ArchivedList({
     } finally {
       setBusy(null);
     }
-  }
-
-  if (total === 0) {
-    return <div className="dm-empty">目前沒有存查紀錄</div>;
   }
 
   return (
@@ -141,9 +137,6 @@ export function ArchivedList({
               )}
             </div>
           ))}
-          {total > tickets.length && (
-            <div className="kb-col-foot">顯示最近 {tickets.length} 筆 · 共 {total} 筆</div>
-          )}
         </div>
     </section>
   );

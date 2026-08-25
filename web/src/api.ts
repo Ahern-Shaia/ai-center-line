@@ -609,10 +609,11 @@ export interface WarroomTaskBoard {
     signed: WarroomKanbanTicket[];
     overdue: WarroomKanbanTicket[];
     unconfirmed: WarroomKanbanTicket[];   // 中信心 · 等主管決定要不要追
-    archived: WarroomKanbanTicket[];      // 公告與已完成 · 留著可查
   };
   counts: {
-    pending: number; signed: number; overdue: number; unconfirmed: number; archived: number;
+    pending: number; signed: number; overdue: number; unconfirmed: number;
+    /** 存查總數 · 卡片走 getArchivedTasks 分頁取，不在看板回應裡 */
+    archived: number;
     /** 卡住的張數 · 給「只看卡住的」篩選用 */
     stuck: number;
   };
@@ -644,6 +645,28 @@ export interface WarroomDailyDays {
 export const getWarroomTasks = (opts: { includeSigned?: boolean } = {}) => {
   const q = opts.includeSigned === false ? "?signed=false" : "";
   return req<WarroomTaskBoard>(`/warroom/tasks${q}`);
+};
+
+export interface ArchiveGroupOption { groupId: string; name: string }
+export interface ArchivedTasksResult {
+  items: WarroomKanbanTicket[];
+  total: number;
+  groups: ArchiveGroupOption[];
+  page: number;
+  pageSize: number;
+}
+/**
+ * 存查 · 獨立分頁查詢（不是從看板那份切）。
+ * 看板只撈最近 500 筆，而存查的用途正是「找回三個月前那件事」。
+ */
+export const getArchivedTasks = (
+  page: number, f: { from?: string; to?: string; groupId?: string } = {},
+) => {
+  const q = new URLSearchParams({ page: String(page) });
+  if (f.from) q.set("from", f.from);
+  if (f.to) q.set("to", f.to);
+  if (f.groupId) q.set("groupId", f.groupId);
+  return req<ArchivedTasksResult>(`/warroom/tasks/archived?${q}`);
 };
 
 export const getWarroomDailyReports = (opts: { from?: string; to?: string } = {}) => {
