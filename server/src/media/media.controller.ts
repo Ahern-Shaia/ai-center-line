@@ -6,6 +6,7 @@ import { Roles } from "../auth/roles.decorator.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { MediaService } from "./media.service.js";
 import { isDate } from "../common/query-date.js";
+import { normalizeQuery } from "../common/query-like.js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -27,6 +28,7 @@ export class MediaController {
     @Query("from") from?: string,
     @Query("to") to?: string,
     @Query("groupId") groupId?: string,
+    @Query("q") q?: string,
   ) {
     const p = page ? Number(page) : 1;
     if (!Number.isFinite(p) || p < 1) throw new BadRequestException("page 格式不正確");
@@ -36,7 +38,7 @@ export class MediaController {
     if (to && !isDate(to)) throw new BadRequestException("結束日期格式不正確");
     if (from && to && from > to) throw new BadRequestException("開始日期不能晚於結束日期");
     if (groupId && groupId.length > 128) throw new BadRequestException("群組代碼格式不正確");
-    return this.svc.list({ kind, page: p, deleted: deleted === "true", from, to, groupId });
+    return this.svc.list({ kind, page: p, deleted: deleted === "true", from, to, groupId, q: normalizeQuery(q) });
   }
 
   /** 檔案內容 · 經權限確認後由伺服器代理，R2 網址不外流（FMEA F-2） */

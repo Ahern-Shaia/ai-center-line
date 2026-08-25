@@ -16,6 +16,7 @@ import { Injectable } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { currentTx } from "../db/client.js";
 import { TaskConfigService } from "../task-config/task-config.service.js";
+import { likeContains } from "../common/query-like.js";
 import { TICKET_SELECT, TICKET_FROM, makeTicketMapper, type TicketRow } from "./ticket-row.js";
 import type { WarroomTicket } from "./warroom-tasks.service.js";
 
@@ -40,6 +41,8 @@ export interface ArchivedListOpts {
   to?: string | null;
   /** LINE group id（Cxxx…）*/
   groupId?: string | null;
+  /** 關鍵字 · 比對任務摘要 · controller 已 trim 過 */
+  q?: string | null;
 }
 
 const PAGE_SIZE = 50;
@@ -61,6 +64,7 @@ export class ArchivedTasksService {
     const from = opts.from || null;
     const to = opts.to || null;
     const groupId = opts.groupId || null;
+    const like = opts.q ? likeContains(opts.q) : null;
 
     // 日期以**台灣時間的那一天**為準。created_at 存 UTC，直接 ::date 比會讓
     // 台灣早上 8 點前建立的票算成前一天 —— 使用者選「今天」看不到今早的紀錄。
@@ -69,6 +73,7 @@ export class ArchivedTasksService {
           (${from}::date    IS NULL OR (t.created_at AT TIME ZONE 'Asia/Taipei')::date >= ${from}::date)
       AND (${to}::date      IS NULL OR (t.created_at AT TIME ZONE 'Asia/Taipei')::date <= ${to}::date)
       AND (${groupId}::text IS NULL OR su.group_id = ${groupId}::text)
+      AND (${like}::text IS NULL OR t.summary ILIKE ${like})
     )`;
 
     // total 要吃同一組篩選 —— 不然頁碼會算出根本翻不到的頁數

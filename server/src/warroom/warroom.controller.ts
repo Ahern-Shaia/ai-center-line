@@ -8,6 +8,7 @@ import { WarroomService } from "./warroom.service.js";
 import { WarroomTasksService } from "./warroom-tasks.service.js";
 import { ArchivedTasksService } from "./archived-tasks.service.js";
 import { isDate } from "../common/query-date.js";
+import { normalizeQuery } from "../common/query-like.js";
 import { WorkStatusService } from "../task-completion/work-status.service.js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -49,6 +50,7 @@ export class WarroomController {
     @Query("from") from?: string,
     @Query("to") to?: string,
     @Query("groupId") groupId?: string,
+    @Query("q") q?: string,
   ) {
     const p = page ? Number(page) : 1;
     if (!Number.isFinite(p) || p < 1) throw new BadRequestException("page 格式不正確");
@@ -56,7 +58,7 @@ export class WarroomController {
     if (to && !isDate(to)) throw new BadRequestException("結束日期格式不正確");
     if (from && to && from > to) throw new BadRequestException("開始日期不能晚於結束日期");
     if (groupId && groupId.length > 128) throw new BadRequestException("群組代碼格式不正確");
-    return this.archived.list({ page: p, from, to, groupId });
+    return this.archived.list({ page: p, from, to, groupId, q: normalizeQuery(q) });
   }
 
   // WTB-M3 · 日誌 view

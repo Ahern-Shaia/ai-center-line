@@ -81,6 +81,9 @@ before(async () => {
   // 不是存查的票 —— 一張都不可以混進來
   await mk("待核對的", D("12", "07:00:00"), G_A, "待簽核");
   await mk("已核對的", D("12", "08:00:00"), G_A, "已簽核");
+  // 關鍵字用
+  await mk("鳳山案場報價單已回覆", D("12", "03:00:00"), G_A, "存查");
+  await mk("報價單 50% 折扣特例", D("12", "04:00:00"), G_A, "存查");
   // 隔離用：同租戶另一部門 1 筆
   await mk("另一部門的存查", D("12", "09:00:00"), G_A, "存查", DEPT2);
   // 別家租戶的部門與票（用它自己的 department，否則 FK 對不上）
@@ -104,13 +107,13 @@ after(async () => {
 
 test("⭐⭐ 總數是真的總數，不是被 50 筆上限截掉的（舊版寫死 slice(0,50)）", async () => {
   const r = await asTenant(() => svc.list());
-  assert.equal(r.total, 64, "60 筆 A + 4/11 那筆 + 工務群已忽略 + 私訊 + 另一部門 = 64");
+  assert.equal(r.total, 66, "60 筆 A + 4/11 + 工務群已忽略 + 私訊 + 另一部門 + 2 筆關鍵字用 = 66");
   assert.equal(r.items.length, 50, "一頁 50 筆");
 });
 
 test("⭐⭐ 第二頁拿得到剩下的 —— 舊版根本沒有第二頁", async () => {
   const p2 = await asTenant(() => svc.list({ page: 2 }));
-  assert.equal(p2.items.length, 14);
+  assert.equal(p2.items.length, 16);
   const p1 = await asTenant(() => svc.list({ page: 1 }));
   const overlap = p1.items.filter((t) => p2.items.some((x) => x.ticketId === t.ticketId));
   assert.equal(overlap.length, 0, "兩頁不可以有重複 —— OFFSET 算錯最典型的症狀");
@@ -121,7 +124,7 @@ test("⭐ 只回存查與已忽略 · 待核對／已核對一張都不可以混
     ...(await asTenant(() => svc.list({ page: 1 }))).items,
     ...(await asTenant(() => svc.list({ page: 2 }))).items,
   ];
-  assert.equal(all.length, 64);
+  assert.equal(all.length, 66);
   assert.ok(all.every((t) => t.confirmStatus === "存查" || t.confirmStatus === "已忽略"),
     `混進了：${all.filter((t) => !["存查", "已忽略"].includes(t.confirmStatus)).map((t) => t.confirmStatus)}`);
 });
@@ -134,8 +137,8 @@ test("⭐⭐ 日期以台灣時間算 · UTC 4/10 23:00 = 台灣 4/11 早上 7 �
 
 test("⭐⭐ total 要吃同一組篩選（不然頁碼會算出翻不到的頁）", async () => {
   const r = await asTenant(() => svc.list({ from: "2026-04-12", to: "2026-04-12" }));
-  assert.equal(r.total, 3, "4/12：工務群已忽略 + 私訊 + 另一部門");
-  assert.equal(r.items.length, 3);
+  assert.equal(r.total, 5, "4/12：工務群已忽略 + 私訊 + 另一部門 + 2 筆關鍵字用");
+  assert.equal(r.items.length, 5);
 });
 
 test("群組篩選 · 日期＋群組可以疊", async () => {
@@ -163,7 +166,7 @@ test("⭐ 群組下拉不隨日期縮水 · 選了之後切得回去", async () 
 test("翻過頭的頁數回空清單，不是丟例外", async () => {
   const r = await asTenant(() => svc.list({ page: 99 }));
   assert.equal(r.items.length, 0);
-  assert.equal(r.total, 64, "總數仍要是對的 —— 前端靠它算最後一頁把人帶回去");
+  assert.equal(r.total, 66, "總數仍要是對的 —— 前端靠它算最後一頁把人帶回去");
 });
 
 test("⭐ 存查的卡片仍帶得出群組名與顯示狀態（抽共用 mapper 後不可掉欄位）", async () => {
@@ -194,7 +197,7 @@ test("⭐⭐ 跨租戶：看不到別家租戶的存查", async () => {
 test("⭐⭐ 部門主管只看得到自己部門的存查（total 也要跟著縮）", async () => {
   const r = await asRole("group_owner", DEPT, () => svc.list());
   assert.ok(!r.items.some((t) => t.summary === "另一部門的存查"), "跨部門外洩");
-  assert.equal(r.total, 63, "total 走另一條 count 查詢 —— 兩條的範圍必須一致，不然頁碼會翻到空頁");
+  assert.equal(r.total, 65, "total 走另一條 count 查詢 —— 兩條的範圍必須一致，不然頁碼會翻到空頁");
 });
 
 test("⭐ 總經理室看得到全公司（含另一部門），但仍不含別家租戶", async () => {
@@ -212,7 +215,41 @@ test("⭐⭐ /warroom/tasks 仍要回 kanban.archived（空陣列）· 拿掉 ke
   assert.ok(Array.isArray(board.kanban.archived),
     "舊前端會做 kanban.archived.map(...) —— key 不見就是 undefined.map，整頁掛掉");
   assert.equal(board.kanban.archived.length, 0, "卡片走分頁端點，這裡不再塞 50 筆");
-  assert.equal(board.counts.archived, 64,
+  assert.equal(board.counts.archived, 66,
     "數字要是**真實總數**（獨立 count），不是從看板那 500 筆數的 —— "
     + "前端用 counts.archived > 0 決定畫不畫入口，數錯就整個入口消失");
+});
+
+// ── 關鍵字搜尋（客戶原話「已簽核的資料存哪 + 搜尋」的後半）───────
+
+test("⭐ 關鍵字比對任務摘要", async () => {
+  const r = await asTenant(() => svc.list({ q: "報價單" }));
+  assert.equal(r.total, 2);
+  assert.ok(r.items.every((t) => t.summary.includes("報價單")));
+});
+
+test("⭐⭐ total 要吃關鍵字 · 不然頁碼算出翻不到的頁", async () => {
+  const r = await asTenant(() => svc.list({ q: "鳳山" }));
+  assert.equal(r.total, 1);
+  assert.equal(r.items.length, 1);
+});
+
+test("⭐⭐ `%` 是字面字元 · 打一個 % 只找「真的含 %」的那筆，不是全部", async () => {
+  const all = await asTenant(() => svc.list({ q: "%" }));
+  assert.equal(all.total, 1,
+    "只有「報價單 50% 折扣特例」的摘要真的含 % · "
+    + "沒跳脫的話 ILIKE '%%%' 會撈到全部 66 筆，使用者會以為搜尋壞了");
+  assert.ok(all.items[0]?.summary.includes("%"));
+  const real = await asTenant(() => svc.list({ q: "50%" }));
+  assert.equal(real.total, 1, "帶 % 的關鍵字也要搜得到");
+});
+
+test("關鍵字＋群組＋日期三個可以疊", async () => {
+  const r = await asTenant(() => svc.list({ q: "報價單", groupId: G_A, from: "2026-04-12", to: "2026-04-12" }));
+  assert.equal(r.total, 2);
+});
+
+test("⭐ 關鍵字不會越過隔離 · 別家租戶的摘要搜不到", async () => {
+  const r = await asTenant(() => svc.list({ q: "別家租戶" }));
+  assert.equal(r.total, 0, "RLS 之外再加一層驗證 —— 搜尋是最容易繞過範圍的入口");
 });

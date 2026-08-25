@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { currentTx } from "../db/client.js";
 import { MediaStorageService } from "../line-ingest/media-storage.service.js";
+import { likeContains } from "../common/query-like.js";
 
 // 素材看板 · docs/modules/media-and-vision.md §2
 //
@@ -57,6 +58,8 @@ export interface MediaListOpts {
   to?: string | null;
   /** LINE group id（Cxxx…）· 不是 group_registry_id */
   groupId?: string | null;
+  /** 關鍵字 · 比對檔名與「前後三分鐘的文字訊息」· controller 已 trim 過 */
+  q?: string | null;
 }
 
 const PAGE_SIZE = 24;
@@ -83,6 +86,7 @@ export class MediaService {
     const from = opts.from || null;
     const to = opts.to || null;
     const groupId = opts.groupId || null;
+    const like = opts.q ? likeContains(opts.q) : null;
     // 已刪除清單只列「還救得回來」的：purged 之後檔案已經不在，列出來也還原不了
     const state = opts.deleted
       ? sql`md.deleted_at IS NOT NULL AND md.purged_at IS NULL`
@@ -95,6 +99,16 @@ export class MediaService {
           (${from}::date    IS NULL OR (m.sent_at AT TIME ZONE 'Asia/Taipei')::date >= ${from}::date)
       AND (${to}::date      IS NULL OR (m.sent_at AT TIME ZONE 'Asia/Taipei')::date <= ${to}::date)
       AND (${groupId}::text IS NULL OR m.group_id = ${groupId}::text)
+      AND (${like}::text IS NULL OR
+           -- 照片多半沒有檔名（LINE 只有 file 型別才給），所以光比對檔名幾乎搜不到東西。
+           -- 真正有用的是「有人在這張圖前後講了什麼」——「報價單」通常打在訊息裡不在檔名裡。
+           md.original_filename ILIKE ${like}
+           OR EXISTS (SELECT 1 FROM line_message t
+                       WHERE t.group_id = m.group_id
+                         AND t.message_type = 'text'
+                         AND t.sent_at BETWEEN m.sent_at - interval '3 minutes'
+                                           AND m.sent_at + interval '3 minutes'
+                         AND t.text_content ILIKE ${like}))
     )`;
 
     // ⚠️ counts 一定要吃同一組篩選 —— 不然分頁籤寫「圖片 135」點下去只有 3 張，

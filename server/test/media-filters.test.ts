@@ -20,6 +20,7 @@ import { sql } from "drizzle-orm";
 import { closeDb, withTenant, txStore, type Db } from "../src/db/client.js";
 import { MediaService } from "../src/media/media.service.js";
 import { isDate } from "../src/common/query-date.js";
+import { likeContains, normalizeQuery } from "../src/common/query-like.js";
 import { MediaStorageService } from "../src/line-ingest/media-storage.service.js";
 
 const svc = new MediaService(new MediaStorageService());
@@ -44,7 +45,7 @@ const asTenant = <R>(fn: () => Promise<R>) =>
  * 只要日期篩選沒轉台灣時區，它就會被算成 3/9。
  */
 const SEED: { id: string; group: string; at: string; kind: string }[] = [
-  { id: "mf-a-0309", group: G_A, at: "2026-03-09T12:00:00Z", kind: "image" },  // 台灣 3/9 20:00
+  { id: "mf-a-0309", group: G_A, at: "2026-03-09T12:00:00Z", kind: "image" },  // 台灣 3/9 20:00 · 前後有「報價單」訊息
   { id: "mf-a-0310", group: G_A, at: "2026-03-09T23:00:00Z", kind: "image" },  // ⭐ 台灣 3/10 07:00
   { id: "mf-a-0311", group: G_A, at: "2026-03-11T02:00:00Z", kind: "file" },   // 台灣 3/11 10:00
   { id: "mf-b-0310", group: G_B, at: "2026-03-10T05:00:00Z", kind: "image" },  // 台灣 3/10 13:00
@@ -69,9 +70,16 @@ before(async () => {
       `INSERT INTO line_message (message_id, tenant_id, bot_id, group_id, message_type, sent_at, raw_event)
        VALUES ($1,$2,$3,$4,'image',$5::timestamptz,'{}'::jsonb)`, [s.id, T, BOT, s.group, s.at]);
     await c.query(
-      `INSERT INTO line_media (tenant_id, message_id, media_type, storage_key)
-       VALUES ($1,$2,$3,$4)`, [T, s.id, s.kind, `mf/${s.id}`]);
+      `INSERT INTO line_media (tenant_id, message_id, media_type, storage_key, original_filename)
+       VALUES ($1,$2,$3,$4,$5)`,
+      [T, s.id, s.kind, `mf/${s.id}`, s.id === "mf-a-0311" ? "estimate-2026.pdf" : null]);
   }
+  // 鄰近文字訊息 —— 關鍵字搜尋真正比對的東西（照片沒有檔名）
+  await c.query(
+    `INSERT INTO line_message (message_id, tenant_id, bot_id, group_id, message_type, sent_at, raw_event, text_content)
+     VALUES ('mf-txt-1',$1,$2,$3,'text','2026-03-09T12:01:00Z'::timestamptz,'{}'::jsonb,'這張是客戶的報價單，請確認'),
+            ('mf-txt-2',$1,$2,$4,'text','2026-03-10T05:01:00Z'::timestamptz,'{}'::jsonb,'現場照片')`,
+    [T, BOT, G_A, G_B]);
   await c.end();
 });
 
@@ -149,4 +157,54 @@ test("⭐ 日期格式驗證擋在 controller · 放行到 SQL 會是 500 不是
   assert.ok(!isDate("2026-02-30"), "2 月 30 號不存在 —— 只用正則會放行，pg 回 22008 變 500");
   assert.ok(!isDate("2026/03/10"));
   assert.ok(!isDate("'; DROP TABLE line_media--"));
+});
+
+// ── 關鍵字搜尋（客戶原話「日期／關鍵字」的後半）─────────────────
+// ⚠️ 比對的是**檔名 OR 前後三分鐘的文字訊息**。
+//    只比檔名幾乎搜不到東西：LINE 只有 file 型別才給檔名，照片一律 null，
+//    而客戶要找的「報價單」多半是一張照片，關鍵字打在旁邊的訊息裡。
+
+test("⭐⭐ 關鍵字比對「前後三分鐘的訊息」· 只比檔名的話照片全都搜不到", async () => {
+  const r = await asTenant(() => svc.list({ q: "報價單" }));
+  assert.equal(ids(r), 1, "只有業務群那張圖的前後訊息提到報價單");
+  assert.equal(r.items[0]?.mediaId && r.items[0].sentAt.startsWith("2026-03-09T12"), true);
+});
+
+test("⭐ 檔名也要比得到", async () => {
+  const r = await asTenant(() => svc.list({ q: "estimate" }));
+  assert.equal(ids(r), 1, "3/11 那筆的原始檔名是 estimate-2026.pdf");
+});
+
+test("⭐⭐ counts 也要吃關鍵字（不然分頁籤數字對不上清單）", async () => {
+  const r = await asTenant(() => svc.list({ q: "報價單" }));
+  assert.equal(r.counts.all, 1);
+  assert.equal(r.total, 1);
+});
+
+test("關鍵字＋日期可以疊", async () => {
+  const hit = await asTenant(() => svc.list({ q: "報價單", from: "2026-03-09", to: "2026-03-09" }));
+  assert.equal(ids(hit), 1);
+  const miss = await asTenant(() => svc.list({ q: "報價單", from: "2026-03-11", to: "2026-03-11" }));
+  assert.equal(ids(miss), 0, "3/11 沒有提到報價單的");
+});
+
+test("⭐⭐ `%` 要當字面字元，不可以變成「匹配全部」", async () => {
+  const r = await asTenant(() => svc.list({ q: "%" }));
+  assert.equal(ids(r), 0,
+    "沒跳脫的話 ILIKE '%%%' 會撈到全部 5 筆 —— 使用者打了一個 % 卻看到全部，會以為搜尋壞了");
+});
+
+test("⭐ `_` 要當字面字元，不可以變成「任一字元」", () => {
+  // A_1 不該匹配 AB1
+  assert.equal(likeContains("A_1"), "%A\\_1%");
+  assert.equal(likeContains("50%"), "%50\\%%");
+  assert.equal(likeContains("a\\b"), "%a\\\\b%");
+});
+
+test("⭐ 空白／純空格＝不篩，不是搜尋空字串", () => {
+  assert.equal(normalizeQuery(""), null);
+  assert.equal(normalizeQuery("   "), null);
+  assert.equal(normalizeQuery(undefined), null);
+  assert.equal(normalizeQuery("  報價單  "), "報價單", "要 trim —— 複製貼上常帶空白");
+  assert.equal(normalizeQuery("x".repeat(500))?.length, 100, "要有長度上限");
 });
