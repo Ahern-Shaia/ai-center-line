@@ -5,6 +5,7 @@ import type { JwtUser } from "../auth/jwt-user.js";
 import { Roles } from "../auth/roles.decorator.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { MediaService } from "./media.service.js";
+import { isDate } from "../common/query-date.js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -90,18 +91,4 @@ export class MediaController {
     await this.svc.purge(mediaId);
     return { success: true };
   }
-}
-
-/**
- * YYYY-MM-DD，而且要是真的存在的日期。
- *
- * ⚠️ 兩層都必要：
- *   · 正則擋掉 `2026/03/10`、`2026-13-45` 這類
- *   · **往返比對**擋掉 `2026-02-30` —— Date 不會拒絕它，會自己進位成 3/2，
- *     所以 `Date.parse` 不回 NaN。放行到 SQL 的話 pg 是 22008，使用者拿到 500。
- */
-export function isDate(s: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
-  const d = new Date(`${s}T00:00:00Z`);
-  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
 }

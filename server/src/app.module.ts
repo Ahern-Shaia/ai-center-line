@@ -17,6 +17,7 @@ import { SignoffService } from "./signoff/signoff.service.js";
 import { WarroomController } from "./warroom/warroom.controller.js";
 import { WarroomService } from "./warroom/warroom.service.js";
 import { WarroomTasksService } from "./warroom/warroom-tasks.service.js";
+import { ArchivedTasksService } from "./warroom/archived-tasks.service.js";
 import { AssignNotifyService } from "./warroom/assign-notify.service.js";
 import { WorkStatusService } from "./task-completion/work-status.service.js";
 import { NotifyModule } from "./notify/notify.module.js";
@@ -82,6 +83,7 @@ import { AuditModule } from "./audit/audit.module.js";
     SignoffService,
     WarroomService,
     WarroomTasksService,
+    ArchivedTasksService,
     AssignNotifyService,
     WorkStatusService,
     // 全域四層：JWT → RolesGuard (backward compat) → PermissionGuard (@RequirePermission) → 包 tenant tx

@@ -6,6 +6,8 @@ import type { JwtUser } from "../auth/jwt-user.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { WarroomService } from "./warroom.service.js";
 import { WarroomTasksService } from "./warroom-tasks.service.js";
+import { ArchivedTasksService } from "./archived-tasks.service.js";
+import { isDate } from "../common/query-date.js";
 import { WorkStatusService } from "../task-completion/work-status.service.js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,6 +18,7 @@ export class WarroomController {
     private readonly svc: WarroomService,
     private readonly tasksService: WarroomTasksService,
     private readonly workStatus: WorkStatusService,
+    private readonly archived: ArchivedTasksService,
   ) {}
 
   // 三環指標（÷N）＋各群組狀態。RLS 自動限本租戶（group_owner 再限本部門）。
@@ -30,6 +33,30 @@ export class WarroomController {
   @RequirePermission("warroom-tasks:view")
   async tasks(@Query("signed") includeSigned?: string) {
     return this.tasksService.listTasks({ includeSignedOff: includeSigned !== "false" });
+  }
+
+  /**
+   * 存查 · 分頁＋日期／群組篩選（台灣福祉 ⑥ · M3b）
+   *
+   * ⚠️ 走**獨立查詢**，不是從 /warroom/tasks 那 500 筆裡切 ——
+   *    存查的用途是「找回三個月前那件事」，掛在以「最近」為前提的查詢下面必然看不到舊的。
+   * ⚠️ 這條路由要排在 @Get("tasks") 之後、任何 tasks/:param 之前。
+   */
+  @Get("tasks/archived")
+  @RequirePermission("warroom-tasks:view")
+  async tasksArchived(
+    @Query("page") page?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("groupId") groupId?: string,
+  ) {
+    const p = page ? Number(page) : 1;
+    if (!Number.isFinite(p) || p < 1) throw new BadRequestException("page 格式不正確");
+    if (from && !isDate(from)) throw new BadRequestException("開始日期格式不正確");
+    if (to && !isDate(to)) throw new BadRequestException("結束日期格式不正確");
+    if (from && to && from > to) throw new BadRequestException("開始日期不能晚於結束日期");
+    if (groupId && groupId.length > 128) throw new BadRequestException("群組代碼格式不正確");
+    return this.archived.list({ page: p, from, to, groupId });
   }
 
   // WTB-M3 · 日誌 view

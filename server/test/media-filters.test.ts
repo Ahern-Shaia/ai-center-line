@@ -19,7 +19,7 @@ import pg from "pg";
 import { sql } from "drizzle-orm";
 import { closeDb, withTenant, txStore, type Db } from "../src/db/client.js";
 import { MediaService } from "../src/media/media.service.js";
-import { isDate } from "../src/media/media.controller.js";
+import { isDate } from "../src/common/query-date.js";
 import { MediaStorageService } from "../src/line-ingest/media-storage.service.js";
 
 const svc = new MediaService(new MediaStorageService());
