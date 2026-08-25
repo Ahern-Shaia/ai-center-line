@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { currentTx, withSystemTx } from "../db/client.js";
 import { displayState, type ConfirmStatus } from "../warroom-task-board/ticket-lane.js";
+import { TICKET_SELECT, makeTicketMapper, type TicketRow } from "./ticket-row.js";
 import { TaskConfigService } from "../task-config/task-config.service.js";
 import { AssignNotifyService } from "./assign-notify.service.js";
 
@@ -115,10 +116,11 @@ export class WarroomTasksService {
       signed: WarroomTicket[];       // 已簽核 (limit 30 · 最近的)
       overdue: WarroomTicket[];      // 逾時 · due_at 過期 or 建立 > 7d 且待簽
       unconfirmed: WarroomTicket[];  // 待確認 · 中信心 · 等主管決定要不要收為任務
-      archived: WarroomTicket[];     // 未列入待辦 · 公告/已完成/已忽略 (limit 50)
     };
     counts: {
-      pending: number; signed: number; overdue: number; unconfirmed: number; archived: number;
+      pending: number; signed: number; overdue: number; unconfirmed: number;
+      /** 存查總數 · 獨立 count（不從看板那 500 筆數）· 卡片本身走 /warroom/tasks/archived */
+      archived: number;
       /** 卡住的張數 · 給「只看卡住的」篩選用（Linear display options）*/
       stuck: number;
     };
@@ -127,147 +129,22 @@ export class WarroomTasksService {
     const includeSigned = args.includeSignedOff !== false;
 
     // 統一 query · 拿全部 · 前端分 · 保 SQL 簡單
-    const rows = await tx.execute<{
-      ticket_id: string;
-      category: string | null;
-      category_id: string | null;
-      summary: string | null;
-      confidence: "high" | "medium" | "low" | null;
-      confirm_status: ConfirmStatus;
-      status: string | null;
-      assignee_display_name: string | null;
-      assignee_user_id: string | null;
-      assignee_account_name: string | null;
-      assign_status: string;
-      due_at: string | null;
-      source_upload_id: number | null;
-      source_record_index: number | null;
-      created_at: string;
-      department_id: string;
-      department_name: string | null;
-      group_name: string | null;
-      category_name: string | null;
-      confirmed_by_name: string | null;
-      confirmed_at: string | null;
-      work_status: "open" | "closed" | "record";
-      work_outcome: string | null;
-      work_closed_via: string | null;
-      work_closed_by_name: string | null;
-      work_last_report_at: string | null;
-      work_last_report_note: string | null;
-      work_asked_at: string | null;
-    }>(sql`
-      SELECT t.ticket_id, t.category, t.category_id::text,
-             t.summary, t.confidence, t.confirm_status, t.status,
-             t.assignee_display_name, t.assignee_user_id::text, t.assign_status,
-             au.display_name AS assignee_account_name,
-             t.due_at::text,
-             t.source_upload_id, t.source_record_index,
-             t.created_at::text,
-             t.department_id::text, d.department_name,
-             lg.display_name AS group_name,
-             cr.category_name AS category_name,
-             u.display_name AS confirmed_by_name,
-             t.confirmed_at::text,
-             t.work_status, t.work_outcome, t.work_closed_via,
-             wu.display_name AS work_closed_by_name,
-             t.work_last_report_at::text, t.work_last_report_note,
-             t.work_asked_at::text
-      FROM tickets t
-      LEFT JOIN departments d ON d.department_id = t.department_id
-      -- 來源群組名（su=source upload · analysis_upload 無 RLS 但 join 的是本 ticket 自己的 upload_id，不跨租戶）
-      LEFT JOIN analysis_upload su ON su.id = t.source_upload_id
-      LEFT JOIN line_group lg ON lg.group_id = su.group_id
-      -- 分類顯示名吃 category_registry（客戶可在「任務設定→分類詞庫」自己改中文名）
-      -- ⚠️ join 用 slug 不用 category_id：prod 實查 category_id 100% 為 null（從沒被寫入）
-      LEFT JOIN category_registry cr ON cr.tenant_id = t.tenant_id AND cr.category_slug = t.category
-      LEFT JOIN users u ON u.user_id = t.confirmed_by
-      LEFT JOIN users au ON au.user_id = t.assignee_user_id
-      LEFT JOIN users wu ON wu.user_id = t.work_closed_by
+    //
+    // ⚠️ LIMIT 500 是**看板**的窗口，不是全部。存查有自己的分頁查詢
+    //    （archived-tasks.service.ts）—— 舊版把存查也從這 500 筆裡切，
+    //    超過 500 張票的租戶會看不到較舊的存查紀錄，而且「共 N 筆」也是錯的。
+    const rows = await tx.execute<TicketRow>(sql`
+      ${TICKET_SELECT}
       ORDER BY t.created_at DESC
       LIMIT 500
     `);
 
     const now = Date.now();
-    const daysSince = (iso: string) => Math.floor((now - new Date(iso).getTime()) / 86_400_000);
 
-    /**
-     * 逾時幾天 · null = 沒逾時。**進欄與 pill 都用這一個判準**，不可能再漂移。
-     *
-     * ⚠️ 先前進欄用 `now - created > 7天`、pill 用 `floor(天數) > 7`，
-     *    於是 7～8 天之間的票**在欄裡卻沒有 pill**，看起來像 pill 壞了。
-     *
-     * ⚠️ 數字的意思是「**超過期限幾天**」不是「建立至今幾天」。
-     *    due_at 是 null 時（prod 100%），隱含期限＝建立後「寬限期」那麼多天，
-     *    所以逾時＝天數 − 寬限期。先前直接顯示 age，25 天的票寫「逾時 25 天」是誇大 ——
-     *    實際只逾了 18 天。標籤講的事要跟實際相符（同「未完成 vs 未確認完成」的紀律）。
-     *
-     * ⚠️ 寬限期不再硬編：每家公司對 task 的性質要求不一樣（維修 7 天合理、詢價太長）。
-     */
+    // 寬限期不硬編：每家公司對 task 的性質要求不一樣（維修 7 天合理、詢價太長）
     const { graceDays: GRACE_DAYS } = await this.taskConfig.forCurrentTenant(currentTx());
-    /**
-     * 卡住＝已簽核、工作還開著、且超過寬限期。
-     * ⚠️「卡住 N 天」的 N 是**持續多久**（duration），跟「逾時 N 天」的
-     *   **超出多少**（excess）語意不同，所以這裡顯示 age 而不是 age − 寬限期。
-     */
-    const isStuck = (r: { work_status: string; confirm_status: string; created_at: string }) =>
-      r.work_status === "open" && r.confirm_status === "已簽核"
-      && daysSince(r.created_at) > GRACE_DAYS;
-    const overdueDaysOf = (t: { dueAt: string | null; createdAt: string }): number | null => {
-      const d = t.dueAt ? daysSince(t.dueAt) : daysSince(t.createdAt) - GRACE_DAYS;
-      return d >= 1 ? d : null;
-    };
-
-    const all = rows.rows.map<WarroomTicket>((r) => ({
-      ticketId: r.ticket_id,
-      category: r.category,
-      categoryId: r.category_id,
-      summary: r.summary ?? "",
-      confidence: r.confidence,
-      confirmStatus: r.confirm_status,
-      status: r.status,
-      assigneeDisplayName: r.assignee_display_name,
-      assigneeUserId: r.assignee_user_id,
-      assigneeAccountName: r.assignee_account_name,
-      assignStatus: (r.assign_status ?? "none") as "none" | "unclaimed" | "assigned",
-      dueAt: r.due_at,
-      sourceUploadId: r.source_upload_id,
-      sourceRecordIndex: r.source_record_index,
-      createdAt: r.created_at,
-      departmentId: r.department_id,
-      departmentName: r.department_name,
-      groupName: r.group_name,
-      categoryName: r.category_name,
-      confirmedByName: r.confirmed_by_name,
-      confirmedAt: r.confirmed_at,
-      workStatus: r.work_status,
-      workOutcome: r.work_outcome,
-      workClosedVia: r.work_closed_via,
-      workClosedByName: r.work_closed_by_name,
-      workLastReportAt: r.work_last_report_at,
-      workLastReportNote: r.work_last_report_note,
-      // ── 量級（不是歸屬）· design-research-taskboard.md §2 弱點 #3 ──
-      // 卡住＝已簽核、工作還開著、且超過 7 天。正常的卡片這兩欄是 null，不長 pill
-      //（同「信心度只在中／低顯」的克制原則：全部都顯眼＝沒有重點）
-      // ⚠️ 用同一個 GRACE_DAYS，不要再寫一個獨立的 7 —— 兩個魔術數字遲早各自漂移
-      stuckDays: isStuck(r) ? daysSince(r.created_at) : null,
-      stuckKind: isStuck(r)
-        ? (r.assign_status === "assigned" ? "no_report" as const : "unassigned" as const)
-        : null,
-      // ⚠️ due_at 在 prod 100% 是 null（抽取 schema 還沒有時間欄位），
-      //    只吃 due_at 的舊寫法讓這個 pill 永遠不會顯示 —— §4 那行 ⬜ 掛了五天的原因。
-      overdueDays: overdueDaysOf({ dueAt: r.due_at, createdAt: r.created_at }),
-      // 四軸投影成對外一個狀態 —— 四個下拉並排丟給現場主管沒人看得懂
-      displayState: displayState({
-        workStatus: r.work_status,
-        workOutcome: r.work_outcome,
-        workLastReportAt: r.work_last_report_at,
-        workAskedAt: r.work_asked_at,
-        confirmStatus: r.confirm_status,
-        assignStatus: r.assign_status,
-        status: r.status,
-      }),
-    }));
+    const toTicket = makeTicketMapper(GRACE_DAYS, now);
+    const all = rows.rows.map<WarroomTicket>(toTicket);
 
     const overdue = all.filter(
       (t) => t.confirmStatus === "待簽核" && t.overdueDays !== null,
@@ -292,18 +169,25 @@ export class WarroomTasksService {
     const unconfirmed = all.filter((t) => t.confirmStatus === "待確認");
     // 未列入待辦：公告、已完成、以及主管標「不用追」的。留著可查、可改回待辦。
     // 標了不用追就從畫面上徹底消失的話，按錯了沒有任何補救途徑（同 doc §2.1 的理由）
-    const notTracked = all.filter((t) => t.confirmStatus === "存查" || t.confirmStatus === "已忽略");
-    const archived = notTracked.slice(0, 50);
+    //
+    // ⚠️ M3b：**數字要自己查，不能從上面那 500 筆數**。
+    //    存查累積得比誰都快，超過 500 張票之後 `all` 裡一張存查都不剩 ——
+    //    數字變 0，而前端是用 `counts.archived > 0` 決定要不要畫「存查」按鈕：
+    //    **整個入口會消失**，使用者再也點不進那一頁。
+    //    卡片本身不從這裡回（存查頁走 archived-tasks.service.ts 的分頁查詢）。
+    const arcCnt = await tx.execute<{ n: number }>(sql`
+      SELECT count(*)::int AS n FROM tickets WHERE confirm_status IN ('存查', '已忽略')
+    `);
 
     return {
-      kanban: { pending, signed, overdue, unconfirmed, archived },
+      kanban: { pending, signed, overdue, unconfirmed },
       counts: {
         pending: pending.length,
         // 這個數字要跟畫面上看得到的卡片數一致（超過 30 由前端註腳說明）
         signed: signed.length,
         overdue: overdue.length,
         unconfirmed: unconfirmed.length,
-        archived: notTracked.length,
+        archived: arcCnt.rows[0]?.n ?? 0,
         stuck: all.filter((t) => t.stuckDays !== null).length,
       },
     };
