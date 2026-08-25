@@ -9,6 +9,7 @@ export const CATEGORY_LABEL: Record<string, string> = {
   sales: "業務",             // 對客戶／我方收錢方向（tenant-twh 分類軸「錢的方向」）
   it_support: "資訊支援",     // 帳號權限／電腦設備／系統操作（NAS／ERP／Ragic）
   meeting: "會議記錄",        // 會議產出的協調事項 · **有主題就歸主題**（分類規則 7）
+  facility_management: "廠區設施",  // 廠房與場地本身 · 不是車輛也不是產線設備（分類規則 8）
   chitchat: "閒聊",
 };
 
