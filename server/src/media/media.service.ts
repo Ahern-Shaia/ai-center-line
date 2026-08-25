@@ -32,12 +32,31 @@ export interface MediaItem {
   deletedByName?: string | null;
 }
 
+/** 群組篩選的下拉選項 · 只列真的有檔案的群（列了空群只是雜訊） */
+export interface MediaGroupOption {
+  groupId: string;
+  name: string;
+}
+
 export interface MediaListResult {
   items: MediaItem[];
+  /** 篩選後的筆數 —— 有篩選時前端文案要跟著改，不然會被讀成「總共只有這麼多」 */
   total: number;
   counts: Record<MediaKind | "all", number>;
+  groups: MediaGroupOption[];
   page: number;
   pageSize: number;
+}
+
+export interface MediaListOpts {
+  kind?: string;
+  page?: number;
+  deleted?: boolean;
+  /** YYYY-MM-DD（台灣時間的那一天）· controller 已驗過格式 */
+  from?: string | null;
+  to?: string | null;
+  /** LINE group id（Cxxx…）· 不是 group_registry_id */
+  groupId?: string | null;
 }
 
 const PAGE_SIZE = 24;
@@ -56,23 +75,50 @@ const DEPT_SCOPE = sql`(
 export class MediaService {
   constructor(private readonly storage: MediaStorageService) {}
 
-  async list(opts: { kind?: string; page?: number; deleted?: boolean } = {}): Promise<MediaListResult> {
+  async list(opts: MediaListOpts = {}): Promise<MediaListResult> {
     const tx = currentTx();
     const kind = isKind(opts.kind) ? opts.kind : null;
     const page = Math.max(1, Math.floor(opts.page ?? 1));
     const offset = (page - 1) * PAGE_SIZE;
+    const from = opts.from || null;
+    const to = opts.to || null;
+    const groupId = opts.groupId || null;
     // 已刪除清單只列「還救得回來」的：purged 之後檔案已經不在，列出來也還原不了
     const state = opts.deleted
       ? sql`md.deleted_at IS NOT NULL AND md.purged_at IS NULL`
       : sql`md.deleted_at IS NULL`;
 
-    // 只列真的存下來的檔案。下載失敗的（storage_key is null）列出來只會讓人點了拿到 404。
+    // 日期以**台灣時間的那一天**為準。sent_at 存 UTC，直接拿 ::date 比會讓
+    // 早上 8 點前傳的檔案算成前一天 —— 使用者選「今天」卻看不到今天早上的圖。
+    // （同款時區踩坑見 AGENTS.md；attendance / line-message 也都是這樣寫的）
+    const FILTER = sql`(
+          (${from}::date    IS NULL OR (m.sent_at AT TIME ZONE 'Asia/Taipei')::date >= ${from}::date)
+      AND (${to}::date      IS NULL OR (m.sent_at AT TIME ZONE 'Asia/Taipei')::date <= ${to}::date)
+      AND (${groupId}::text IS NULL OR m.group_id = ${groupId}::text)
+    )`;
+
+    // ⚠️ counts 一定要吃同一組篩選 —— 不然分頁籤寫「圖片 135」點下去只有 3 張，
+    //    使用者會以為篩選壞了。分頁籤的數字就是「這組條件下各類型有幾個」。
     const counts = await tx.execute<{ media_type: MediaKind; n: number }>(sql`
       SELECT md.media_type, count(*)::int AS n
         FROM line_media md
         JOIN line_message m ON m.message_id = md.message_id
-       WHERE md.storage_key IS NOT NULL AND ${DEPT_SCOPE} AND ${state}
+       WHERE md.storage_key IS NOT NULL AND ${DEPT_SCOPE} AND ${state} AND ${FILTER}
        GROUP BY 1
+    `);
+
+    // 群組選項刻意**不吃**日期與群組篩選 —— 選項會隨著選日期而消失的下拉很難用，
+    // 而且選了某一群之後就剩它自己，等於再也切不回去。
+    // INNER JOIN line_group：1:1 私訊的 group_id 是 `__personal__<userId>` 佔位，
+    // 不是群組，列進下拉只會是一串亂碼。
+    const groupRows = await tx.execute<{ group_id: string; name: string | null }>(sql`
+      SELECT m.group_id, max(g.display_name) AS name
+        FROM line_media md
+        JOIN line_message m ON m.message_id = md.message_id
+        JOIN line_group g   ON g.group_id = m.group_id
+       WHERE md.storage_key IS NOT NULL AND ${DEPT_SCOPE} AND ${state}
+       GROUP BY m.group_id
+       ORDER BY 2
     `);
     const countMap = { all: 0, image: 0, video: 0, audio: 0, file: 0 } as Record<MediaKind | "all", number>;
     for (const r of counts.rows) {
@@ -120,6 +166,7 @@ export class MediaService {
        WHERE md.storage_key IS NOT NULL
          AND ${DEPT_SCOPE}
          AND ${state}
+         AND ${FILTER}
          AND (${kind}::text IS NULL OR md.media_type = ${kind}::text)
        ORDER BY ${opts.deleted ? sql`md.deleted_at DESC` : sql`m.sent_at DESC`}
        LIMIT ${PAGE_SIZE} OFFSET ${offset}
@@ -143,6 +190,11 @@ export class MediaService {
       })),
       total: kind ? countMap[kind] : countMap.all,
       counts: countMap,
+      // 沒設定群組名稱的群回傳 group_id 尾碼 —— 給空字串的話下拉會有一個點不出所以然的空白項
+      groups: groupRows.rows.map((r) => ({
+        groupId: r.group_id,
+        name: r.name?.trim() || `未命名群組 ⋯${r.group_id.slice(-6)}`,
+      })),
       page,
       pageSize: PAGE_SIZE,
     };

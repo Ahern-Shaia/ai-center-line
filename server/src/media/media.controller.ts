@@ -23,10 +23,19 @@ export class MediaController {
     @Query("kind") kind?: string,
     @Query("page") page?: string,
     @Query("deleted") deleted?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("groupId") groupId?: string,
   ) {
     const p = page ? Number(page) : 1;
     if (!Number.isFinite(p) || p < 1) throw new BadRequestException("page 格式不正確");
-    return this.svc.list({ kind, page: p, deleted: deleted === "true" });
+    // ⚠️ 日期一定要在這裡擋下來。放行到 SQL 的話 `'2026-13-45'::date` 會是 pg 22008，
+    //    使用者拿到的是一個 500 —— 那是我們的錯卻長得像系統壞了。
+    if (from && !isDate(from)) throw new BadRequestException("開始日期格式不正確");
+    if (to && !isDate(to)) throw new BadRequestException("結束日期格式不正確");
+    if (from && to && from > to) throw new BadRequestException("開始日期不能晚於結束日期");
+    if (groupId && groupId.length > 128) throw new BadRequestException("群組代碼格式不正確");
+    return this.svc.list({ kind, page: p, deleted: deleted === "true", from, to, groupId });
   }
 
   /** 檔案內容 · 經權限確認後由伺服器代理，R2 網址不外流（FMEA F-2） */
@@ -81,4 +90,18 @@ export class MediaController {
     await this.svc.purge(mediaId);
     return { success: true };
   }
+}
+
+/**
+ * YYYY-MM-DD，而且要是真的存在的日期。
+ *
+ * ⚠️ 兩層都必要：
+ *   · 正則擋掉 `2026/03/10`、`2026-13-45` 這類
+ *   · **往返比對**擋掉 `2026-02-30` —— Date 不會拒絕它，會自己進位成 3/2，
+ *     所以 `Date.parse` 不回 NaN。放行到 SQL 的話 pg 是 22008，使用者拿到 500。
+ */
+export function isDate(s: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
 }
