@@ -24,6 +24,14 @@ export const CategoryEnum = z.enum([
   //    只加清單不給判別軸，模型會在邊界上亂猜。
   "sales",
   "it_support",
+  // 2026-08-25 新增 · 依 prod 真實資料（台灣福祉 9 張 production_meeting）：
+  //   內建清單原本**沒有會議**，模型看到生產會議的決議事項無處可歸，
+  //   就自己造了英文 slug `production_meeting` —— 那正是 08-24 中英混雜的來源之一。
+  //   缺的不是「會議這個主題」，是「工位車輛更換 / 複檢 / QC 指派」這類
+  //   **會議產出的協調事項**在八個主題分類裡都不成立。
+  // ⚠️ 判別軸見 tenant prompt 分類規則 7：**主題優先**，
+  //    會議上談的維保仍是 maintenance —— 否則要找維保時就找不到它了。
+  "meeting",
   "chitchat",
 ]);
 export type Category = z.infer<typeof CategoryEnum>;
@@ -49,6 +57,7 @@ export const DEFAULT_CATEGORY_NAMES: Record<string, string> = {
   procurement: "採購",
   sales: "業務",
   it_support: "資訊支援",
+  meeting: "會議記錄",
 };
 
 const Confidence = z.enum(["high", "medium", "low"]);
