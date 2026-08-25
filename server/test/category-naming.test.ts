@@ -65,3 +65,18 @@ test("⭐ meeting 在內建清單裡 · 不在的話模型會再造一個英文 
     "production_meeting 當初就是因為內建清單沒有會議才被造出來的");
   assert.equal(DEFAULT_CATEGORY_NAMES.meeting, "會議記錄");
 });
+
+test("⭐⭐ facility_management 的判別軸必須跟 maintenance / it_support 分得開", () => {
+  const src = readFileSync(
+    new URL("../src/conversation-analysis/pipeline/tenant-twh.ts", import.meta.url), "utf8");
+  assert.match(src, /停車場地面坑洞維修.*不是 maintenance/s,
+    "要給**具體例子**說明邊界 —— 只寫抽象定義，模型會把停車場坑洞當成產線設備異常");
+  assert.match(src, /監視器的帳號登不進去/,
+    "同一個東西的實體面 vs 軟體面要分得開，否則 it_support 跟 facility 會互搶");
+  assert.equal(DEFAULT_CATEGORY_NAMES.facility_management, "廠區設施");
+});
+
+test("⭐ slug 沿用 AI 造的名字 · 不改名＝零資料遷移", () => {
+  assert.ok(DEFAULT_CATEGORIES.includes("facility_management" as never),
+    "prod 已有 3 張用這個 slug —— 改名就要多一支 UPDATE，而它本來就夠通用");
+});

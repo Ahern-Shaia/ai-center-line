@@ -32,6 +32,14 @@ export const CategoryEnum = z.enum([
   // ⚠️ 判別軸見 tenant prompt 分類規則 7：**主題優先**，
   //    會議上談的維保仍是 maintenance —— 否則要找維保時就找不到它了。
   "meeting",
+  // 2026-08-25 · 同一批 prod 實查（台灣福祉 3 張 facility_management）：
+  //   停車場坑洞、監視器加裝、參訪的網路佈線 —— 都不是 maintenance 定義的
+  //   「車輛／產線設備／治具」，也不是 it_support 的「帳號與軟體操作」。
+  //   ⭐ slug **刻意沿用 AI 造的 `facility_management`**：它本來就夠通用，
+  //      缺的只是沒在內建清單裡所以沒有中文名 —— 沿用等於零資料遷移。
+  //      （`production_meeting` 要改成 `meeting` 是因為它帶了業種色彩，這裡沒有。）
+  // ⚠️ 判別軸見分類規則 8。
+  "facility_management",
   "chitchat",
 ]);
 export type Category = z.infer<typeof CategoryEnum>;
@@ -58,6 +66,7 @@ export const DEFAULT_CATEGORY_NAMES: Record<string, string> = {
   sales: "業務",
   it_support: "資訊支援",
   meeting: "會議記錄",
+  facility_management: "廠區設施",
 };
 
 const Confidence = z.enum(["high", "medium", "low"]);
