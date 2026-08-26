@@ -8,6 +8,8 @@ import StyledSelect from "../shared/StyledSelect";
 import { getTaipeiDate } from "../shared/taipeiDate";
 import { useDebounced } from "../shared/useDebounced";
 import { ArchivedList } from "./TaskTriage";
+import { t } from "../i18n";
+import { useT } from "../i18n/useT";
 
 // 存查次頁 · 台灣福祉 ⑥（M3b）
 //
@@ -26,6 +28,7 @@ export default function ArchivePage({
   onDecided: () => void;
 }) {
   const toast = useToast();
+  const tr = useT();
   const [data, setData] = useState<ArchivedTasksResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -39,7 +42,7 @@ export default function ArchivePage({
   const load = useCallback(async () => {
     setLoading(true);
     try { setData(await getArchivedTasks(page, { from, to, groupId, q })); }
-    catch (e) { toast.show(e instanceof ApiError ? e.message : "載入存查失敗", "danger"); }
+    catch (e) { toast.show(e instanceof ApiError ? e.message : t("arc.loadFailed"), "danger"); }
     finally { setLoading(false); }
   }, [page, from, to, groupId, q, toast]);
   useEffect(() => { void load(); }, [load]);
@@ -59,33 +62,33 @@ export default function ArchivePage({
       <div className="pane-hdr">
         <div>
           <h1>
-            <button className="btn btn-sm" onClick={onBack}>← 任務看板</button>
-            <span style={{ marginLeft: 10 }}>存查</span>
+            <button className="btn btn-sm" onClick={onBack}>{tr("arc.back")}</button>
+            <span style={{ marginLeft: 10 }}>{tr("arc.title")}</span>
           </h1>
           <div className="sub">
-            公告 / 已完成 / 已忽略 · 不需核對的紀錄 · 偶爾查閱
+            {tr("arc.sub")}
             {/* 有篩選時不能只寫「共 N 筆」—— 會被讀成「總共就這麼多」 */}
-            {data ? ` · ${hasFilter ? "符合條件" : "共"} ${total.toLocaleString()} 筆` : ""}
+            {data ? ` · ${tr(hasFilter ? "arc.countFiltered" : "arc.countAll", { n: total.toLocaleString() })}` : ""}
           </div>
         </div>
-        <button className="btn" onClick={() => void load()} disabled={loading}>重新整理</button>
+        <button className="btn" onClick={() => void load()} disabled={loading}>{tr("common.refresh")}</button>
       </div>
 
       {/* 篩選列 · 與素材看板同一組條件與同一組樣式（用戶 2026-08-25 裁定日期＋群組） */}
       <div className="ml-filterbar">
         <div className="hdr-group ml-filter-search">
-          <label className="hdr-label" htmlFor="arc-kw">關鍵字</label>
+          <label className="hdr-label" htmlFor="arc-kw">{tr("filter.keyword")}</label>
           <div className="nc-tb-search">
             <span className="ic" aria-hidden>⌕</span>
             <input
               id="arc-kw" className="tf" value={kw}
               onChange={(e) => setKw(e.target.value)}
-              placeholder="搜尋任務摘要"
+              placeholder={tr("arc.searchPlaceholder")}
             />
           </div>
         </div>
         <div className="hdr-group">
-          <label className="hdr-label" htmlFor="arc-from">開始日期</label>
+          <label className="hdr-label" htmlFor="arc-from">{tr("filter.from")}</label>
           <input
             id="arc-from" type="date" className="tf" value={from}
             max={to || getTaipeiDate()}
@@ -94,7 +97,7 @@ export default function ArchivePage({
           />
         </div>
         <div className="hdr-group">
-          <label className="hdr-label" htmlFor="arc-to">結束日期</label>
+          <label className="hdr-label" htmlFor="arc-to">{tr("filter.to")}</label>
           <input
             id="arc-to" type="date" className="tf" value={to}
             min={from || undefined} max={getTaipeiDate()}
@@ -104,15 +107,15 @@ export default function ArchivePage({
         </div>
         {(data?.groups.length ?? 0) > 1 && (
           <div className="hdr-group ml-filter-group">
-            <span className="hdr-label">群組</span>
+            <span className="hdr-label">{tr("filter.group")}</span>
             <StyledSelect
               items={(data?.groups ?? []).map((g) => ({ id: g.groupId, label: g.name }))}
               value={groupId}
               onChange={(v) => applyFilter(() => setGroupId(v))}
-              ariaLabel="依群組篩選"
+              ariaLabel={tr("filter.byGroup")}
               allowEmpty
-              emptyLabel="全部群組"
-              placeholder="全部群組"
+              emptyLabel={tr("filter.allGroups")}
+              placeholder={tr("filter.allGroups")}
               disabled={loading}
             />
           </div>
@@ -120,26 +123,26 @@ export default function ArchivePage({
         {hasFilter && (
           <div className="hdr-group">
             <span className="hdr-label" aria-hidden>&nbsp;</span>
-            <button className="btn" onClick={clearFilter} disabled={loading}>清除篩選</button>
+            <button className="btn" onClick={clearFilter} disabled={loading}>{tr("filter.clear")}</button>
           </div>
         )}
       </div>
 
       {loading && !data ? (
-        <div className="dm-empty">載入存查紀錄中…</div>
+        <div className="dm-empty">{tr("arc.loading")}</div>
       ) : total === 0 ? (
         <div className="dm-empty">
           {/* ⚠️ 有篩選時一定要先講「是篩選的關係」——
               寫「目前沒有存查紀錄」會被讀成紀錄不見了 */}
-          {hasFilter ? "沒有符合條件的紀錄" : "目前沒有存查紀錄"}
+          {tr(hasFilter ? "arc.emptyFiltered" : "arc.empty")}
           <div className="dm-empty-hint">
             {hasFilter
-              ? "紀錄都還在，只是不在這個範圍裡"
-              : "公告、已完成、以及您標記「不用追」的項目會收在這裡"}
+              ? tr("arc.emptyFilteredHint")
+              : tr("arc.emptyHint")}
           </div>
           {hasFilter && (
             <button className="btn btn-sm" style={{ marginTop: 10 }} onClick={clearFilter}>
-              清除篩選
+              {tr("filter.clear")}
             </button>
           )}
         </div>
@@ -153,10 +156,10 @@ export default function ArchivePage({
           {lastPage > 1 && (
             <div className="ml-pager">
               <button className="btn" disabled={page <= 1 || loading}
-                onClick={() => setPage((p) => p - 1)}>上一頁</button>
-              <span className="ml-pager-at mono">第 {page} / {lastPage} 頁</span>
+                onClick={() => setPage((p) => p - 1)}>{tr("pager.prev")}</button>
+              <span className="ml-pager-at mono">{tr("pager.at", { page, last: lastPage })}</span>
               <button className="btn" disabled={page >= lastPage || loading}
-                onClick={() => setPage((p) => p + 1)}>下一頁</button>
+                onClick={() => setPage((p) => p + 1)}>{tr("pager.next")}</button>
             </div>
           )}
         </>

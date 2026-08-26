@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ApiError, decideTicket, type WarroomKanbanTicket } from "../api";
 import { useToast } from "../Toast";
+import { useT } from "../i18n/useT";
 import { statusLabel } from "../shared/recordStatusLabel";
 
 // 任務看板的兩個附加區塊 · docs/modules/task-materialization-gate.md
@@ -25,6 +26,7 @@ export function UnconfirmedQueue({
   onDecided: () => void;
 }) {
   const toast = useToast();
+  const tr = useT();
   const [busy, setBusy] = useState<string | null>(null);
   // V4 · 預設收合 —— 待確認是次要 triage，進頁時看板才是主角。
   // 原本 useState(true) 讓它進頁就全展開成一道牆，把看板擠到下面（2026-07-30 雜亂根因）。
@@ -36,10 +38,10 @@ export function UnconfirmedQueue({
     setBusy(t.ticketId);
     try {
       await decideTicket(t.ticketId, accept);
-      toast.show(accept ? "已收為任務，接著可以核對" : "已標記為不用追", "ok");
+      toast.show(tr(accept ? "tri.accepted" : "tri.dismissed"), "ok");
       onDecided();
     } catch (e) {
-      toast.show(e instanceof ApiError ? e.message : "操作失敗", "danger");
+      toast.show(e instanceof ApiError ? e.message : tr("common.actionFailed"), "danger");
     } finally {
       setBusy(null);
     }
@@ -49,31 +51,31 @@ export function UnconfirmedQueue({
     <section className="tri-box tri-box-warn">
       <button className="tri-hdr" onClick={() => setOpen(!open)} aria-expanded={open}>
         <span className="kb-dot kb-dot-mid" aria-hidden />
-        <span className="tri-title">請您判定</span>
+        <span className="tri-title">{tr("tri.title")}</span>
         <span className="kb-col-count">{tickets.length}</span>
         <span className="tri-hint">
-          AI 整理出這些事，但沒有十足把握。請看一下要不要追蹤。
+          {tr("tri.hint")}
         </span>
-        <span className="tri-caret" aria-hidden>{open ? "收合 ▴" : "展開檢視 ▾"}</span>
+        <span className="tri-caret" aria-hidden>{open ? tr("tri.collapse") : tr("tri.expand")}</span>
       </button>
 
       {open && (
         <div className="tri-body tri-body-cap">
           {tickets.map((t) => (
             <div key={t.ticketId} className="tri-row">
-              <button className="tri-sum" onClick={() => onOpen(t)} title="點開看原始對話">
+              <button className="tri-sum" onClick={() => onOpen(t)} title={tr("tri.openSource")}>
                 {t.summary}
               </button>
               <span className="tri-meta">
-                {t.departmentName ?? "未分派部門"}
+                {t.departmentName ?? tr("common.noDept")}
                 {t.status ? ` · ${statusLabel(t.status)}` : ""}
                 {t.assigneeDisplayName ? ` · ${t.assigneeDisplayName}` : ""}
               </span>
               <span className="tri-act">
                 <button className="btn btn-primary" disabled={busy === t.ticketId}
-                  onClick={() => void decide(t, true)}>收為任務</button>
+                  onClick={() => void decide(t, true)}>{tr("tri.accept")}</button>
                 <button className="btn" disabled={busy === t.ticketId}
-                  onClick={() => void decide(t, false)}>不用追</button>
+                  onClick={() => void decide(t, false)}>{tr("tri.dismiss")}</button>
               </span>
             </div>
           ))}
@@ -100,16 +102,17 @@ export function ArchivedList({
   // V4 · 存查改成獨立次頁（由 TaskBoard 的「存查」按鈕進來）· 不再收合、不再壓在看板底部。
   // M3b · 空狀態與總數由 ArchivePage 負責（它才知道有沒有套篩選）；這裡只畫列。
   const toast = useToast();
+  const tr = useT();
   const [busy, setBusy] = useState<string | null>(null);
 
   async function restore(t: WarroomKanbanTicket) {
     setBusy(t.ticketId);
     try {
       await decideTicket(t.ticketId, true);
-      toast.show("已改列待辦", "ok");
+      toast.show(tr("tri.restored"), "ok");
       onDecided();
     } catch (e) {
-      toast.show(e instanceof ApiError ? e.message : "操作失敗", "danger");
+      toast.show(e instanceof ApiError ? e.message : tr("common.actionFailed"), "danger");
     } finally {
       setBusy(null);
     }
@@ -120,19 +123,19 @@ export function ArchivedList({
         <div className="tri-body">
           {tickets.map((t) => (
             <div key={t.ticketId} className="tri-row">
-              <button className="tri-sum" onClick={() => onOpen(t)} title="點開看原始對話">
+              <button className="tri-sum" onClick={() => onOpen(t)} title={tr("tri.openSource")}>
                 {t.summary}
               </button>
               <span className="tri-meta">
                 {t.confirmStatus === "已忽略"
-                  ? "您標記不用追"
+                  ? tr("tri.youDismissed")
                   : t.status ? statusLabel(t.status) : "—"}
-                {` · ${t.departmentName ?? "未分派部門"}`}
+                {` · ${t.departmentName ?? tr("common.noDept")}`}
               </span>
               {t.confirmStatus === "已忽略" && (
                 <span className="tri-act">
                   <button className="btn" disabled={busy === t.ticketId}
-                    onClick={() => void restore(t)}>改列待辦</button>
+                    onClick={() => void restore(t)}>{tr("tri.restore")}</button>
                 </span>
               )}
             </div>

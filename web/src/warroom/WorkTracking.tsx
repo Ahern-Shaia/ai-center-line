@@ -4,6 +4,7 @@ import {
   type WarroomKanbanTicket, type WorkOutcome,
 } from "../api";
 import { useToast } from "../Toast";
+import { useT } from "../i18n/useT";
 import ConfirmDialog from "../shared/ConfirmDialog";
 
 // 任務追蹤到結束 · 網頁端的補登（M5）
@@ -19,13 +20,15 @@ import ConfirmDialog from "../shared/ConfirmDialog";
 // ⚠️ 措辭鐵則：一律「尚未確認完成」不用「未完成」——
 // 後者說的是工作狀態，人做完但還沒回報時它是**假的**（F-26）。
 
-const OUTCOMES: Array<{ value: WorkOutcome; label: string; hint: string }> = [
-  { value: "完成", label: "完成", hint: "事情做好了" },
-  { value: "不用做了", label: "不用做了", hint: "後來取消、或改用別的方式處理" },
-  { value: "轉他人", label: "轉給別人", hint: "不在這個人手上了" },
+// ⚠️ `value` 是 DB 值（work_outcome）· labelKey/hintKey 才是顯示。
+//    翻掉 value 會讓結案比對失效（同 confirm_status 的紀律）。
+const OUTCOMES: Array<{ value: WorkOutcome; labelKey: string; hintKey: string }> = [
+  { value: "完成", labelKey: "outcome.完成", hintKey: "outcomeHint.完成" },
+  { value: "不用做了", labelKey: "outcome.不用做了", hintKey: "outcomeHint.不用做了" },
+  { value: "轉他人", labelKey: "outcome.轉他人", hintKey: "outcomeHint.轉他人" },
   // ⭐ 四個裡最有價值的一個 —— 唯一會讓事情**往上走**的選項。
   //    沒有它，卡住的人只能不按任何鍵，任務靜靜躺著沒人知道。
-  { value: "做不到", label: "做不到", hint: "缺料、缺人、缺權限 —— 需要有人處理障礙" },
+  { value: "做不到", labelKey: "outcome.做不到", hintKey: "outcomeHint.做不到" },
 ];
 
 /**
@@ -38,6 +41,7 @@ export function WorkStatusBox({
   ticket: WarroomKanbanTicket;
   onChanged: () => void;
 }) {
+  const tr = useT();
   const [closing, setClosing] = useState(false);
 
   if (ticket.workStatus === "closed") {
@@ -52,9 +56,9 @@ export function WorkStatusBox({
   return (
     <div className="wt-box">
       <span className="wt-box-state">
-        {ticket.stuckDays != null ? `尚未確認完成 · 已 ${ticket.stuckDays} 天` : "尚未確認完成"}
+        {ticket.stuckDays != null ? tr("wt.unconfirmedDays", { n: ticket.stuckDays }) : tr("wt.unconfirmed")}
       </span>
-      <button className="btn" onClick={() => setClosing(true)}>補登結束</button>
+      <button className="btn" onClick={() => setClosing(true)}>{tr("wt.logClose")}</button>
       <CloseDialog
         open={closing}
         ticket={ticket}
@@ -84,16 +88,17 @@ function CloseDialog({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  const tr = useT();
 
   async function submit() {
     setBusy(true);
     try {
       await closeTicketWork(ticket.ticketId, outcome, note.trim() || undefined);
-      toast.show(`已標記為「${outcome}」`, "ok");
+      toast.show(tr("wt.marked", { what: tr(`outcome.${outcome}`) }), "ok");
       setNote("");
       onDone();
     } catch (e) {
-      toast.show(e instanceof ApiError ? e.message : "操作失敗", "danger");
+      toast.show(e instanceof ApiError ? e.message : tr("common.actionFailed"), "danger");
     } finally {
       setBusy(false);
     }
@@ -104,13 +109,13 @@ function CloseDialog({
       open={open}
       onClose={onClose}
       onConfirm={() => void submit()}
-      title="結束這件任務"
-      confirmLabel="確認結束"
+      title={tr("wt.closeTitle")}
+      confirmLabel={tr("wt.closeConfirm")}
       busy={busy}
       body={
         <div className="wt-form">
           <div className="wt-form-target">{ticket.summary}</div>
-          <label className="wt-form-label">為什麼結束？</label>
+          <label className="wt-form-label">{tr("wt.whyClose")}</label>
           {OUTCOMES.map((o) => (
             <button
               key={o.value}
@@ -120,12 +125,12 @@ function CloseDialog({
             >
               <span className="wt-radio" aria-hidden />
               <span>
-                <b>{o.label}</b>
-                <span className="wt-opt-hint">{o.hint}</span>
+                <b>{tr(o.labelKey)}</b>
+                <span className="wt-opt-hint">{tr(o.hintKey)}</span>
               </span>
             </button>
           ))}
-          <label className="wt-form-label" htmlFor="wt-note">補一句話（選填）</label>
+          <label className="wt-form-label" htmlFor="wt-note">{tr("wt.note")}</label>
           <textarea
             id="wt-note"
             className="wt-textarea"
@@ -135,7 +140,7 @@ function CloseDialog({
           />
           {/* 代結案要讓人知道會留痕 —— 不是威嚇，是避免日後爭議時查不到 */}
           {ticket.assigneeDisplayName && (
-            <p className="wt-form-foot">會記錄為由您代 {ticket.assigneeDisplayName} 結束。</p>
+            <p className="wt-form-foot">{tr("wt.onBehalf", { name: ticket.assigneeDisplayName })}</p>
           )}
         </div>
       }
@@ -149,13 +154,14 @@ function CloseDialog({
  * 也讓完成率不會被代標灌水。
  */
 function ClosedLine({ ticket }: { ticket: WarroomKanbanTicket }) {
+  const tr = useT();
   const proxied = ticket.workClosedVia === "web" && ticket.workClosedByName;
   return (
     <span className={`wt-box-state ${proxied ? "warn" : "ok"}`}>
       {proxied
-        ? `由 ${ticket.workClosedByName} 代為結束（${ticket.workOutcome}）`
+        ? tr("wt.closedByOther", { name: ticket.workClosedByName ?? "—", what: tr(`outcome.${ticket.workOutcome}`) })
         : ticket.workClosedVia === "line_reply"
-          ? `本人於 LINE 回報「${ticket.workOutcome}」`
+          ? tr("wt.closedSelf", { what: tr(`outcome.${ticket.workOutcome}`) })
           : ticket.displayState}
     </span>
   );
@@ -164,6 +170,7 @@ function ClosedLine({ ticket }: { ticket: WarroomKanbanTicket }) {
 function ReopenButton({ ticket, onChanged }: { ticket: WarroomKanbanTicket; onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  const tr = useT();
   return (
     <button
       className="btn"
@@ -172,14 +179,14 @@ function ReopenButton({ ticket, onChanged }: { ticket: WarroomKanbanTicket; onCh
         setBusy(true);
         try {
           await reopenTicketWork(ticket.ticketId);
-          toast.show("已還原成尚未確認完成", "ok");
+          toast.show(tr("wt.reopened"), "ok");
           onChanged();
         } catch (e) {
-          toast.show(e instanceof ApiError ? e.message : "還原失敗", "danger");
+          toast.show(e instanceof ApiError ? e.message : tr("wt.reopenFailed"), "danger");
         } finally { setBusy(false); }
       }}
     >
-      還原
+      {tr("common.undo")}
     </button>
   );
 }
