@@ -59,6 +59,9 @@ function isDbLiteral(line: string): boolean {
     // ⚠️ key 就是 DB 值本身（見 web/src/i18n/zh-TW.ts 檔頭 · FMEA F-1）；
     //    翻掉 key 會讓全站狀態比對靜默失效，所以它**必須**留舊字串。
     || /^\s*"\w+\.(待簽核|已簽核|待確認|逾時警示|已忽略|存查)"\s*:/.test(line)
+    // i18n key 的**引用**：`tr("confirmStatus.待簽核")` —— 第三種語法。
+    // 定義（上一條）與引用都必須留 DB 值原文，否則查表查不到。
+    || /\bt?r?\(\s*[`"']\w+\.(待簽核|已簽核|待確認|逾時警示|已忽略|存查)[`"']/.test(line)
     || /confirm_status|string_to_array|\$type<|ANY\(/.test(line);
 }
 

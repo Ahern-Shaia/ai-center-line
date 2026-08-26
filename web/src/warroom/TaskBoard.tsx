@@ -9,6 +9,8 @@ import {
   type WarroomTaskBoard,
 } from "../api";
 import { useToast } from "../Toast";
+import { t } from "../i18n";
+import { useT } from "../i18n/useT";
 import { catLabel } from "../shared/categoryLabel";
 import { canOpenConvoDetail, navigateTo } from "../nav";
 import { assignTicket, getAssignableMembers, getTicketSource, notifyOthers, type AssignableMember, type TicketSource } from "../api";
@@ -21,6 +23,7 @@ import { confirmLabel } from "../shared/confirmStatusLabel";
 // WTB-M4 · 任務看板 Kanban 3 欄 (待核對 / 逾時 / 已核對)
 // 對照 docs/modules/warroom-task-board.md §7.2
 export default function TaskBoard() {
+  const tr = useT();
   const guide = usePageGuide("task-board");
   const [board, setBoard] = useState<WarroomTaskBoard | null>(null);
   // 「只看卡住的」· Linear 的 display options —— 要聚焦用篩選，不用另開一個容器
@@ -42,7 +45,7 @@ export default function TaskBoard() {
       const b = await getWarroomTasks();
       setBoard(b);
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入任務失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("kb.loadFailed"), "danger");
     } finally {
       setLoading(false);
     }
@@ -54,11 +57,11 @@ export default function TaskBoard() {
     setSigning((s) => new Set(s).add(ticket.ticketId));
     try {
       await confirmSignoff([ticket.ticketId]);
-      toast.show(`已核對：${ticket.summary.slice(0, 20)}`, "ok");
+      toast.show(tr("kb.verifiedOne", { s: ticket.summary.slice(0, 20) }), "ok");
       setDrawer(null);
       void refresh();
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "核對失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("kb.verifyFailed"), "danger");
     } finally {
       setSigning((s) => {
         const next = new Set(s);
@@ -68,7 +71,7 @@ export default function TaskBoard() {
     }
   }, [refresh, toast]);
 
-  if (loading && !board) return <div className="dm-empty">載入任務看板中…</div>;
+  if (loading && !board) return <div className="dm-empty">{tr("kb.loading")}</div>;
   if (!board) return null;
 
   // V4 · 存查次頁：偶爾瀏覽、大量紀錄 → 獨立去處，不塞回主看板（判準見 mockup taskboard-v4-focus）
@@ -113,8 +116,8 @@ export default function TaskBoard() {
     <>
       <div className="pane-hdr">
         <div>
-          <h1>任務看板{guide.toggle}</h1>
-          <div className="sub">下方三欄是需要您核對的任務 · 點卡片可展開原始對話對照</div>
+          <h1>{tr("nav.taskBoard")}{guide.toggle}</h1>
+          <div className="sub">{tr("kb.sub")}</div>
         </div>
         <div className="kb-viewbar">
           {board.counts.stuck > 0 && (
@@ -122,16 +125,16 @@ export default function TaskBoard() {
               className={`btn btn-sm${onlyStuck ? " btn-primary" : ""}`}
               onClick={() => setOnlyStuck((v) => !v)}
             >
-              {onlyStuck ? "顯示全部" : `只看卡住的（${board.counts.stuck}）`}
+              {onlyStuck ? tr("kb.showAll") : tr("kb.onlyStuck", { n: board.counts.stuck })}
             </button>
           )}
           {/* V4 · 存查入口在 toolbar（穩定位置，不隨看板變長往下跑）· 點開進獨立次頁 */}
           {board.counts.archived > 0 && (
             <button className="btn" onClick={() => setShowArchive(true)}>
-              存查 <span className="mono" style={{ color: "var(--ink-3)" }}>{board.counts.archived}</span>
+              {tr("arc.title")} <span className="mono" style={{ color: "var(--ink-3)" }}>{board.counts.archived}</span>
             </button>
           )}
-          <button className="btn" onClick={() => void refresh()} disabled={loading}>重新整理</button>
+          <button className="btn" onClick={() => void refresh()} disabled={loading}>{tr("common.refresh")}</button>
         </div>
       </div>
       {guide.panel}
@@ -142,7 +145,7 @@ export default function TaskBoard() {
           <button
             className={`kb-cchip${catFilter === null ? " on" : ""}`}
             onClick={() => setCatFilter(null)}
-          >全部 <span className="n">{catTotal}</span></button>
+          >{tr("kb.all")} <span className="n">{catTotal}</span></button>
           {catChips.map((g) => (
             <button
               key={g.key}
@@ -167,10 +170,9 @@ export default function TaskBoard() {
       {board.counts.pending === 0 && board.counts.overdue === 0 && board.counts.signed === 0
         && board.kanban.unconfirmed.length === 0 && (
         <div className="kb-board-empty">
-          <div className="kb-board-empty-h">還沒有任何任務</div>
+          <div className="kb-board-empty-h">{tr("kb.emptyTitle")}</div>
           <div className="kb-board-empty-b">
-            任務是 AI 從你們的 LINE 群組對話裡讀出來的「有人要做的事」——
-            系統每天固定時間整理一次，<b>明天早上這裡就會開始有東西</b>。
+            {tr("kb.emptyHint")}
           </div>
           <TriggerAnalysisButton />
         </div>
@@ -178,7 +180,7 @@ export default function TaskBoard() {
 
       <div className="kanban">
         <KanbanColumn
-          title="待核對"
+          title={tr("confirmStatus.待簽核")}
           tone="warn"
           count={board.counts.pending}
           tickets={pick(board.kanban.pending)}
@@ -188,7 +190,7 @@ export default function TaskBoard() {
           onToggleGroup={toggleGroup}
         />
         <KanbanColumn
-          title="逾時警示"
+          title={tr("confirmStatus.逾時警示")}
           tone="danger"
           count={board.counts.overdue}
           tickets={pick(board.kanban.overdue)}
@@ -198,7 +200,7 @@ export default function TaskBoard() {
           onToggleGroup={toggleGroup}
         />
         <KanbanColumn
-          title="已核對"
+          title={tr("confirmStatus.已簽核")}
           tone="ok"
           count={board.counts.signed}
           tickets={pick(board.kanban.signed)}
@@ -221,8 +223,10 @@ export default function TaskBoard() {
 }
 
 /** 已核對欄的註腳 · 只在超過顯示上限時才講 */
+// ⚠️ 這是**純輔助函式不是元件** —— 不可以在這裡用 useT()（違反 Rules of Hooks）。
+//    用純函式 t()：呼叫它的 TaskBoard 已經訂閱了語言，重繪照樣發生。
 function signedNote(board: WarroomTaskBoard): string | undefined {
-  return board.counts.signed > 30 ? `顯示最近 30 筆 · 共 ${board.counts.signed}` : undefined;
+  return board.counts.signed > 30 ? t("kb.recent30", { n: board.counts.signed }) : undefined;
 }
 
 type Tone = "warn" | "danger" | "ok";
@@ -243,6 +247,7 @@ function KanbanColumn({
   isCollapsed?: (colTitle: string, catKey: string, idx: number) => boolean;
   onToggleGroup?: (colTitle: string, catKey: string) => void;
 }) {
+  const tr = useT();
   // 只有一組時不必分組（例：套了分類篩選）—— 多一層組頭只是噪音
   const groups = grouped ? groupByCategory(tickets) : [];
   const useGroups = grouped && groups.length > 1;
@@ -260,7 +265,7 @@ function KanbanColumn({
             放底部的話離空狀態近兩千像素，第一屏根本看不到（瀏覽器實測） */}
         {note && <div className="kb-col-note">{note}</div>}
         {tickets.length === 0 && (
-          <div className="kb-empty">{emptyLabel ?? `目前沒有${title}的任務`}</div>
+          <div className="kb-empty">{emptyLabel ?? tr("kb.emptyCol", { col: title })}</div>
         )}
         {useGroups
           ? groups.map((g, idx) => {
@@ -271,7 +276,7 @@ function KanbanColumn({
                   <span className="kb-grp-chev" aria-hidden>{collapsed ? "▸" : "▾"}</span>
                   <span className={`kb-cdot kb-avatar-${catTone(g.key)}`} aria-hidden />
                   <span className="kb-grp-title">{g.label}</span>
-                  <span className="kb-grp-count">{g.items.length} 張</span>
+                  <span className="kb-grp-count">{tr("kb.nCards", { n: g.items.length })}</span>
                 </button>
                 {!collapsed && (
                   <div className="kb-grp-body">
@@ -296,11 +301,12 @@ function TicketCard({ t, tone, onOpen, inGroup }: {
   /** 在分類組內 → 分類已在組頭寫過，卡片就不再重複（改讓來源群組出頭）*/
   inGroup?: boolean;
 }) {
+  const tr = useT();
   // 高信度是本看板預設（sub 已說明）· 逐卡標「信度高」反成雜訊 · 只在中/低時提醒審核者留意
   const confChip = t.confidence === "medium"
-    ? { label: "信度中", level: "mid", tip: "AI 對這張任務的把握程度為「中」· 建議點開卡片對照原始訊息再核對" }
+    ? { label: tr("kb.confMid"), level: "mid", tip: tr("kb.confMidTip") }
     : t.confidence === "low"
-      ? { label: "信度低", level: "low", tip: "AI 對這張任務的把握程度為「低」· 語意較模糊，核對前務必點開對照原始訊息" }
+      ? { label: tr("kb.confLow"), level: "low", tip: tr("kb.confLowTip") }
       : null;
   // 逾時要顯「量級」不只是「在逾時欄」—— 逾 1 天和逾 15 天的處理順序完全不同
   // ⚠️ 改吃後端算好的 overdueDays：prod 的 due_at 100% 是 null，
@@ -315,7 +321,7 @@ function TicketCard({ t, tone, onOpen, inGroup }: {
       <span className={`kb-stripe kb-stripe-${tone}`} aria-hidden />
       <div className="kb-card-summary">{t.summary}</div>
       <div className="kb-card-meta">
-        {t.groupName && <span className="kb-group" title={`來源群組：${t.groupName}`}>{t.groupName}</span>}
+        {t.groupName && <span className="kb-group" title={tr("kb.fromGroup", { g: t.groupName })}>{t.groupName}</span>}
         {!inGroup && t.category && <span className="kb-tag">{catLabel(t.category, t.categoryName)}</span>}
         {confChip && (
           <span className={`kb-conf kb-conf-${confChip.level}`} title={confChip.tip}>
@@ -323,14 +329,14 @@ function TicketCard({ t, tone, onOpen, inGroup }: {
             {confChip.label}
           </span>
         )}
-        {overdueDays != null && <span className="kb-over">逾時 {overdueDays} 天</span>}
+        {overdueDays != null && <span className="kb-over">{tr("kb.overdueDays", { n: overdueDays })}</span>}
         {/* 卡住＝**量級**不是歸屬（design-research-taskboard.md §2 弱點 #3）。
             沿用 V3 已裁定的實心 pill，形用 ● 圓點與「逾時」的無形做區隔 ——
             色＋形＋字三重編碼，不只靠顏色。正常的卡片不長這個 pill。 */}
         {t.stuckDays != null && (
           <span className={`kb-stuck${t.stuckKind === "unassigned" ? " hot" : ""}`}>
             <span className="kb-stuck-d" aria-hidden />
-            卡住 {t.stuckDays} 天 · {t.stuckKind === "unassigned" ? "待指派" : "無回報"}
+            {tr("kb.stuck", { n: t.stuckDays ?? 0, kind: tr(t.stuckKind === "unassigned" ? "kb.stuckUnassigned" : "kb.stuckNoReport") })}
           </span>
         )}
         {dueText && (
@@ -354,16 +360,16 @@ function TicketCard({ t, tone, onOpen, inGroup }: {
             {t.assigneeAccountName}
           </span>
         ) : t.assignStatus === "unclaimed" ? (
-          <span className="kb-who kb-unclaimed">待認領{who ? `：${who}` : ""}</span>
+          <span className="kb-who kb-unclaimed">{tr("kb.unclaimed")}{who ? `：${who}` : ""}</span>
         ) : who ? (
           <span className="kb-who">
             <span className={`kb-avatar kb-avatar-${avatarTone(who)}`} aria-hidden>{who.slice(0, 1)}</span>
             {who}
           </span>
-        ) : <span className="kb-who kb-unassigned">未指派</span>}
+        ) : <span className="kb-who kb-unassigned">{tr("kb.unassigned")}</span>}
         {/* 不顯示「已同步到某某系統」—— 各家用的系統不同，而且我方目前也沒有同步功能。
             已核對欄改顯示誰核對的。*/}
-        <span>{tone === "ok" && t.confirmedByName ? `${t.confirmedByName} 已核對` : t.departmentName ?? ""}</span>
+        <span>{tone === "ok" && t.confirmedByName ? tr("kb.verifiedBy", { name: t.confirmedByName }) : t.departmentName ?? ""}</span>
       </div>
     </button>
   );
@@ -405,13 +411,14 @@ function groupByCategory(tickets: WarroomKanbanTicket[]): Array<{ key: string; l
     map.set(key, arr);
   }
   return Array.from(map.entries())
-    .map(([key, items]) => ({ key, label: key === UNCAT ? "未分類" : catLabel(key, items[0]?.categoryName), items }))
+    .map(([key, items]) => ({ key, label: key === UNCAT ? t("kb.uncategorized") : catLabel(key, items[0]?.categoryName), items }))
     .sort((a, b) => (a.key === UNCAT ? 1 : b.key === UNCAT ? -1 : 0) || b.items.length - a.items.length);
 }
 
 // 手動派發 · 導入期的主要流程
 // 員工還沒綁定 LINE 時 AI 對不到人，由主管指定；綁定普及後自動歸屬會接手，此處仍可覆寫。
 function AssignBox({ ticket, onAssigned }: { ticket: WarroomKanbanTicket; onAssigned: () => void }) {
+  const tr = useT();
   const [members, setMembers] = useState<AssignableMember[] | null>(null);
   const [open, setOpen] = useState(false);
   const [ccOpen, setCcOpen] = useState(false);
@@ -419,11 +426,11 @@ function AssignBox({ ticket, onAssigned }: { ticket: WarroomKanbanTicket; onAssi
   const toast = useToast();
 
   const NOTIFY_SKIP_LABEL: Record<string, string> = {
-  no_binding: "⚠️ 對方未綁定 LINE，沒有通知到，請另外跟他說一聲",
-  no_bot: "⚠️ 這家還沒設定 LINE 機器人，沒有通知到",
-  disabled: "指派通知已關閉（可在「任務設定」開啟）",
-  already_notified: "先前已通知過，不重複打擾",
-  push_failed: "⚠️ 通知送出失敗，請另外跟他說一聲",
+  no_binding: "kb.skip.no_binding",
+  no_bot: "kb.skip.no_bot",
+  disabled: "kb.skip.disabled",
+  already_notified: "kb.skip.already_notified",
+  push_failed: "kb.skip.push_failed",
 };
 
 async function pick(userId: string | null) {
@@ -434,14 +441,14 @@ async function pick(userId: string | null) {
       // ⚠️ 通知結果一定要說出來。只講「已派給 X」而私訊沒送出的話，
       //    主管會以為對方知道了，事情就卡在那裡（FMEA A-1 · P0）。
       toast.show(
-        !userId ? "已退回待認領"
-          : r.notified ? `已派給 ${r.assigneeName ?? ""} · 已私訊通知`
-          : `已派給 ${r.assigneeName ?? ""} · ${NOTIFY_SKIP_LABEL[r.notifySkipReason ?? "push_failed"]}`,
+        !userId ? tr("kb.returnedToUnclaimed")
+          : r.notified ? tr("kb.assignedNotified", { name: r.assigneeName ?? "" })
+          : tr("kb.assignedNotNotified", { name: r.assigneeName ?? "", why: tr(NOTIFY_SKIP_LABEL[r.notifySkipReason ?? "push_failed"]) }),
         !userId || r.notified ? "ok" : "warn",
       );
       setOpen(false);
       onAssigned();
-    } catch (e) { toast.show(e instanceof ApiError ? e.message : "派發失敗", "danger"); }
+    } catch (e) { toast.show(e instanceof ApiError ? e.message : tr("kb.assignFailed"), "danger"); }
     finally { setBusy(false); }
   }
 
@@ -457,22 +464,22 @@ async function pick(userId: string | null) {
   return (
     <div className="ab-wrap">
       <div className="ab-row">
-        <span className="ab-lbl">當責人</span>
+        <span className="ab-lbl">{tr("kb.owner")}</span>
         <span className="ab-val">
           {current ?? (ticket.assignStatus === "unclaimed"
-            ? <>待認領{ticket.assigneeDisplayName ? <span className="ab-hint">（AI 讀到「{ticket.assigneeDisplayName}」但對不到系統帳號）</span> : null}</>
-            : "未指派")}
+            ? <>{tr("kb.unclaimed")}{ticket.assigneeDisplayName ? <span className="ab-hint">{tr("kb.aiReadName", { name: ticket.assigneeDisplayName })}</span> : null}</>
+            : tr("kb.unassigned"))}
         </span>
-        <button className="nc-lnk" onClick={() => void toggle()}>{open ? "取消" : current ? "改派" : "指派"}</button>
+        <button className="nc-lnk" onClick={() => void toggle()}>{open ? tr("common.cancel") : tr(current ? "kb.reassign" : "kb.assign")}</button>
       </div>
 
       {/* ⚠️ 知會刻意是**指派之外的獨立動作**（台灣福祉 ④ · OQ-TWH-5）：
           指派現在是「一次點擊、零個選擇」，把勾選塞進去會讓每次指派都多一輪判斷，
           而「要讓別人也知道」是少數情況。所以另開一列，不動主流程。 */}
       <div className="ab-row">
-        <span className="ab-lbl">同時通知</span>
-        <span className="ab-val ab-hint">讓其他人也知道這件事（不改變當責人）</span>
-        <button className="nc-lnk" onClick={() => setCcOpen((v) => !v)}>{ccOpen ? "取消" : "選人"}</button>
+        <span className="ab-lbl">{tr("kb.alsoNotify")}</span>
+        <span className="ab-val ab-hint">{tr("kb.alsoNotifyHint")}</span>
+        <button className="nc-lnk" onClick={() => setCcOpen((v) => !v)}>{ccOpen ? tr("common.cancel") : tr("kb.pickPeople")}</button>
       </div>
       {ccOpen && (
         <CcPicker
@@ -483,17 +490,17 @@ async function pick(userId: string | null) {
       )}
       {open && (
         <div className="ab-opts">
-          {members === null ? <span className="ab-hint">載入中…</span>
-            : members.length === 0 ? <span className="ab-hint">沒有可指派的成員</span>
+          {members === null ? <span className="ab-hint">{tr("common.loading")}</span>
+            : members.length === 0 ? <span className="ab-hint">{tr("kb.noAssignable")}</span>
             : (<>
                 {members.map((m) => (
                   <button key={m.userId} className="ab-opt" onClick={() => void pick(m.userId)} disabled={busy}>
                     {m.name}
                     {/* 沒綁 LINE 不影響手動派發（日報走網頁登入），只影響之後能不能自動歸屬 */}
-                    {!m.hasLineBinding && <span className="ab-nobind">未綁 LINE</span>}
+                    {!m.hasLineBinding && <span className="ab-nobind">{tr("kb.noLine")}</span>}
                   </button>
                 ))}
-                {current && <button className="ab-opt ab-clear" onClick={() => void pick(null)} disabled={busy}>退回待認領</button>}
+                {current && <button className="ab-opt ab-clear" onClick={() => void pick(null)} disabled={busy}>{tr("kb.returnToUnclaimed")}</button>}
               </>)}
         </div>
       )}
@@ -503,6 +510,7 @@ async function pick(userId: string | null) {
 
 // 來源原文對照 · 預設收合（多數時候直接簽，需要時才展開）
 function SourceMessages({ ticketId }: { ticketId: string }) {
+  const tr = useT();
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<TicketSource | null>(null);
   const [loading, setLoading] = useState(false);
@@ -514,18 +522,18 @@ function SourceMessages({ ticketId }: { ticketId: string }) {
     if (data) return;
     setLoading(true);
     try { setData(await getTicketSource(ticketId)); setErr(null); }
-    catch (e) { setErr(e instanceof Error ? e.message : "載入失敗"); }
+    catch (e) { setErr(e instanceof Error ? e.message : tr("common.loadFailed")); }
     finally { setLoading(false); }
   }
 
   return (
     <div className="ts-wrap">
       <button className="ts-toggle" onClick={() => void toggle()}>
-        {open ? "收合原始訊息 ▲" : "對照原始訊息 ▼"}
+        {open ? tr("kb.hideSource") : tr("kb.showSource")}
       </button>
       {open && (
         <div className="ts-body">
-          {loading && <div className="ts-note">載入中…</div>}
+          {loading && <div className="ts-note">{tr("common.loading")}</div>}
           {err && <div className="ts-note">{err}</div>}
           {data && data.unavailableReason && <div className="ts-note">{data.unavailableReason}</div>}
           {data && <SourceMessageList data={data} />}
@@ -544,6 +552,7 @@ function TicketDrawer({
   signing: boolean;
   onAssigned: () => void;
 }) {
+  const tr = useT();
   const created = useMemo(() => ticket ? formatDateTime(ticket.createdAt) : "", [ticket]);
   const confirmed = useMemo(() => ticket?.confirmedAt ? formatDateTime(ticket.confirmedAt) : "", [ticket]);
   if (!ticket) return null;
@@ -552,21 +561,21 @@ function TicketDrawer({
       <div className="drawer-overlay" onClick={onClose} />
       <aside className="drawer">
         <div className="drawer-hdr">
-          <h3>任務詳情</h3>
-          <button className="drawer-close" onClick={onClose} aria-label="關閉">×</button>
+          <h3>{tr("kb.detail")}</h3>
+          <button className="drawer-close" onClick={onClose} aria-label={tr("common.close")}>×</button>
         </div>
         <div className="drawer-body">
           <div className="drawer-summary">{ticket.summary}</div>
 
           <dl className="drawer-meta">
-            {ticket.groupName && (<><dt>來源群組</dt><dd>{ticket.groupName}</dd></>)}
-            {ticket.category && (<><dt>分類</dt><dd>{catLabel(ticket.category, ticket.categoryName)}</dd></>)}
-            {ticket.departmentName && (<><dt>部門</dt><dd>{ticket.departmentName}</dd></>)}
-            {ticket.assigneeDisplayName && (<><dt>指派</dt><dd>{ticket.assigneeDisplayName}</dd></>)}
-            {ticket.dueAt && (<><dt>截止</dt><dd>{formatDate(ticket.dueAt)}</dd></>)}
-            <dt>建立</dt><dd>{created}</dd>
-            {ticket.confirmedAt && (<><dt>核對</dt><dd>{ticket.confirmedByName ?? "—"} · {confirmed}</dd></>)}
-            <dt>狀態</dt><dd>{confirmLabel(ticket.confirmStatus)}</dd>
+            {ticket.groupName && (<><dt>{tr("kb.fldGroup")}</dt><dd>{ticket.groupName}</dd></>)}
+            {ticket.category && (<><dt>{tr("kb.fldCategory")}</dt><dd>{catLabel(ticket.category, ticket.categoryName)}</dd></>)}
+            {ticket.departmentName && (<><dt>{tr("kb.fldDept")}</dt><dd>{ticket.departmentName}</dd></>)}
+            {ticket.assigneeDisplayName && (<><dt>{tr("kb.fldAssignee")}</dt><dd>{ticket.assigneeDisplayName}</dd></>)}
+            {ticket.dueAt && (<><dt>{tr("kb.fldDue")}</dt><dd>{formatDate(ticket.dueAt)}</dd></>)}
+            <dt>{tr("kb.fldCreated")}</dt><dd>{created}</dd>
+            {ticket.confirmedAt && (<><dt>{tr("kb.fldVerified")}</dt><dd>{ticket.confirmedByName ?? "—"} · {confirmed}</dd></>)}
+            <dt>{tr("kb.fldStatus")}</dt><dd>{confirmLabel(ticket.confirmStatus)}</dd>
           </dl>
 
           <AssignBox ticket={ticket} onAssigned={onAssigned} />
@@ -579,7 +588,7 @@ function TicketDrawer({
               <button className="nc-lnk" onClick={() => {
                 navigateTo({ page: "convo-detail", uploadId: ticket.sourceUploadId as number });
                 onClose();
-              }}>查當日完整對話 →</button>
+              }}>{tr("kb.viewFullDay")}</button>
             </div>
           )}
         </div>
@@ -591,10 +600,10 @@ function TicketDrawer({
           )}
           {ticket.confirmStatus === "待簽核" || ticket.confirmStatus === "逾時警示" ? (
             <button className="btn btn-primary" onClick={() => onSignoff(ticket)} disabled={signing}>
-              {signing ? "核對中…" : "核對此筆"}
+              {signing ? tr("wr.verifying") : tr("kb.verifyThis")}
             </button>
           ) : (
-            <span className="drawer-note">已確認 · 正式列入紀錄</span>
+            <span className="drawer-note">{tr("wr.tipConfirmed")}</span>
           )}
         </div>
       </aside>
@@ -615,6 +624,7 @@ function formatDateTime(iso: string): string {
 // ⚠️ 不自己做防連點：後端 `POST /warroom/batches/rerun` 已有**每租戶 5 分鐘限流**，
 //    自己再做一套只會兩邊不一致。這裡只負責把 429 的中文訊息好好呈現。
 function TriggerAnalysisButton() {
+  const tr = useT();
   const toast = useToast();
   const [running, setRunning] = useState(false);
   return (
@@ -627,19 +637,19 @@ function TriggerAnalysisButton() {
           const r = await triggerWarroomBatchRerun();
           toast.show(
             r.completed > 0
-              ? `分析完成 · 讀了 ${r.total} 個群組，${r.completed} 個有產出`
-              : `分析完成 · 讀了 ${r.total} 個群組，今天還沒有可以整理成任務的對話`,
+              ? tr("kb.analysisDone", { total: r.total, done: r.completed })
+              : tr("kb.analysisEmpty", { total: r.total }),
             r.completed > 0 ? "ok" : "info",
           );
           window.location.reload();
         } catch (e) {
-          toast.show(e instanceof ApiError ? e.message : "觸發失敗", "danger");
+          toast.show(e instanceof ApiError ? e.message : tr("kb.triggerFailed"), "danger");
         } finally {
           setRunning(false);
         }
       }}
     >
-      {running ? "分析中…（約 1 分鐘）" : "立即分析今天的對話"}
+      {running ? tr("kb.analysing") : tr("kb.analyseNow")}
     </button>
   );
 }
@@ -655,6 +665,7 @@ function CcPicker({ ticketId, excludeUserId, onDone }: {
   excludeUserId: string | null;
   onDone: () => void;
 }) {
+  const tr = useT();
   const [members, setMembers] = useState<AssignableMember[] | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -672,7 +683,7 @@ function CcPicker({ ticketId, excludeUserId, onDone }: {
     const n = new Set(s);
     if (n.has(id)) n.delete(id);
     else if (n.size < 5) n.add(id);          // 後端上限 5，這裡先擋住不讓人白按
-    else toast.show("一次最多知會 5 個人", "warn");
+    else toast.show(tr("kb.max5"), "warn");
     return n;
   });
 
@@ -687,18 +698,18 @@ function CcPicker({ ticketId, excludeUserId, onDone }: {
       const bad = r.results.filter((x) => !x.notified);
       toast.show(
         bad.length === 0
-          ? `已私訊通知 ${ok.map((x) => x.name ?? "").join("、")}`
-          : `已通知 ${ok.length} 人 · ${bad.map((x) => `${x.name ?? "有人"}沒收到`).join("、")}，請另外跟他說一聲`,
+          ? tr("kb.notified", { names: ok.map((x) => x.name ?? "").join("、") })
+          : tr("kb.notifiedPartial", { n: ok.length, who: bad.map((x) => x.name ?? "?").join("、") }),
         bad.length === 0 ? "ok" : "warn",
       );
       onDone();
     } catch (e) {
-      toast.show(e instanceof ApiError ? e.message : "通知失敗", "danger");
+      toast.show(e instanceof ApiError ? e.message : tr("kb.notifyFailed"), "danger");
     } finally { setBusy(false); }
   }
 
-  if (members === null) return <div className="ab-opts"><span className="ab-hint">載入中…</span></div>;
-  if (members.length === 0) return <div className="ab-opts"><span className="ab-hint">沒有其他可通知的成員</span></div>;
+  if (members === null) return <div className="ab-opts"><span className="ab-hint">{tr("common.loading")}</span></div>;
+  if (members.length === 0) return <div className="ab-opts"><span className="ab-hint">{tr("kb.noOthers")}</span></div>;
 
   return (
     <div className="ab-opts">
@@ -712,11 +723,11 @@ function CcPicker({ ticketId, excludeUserId, onDone }: {
           <span className="ab-check" aria-hidden>{picked.has(m.userId) ? "✓" : ""}</span>
           {m.name}
           {/* 沒綁 LINE 就收不到私訊 —— 先講，不要讓人選了才發現 */}
-          {!m.hasLineBinding && <span className="ab-nobind">未綁 LINE · 收不到</span>}
+          {!m.hasLineBinding && <span className="ab-nobind">{tr("kb.noLineCantReach")}</span>}
         </button>
       ))}
       <button className="btn btn-primary ab-send" onClick={() => void send()} disabled={busy || picked.size === 0}>
-        {busy ? "傳送中…" : `私訊通知這 ${picked.size} 人`}
+        {busy ? tr("kb.sending") : tr("kb.notifyN", { n: picked.size })}
       </button>
     </div>
   );
