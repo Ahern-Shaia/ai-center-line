@@ -10,6 +10,8 @@ import {
 } from "../../api";
 import { usePermissions } from "../../permission/PermissionContext";
 import { useToast } from "../../Toast";
+import { t } from "../../i18n";
+import { useT } from "../../i18n/useT";
 import ConfirmDialog from "../../shared/ConfirmDialog";
 import { useTenantPicker } from "../../shared/TenantPicker";
 import { usePageGuide } from "../../shared/usePageGuide";
@@ -17,6 +19,7 @@ import { usePageGuide } from "../../shared/usePageGuide";
 // scheduler-config M4 · 定時任務設定
 // 對照 docs/modules/scheduler-config.md §4 · v0.2 APPROVED
 export default function SchedulerConfigPage() {
+  const tr = useT();
   const guide = usePageGuide("scheduler-config");
   const session = getSession();
   const perms = usePermissions();
@@ -42,7 +45,7 @@ export default function SchedulerConfigPage() {
       const res = await listSchedulerConfigs(pickedTenantId);
       setConfigs(res.configs);
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("common.loadFailed"), "danger");
     } finally {
       setLoading(false);
     }
@@ -112,10 +115,10 @@ export default function SchedulerConfigPage() {
         lookbackDays: patch.lookbackDays ?? active.lookbackDays,
         concurrency: patch.concurrency ?? active.concurrency,
       });
-      toast.show("已儲存 · SchedulerManager 已重排下次觸發時間", "ok");
+      toast.show(tr("sc.saved"), "ok");
       await refresh();
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "儲存失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("common.saveFailed"), "danger");
     } finally {
       setBusy(false);
     }
@@ -135,8 +138,8 @@ export default function SchedulerConfigPage() {
   if (!canView) {
     return (
       <div className="pane">
-        <div className="pane-hdr"><div><h1>分析排程</h1></div></div>
-        <div className="dm-empty">你的角色無權查看此頁 · 請聯繫管理員</div>
+        <div className="pane-hdr"><div><h1>{tr("nav.schedulerConfig")}</h1></div></div>
+        <div className="dm-empty">{tr("common.noPagePermission")}</div>
       </div>
     );
   }
@@ -145,11 +148,11 @@ export default function SchedulerConfigPage() {
     <div className="pane">
       <div className="pane-hdr">
         <div>
-          <h1>分析排程{guide.toggle}</h1>
+          <h1>{tr("nav.schedulerConfig")}{guide.toggle}</h1>
           <div className="sub">
             {canManagePlatform
-              ? "平台預設設定 · 可調整整體預設值與各公司的個別設定"
-              : "貴公司的排程設定 · 未調整時採用系統預設值（部分進階項目由 AIPROOT 維護）"}
+              ? tr("sc.subPlatform")
+              : tr("sc.subTenant")}
           </div>
         </div>
       </div>
@@ -165,10 +168,9 @@ export default function SchedulerConfigPage() {
           現在草稿卡對租戶也給，這裡改成說明「沒有排程會怎樣」。 */}
       {!loading && configs.length === 0 && (
         <div className="dm-empty">
-          還沒有分析排程
+          {tr("sc.noneTitle")}
           <div className="dm-empty-hint">
-            沒有排程的話，<b>群組訊息收得到、但不會被整理成任務與日報</b>。<br />
-            下方是建議設定（每天 18:00），確認後按儲存就會開始運作。
+            {tr("sc.noneHint")}
           </div>
         </div>
       )}
@@ -181,7 +183,7 @@ export default function SchedulerConfigPage() {
         const active = existing ?? ((canManagePlatform || canManageTenant) ? draftCfg(sid) : null);
         if (!active) return null;
         const isOverride = resolved.get(sid)?.override !== null && resolved.get(sid)?.override !== undefined;
-        const title = sid === "pdr" ? "個人日報 · 每日整理" : "群組日誌 · 每日整理";
+        const title = tr(sid === "pdr" ? "sc.jobPdr" : "sc.jobGroup");
         return (
           <SchedulerCard
             key={sid}
@@ -209,21 +211,21 @@ export default function SchedulerConfigPage() {
           }
         }}
         busy={busy}
-        title="停用定時任務"
+        title={tr("sc.disableTitle")}
         body={
           <div>
-            即將停用「<b>{confirmDisable?.schedulerId === "pdr" ? "個人日報" : "群組日誌"}</b>」的每日自動整理
+            {tr("sc.disableBody", { what: tr(confirmDisable?.schedulerId === "pdr" ? "sc.pdrShort" : "sc.groupShort") })}
             <div style={{ marginTop: 10, padding: 10, background: "var(--warn-tint)", border: "1px solid #F5D5A6", borderRadius: 6, fontSize: 12, color: "#7A4E1B" }}>
-              停用後：
+              {tr("sc.disableAfter")}
               <ul style={{ marginLeft: 18, marginTop: 4 }}>
-                <li>系統不會自動每天在指定時間跑</li>
-                <li>下游主管 LINE 通知會斷</li>
-                <li>員工仍可從「我的日報」/「立即分析」手動觸發</li>
+                <li>{tr("sc.disable1")}</li>
+                <li>{tr("sc.disable2")}</li>
+                <li>{tr("sc.disable3")}</li>
               </ul>
             </div>
           </div>
         }
-        confirmLabel="確定停用"
+        confirmLabel={tr("sc.disableConfirm")}
         tone="danger"
       />
     </div>
@@ -247,6 +249,7 @@ function SchedulerCard({
   onToggle: (next: boolean) => void;
   onSave: (patch: Partial<SchedulerConfigRow>) => void;
 }) {
+  const tr = useT();
   const [cronExpr, setCronExpr] = useState(cfg.cronExpr);
   const [minSourceCount, setMinSourceCount] = useState(cfg.minSourceCount);
   const [lookbackDays, setLookbackDays] = useState(cfg.lookbackDays);
@@ -281,27 +284,27 @@ function SchedulerCard({
         <div>
           <h2 style={{ margin: 0, fontSize: 15 }}>{title}</h2>
           <div className="sub" style={{ marginTop: 3 }}>
-            {isDraft ? "這家尚未建立排程 · 以下為建議值，儲存後才生效" : (isOverride ? "已自訂" : "採用系統預設值")}
+            {isDraft ? tr("sc.draft") : tr(isOverride ? "sc.custom" : "sc.usingDefault")}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <span className={`sc-status ${cfg.enabled ? "on" : "off"}`}>
-            {cfg.enabled ? "啟用中" : "停用"}
+            {tr(cfg.enabled ? "sc.on" : "common.off")}
           </span>
           {canEditBasic && (
             <button
               className="btn"
               onClick={() => onToggle(!cfg.enabled)}
               disabled={busy}
-            >{cfg.enabled ? "停用" : "啟用"}</button>
+            >{tr(cfg.enabled ? "common.off" : "common.on")}</button>
           )}
         </div>
       </div>
 
       <div className="sc-row">
         <div className="sc-row-lbl">
-          執行時間
-          <span className="sc-row-hint">每天固定時間執行</span>
+          {tr("sc.runAt")}
+          <span className="sc-row-hint">{tr("sc.runAtHint")}</span>
         </div>
         <div className="sc-row-val">
           {dailyTime !== null ? (
@@ -314,7 +317,7 @@ function SchedulerCard({
               style={{ width: 130 }}
             />
           ) : (
-            <span style={{ fontSize: 13, color: "var(--ink-2)" }}>使用進階排程（見下方）</span>
+            <span style={{ fontSize: 13, color: "var(--ink-2)" }}>{tr("sc.usingAdvanced")}</span>
           )}
           <span className="sc-code-tz">{cfg.timeZone}</span>
           <span style={{ fontSize: 12, color: "var(--ink-3)" }}>· {cronHuman}</span>
@@ -322,17 +325,17 @@ function SchedulerCard({
       </div>
 
       <div className="sc-row">
-        <div className="sc-row-lbl">下次執行</div>
+        <div className="sc-row-lbl">{tr("sc.nextRun")}</div>
         <div className="sc-row-val">
           {isDirty ? (
-            <span style={{ fontSize: 12.5, color: "var(--warn)" }}>設定尚未儲存 · 儲存後重算</span>
+            <span style={{ fontSize: 12.5, color: "var(--warn)" }}>{tr("sc.unsaved")}</span>
           ) : nextRun ? (
             <span style={{ fontSize: 13 }}>
               {formatNextRun(nextRun)}
               <span style={{ fontSize: 12, color: "var(--ink-3)" }}>（{nextRun.toLocaleString("zh-TW", { hour12: false })}）</span>
             </span>
           ) : (
-            <span style={{ fontSize: 12.5, color: "var(--ink-3)" }}>{cfg.enabled ? "—" : "已停用 · 不會自動執行"}</span>
+            <span style={{ fontSize: 12.5, color: "var(--ink-3)" }}>{cfg.enabled ? "—" : tr("sc.disabledNote")}</span>
           )}
         </div>
       </div>
@@ -340,9 +343,9 @@ function SchedulerCard({
       <div className="sc-row">
         <div className="sc-row-lbl">
           <button className="nc-lnk mut" style={{ padding: 0 }} onClick={() => setShowAdvanced((v) => !v)}>
-            {showAdvanced ? "▾" : "▸"} 進階排程設定
+            {showAdvanced ? "▾" : "▸"} {tr("sc.advanced")}
           </button>
-          <span className="sc-row-hint">非「每天固定時間」才需要</span>
+          <span className="sc-row-hint">{tr("sc.advancedHint")}</span>
         </div>
         <div className="sc-row-val">
           {showAdvanced ? (
@@ -354,21 +357,21 @@ function SchedulerCard({
                 disabled={busy || !canEditBasic}
                 style={{ width: 160, fontFamily: "var(--mono, ui-monospace, monospace)" }}
               />
-              <span style={{ fontSize: 12, color: "var(--ink-3)" }}>Cron 表達式 · e.g. 30 17 * * * ＝每天 17:30</span>
+              <span style={{ fontSize: 12, color: "var(--ink-3)" }}>{tr("sc.cronHint")}</span>
             </>
           ) : (
-            <span style={{ fontSize: 12, color: "var(--ink-3)" }}>目前：<code>{cronExpr}</code></span>
+            <span style={{ fontSize: 12, color: "var(--ink-3)" }}>{tr("sc.cronNow")}<code>{cronExpr}</code></span>
           )}
         </div>
       </div>
 
       <div className="sc-row">
         <div className="sc-row-lbl">
-          跳過門檻
-          <span className="sc-row-hint">訊息數少於 N 不觸發 AI (成本控管)</span>
+          {tr("sc.skipThreshold")}
+          <span className="sc-row-hint">{tr("sc.skipThresholdHint")}</span>
         </div>
         <div className="sc-row-val">
-          當日私訊 &lt;
+          {tr("sc.dmsUnder")} &lt;
           <input
             className="tf"
             type="number"
@@ -377,7 +380,7 @@ function SchedulerCard({
             disabled={busy || !canEditBasic}
             style={{ width: 60 }}
           />
-          則時跳過
+          {tr("sc.thenSkip")}
         </div>
       </div>
 
@@ -389,8 +392,8 @@ function SchedulerCard({
       {canEditCost && schedulerId === "group_batch" && (
         <div className="sc-row">
           <div className="sc-row-lbl">
-            失敗補跑天數
-            <span className="sc-row-hint">前一次執行失敗時，往前補跑幾天的資料</span>
+            {tr("sc.lookback")}
+            <span className="sc-row-hint">{tr("sc.lookbackHint")}</span>
           </div>
           <div className="sc-row-val">
             <input
@@ -400,7 +403,7 @@ function SchedulerCard({
               onChange={(e) => setLookbackDays(Number(e.target.value))}
               disabled={busy || !canEditCost}
               style={{ width: 60 }}
-            /> 天
+            /> {tr("sc.days")}
           </div>
         </div>
       )}
@@ -408,8 +411,8 @@ function SchedulerCard({
       {canEditCost && (
         <div className="sc-row">
           <div className="sc-row-lbl">
-            併發限制
-            <span className="sc-row-hint">同時處理幾個群組 · 設太高可能超出 AI 服務限制</span>
+            {tr("sc.concurrency")}
+            <span className="sc-row-hint">{tr("sc.concurrencyHint")}</span>
           </div>
           <div className="sc-row-val">
             <input
@@ -419,13 +422,13 @@ function SchedulerCard({
               onChange={(e) => setConcurrency(Number(e.target.value))}
               disabled={busy || !canEditCost}
               style={{ width: 60 }}
-            /> 個
+            /> {tr("sc.units")}
           </div>
         </div>
       )}
 
       <div className="sc-row">
-        <div className="sc-row-lbl">上次執行</div>
+        <div className="sc-row-lbl">{tr("sc.lastRun")}</div>
         <div className="sc-row-val">
           {lastRun ? (
             <div style={{ fontSize: 12, color: "var(--ink-3)" }}>
@@ -439,7 +442,7 @@ function SchedulerCard({
               )}
             </div>
           ) : (
-            <div style={{ fontSize: 12, color: "var(--ink-3)" }}>尚未執行</div>
+            <div style={{ fontSize: 12, color: "var(--ink-3)" }}>{tr("sc.neverRun")}</div>
           )}
         </div>
       </div>
@@ -450,7 +453,7 @@ function SchedulerCard({
             className="btn btn-primary"
             disabled={busy || !isDirty}
             onClick={() => onSave({ cronExpr, minSourceCount, lookbackDays, concurrency })}
-          >儲存變更</button>
+          >{tr("common.save")}</button>
         </div>
       )}
     </div>
@@ -481,18 +484,18 @@ function formatNextRun(d: Date): string {
   const day = (x: Date) => x.toLocaleDateString("en-CA");
   const now = new Date();
   const tomorrow = new Date(now.getTime() + 86400000);
-  if (day(d) === day(now)) return `今天 ${hhmm} `;
-  if (day(d) === day(tomorrow)) return `明天 ${hhmm} `;
+  if (day(d) === day(now)) return `${t("sc.today")} ${hhmm} `;
+  if (day(d) === day(tomorrow)) return `${t("sc.tomorrow")} ${hhmm} `;
   return `${d.toLocaleDateString("zh-TW", { month: "numeric", day: "numeric" })} ${hhmm} `;
 }
 
 function humanCron(expr: string): string {
   // 簡易 · 只解析「HH:MM 每天」pattern
   const parts = expr.trim().split(/\s+/);
-  if (parts.length !== 5) return "自訂 · 每次觸發時算";
+  if (parts.length !== 5) return t("sc.cronCustom");
   const [min, hr, dom, mon, dow] = parts;
   if (dom === "*" && mon === "*" && dow === "*" && /^\d+$/.test(min) && /^\d+$/.test(hr)) {
-    return `每天 ${hr.padStart(2, "0")}:${min.padStart(2, "0")}`;
+    return t("sc.everyDayAt", { t: `${hr.padStart(2, "0")}:${min.padStart(2, "0")}` });
   }
-  return "自訂 · 每次觸發時算";
+  return t("sc.cronCustom");
 }
