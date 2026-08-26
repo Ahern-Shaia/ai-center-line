@@ -996,19 +996,12 @@ export interface LineBotDto {
 
 /** 0068 · 群組類型 · 只有 department 定義組織 */
 export type LineGroupType = "department" | "process" | "announcement" | "test";
-export const GROUP_TYPE_LABEL: Record<LineGroupType, string> = {
-  department: "部門群",
-  process: "流程群",
-  announcement: "公告群",
-  test: "測試群",
-};
+// ⚠️ 2026-08-26 i18n：文字搬進 i18n/*.ts（key = `groupType.<值>` / `groupTypeHint.<值>`）。
+//    `LineGroupType` 的值是 DB 值（line_group.group_type），**不可翻**。
+export const GROUP_TYPES: LineGroupType[] = ["department", "process", "announcement", "test"];
+export const groupTypeLabel = (v: LineGroupType) => t(`groupType.${v}`);
 /** 下拉旁邊那句說明 —— 少了它，使用者無從判斷該選哪個 */
-export const GROUP_TYPE_HINT: Record<LineGroupType, string> = {
-  department: "這群人就是那個部門 · 唯一會決定成員部門歸屬的類型",
-  process: "一件跨部門的事（報工、排車）· 成員來自各部門",
-  announcement: "全員或大範圍佈達 · 幾乎所有人都在裡面",
-  test: "測試或一對一 · 不屬於組織",
-};
+export const groupTypeHint = (v: LineGroupType) => t(`groupTypeHint.${v}`);
 
 export interface LineGroupRow {
   groupRegistryId: string;

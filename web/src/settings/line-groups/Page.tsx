@@ -11,9 +11,10 @@ import {
 } from "../../api";
 import { usePermissions } from "../../permission/PermissionContext";
 import { useToast } from "../../Toast";
+import { useT } from "../../i18n/useT";
 import ConfirmDialog from "../../shared/ConfirmDialog";
 import StyledSelect from "../../shared/StyledSelect";
-import { GROUP_TYPE_LABEL, GROUP_TYPE_HINT, type LineGroupType } from "../../api";
+import { GROUP_TYPES, groupTypeHint, type LineGroupType } from "../../api";
 import { useTenantPicker } from "../../shared/TenantPicker";
 import { usePageGuide } from "../../shared/usePageGuide";
 
@@ -21,6 +22,7 @@ import { usePageGuide } from "../../shared/usePageGuide";
 // 對照 docs/roles-permissions-matrix.md §3.4 · perm=line-groups:view / assign
 // 為了 tenant 自己清楚哪個 LINE 群屬於哪個部門 · 提供分派 UI
 export default function LineGroupsPage() {
+  const tr = useT();
   const guide = usePageGuide("channels");
   const session = getSession();
   const perms = usePermissions();
@@ -49,7 +51,7 @@ export default function LineGroupsPage() {
       setGroups(gRes.groups);
       setDepts(dRes.departments);
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("common.loadFailed"), "danger");
     } finally {
       setLoading(false);
     }
@@ -62,9 +64,9 @@ export default function LineGroupsPage() {
     try {
       const res = await patchLineGroup(groupRegistryId, { departmentId });
       setGroups((s) => s.map((g) => g.groupRegistryId === groupRegistryId ? res.group : g));
-      toast.show("已分派", "ok");
+      toast.show(tr("lg.assigned"), "ok");
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "分派失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("lg.assignFailed"), "danger");
     } finally {
       setSavingIds((s) => {
         const next = new Set(s);
@@ -86,11 +88,11 @@ export default function LineGroupsPage() {
     setSavingIds((s) => new Set(s).add(id));
     try {
       await patchLineGroup(id, { hidden: true });
-      toast.show("已移除（歷史記錄仍保留群名）", "ok");
+      toast.show(tr("lg.removed"), "ok");
       setConfirmHide(null);
       await refresh();
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "移除失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("lg.removeFailed"), "danger");
     } finally {
       setSavingIds((s) => { const n = new Set(s); n.delete(id); return n; });
     }
@@ -107,9 +109,9 @@ export default function LineGroupsPage() {
     try {
       const res = await patchLineGroup(groupRegistryId, { groupType });
       setGroups((s) => s.map((g) => g.groupRegistryId === groupRegistryId ? res.group : g));
-      toast.show(`已改為「${GROUP_TYPE_LABEL[groupType]}」`, "ok");
+      toast.show(tr("lg.typeChanged", { what: tr(`groupType.${groupType}`) }), "ok");
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "更新失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("common.updateFailed"), "danger");
     } finally {
       setSavingIds((s) => {
         const next = new Set(s);
@@ -122,14 +124,14 @@ export default function LineGroupsPage() {
   async function handleToggle(
     groupRegistryId: string, field: "analyzeEnabled" | "replyEnabled", enabled: boolean,
   ) {
-    const label = field === "analyzeEnabled" ? "AI 分析" : "群組回話";
+    const label = tr(field === "analyzeEnabled" ? "lg.aiAnalysis" : "lg.replyEnabled");
     setSavingIds((s) => new Set(s).add(groupRegistryId));
     try {
       const res = await patchLineGroup(groupRegistryId, { [field]: enabled });
       setGroups((s) => s.map((g) => g.groupRegistryId === groupRegistryId ? res.group : g));
-      toast.show(`已${enabled ? "啟用" : "停用"}${label}`, "ok");
+      toast.show(tr(enabled ? "lg.turnedOn" : "lg.turnedOff", { what: label }), "ok");
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "更新失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("common.updateFailed"), "danger");
     } finally {
       setSavingIds((s) => {
         const next = new Set(s);
@@ -146,8 +148,8 @@ export default function LineGroupsPage() {
   if (!canView) {
     return (
       <div className="pane">
-        <div className="pane-hdr"><div><h1>LINE 群組</h1></div></div>
-        <div className="dm-empty">你的角色無權查看此頁 · 請聯繫管理員</div>
+        <div className="pane-hdr"><div><h1>{tr("nav.channels")}</h1></div></div>
+        <div className="dm-empty">{tr("common.noPagePermission")}</div>
       </div>
     );
   }
@@ -156,10 +158,12 @@ export default function LineGroupsPage() {
     <div className="pane">
       <div className="pane-hdr">
         <div>
-          <h1>LINE 群組{guide.toggle}</h1>
+          <h1>{tr("nav.channels")}{guide.toggle}</h1>
           <div className="sub">
-            {loading ? "載入中…" : `共 ${activeGroups.length} 個群組（啟用中）${leftGroups.length > 0 ? ` · ${leftGroups.length} 群已離開` : ""}`}
-            {unassignedCount > 0 && <span style={{ color: "var(--warn)", marginLeft: 8 }}> · <b>{unassignedCount}</b> 群未分派部門</span>}
+            {loading ? tr("common.loading")
+              : tr("lg.count", { n: activeGroups.length })
+                + (leftGroups.length > 0 ? ` · ${tr("lg.countLeft", { n: leftGroups.length })}` : "")}
+            {unassignedCount > 0 && <span style={{ color: "var(--warn)", marginLeft: 8 }}> · {tr("lg.countUnassigned", { n: unassignedCount })}</span>}
           </div>
         </div>
         {picker}
@@ -169,20 +173,20 @@ export default function LineGroupsPage() {
       {loading && <Spinner block />}
 
       {!loading && activeGroups.length === 0 && leftGroups.length === 0 && (
-        <div className="dm-empty">尚無群組 · 加 bot 到 LINE 群後 · 首則訊息會自動註冊</div>
+        <div className="dm-empty">{tr("lg.empty")}</div>
       )}
 
       {!loading && activeGroups.length > 0 && (
         <table className="lg-table">
           <thead>
             <tr>
-              <th style={{ minWidth: 180 }}>群組</th>
-              <th style={{ minWidth: 160 }}>部門</th>
-              <th style={{ minWidth: 150 }}>群組類型</th>
-              <th style={{ minWidth: 90 }}>AI 分析</th>
-              <th style={{ minWidth: 100 }}>群組回話</th>
-              <th style={{ minWidth: 90, textAlign: "right" }}>訊息數</th>
-              <th style={{ minWidth: 120 }}>最後活動</th>
+              <th style={{ minWidth: 180 }}>{tr("lg.colGroup")}</th>
+              <th style={{ minWidth: 160 }}>{tr("kb.fldDept")}</th>
+              <th style={{ minWidth: 150 }}>{tr("lg.colType")}</th>
+              <th style={{ minWidth: 90 }}>{tr("lg.aiAnalysis")}</th>
+              <th style={{ minWidth: 100 }}>{tr("lg.replyEnabled")}</th>
+              <th style={{ minWidth: 90, textAlign: "right" }}>{tr("lg.colMsgs")}</th>
+              <th style={{ minWidth: 120 }}>{tr("lg.colLastSeen")}</th>
             </tr>
           </thead>
           <tbody>
@@ -191,19 +195,19 @@ export default function LineGroupsPage() {
               return (
                 <tr key={g.groupRegistryId}>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{g.displayName ?? "(群名未同步)"}</div>
+                    <div style={{ fontWeight: 600 }}>{g.displayName ?? tr("lg.nameNotSynced")}</div>
                     {/* ⚠️ 要能複製**完整**的 ID。原本只顯示 slice(0,16)…，
                         而群組 ID 在 LINE App 裡本來就看不到 —— 這裡截斷就等於沒有人拿得到它，
                         「通知設定」那邊的「手動輸入群組 ID」也跟著變成一條死路。*/}
                     <button
                       type="button"
                       className="lg-gid"
-                      title={`點一下複製完整 ID：${g.groupId}`}
+                      title={tr("lg.copyIdTip", { id: g.groupId })}
                       onClick={() => {
                         void navigator.clipboard?.writeText(g.groupId);
-                        toast.show("已複製完整群組 ID", "ok");
+                        toast.show(tr("lg.idCopied"), "ok");
                       }}
-                    >{g.groupId.slice(0, 16)}… <span className="lg-gid-cp">複製</span></button>
+                    >{g.groupId.slice(0, 16)}… <span className="lg-gid-cp">{tr("common.copy")}</span></button>
                   </td>
                   <td>
                     {canAssign ? (
@@ -211,43 +215,42 @@ export default function LineGroupsPage() {
                         items={depts.map((d) => ({ id: d.departmentId, label: d.departmentName }))}
                         value={g.departmentId ?? ""}
                         onChange={(v) => void handleAssign(g.groupRegistryId, v || null)}
-                        ariaLabel={`分派「${g.displayName ?? g.groupId}」到部門`}
+                        ariaLabel={tr("lg.assignAria", { g: g.displayName ?? g.groupId })}
                         disabled={saving}
                         allowEmpty
-                        emptyLabel="(未分派)"
+                        emptyLabel={tr("lg.unassigned")}
                       />
                     ) : (
-                      <span>{g.departmentName ?? "(未分派)"}</span>
+                      <span>{g.departmentName ?? tr("lg.unassigned")}</span>
                     )}
                   </td>
                   <td>
                     {canAssign ? (
                       <>
                         <StyledSelect
-                          items={(Object.keys(GROUP_TYPE_LABEL) as LineGroupType[])
-                            .map((t) => ({ id: t, label: GROUP_TYPE_LABEL[t] }))}
+                          items={GROUP_TYPES.map((v) => ({ id: v, label: tr(`groupType.${v}`) }))}
                           value={g.groupType}
                           onChange={(v) => void handleGroupType(g.groupRegistryId, v as LineGroupType)}
-                          ariaLabel={`「${g.displayName ?? g.groupId}」的群組類型`}
+                          ariaLabel={tr("lg.typeAria", { g: g.displayName ?? g.groupId })}
                           disabled={saving}
                         />
                         {/* 少了這句沒人知道該選哪個 —— 四個類型的差別不在字面上 */}
-                        <div className="lg-type-hint">{GROUP_TYPE_HINT[g.groupType]}</div>
+                        <div className="lg-type-hint">{groupTypeHint(g.groupType)}</div>
                       </>
                     ) : (
-                      <span>{GROUP_TYPE_LABEL[g.groupType]}</span>
+                      <span>{tr(`groupType.${g.groupType}`)}</span>
                     )}
                   </td>
                   <ToggleCell
                     on={g.analyzeEnabled} editable={canAssign} saving={saving}
-                    label={`「${g.displayName ?? g.groupId}」的 AI 分析`}
+                    label={tr("lg.aiAria", { g: g.displayName ?? g.groupId })}
                     onChange={(v) => void handleToggle(g.groupRegistryId, "analyzeEnabled", v)}
                   />
                   {/* bot 在群裡回「已收到完成回報」那類訊息。誤判會被整個群看到，
                       所以客戶要能自己關掉（2026-07-29 回報）。關掉不影響分析與訊號落地。 */}
                   <ToggleCell
                     on={g.replyEnabled} editable={canAssign} saving={saving}
-                    label={`「${g.displayName ?? g.groupId}」的群組回話`}
+                    label={tr("lg.replyAria", { g: g.displayName ?? g.groupId })}
                     onChange={(v) => void handleToggle(g.groupRegistryId, "replyEnabled", v)}
                   />
                   <td style={{ textAlign: "right", fontFamily: "var(--mono, ui-monospace, monospace)", fontSize: 12 }}>{g.eventCount}</td>
@@ -261,16 +264,16 @@ export default function LineGroupsPage() {
 
       {!loading && leftGroups.length > 0 && (
         <>
-          <h2 style={{ fontSize: 14, marginTop: 24, marginBottom: 4, color: "var(--ink-3)" }}>已離開的群 ({leftGroups.length})</h2>
+          <h2 style={{ fontSize: 14, marginTop: 24, marginBottom: 4, color: "var(--ink-3)" }}>{tr("lg.leftGroups", { n: leftGroups.length })}</h2>
           <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginBottom: 8 }}>
-            bot 已不在這些群 · 可「移除」讓清單乾淨（歷史記錄仍保留群名；bot 若被重新加入會自動回到上方清單）
+            {tr("lg.leftGroupsHint")}
           </div>
           <table className="lg-table lg-table-left">
             <thead>
               <tr>
-                <th style={{ minWidth: 180 }}>群組</th>
-                <th style={{ minWidth: 160 }}>原部門</th>
-                <th style={{ minWidth: 120 }}>最後活動</th>
+                <th style={{ minWidth: 180 }}>{tr("lg.colGroup")}</th>
+                <th style={{ minWidth: 160 }}>{tr("lg.colWasDept")}</th>
+                <th style={{ minWidth: 120 }}>{tr("lg.colLastSeen")}</th>
                 <th></th>
               </tr>
             </thead>
@@ -278,10 +281,10 @@ export default function LineGroupsPage() {
               {leftGroups.map((g) => (
                 <tr key={g.groupRegistryId} style={{ opacity: 0.55 }}>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{g.displayName ?? "(群名未同步)"}</div>
+                    <div style={{ fontWeight: 600 }}>{g.displayName ?? tr("lg.nameNotSynced")}</div>
                     <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{g.groupId.slice(0, 16)}…</div>
                   </td>
-                  <td>{g.departmentName ?? "(未分派)"}</td>
+                  <td>{g.departmentName ?? tr("lg.unassigned")}</td>
                   <td style={{ fontSize: 12, color: "var(--ink-3)" }}>{formatDateTime(g.lastEventAt)}</td>
                   <td style={{ textAlign: "right" }}>
                     {canAssign && (
@@ -289,7 +292,7 @@ export default function LineGroupsPage() {
                         className="btn btn-sm btn-ghost"
                         onClick={() => setConfirmHide({ id: g.groupRegistryId, name: g.displayName ?? g.groupId.slice(0, 16) })}
                         disabled={savingIds.has(g.groupRegistryId)}
-                      >移除</button>
+                      >{tr("common.remove")}</button>
                     )}
                   </td>
                 </tr>
@@ -304,17 +307,16 @@ export default function LineGroupsPage() {
         onClose={() => { if (!confirmHide || !savingIds.has(confirmHide.id)) setConfirmHide(null); }}
         onConfirm={() => void doHide()}
         busy={confirmHide ? savingIds.has(confirmHide.id) : false}
-        title="移除已離開的群"
+        title={tr("lg.removeTitle")}
         body={
           <div style={{ fontSize: 13, lineHeight: 1.7 }}>
-            將「<b>{confirmHide?.name}</b>」從清單移除。
+            {tr("lg.removeBody", { name: confirmHide?.name ?? "" })}
             <div style={{ marginTop: 8, fontSize: 12, color: "var(--ink-3)" }}>
-              這只是隱藏，不會刪除資料 —— 過去的群組日誌、分析記錄仍會顯示這個群名。
-              若 bot 之後被重新加入該群，它會自動回到上方的群組清單。
+              {tr("lg.removeBodyHint")}
             </div>
           </div>
         }
-        confirmLabel="確定移除"
+        confirmLabel={tr("lg.removeConfirm")}
         tone="primary"
       />
     </div>
@@ -329,9 +331,10 @@ function formatDateTime(iso: string): string {
 function ToggleCell({ on, editable, saving, label, onChange }: {
   on: boolean; editable: boolean; saving: boolean; label: string; onChange: (v: boolean) => void;
 }) {
+  const tr = useT();
   const text = (
     <span style={{ fontSize: 12, color: on ? "var(--ok, #059669)" : "var(--ink-3)" }}>
-      {on ? "啟用" : "停用"}
+      {tr(on ? "common.on" : "common.off")}
     </span>
   );
   return (

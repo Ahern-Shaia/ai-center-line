@@ -1,6 +1,6 @@
 import Spinner from "../../shared/Spinner";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { getOrgOverview, ApiError, GROUP_TYPE_LABEL, type OrgOverview, type OrgMember, type LineGroupType } from "../../api";
+import { getOrgOverview, ApiError, groupTypeLabel, type OrgOverview, type OrgMember, type LineGroupType } from "../../api";
 import { useToast } from "../../Toast";
 
 // 組織關係圖（org-overview M1 → 2026-08-21 改左右樹）· 資料驅動 · 座標用量不用排。
@@ -204,7 +204,7 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
                 <div className="n">
                   {g.name}
                   <span className={`og-cross-badge ${g.groupType}`}>
-                    {GROUP_TYPE_LABEL[g.groupType as LineGroupType] ?? g.groupType}
+                    {groupTypeLabel(g.groupType as LineGroupType)}
                   </span>
                 </div>
                 <div className="m">{g.memberCount} 人</div>
