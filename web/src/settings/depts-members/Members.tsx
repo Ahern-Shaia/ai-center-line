@@ -1,4 +1,6 @@
 import Spinner from "../../shared/Spinner";
+import { t } from "../../i18n";
+import { useT } from "../../i18n/useT";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   listDepartments,
@@ -63,6 +65,7 @@ export function Members({
   canEdit: boolean;
   onChanged: () => void;
 }) {
+  const tr = useT();
   const toast = useToast();
   const perms = usePermissions();
   // MDA · 分配部門與「改角色/刪除」是兩件事，權限不同：
@@ -106,7 +109,7 @@ export function Members({
       setActivity(actRes.activity);
       setCustomRoles(crRes.roles);
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("common.loadFailed"), "danger");
     } finally {
       setLoading(false);
     }
@@ -119,11 +122,11 @@ export function Members({
     setSavingDept(u.userId);
     try {
       await assignUserDepartment(u.userId, { tenantId, departmentId });
-      toast.show(departmentId ? "已調整所屬部門" : "已移出部門", "ok");
+      toast.show(tr(departmentId ? "mb.deptChanged" : "mb.deptRemoved"), "ok");
       await refresh();
       onChanged();
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "調整失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("mb.changeFailed"), "danger");
     } finally {
       setSavingDept(null);
     }
@@ -141,11 +144,11 @@ export function Members({
         if (u.roleId) await assignCustomRole(u.userId, null);
         await assignMemberRole(u.userId, { tenantId, role: sel as "employee" | "group_owner" });
       }
-      toast.show("已調整角色", "ok");
+      toast.show(tr("mb.roleChanged"), "ok");
       await refresh();
       onChanged();
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "調整失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("mb.changeFailed"), "danger");
     } finally {
       setSavingRole(null);
     }
@@ -155,7 +158,7 @@ export function Members({
     <div>
       {canEdit && (
         <div className="dm-actions-bar">
-          <button className="btn btn-primary" onClick={() => setDrawer({ kind: "new" })}>+ 新增成員</button>
+          <button className="btn btn-primary" onClick={() => setDrawer({ kind: "new" })}>+ {tr("mb.new")}</button>
         </div>
       )}
 
@@ -163,14 +166,13 @@ export function Members({
         <Spinner block />
       ) : users.length === 0 ? (
         <div className="dm-empty">
-          <div>還沒有任何成員</div>
+          <div>{tr("mb.emptyTitle")}</div>
           {/* ⚠️ 原本寫「點右上『新增成員』建立」是**會把人導進死路的**：
               員工不是手建的（LINE 綁定後自動產生），而「新增成員」的角色下拉裡
               根本沒有「員工」這個選項 —— 照著做會點進去然後困惑。 */}
           <div className="dm-empty-hint">
-            <b>員工不用手動建</b> —— 同仁用 LINE 加公司官方帳號、完成綁定後，
-            就會自動出現在這裡。<br />
-            {canEdit && <>要指定<b>部門主管</b>時，才用右上的「新增成員」。</>}
+            {tr("mb.emptyHint")}
+            {canEdit && <>{tr("mb.emptyManagerHint")}</>}
           </div>
         </div>
       ) : (
@@ -178,11 +180,11 @@ export function Members({
           <table className="dm-table">
             <thead>
               <tr>
-                <th>顯示名稱</th>
+                <th>{tr("dp.colDisplay")}</th>
                 <th>Email</th>
-                <th>角色</th>
-                <th>所屬部門</th>
-                <th>密碼</th>
+                <th>{tr("mb.colRole")}</th>
+                <th>{tr("mb.colDept")}</th>
+                <th>{tr("mb.colPassword")}</th>
                 <th></th>
               </tr>
             </thead>
@@ -210,19 +212,19 @@ export function Members({
                       onChange={(d) => void changeDept(u, d)}
                     />
                   </td>
-                  <td>{u.hasPassword ? <span className="dm-tag-set">已設</span> : <span className="dm-tag-unset">未設</span>}</td>
+                  <td>{u.hasPassword ? <span className="dm-tag-set">{tr("mb.pwSet")}</span> : <span className="dm-tag-unset">{tr("mb.pwUnset")}</span>}</td>
                   <td className="dm-cell-actions">
                     {/* ⚠️ 編輯/刪除走 users:manage（aiproot only）· 只給真的能用的人看，
                         否則就是 auth-gate 那類「看得到卻 403」。tenant_admin 改部門走上面的下拉。*/}
                     {canManageFull ? (
                       <>
-                        <button className="btn btn-sm btn-ghost" onClick={() => setDrawer({ kind: "edit", user: u })}>編輯</button>
-                        <button className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(u)}>刪除</button>
+                        <button className="btn btn-sm btn-ghost" onClick={() => setDrawer({ kind: "edit", user: u })}>{tr("common.edit")}</button>
+                        <button className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(u)}>{tr("common.delete")}</button>
                       </>
                     ) : (
                       // 0055 · tenant_admin 只能刪自家 員工/部門主管（碰不到高階帳號、不能刪自己）
                       canDeleteMember && !isSelf(u) && MEMBER_EDITABLE_ROLES.includes(u.role) && (
-                        <button className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(u)}>刪除</button>
+                        <button className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(u)}>{tr("common.delete")}</button>
                       )
                     )}
                   </td>
@@ -251,9 +253,9 @@ export function Members({
         />
       )}
       {confirmDelete && (
-        <Drawer open onClose={() => setConfirmDelete(null)} title="確認刪除成員" width={480}>
+        <Drawer open onClose={() => setConfirmDelete(null)} title={tr("mb.deleteTitle")} width={480}>
           <div className="lbot-confirm">
-            <p>即將刪除 <b>{confirmDelete.displayName ?? confirmDelete.email}</b> · 此操作無法還原。</p>
+            <p>{tr("mb.deleteBody", { name: confirmDelete.displayName ?? confirmDelete.email ?? "" })}</p>
             <div className="llm-form-actions">
               <button
                 type="button"
@@ -261,18 +263,18 @@ export function Members({
                 onClick={async () => {
                   try {
                     await deleteTenantUser(confirmDelete.userId, tenantId);
-                    toast.show("成員已刪除", "ok");
+                    toast.show(tr("mb.deleted"), "ok");
                     setConfirmDelete(null);
                     refresh();
                     onChanged();
                   } catch (err) {
-                    toast.show(err instanceof ApiError ? err.message : "刪除失敗", "danger");
+                    toast.show(err instanceof ApiError ? err.message : tr("rm.deleteFailed"), "danger");
                   }
                 }}
               >
-                確認刪除
+                {tr("dp.deleteConfirm")}
               </button>
-              <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(null)}>取消</button>
+              <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(null)}>{tr("common.cancel")}</button>
             </div>
           </div>
         </Drawer>
@@ -284,8 +286,9 @@ export function Members({
 // LINE 綁定的成員 email 是自動產生的 U…@line.local（登入走 LINE，非真信箱）·
 // 那串 hash 對人沒意義、又佔滿整欄 → 收成一個小標籤，畫面立刻清爽。
 function MemberEmail({ email }: { email: string | null }) {
+  const tr = useT();
   if (!email) return <span className="dm-cell-muted">—</span>;
-  if (email.endsWith("@line.local")) return <span className="dm-tag-unset">LINE 綁定</span>;
+  if (email.endsWith("@line.local")) return <span className="dm-tag-unset">{tr("mb.lineLinked")}</span>;
   return <span className="mono dm-cell-muted">{email}</span>;
 }
 
@@ -301,6 +304,7 @@ function RoleCell({ user, editable, saving, customRoles, onChange }: {
   customRoles: CustomRoleDto[];
   onChange: (sel: string) => void;
 }) {
+  const tr = useT();
   const mine = user.roleId ? customRoles.find((c) => c.roleId === user.roleId) : undefined;
 
   if (!editable) {
@@ -309,7 +313,7 @@ function RoleCell({ user, editable, saving, customRoles, onChange }: {
   }
   return (
     <StyledSelect
-      ariaLabel="角色"
+      ariaLabel={tr("mb.colRole")}
       value={mine ? `c:${mine.roleId}` : user.role}
       disabled={saving}
       width={130}
@@ -317,7 +321,7 @@ function RoleCell({ user, editable, saving, customRoles, onChange }: {
         ...MEMBER_EDITABLE_ROLES.map((r) => ({ id: r, label: roleLabel(r) })),
         // StyledSelect 沒有分組，用 hint（右側灰字）標出來源 ——
         // 不標的話「品保組長」混在內建角色裡，沒人知道那是自己公司建的
-        ...customRoles.map((c) => ({ id: `c:${c.roleId}`, label: c.roleName, hint: "本公司自建" })),
+        ...customRoles.map((c) => ({ id: `c:${c.roleId}`, label: c.roleName, hint: tr("rm.custom") })),
       ]}
       onChange={onChange}
     />
@@ -334,9 +338,10 @@ function DeptCell({ user, depts, editable, saving, onChange, activity }: {
   /** 近 30 天在各群的發言數 · 用來說明部門怎麼推出來的（§4.6）*/
   activity: MemberGroupActivity[];
 }) {
+  const tr = useT();
   // 總經理室＝全公司，不屬單一部門，不給下拉
   if (user.role === "tenant_admin") {
-    return <span className="dm-cell-muted">全公司（不分部門）</span>;
+    return <span className="dm-cell-muted">{tr("mb.wholeCompany")}</span>;
   }
   const unassigned = !user.departmentId;
   const counted = activity.filter((a) => a.countsTowardDepartment);
@@ -355,16 +360,16 @@ function DeptCell({ user, depts, editable, saving, onChange, activity }: {
   const detail = (
     <div className="dm-why-tip">
       <div className="dm-why-tip-h">
-        {user.departmentSource === "manual" ? "手動指派 · 自動判定不會覆寫" : "近 30 天在各群的發言"}
+        {tr(user.departmentSource === "manual" ? "mb.manualNote" : "mb.autoNote")}
       </div>
       {activity.map((a, i) => (
         <div className={`dm-why-tip-row${a.countsTowardDepartment ? "" : " out"}`} key={i}>
           <span>{a.groupName}</span>
-          <b>{a.messageCount} 則</b>
+          <b>{tr("mb.nMsgs", { n: a.messageCount })}</b>
         </div>
       ))}
       {notCounted.length > 0 && (
-        <div className="dm-why-tip-f">畫線的是非部門群 · 不計入判定</div>
+        <div className="dm-why-tip-f">{tr("mb.whyFoot")}</div>
       )}
     </div>
   );
@@ -373,13 +378,13 @@ function DeptCell({ user, depts, editable, saving, onChange, activity }: {
   // 摘要寫長了（例如「依 8 個部門群中發言最多的（另有 1 個非部門群不計入）」）
   // 會把整個「所屬部門」欄撐寬，右邊的密碼／刪除被推到天邊、中間一大片空白。
   const summary = unassigned ? (
-    <span className="dm-dept-src warn">⚠ 請指派</span>
+    <span className="dm-dept-src warn">⚠ {tr("mb.pleaseAssign")}</span>
   ) : user.departmentSource === "manual" ? (
-    <span className="dm-dept-src ok">· 手動指派</span>
+    <span className="dm-dept-src ok">· {tr("mb.manual")}</span>
   ) : counted.length > 0 ? (
-    <span className="dm-dept-src">· 自動判定 · {counted.length} 群</span>
+    <span className="dm-dept-src">· {tr("mb.auto", { n: counted.length })}</span>
   ) : (
-    <span className="dm-dept-src">· 30 天內無發言</span>
+    <span className="dm-dept-src">· {tr("mb.noMsgs30")}</span>
   );
 
   const why = (
@@ -393,7 +398,7 @@ function DeptCell({ user, depts, editable, saving, onChange, activity }: {
   if (!editable) {
     return (
       <div>
-        <span className={unassigned ? "dm-dept-unset" : ""}>{user.departmentName ?? "未分派"}</span>
+        <span className={unassigned ? "dm-dept-unset" : ""}>{user.departmentName ?? tr("mb.unassigned")}</span>
         {why}
       </div>
     );
@@ -401,12 +406,12 @@ function DeptCell({ user, depts, editable, saving, onChange, activity }: {
   return (
     <div className="dm-dept-edit">
       <StyledSelect
-        ariaLabel="所屬部門"
+        ariaLabel={tr("mb.colDept")}
         value={user.departmentId ?? ""}
         disabled={saving}
         allowEmpty
-        emptyLabel="未分派"
-        placeholder="未分派"
+        emptyLabel={tr("mb.unassigned")}
+        placeholder={tr("mb.unassigned")}
         width={140}
         items={depts.map((d) => ({ id: d.departmentId, label: d.departmentName }))}
         onChange={(v) => onChange(v || null)}
@@ -425,6 +430,7 @@ function MemberDrawer({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tr = useT();
   const toast = useToast();
   const session = getSession();
   const isEdit = user != null;
@@ -444,7 +450,7 @@ function MemberDrawer({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isEdit && (!email.trim() || !password.trim())) {
-      toast.show("email 與密碼為必填", "danger");
+      toast.show(tr("mb.emailPwRequired"), "danger");
       return;
     }
     setSaving(true);
@@ -467,66 +473,66 @@ function MemberDrawer({
           password: password.trim(),
         });
       }
-      toast.show(isEdit ? "成員已更新" : "成員已新增", "ok");
+      toast.show(tr(isEdit ? "mb.updated" : "mb.created"), "ok");
       onSaved();
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "儲存失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("common.saveFailed"), "danger");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Drawer open onClose={onClose} title={isEdit ? "編輯成員" : "新增成員"} subtitle={isEdit ? (user.email ?? undefined) : undefined}>
+    <Drawer open onClose={onClose} title={tr(isEdit ? "mb.edit" : "mb.new")} subtitle={isEdit ? (user.email ?? undefined) : undefined}>
       <form onSubmit={handleSubmit} className="llm-form">
         <div className="field">
           <label>Email *</label>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={saving || isEdit} placeholder="user@example.com" required />
-          <div className="llm-hint">{isEdit ? "email 為登入識別 · 不可修改" : "登入用 · 需唯一"}</div>
+          <div className="llm-hint">{tr(isEdit ? "mb.emailLocked" : "mb.emailHint")}</div>
         </div>
 
         <div className="field">
-          <label>顯示名稱</label>
-          <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={saving} placeholder="例：王總 / 阿豪" />
+          <label>{tr("dp.colDisplay")}</label>
+          <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={saving} placeholder={tr("mb.namePlaceholder")} />
         </div>
 
         <div className="field">
-          <label>角色 *</label>
+          <label>{tr("mb.colRole")} *</label>
           <StyledSelect
             items={assignable.map((r) => ({ id: r, label: roleLabel(r) }))}
             value={role}
             onChange={(v) => setRole(v as UserRole)}
             disabled={saving}
-            ariaLabel="角色"
+            ariaLabel={tr("mb.colRole")}
           />
           {/* ⚠️ 舊文案寫「可新增部門主管與助理」，但 0049 之後租戶就不能建助理了（見
               assignableRolesFor 的註解）。選項只有一個時更要說明另外兩個去哪了 ——
               不然在「權限管理」看到三個角色的人，會以為這裡壞掉。 */}
           <div className="llm-hint">
             {session?.role === "tenant_admin"
-              ? "「員工」不必在這裡建 —— 同仁用 LINE 綁定後會自動成為員工。「助理」與「總經理室」請聯繫 AIPROOT 開通。"
-              : "此頁可新增「總經理室」「部門主管」「助理」·「員工」由 LINE 綁定自動建立 · 平台管理帳號由 AIPROOT 另行建立"}
+              ? tr("mb.roleHintTenant")
+              : tr("mb.roleHintPlatform")}
           </div>
         </div>
 
         <div className="field">
-          <label>所屬部門</label>
+          <label>{tr("mb.colDept")}</label>
           <StyledSelect
             items={depts.map((d) => ({ id: d.departmentId, label: d.departmentName }))}
             value={departmentId}
             onChange={setDepartmentId}
             disabled={saving}
-            ariaLabel="所屬部門"
+            ariaLabel={tr("mb.colDept")}
             allowEmpty
-            emptyLabel="未分派"
+            emptyLabel={tr("mb.unassigned")}
           />
         </div>
 
         {!isEdit && (
           <div className="field">
-            <label>初始密碼 *</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={saving} placeholder="至少 6 字元" required autoComplete="new-password" />
-            <div className="llm-hint">bcrypt(10) 加密存 · 建議首次登入請成員自行改密碼</div>
+            <label>{tr("mb.initialPw")} *</label>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={saving} placeholder={tr("mb.pwPlaceholder")} required autoComplete="new-password" />
+            <div className="llm-hint">{tr("mb.pwHint")}</div>
           </div>
         )}
 
@@ -534,7 +540,7 @@ function MemberDrawer({
           <div className="lbot-rotate">
             <label className="lbot-rotate-hdr">
               <input type="checkbox" checked={rotatePassword} onChange={(e) => setRotatePassword(e.target.checked)} disabled={saving} />
-              <span>重設密碼</span>
+              <span>{tr("mb.resetPw")}</span>
             </label>
             {rotatePassword && (
               <input
@@ -542,7 +548,7 @@ function MemberDrawer({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={saving}
-                placeholder="新密碼（至少 6 字元）"
+                placeholder={tr("mb.newPwPlaceholder")}
                 required
                 autoComplete="new-password"
                 className="lbot-rotate-input"
@@ -553,9 +559,9 @@ function MemberDrawer({
 
         <div className="llm-form-actions">
           <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? "儲存中…" : isEdit ? "儲存變更" : "新增成員"}
+            {saving ? tr("common.saving") : tr(isEdit ? "common.save" : "mb.new")}
           </button>
-          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>取消</button>
+          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>{tr("common.cancel")}</button>
         </div>
       </form>
     </Drawer>

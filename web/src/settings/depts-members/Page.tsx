@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { t } from "../../i18n";
+import { useT } from "../../i18n/useT";
 import {
   Button as AriaButton,
   ListBox,
@@ -25,6 +27,7 @@ type Tab = "dept" | "member" | "org";
 // 對照 docs/roles-permissions-matrix.md §3.5
 // initialTab：讓「權限設定教學」的「帶我去新增成員」能直接落在成員分頁
 export default function DepartmentsMembers({ initialTab, onOpenGuide }: { initialTab?: Tab; onOpenGuide?: () => void } = {}) {
+  const tr = useT();
   const guide = usePageGuide("depts");
   const session = getSession();
   const toast = useToast();
@@ -50,7 +53,7 @@ export default function DepartmentsMembers({ initialTab, onOpenGuide }: { initia
     if (!canView) { setLoading(false); return; }
     // tenant_admin 自動用 own tenant · 不呼跨 tenant list API
     if (!canSwitchTenant && session?.tenantId) {
-      setTenants([{ tenantId: session.tenantId, tenantName: "本公司" }]);
+      setTenants([{ tenantId: session.tenantId, tenantName: t("dm.thisCompany") }]);
       setSelectedTenantId(session.tenantId);
       setLoading(false);
       return;
@@ -62,7 +65,7 @@ export default function DepartmentsMembers({ initialTab, onOpenGuide }: { initia
         setSelectedTenantId(refs.tenants[0].tenantId);
       }
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入租戶失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("dm.loadTenantsFailed"), "danger");
     } finally {
       setLoading(false);
     }
@@ -79,9 +82,9 @@ export default function DepartmentsMembers({ initialTab, onOpenGuide }: { initia
   if (!canView) {
     return (
       <div className="pane">
-        <div className="pane-hdr"><div><h1>部門 / 成員</h1></div></div>
+        <div className="pane-hdr"><div><h1>{tr("nav.depts")}</h1></div></div>
         <div className="dm-empty">
-          <div>你的角色無權管理部門 / 成員 · 請聯繫管理員</div>
+          <div>{tr("common.noPagePermission")}</div>
         </div>
       </div>
     );
@@ -91,16 +94,16 @@ export default function DepartmentsMembers({ initialTab, onOpenGuide }: { initia
     <div className="pane">
       <div className="pane-hdr">
         <div>
-          <h1>部門 / 成員{guide.toggle}</h1>
+          <h1>{tr("nav.depts")}{guide.toggle}</h1>
           <div className="sub">
             {canSwitchTenant
-              ? "aiproot 側維護所有客戶方組織 · 部門建立後於「LINE 機器人管理」把群組分派到部門"
-              : "管理本公司部門與部門主管 · 部門建立後，到左側「LINE 群組」頁把各群組分派到對應部門（一個部門可含多個群）"}
+              ? tr("dm.subPlatform")
+              : tr("dm.subTenant")}
           </div>
         </div>
         {onOpenGuide && !canSwitchTenant && (
           <div className="actions">
-            <button className="btn" onClick={onOpenGuide}>📖 第一次設定？看教學</button>
+            <button className="btn" onClick={onOpenGuide}>📖 {tr("dm.guide")}</button>
           </div>
         )}
       </div>
@@ -109,17 +112,17 @@ export default function DepartmentsMembers({ initialTab, onOpenGuide }: { initia
       {/* Tenant selector (只 aiproot / consultant 顯示) */}
       {canSwitchTenant && (
       <div className="dm-tenant-picker">
-        <label className="dm-tenant-lbl">目前操作公司</label>
+        <label className="dm-tenant-lbl">{tr("dm.currentTenant")}</label>
         <Select
           className="llm-select"
           selectedKey={selectedTenantId || undefined}
           onSelectionChange={(k) => setSelectedTenantId(String(k))}
-          aria-label="租戶"
+          aria-label={tr("dm.tenant")}
           isDisabled={loading || tenants.length === 0}
         >
           <AriaButton className="llm-select-btn dm-tenant-btn">
             <SelectValue className="llm-select-value">
-              {() => selectedTenant?.tenantName ?? (loading ? "載入中…" : "選擇公司")}
+              {() => selectedTenant?.tenantName ?? (loading ? tr("common.loading") : tr("dm.pickCompany"))}
             </SelectValue>
             <svg className="llm-select-chev" width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
               <path d="M1 1l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -144,19 +147,19 @@ export default function DepartmentsMembers({ initialTab, onOpenGuide }: { initia
       {/* Tabs */}
       <div className="dm-tabs">
         <button className={`dm-tab${tab === "dept" ? " active" : ""}`} onClick={() => setTab("dept")}>
-          部門配置
+          {tr("dm.tabDepts")}
         </button>
         <button className={`dm-tab${tab === "member" ? " active" : ""}`} onClick={() => setTab("member")}>
-          成員
+          {tr("dm.tabMembers")}
         </button>
         <button className={`dm-tab${tab === "org" ? " active" : ""}`} onClick={() => setTab("org")}>
-          組織圖
+          {tr("dm.tabOrg")}
         </button>
       </div>
 
       {!selectedTenantId ? (
         <div className="dm-empty">
-          <div>{loading ? "載入中…" : "請選擇租戶"}</div>
+          <div>{loading ? tr("common.loading") : tr("dm.pickTenant")}</div>
         </div>
       ) : tab === "dept" ? (
         <Departments

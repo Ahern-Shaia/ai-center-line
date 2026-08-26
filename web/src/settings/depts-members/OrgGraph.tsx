@@ -1,4 +1,6 @@
 import Spinner from "../../shared/Spinner";
+import { t } from "../../i18n";
+import { useT } from "../../i18n/useT";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getOrgOverview, ApiError, groupTypeLabel, type OrgOverview, type OrgMember, type LineGroupType } from "../../api";
 import { useToast } from "../../Toast";
@@ -33,6 +35,7 @@ function bezH(x1: number, y1: number, x2: number, y2: number, stroke: string): E
 type Lod = "all" | "dept";
 
 export default function OrgGraph({ tenantId }: { tenantId: string }) {
+  const tr = useT();
   const [data, setData] = useState<OrgOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
@@ -48,7 +51,7 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
     setLoading(true);
     getOrgOverview(tenantId)
       .then((d) => { if (alive) { setData(d); setExpanded(new Set()); } })
-      .catch((e) => toast.show(e instanceof ApiError ? e.message : "載入組織圖失敗", "danger"))
+      .catch((e) => toast.show(e instanceof ApiError ? e.message : tr("og.loadFailed"), "danger"))
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [tenantId, toast]);
@@ -109,7 +112,7 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
   }, [draw]);
 
   if (loading && !data) return <Spinner block />;
-  if (!data) return <div className="dm-empty">無法載入組織圖</div>;
+  if (!data) return <div className="dm-empty">{tr("og.cannotLoad")}</div>;
 
   const toggle = (di: number) => setExpanded((s) => {
     const n = new Set(s); if (n.has(di)) n.delete(di); else n.add(di); return n;
@@ -121,12 +124,12 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
       <div className="og-bar">
         {/* 分層顯示 · 研究 §4「progressive disclosure」· 部門一多時先看骨架 */}
         <div className="og-seg">
-          <button className={lod === "all" ? "on" : ""} onClick={() => setLod("all")}>部門＋成員</button>
-          <button className={lod === "dept" ? "on" : ""} onClick={() => setLod("dept")}>只看部門</button>
+          <button className={lod === "all" ? "on" : ""} onClick={() => setLod("all")}>{tr("og.lodAll")}</button>
+          <button className={lod === "dept" ? "on" : ""} onClick={() => setLod("dept")}>{tr("og.lodDept")}</button>
         </div>
         <input
           className="og-srch" type="search" value={q} onChange={(e) => setQ(e.target.value)}
-          placeholder="搜尋部門或成員…" aria-label="搜尋部門或成員"
+          placeholder={tr("og.search")} aria-label={tr("og.search")}
         />
       </div>
 
@@ -138,11 +141,11 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
         </svg>
 
         <div className="og-root">
-          <div className="og-company" data-og="company"><div className="t">公司</div><div className="n">{data.company}</div></div>
+          <div className="og-company" data-og="company"><div className="t">{tr("og.company")}</div><div className="n">{data.company}</div></div>
           {data.gm.length > 0 && (
             <div className="og-gm" data-og="gm">
               <span className="av">{data.gm[0][0] ?? "？"}</span>
-              <span><span className="n">{data.gm.join("、")}</span><br /><span className="r">總經理室 · 看全公司</span></span>
+              <span><span className="n">{data.gm.join("、")}</span><br /><span className="r">{tr("og.gm")}</span></span>
             </div>
           )}
         </div>
@@ -162,9 +165,9 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
                     <span className="n">{d.name}</span>
                     {d.groups.length > 0
                       ? d.groups.map((g, gi) => <span key={gi} className="grp" style={{ color: p.c, background: p.t }}>◍ {g}</span>)
-                      : <span className="grp warn">◍ 未接 LINE 群</span>}
+                      : <span className="grp warn">◍ {tr("og.noGroup")}</span>}
                   </span>
-                  <span className="cnt">{d.members.length} 位</span>
+                  <span className="cnt">{tr("og.nPeople", { n: d.members.length })}</span>
                 </div>
                 {lod === "all" && (
                   <div className="og-mems">
@@ -172,10 +175,10 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
                     {/* 溢位收合仍保留 —— 版型換了，但「一部門 20 人」那個壓測情境沒有消失 */}
                     {over && (
                       <button className="og-more" onClick={() => toggle(di)}>
-                        {isExp ? "收合 ▲" : `＋${d.members.length - MAX} 位…`}
+                        {isExp ? tr("og.collapse") : tr("og.more", { n: d.members.length - MAX })}
                       </button>
                     )}
-                    {d.members.length === 0 && <span className="og-none">— 尚無成員</span>}
+                    {d.members.length === 0 && <span className="og-none">— {tr("og.noMembers")}</span>}
                   </div>
                 )}
               </div>
@@ -183,7 +186,7 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
           })}
           {shownIdx.length === 0 && (
             <div className="dm-empty" style={{ padding: "26px 0" }}>
-              找不到符合「{q}」的部門或成員
+              {tr("og.noMatch", { q })}
             </div>
           )}
         </div>
@@ -193,10 +196,9 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
           （group-type-classification.md §4.2）。放在部門樹之後、未分派之前。 */}
       {data.crossGroups.length > 0 && (
         <div className="og-cross">
-          <div className="t">跨部門群組 · {data.crossGroups.length} 個</div>
+          <div className="t">{tr("og.crossGroups", { n: data.crossGroups.length })}</div>
           <div className="s">
-            這些群的成員橫跨多個部門，<b>不代表組織歸屬</b>，所以不畫進上面的部門樹、
-            也不計入部門健康度的分母。但它們<b>照常分析、照常產出任務</b>。
+            {tr("og.crossGroupsHint")}
           </div>
           <div className="og-cross-list">
             {data.crossGroups.map((g, i) => (
@@ -207,7 +209,7 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
                     {groupTypeLabel(g.groupType as LineGroupType)}
                   </span>
                 </div>
-                <div className="m">{g.memberCount} 人</div>
+                <div className="m">{tr("og.nPeople", { n: g.memberCount })}</div>
               </div>
             ))}
           </div>
@@ -216,10 +218,10 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
 
       {hasOrphan && (
         <div className="og-orphan">
-          <div className="t">⚠ 未分派 · 導入待補</div>
+          <div className="t">⚠ {tr("og.unassigned")}</div>
           <div className="s">
-            {data.unassigned.groups.length > 0 && <>群組：{data.unassigned.groups.join("、")}　</>}
-            {data.unassigned.members.length > 0 && <>成員：{data.unassigned.members.map((m) => m.name).join("、")}（系統推不出部門）</>}
+            {data.unassigned.groups.length > 0 && <>{tr("og.groupsLabel")}{data.unassigned.groups.join("、")}　</>}
+            {data.unassigned.members.length > 0 && <>{tr("og.membersLabel")}{data.unassigned.members.map((m) => m.name).join("、")}{tr("og.cannotInfer")}</>}
           </div>
         </div>
       )}
@@ -228,13 +230,14 @@ export default function OrgGraph({ tenantId }: { tenantId: string }) {
 }
 
 function MemberNode({ m, p }: { m: OrgMember; p: { c: string; c2: string } }) {
+  const tr = useT();
   const lead = m.role === "group_owner";
   return (
     <span className={`og-mem${lead ? " lead" : ""}${!m.hasLineBinding ? " warn" : ""}`}>
       <span className="av" style={{ background: `linear-gradient(135deg,${p.c},${p.c2})` }}>{m.name[0] ?? "？"}</span>
       <span className="nm">{m.name}</span>
-      {lead && <span className="og-badge" style={{ background: p.c }}>主管</span>}
-      {!m.hasLineBinding && <span className="og-nolink">未綁</span>}
+      {lead && <span className="og-badge" style={{ background: p.c }}>{tr("og.lead")}</span>}
+      {!m.hasLineBinding && <span className="og-nolink">{tr("og.notLinked")}</span>}
     </span>
   );
 }

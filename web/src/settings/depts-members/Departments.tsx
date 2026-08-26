@@ -1,4 +1,6 @@
 import Spinner from "../../shared/Spinner";
+import { t } from "../../i18n";
+import { useT } from "../../i18n/useT";
 import { useCallback, useEffect, useState } from "react";
 import {
   listDepartments,
@@ -17,12 +19,12 @@ import Drawer from "../../shared/Drawer";
  */
 function deleteBlockedReason(d: DepartmentDto): string {
   const parts: string[] = [];
-  if (d.memberCount > 0) parts.push(`尚有 ${d.memberCount} 名成員（到「成員」分頁改分派或移除）`);
+  if (d.memberCount > 0) parts.push(t("dp.blockMembers", { n: d.memberCount }));
   if (d.groupBindingCount > 0) {
     const names = d.boundGroupNames?.length ? `：${d.boundGroupNames.join("、")}` : "";
-    parts.push(`尚綁 ${d.groupBindingCount} 群${names}（到「LINE 機器人管理」把該群的「分派部門」改成「未分派」）`);
+    parts.push(t("dp.blockGroups", { n: d.groupBindingCount, names }));
   }
-  return parts.length === 0 ? "" : `不可刪除 —— ${parts.join("；")}`;
+  return parts.length === 0 ? "" : t("dp.blocked", { why: parts.join("；") });
 }
 
 export function Departments({
@@ -32,6 +34,7 @@ export function Departments({
   canEdit: boolean;
   onChanged: () => void;
 }) {
+  const tr = useT();
   const toast = useToast();
   const [rows, setRows] = useState<DepartmentDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +47,7 @@ export function Departments({
       const res = await listDepartments(tenantId);
       setRows(res.departments);
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("common.loadFailed"), "danger");
     } finally {
       setLoading(false);
     }
@@ -56,7 +59,7 @@ export function Departments({
     <div>
       {canEdit && (
         <div className="dm-actions-bar">
-          <button className="btn btn-primary" onClick={() => setDrawer({ kind: "new" })}>+ 新增部門</button>
+          <button className="btn btn-primary" onClick={() => setDrawer({ kind: "new" })}>+ {tr("dp.new")}</button>
         </div>
       )}
 
@@ -64,14 +67,12 @@ export function Departments({
         <Spinner block />
       ) : rows.length === 0 ? (
         <div className="dm-empty">
-          <div>還沒有建立部門</div>
+          <div>{tr("dp.emptyTitle")}</div>
           {/* 只說「點右上新增」沒回答「為什麼要建」—— 部門是整套系統的切分依據，
               不先建，後面分派群組／看板／權限全都卡住 */}
           <div className="dm-empty-hint">
-            <b>部門是整套系統的切分依據</b> —— 任務、日報、看得到什麼，都是照部門分的。<br />
-            建議跟 LINE 群名對應（群「○○—品保部」→ 部門「品保部」），
-            之後在「LINE 群組」把各群分派進來。<br />
-            {canEdit && <>從右上的「新增部門」開始。</>}
+            {tr("dp.emptyHint")}
+            {canEdit && <>{tr("dp.emptyStart")}</>}
           </div>
         </div>
       ) : (
@@ -79,11 +80,11 @@ export function Departments({
           <table className="dm-table">
             <thead>
               <tr>
-                <th>部門名</th>
-                <th>顯示名稱</th>
-                <th className="num">成員</th>
-                <th className="num">綁定群</th>
-                <th>對應表單</th>
+                <th>{tr("dp.colName")}</th>
+                <th>{tr("dp.colDisplay")}</th>
+                <th className="num">{tr("dm.tabMembers")}</th>
+                <th className="num">{tr("dp.colGroups")}</th>
+                <th>{tr("dp.colForm")}</th>
                 <th></th>
               </tr>
             </thead>
@@ -98,14 +99,14 @@ export function Departments({
                   <td className="dm-cell-actions">
                     {canEdit && (
                       <>
-                        <button className="btn btn-sm btn-ghost" onClick={() => setDrawer({ kind: "edit", dept: d })}>編輯</button>
+                        <button className="btn btn-sm btn-ghost" onClick={() => setDrawer({ kind: "edit", dept: d })}>{tr("common.edit")}</button>
                         <button
                           className="btn btn-sm btn-ghost"
                           onClick={() => setConfirmDelete(d)}
                           disabled={d.memberCount > 0 || d.groupBindingCount > 0}
                           title={deleteBlockedReason(d)}
                         >
-                          刪除
+                          {tr("common.delete")}
                         </button>
                       </>
                     )}
@@ -133,9 +134,9 @@ export function Departments({
         />
       )}
       {confirmDelete && (
-        <Drawer open onClose={() => setConfirmDelete(null)} title="確認刪除部門" width={480}>
+        <Drawer open onClose={() => setConfirmDelete(null)} title={tr("dp.deleteTitle")} width={480}>
           <div className="lbot-confirm">
-            <p>即將刪除部門 <b>{confirmDelete.departmentName}</b> · 此操作無法還原。</p>
+            <p>{tr("dp.deleteBody", { name: confirmDelete.departmentName })}</p>
             <div className="llm-form-actions">
               <button
                 type="button"
@@ -143,18 +144,18 @@ export function Departments({
                 onClick={async () => {
                   try {
                     await deleteDepartment(confirmDelete.departmentId, tenantId);
-                    toast.show("部門已刪除", "ok");
+                    toast.show(tr("dp.deleted"), "ok");
                     setConfirmDelete(null);
                     refresh();
                     onChanged();
                   } catch (err) {
-                    toast.show(err instanceof ApiError ? err.message : "刪除失敗", "danger");
+                    toast.show(err instanceof ApiError ? err.message : tr("rm.deleteFailed"), "danger");
                   }
                 }}
               >
-                確認刪除
+                {tr("dp.deleteConfirm")}
               </button>
-              <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(null)}>取消</button>
+              <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(null)}>{tr("common.cancel")}</button>
             </div>
           </div>
         </Drawer>
@@ -171,6 +172,7 @@ function DeptDrawer({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const tr = useT();
   const toast = useToast();
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState(dept?.departmentName ?? "");
@@ -179,7 +181,7 @@ function DeptDrawer({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) { toast.show("部門名不可為空", "danger"); return; }
+    if (!name.trim()) { toast.show(tr("dp.nameRequired"), "danger"); return; }
     setSaving(true);
     try {
       if (isEdit) {
@@ -191,47 +193,46 @@ function DeptDrawer({
       } else {
         await createDepartment({ tenantId, departmentName: name.trim(), displayName: displayName.trim() || undefined });
       }
-      toast.show(isEdit ? "部門已更新" : "部門已新增", "ok");
+      toast.show(tr(isEdit ? "dp.updated" : "dp.created"), "ok");
       onSaved();
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "儲存失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("common.saveFailed"), "danger");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Drawer open onClose={onClose} title={isEdit ? "編輯部門" : "新增部門"} subtitle={isEdit ? dept.departmentName : undefined}>
+    <Drawer open onClose={onClose} title={tr(isEdit ? "dp.edit" : "dp.new")} subtitle={isEdit ? dept.departmentName : undefined}>
       <form onSubmit={handleSubmit} className="llm-form">
         <div className="field">
-          <label>部門名 *</label>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} disabled={saving} placeholder="例：業務二部" required />
-          <div className="llm-hint">正式名稱 · 對外顯示與內部搜尋皆用此欄</div>
+          <label>{tr("dp.colName")} *</label>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} disabled={saving} placeholder={tr("dp.namePlaceholder")} required />
+          <div className="llm-hint">{tr("dp.nameHint")}</div>
         </div>
         <div className="field">
-          <label>顯示名稱（選填）</label>
-          <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={saving} placeholder="縮寫或別稱 · 空則沿用部門名" />
-          <div className="llm-hint">戰情室卡片標題可用此欄縮短顯示</div>
+          <label>{tr("dp.displayName")}</label>
+          <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={saving} placeholder={tr("dp.displayPlaceholder")} />
+          <div className="llm-hint">{tr("dp.displayHint")}</div>
         </div>
         {isEdit && (
           <div className="dm-info-note">
-            <div className="dm-info-note-lbl">現況資訊</div>
-            <div>成員 {dept.memberCount} 人 · 綁定 LINE 群 {dept.groupBindingCount} 個</div>
+            <div className="dm-info-note-lbl">{tr("dp.current")}</div>
+            <div>{tr("dp.currentInfo", { m: dept.memberCount, g: dept.groupBindingCount })}</div>
             {/* 兩道刪除條件一次講完、而且要寫出「去哪、按什麼」。
                 原本只提群綁定 → 使用者解完綁定回來，再撞一次成員那道。
                 而且「解除綁定」在 LINE 機器人管理頁不是這個字，那裡叫「分派部門」選「未分派」。*/}
             {(dept.memberCount > 0 || dept.groupBindingCount > 0) && (
               <div className="dm-info-note-hint">
-                此部門目前<b>不可刪除</b>，需先處理：
+                {tr("dp.cannotDelete")}
                 <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
                   {dept.memberCount > 0 && (
-                    <li>成員 {dept.memberCount} 人 —— 到上方「成員」分頁改分派或移除</li>
+                    <li>{tr("dp.blockMembers", { n: dept.memberCount })}</li>
                   )}
                   {dept.groupBindingCount > 0 && (
                     <li>
-                      綁定 LINE 群 {dept.groupBindingCount} 個
+                      {tr("dp.blockGroupsLi", { n: dept.groupBindingCount })}
                       {dept.boundGroupNames?.length ? `：${dept.boundGroupNames.join("、")}` : ""}
-                      {" "}—— 到「LINE 機器人管理」找到該群，把「分派部門」改成<b>「未分派」</b>
                     </li>
                   )}
                 </ul>
@@ -241,9 +242,9 @@ function DeptDrawer({
         )}
         <div className="llm-form-actions">
           <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? "儲存中…" : isEdit ? "儲存變更" : "新增部門"}
+            {saving ? tr("common.saving") : tr(isEdit ? "common.save" : "dp.new")}
           </button>
-          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>取消</button>
+          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>{tr("common.cancel")}</button>
         </div>
       </form>
     </Drawer>
