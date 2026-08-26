@@ -1,3 +1,5 @@
+import { t } from "../i18n";
+
 // 任務狀態 → 中文顯示（中文優先鐵則 · 單一來源避免各視圖走鐘）
 //
 // ⚠️⚠️ **DB 存的還是舊字串**（`tickets.confirm_status` = 待確認/待簽核/已簽核/…）。
@@ -22,15 +24,8 @@
 //   軸3 → 維持 進行中 / 已完成
 //
 // ⚠️ 原本提議軸2 改叫「確認」—— 那會跟軸1 現有的「待確認」撞名，是錯的。
-export const CONFIRM_STATUS_LABEL: Record<string, string> = {
-  待確認: "待判定",
-  待簽核: "待核對",
-  已簽核: "已核對",
-  逾時警示: "逾時警示",
-  已忽略: "已忽略",
-  存查: "存查",
-};
-
+// ⚠️ 2026-08-26 i18n：文字搬進 i18n/zh-TW.ts 與 en.ts（key = `confirmStatus.<DB 值>`）。
+//    這支保留原本的 API，**caller 一行都不用改** —— 但現在會跟著語言切換。
 /** 未知值 fallback 原值 —— 不吞資料，但至少看得出來是沒對應到 */
 export const confirmLabel = (s: string | null | undefined): string =>
-  s ? (CONFIRM_STATUS_LABEL[s] ?? s) : "";
+  s ? t(`confirmStatus.${s}`) : "";

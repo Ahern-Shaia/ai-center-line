@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ApiError, decideTicket, type WarroomKanbanTicket } from "../api";
 import { useToast } from "../Toast";
-import { RECORD_STATUS_LABEL as STATUS_LABEL } from "../shared/recordStatusLabel";
+import { statusLabel } from "../shared/recordStatusLabel";
 
 // 任務看板的兩個附加區塊 · docs/modules/task-materialization-gate.md
 //
@@ -66,7 +66,7 @@ export function UnconfirmedQueue({
               </button>
               <span className="tri-meta">
                 {t.departmentName ?? "未分派部門"}
-                {t.status ? ` · ${STATUS_LABEL[t.status] ?? t.status}` : ""}
+                {t.status ? ` · ${statusLabel(t.status)}` : ""}
                 {t.assigneeDisplayName ? ` · ${t.assigneeDisplayName}` : ""}
               </span>
               <span className="tri-act">
@@ -126,7 +126,7 @@ export function ArchivedList({
               <span className="tri-meta">
                 {t.confirmStatus === "已忽略"
                   ? "您標記不用追"
-                  : t.status ? STATUS_LABEL[t.status] ?? t.status : "—"}
+                  : t.status ? statusLabel(t.status) : "—"}
                 {` · ${t.departmentName ?? "未分派部門"}`}
               </span>
               {t.confirmStatus === "已忽略" && (

@@ -24,7 +24,7 @@ import { usePermissions } from "../../permission/PermissionContext";
 import Drawer from "../../shared/Drawer";
 import StyledSelect from "../../shared/StyledSelect";
 import { InfoTip } from "../../shared/InfoTip";
-import { ROLE_LABEL } from "../../shared/roleLabel";
+import { roleLabel } from "../../shared/roleLabel";
 
 // tenant_admin 能內嵌調整的角色（碰不到 總經理室/助理/aiproot）· 對齊後端 0055 護欄
 const MEMBER_EDITABLE_ROLES: UserRole[] = ["employee", "group_owner"];
@@ -39,7 +39,7 @@ const MEMBER_EDITABLE_ROLES: UserRole[] = ["employee", "group_owner"];
  * 一個 UI 上只勾了 2 個權限的角色，在 DB 層可能看得到全租戶。
  *
  * 要加角色就在這裡加一個，同時記得改 `users_role_check`、
- * 後端 DTO 的 `RoleEnum`，以及上面的 `ROLE_LABEL`。
+ * 後端 DTO 的 `RoleEnum`，以及 i18n 的 `role.*`。
  */
 function assignableRolesFor(callerRole: string | undefined): UserRole[] {
   // ⚠️ 「助理」**只有 aiproot 能指派**。
@@ -305,7 +305,7 @@ function RoleCell({ user, editable, saving, customRoles, onChange }: {
 
   if (!editable) {
     // 有自訂角色就顯示它的名字 —— 顯示基準角色的話畫面會說「部門主管」而實際是「品保組長」
-    return <span>{mine?.roleName ?? ROLE_LABEL[user.role] ?? user.role}</span>;
+    return <span>{mine?.roleName ?? roleLabel(user.role)}</span>;
   }
   return (
     <StyledSelect
@@ -314,7 +314,7 @@ function RoleCell({ user, editable, saving, customRoles, onChange }: {
       disabled={saving}
       width={130}
       items={[
-        ...MEMBER_EDITABLE_ROLES.map((r) => ({ id: r, label: ROLE_LABEL[r] })),
+        ...MEMBER_EDITABLE_ROLES.map((r) => ({ id: r, label: roleLabel(r) })),
         // StyledSelect 沒有分組，用 hint（右側灰字）標出來源 ——
         // 不標的話「品保組長」混在內建角色裡，沒人知道那是自己公司建的
         ...customRoles.map((c) => ({ id: `c:${c.roleId}`, label: c.roleName, hint: "本公司自建" })),
@@ -493,7 +493,7 @@ function MemberDrawer({
         <div className="field">
           <label>角色 *</label>
           <StyledSelect
-            items={assignable.map((r) => ({ id: r, label: ROLE_LABEL[r] }))}
+            items={assignable.map((r) => ({ id: r, label: roleLabel(r) }))}
             value={role}
             onChange={(v) => setRole(v as UserRole)}
             disabled={saving}

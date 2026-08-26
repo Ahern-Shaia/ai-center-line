@@ -9,7 +9,7 @@ import {
 } from "../api";
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
-import { ROLE_LABEL } from "../shared/roleLabel";
+import { roleLabel } from "../shared/roleLabel";
 
 // 租戶管理（aiproot）· 開通後的救援窗口
 // 開通當下的一次性密碼只顯示一次；忘記帳號或密碼時，在這裡查得到「帳號是誰」、重設得了密碼。
@@ -205,7 +205,7 @@ export default function TenantManagement() {
                       <tr key={u.userId}>
                         <td className="nc-t-mono" style={{ fontSize: 12 }}>{u.email ?? "（未設 email）"}</td>
                         <td>{u.displayName ?? "—"}{u.departmentName && <div className="nc-t-sub">{u.departmentName}</div>}</td>
-                        <td style={{ fontSize: 12.5 }}>{ROLE_LABEL[u.role] ?? u.role}</td>
+                        <td style={{ fontSize: 12.5 }}>{roleLabel(u.role)}</td>
                         <td>
                           {u.locked ? <span className="nc-pill danger">已鎖定</span>
                             : u.mustChangePassword ? <span className="nc-pill warn">待改密碼</span>

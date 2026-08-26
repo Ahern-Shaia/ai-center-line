@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ApiError, login, getLineOauthUrl, completeLineOauth, selectLineTenant, type TenantChoice } from "./api";
-import { ROLE_LABEL } from "./shared/roleLabel";
+import { roleLabel } from "./shared/roleLabel";
 
 // LINE OAuth state 由後端簽章並驗證（見 line-oauth.service）。
 // 早期版本存在 sessionStorage 前端自驗 → 手機上 LINE 內建瀏覽器把導回交給 Safari 時，
@@ -103,7 +103,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                   disabled={lineBusy}
                 >
                   <span className="tp-name">{o.tenantName ?? "（未命名組織）"}</span>
-                  <span className="tp-role">{ROLE_LABEL[o.role] ?? o.role}</span>
+                  <span className="tp-role">{roleLabel(o.role)}</span>
                 </button>
               ))}
             </div>

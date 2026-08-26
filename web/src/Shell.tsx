@@ -6,7 +6,9 @@ import { useToast } from "./Toast";
 import { usePermissions } from "./permission/PermissionContext";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
 import ChangeDisplayNameDialog from "./auth/ChangeDisplayNameDialog";
-import { ROLE_LABEL } from "./shared/roleLabel";
+import { roleLabel } from "./shared/roleLabel";
+import { LOCALES, LOCALE_NAME } from "./i18n";
+import { useLocale, useT } from "./i18n/useT";
 
 // 對照 docs/roles-permissions-matrix.md · 每個 item 綁 permission
 //
@@ -210,6 +212,8 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
   const tenantName = TENANT_NAME[session.tenantId] ?? "客戶方";
   const brand = brandFor(session);
   const toast = useToast();
+  const [locale, setLocale] = useLocale();
+  const tr = useT();
   const initials = session.email.slice(0, 2).toUpperCase();
   const [changePwOpen, setChangePwOpen] = useState(false);
   const [changeNameOpen, setChangeNameOpen] = useState(false);
@@ -349,7 +353,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
               <span className="user-avatar">{initials}</span>
               <span className="user-meta">
                 <span className="user-name">{session.displayName || session.email.split("@")[0]}</span>
-                <span className="user-role">{ROLE_LABEL[session.role] ?? session.role}</span>
+                <span className="user-role">{roleLabel(session.role)}</span>
               </span>
             </AriaButton>
             <Popover className="user-menu-pop" placement="bottom right" offset={6}>
@@ -357,16 +361,29 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
                 if (key === "logout") onLogout();
                 else if (key === "change-password") setChangePwOpen(true);
                 else if (key === "change-name") setChangeNameOpen(true);
+                // 語言：key 形如 `locale:en` —— 之後要加第三語言不用改這裡（OQ-I18N-7）
+                else if (typeof key === "string" && key.startsWith("locale:")) {
+                  setLocale(key.slice(7) as (typeof LOCALES)[number]);
+                }
               }}>
                 <AriaHeader className="user-menu-hdr">
                   <div className="n">{session.displayName || session.email.split("@")[0]}</div>
                   <div className="e">{session.email}</div>
-                  <div className="t">{ROLE_LABEL[session.role] ?? session.role} · {tenantName}</div>
+                  <div className="t">{roleLabel(session.role)} · {tenantName}</div>
                 </AriaHeader>
                 <Separator className="user-menu-sep" />
                 <MenuItem id="change-name">變更顯示名稱</MenuItem>
                 <MenuItem id="change-password">變更密碼</MenuItem>
                 <MenuItem id="switch" isDisabled>切換租戶</MenuItem>
+                <Separator className="user-menu-sep" />
+                {/* 語言切換 · 放在使用者選單，跟「變更密碼」同一處
+                    —— 那是「關於我」的設定，不是系統設定（外籍主管找得到的地方）*/}
+                <AriaHeader className="user-menu-sub">{tr("locale.label")}</AriaHeader>
+                {LOCALES.map((l) => (
+                  <MenuItem key={l} id={`locale:${l}`}>
+                    {l === locale ? "✓ " : "\u2007"}{LOCALE_NAME[l]}
+                  </MenuItem>
+                ))}
                 <MenuItem id="logout" className="danger">登出</MenuItem>
               </Menu>
             </Popover>

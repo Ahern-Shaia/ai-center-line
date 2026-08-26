@@ -130,6 +130,8 @@ button { cursor:pointer; }
 @keyframes menu-out { to { opacity:0; transform:translateY(calc(-4px * var(--m-shift))); } }
 .user-menu { min-width:240px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--sh); padding:6px; outline:none; }
 .user-menu-hdr { padding:10px 12px 8px; }
+/* 語言切換的小標 · 比 hdr 輕，只是分組不是資訊 */
+.user-menu-sub { padding:7px 12px 3px; font-size:10.5px; font-weight:600; letter-spacing:.05em; color:var(--ink-3); }
 .user-menu-hdr .n { font-size:13px; font-weight:600; color:var(--ink); }
 .user-menu-hdr .e { font-size:12px; color:var(--ink-3); margin-top:2px; }
 .user-menu-hdr .t { font-size:11px; color:var(--ink-3); margin-top:6px; font-family:var(--mono); }

@@ -11,7 +11,7 @@ import {
   ApiError,
 } from "../api";
 import { useToast } from "../Toast";
-import { RECORD_STATUS_LABEL as STATUS_LABEL } from "../shared/recordStatusLabel";
+import { statusLabel } from "../shared/recordStatusLabel";
 
 interface Props {
   uploadId: number;
@@ -249,7 +249,7 @@ export default function ConversationAnalysisDetail({ uploadId, onBack }: Props) 
                 <div key={idx} className={`detail-record ${meta.rec}`}>
                   <div className="detail-record-head">
                     <span className={`cat ${meta.cls}`}>{meta.label}</span>
-                    {r.status && <span className={`stat stat-${r.status}`}>{STATUS_LABEL[r.status] ?? r.status}</span>}
+                    {r.status && <span className={`stat stat-${r.status}`}>{statusLabel(r.status)}</span>}
                     <ConfPill c={r.confidence} />
                     <div style={{ marginLeft: "auto" }}>
                       <LabelToggle

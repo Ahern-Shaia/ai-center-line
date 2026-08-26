@@ -1,3 +1,5 @@
+import { t } from "../i18n";
+
 // 角色 → 中文顯示（中文優先鐵則 · 單一來源避免各視圖走鐘）
 //
 // ⚠️ 為什麼要有這個檔：同一個角色原本全站有**三套**叫法 ——
@@ -11,15 +13,7 @@
 // `roles.role_name`。2026-08-21 權限管理頁開始讀它，那個前提就破了。
 // **判準：改顯示名時要問的不是「現在誰在讀」，而是「這個值會不會變成 user-visible」。**
 // DB 側由 migration 0069 對齊，本檔是前端側的單一來源。
-export const ROLE_LABEL: Record<string, string> = {
-  aiproot_admin: "AIPROOT 管理員",
-  consultant: "顧問",
-  tenant_admin: "總經理室",
-  group_owner: "部門主管",
-  assistant: "助理",
-  employee: "員工",
-};
-
+// ⚠️ 2026-08-26 i18n：文字搬進 i18n/*.ts（key = `role.<role>`）· API 不變
 /** 未知值 fallback 原值 —— 不吞資料，但至少看得出來是沒對應到 */
 export const roleLabel = (r: string | null | undefined): string =>
-  r ? (ROLE_LABEL[r] ?? r) : "";
+  r ? t(`role.${r}`) : "";
