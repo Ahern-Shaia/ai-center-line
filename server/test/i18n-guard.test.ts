@@ -59,6 +59,19 @@ test("⭐⭐ F-3 · 英文比中文長，側欄／按鈕類的字要壓短", () 
     if (!TIGHT.some((p) => k.startsWith(p))) continue;
     assert.ok(v.length <= 24, `「${k}」的英文 "${v}" 有 ${v.length} 字 —— 狀態/分類籤放不下`);
   }
+
+  // ⭐ 側欄更緊：236px 扣掉內距與圖示，13px 字大約放得下 18 字元。
+  //    2026-08-26 用真實 CSS 渲染中英對照截圖確認過：
+  //    現況最長是 "Knowledge base" / "Depts & people"（14 字）—— 不截斷、不換行。
+  //    ⚠️ 這個上限是**量出來的**（scratchpad/nav-i18n-check.html），不是猜的。
+  for (const [k, v] of Object.entries(en)) {
+    if (!k.startsWith("nav.") || k === "nav.comingSoon") continue;   // comingSoon 是 toast 不受寬度限制
+    assert.ok(v.length <= 18, `側欄「${k}」的英文 "${v}" 有 ${v.length} 字 —— 236px 放不下，會被截斷`);
+  }
+  for (const [k, v] of Object.entries(en)) {
+    if (!k.startsWith("navGroup.")) continue;
+    assert.ok(v.length <= 14, `側欄分組「${k}」的英文 "${v}" 太長`);
+  }
 });
 
 test("⭐ 元件不可以直接 import { t } —— 那樣切語言不會重繪", () => {
@@ -69,4 +82,31 @@ test("⭐ 元件不可以直接 import { t } —— 那樣切語言不會重繪"
   const Shell = read("../../web/src/Shell.tsx");
   assert.ok(Shell.includes("useT"), "Shell 要用 useT() 而不是 t()");
   assert.ok(OK.length === 4);
+});
+
+// ── M2 · users.locale（0071）────────────────────────────────────
+// ⚠️ 加語言時**三個地方要一起改**，漏一處的症狀各不相同：
+//    漏 CHECK → 500 ｜ 漏 DTO → 400 ｜ 漏前端 LOCALES → 選單裡選不到
+
+test("⭐⭐ 語言清單三處必須一致（migration CHECK / DTO / 前端 LOCALES）", () => {
+  const sql = read("../src/db/migrations/0071_user_locale.sql");
+  const dto = read("../src/auth/dto/locale.dto.ts");
+  const web = read("../../web/src/i18n/index.ts");
+
+  const inCheck = [...sql.matchAll(/'([a-zA-Z-]+)'/g)].map((m) => m[1]!)
+    .filter((v) => v.includes("-") || v === "en");
+  const inDto = [...dto.matchAll(/"([a-zA-Z-]+)"/g)].map((m) => m[1]!);
+  const inWeb = [...web.slice(web.indexOf("LOCALES")).matchAll(/"([a-zA-Z-]+)"/g)].map((m) => m[1]!).slice(0, 2);
+
+  for (const l of ["zh-TW", "en"]) {
+    assert.ok(inCheck.includes(l), `0071 的 CHECK 少了 ${l} → 存進去會 500`);
+    assert.ok(inDto.includes(l), `locale.dto.ts 少了 ${l} → 送上來會 400`);
+    assert.ok(inWeb.includes(l), `web/src/i18n 的 LOCALES 少了 ${l} → 選單裡選不到`);
+  }
+});
+
+test("⭐ 0071 必須給 DEFAULT —— 沒有的話 migration 到部署那段空窗期會炸", () => {
+  const sql = read("../src/db/migrations/0071_user_locale.sql");
+  assert.match(sql, /DEFAULT 'zh-TW'/, "新欄位要有預設值，讓空窗期行為完全不變");
+  assert.match(sql, /NOT NULL/, "沒有 NOT NULL 的話讀出來可能是 null，前端要多一層防呆");
 });
