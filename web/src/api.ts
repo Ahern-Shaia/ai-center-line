@@ -200,12 +200,12 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   } catch (e) {
     // 網路失敗（離線、DNS、CORS block、server down）
     if (import.meta.env.DEV) console.error(`[api] network failure on ${path}`, e);
-    throw new ApiError(0, "無法連線到伺服器，請確認網路後再試");
+    throw new ApiError(0, t("err.network"));
   }
 
   if (res.status === 401 && !PRE_AUTH_PATHS.has(path)) {
     logout();
-    throw new ApiError(401, "工作階段已過期，請重新登入");
+    throw new ApiError(401, t("err.expired"));
   }
 
   if (!res.ok) {
@@ -227,7 +227,7 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const contentType = res.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
     if (import.meta.env.DEV) console.error(`[api] ${path} → 2xx 但非 JSON · content-type=${contentType} · 可能是 _redirects 沒生效`);
-    throw new ApiError(0, "伺服器回應格式異常，請確認前端 API 代理設定");
+    throw new ApiError(0, t("err.badFormat"));
   }
   return res.json() as Promise<T>;
 }

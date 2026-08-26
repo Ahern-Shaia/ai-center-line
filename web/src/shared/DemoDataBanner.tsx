@@ -1,3 +1,4 @@
+import { useT } from "../i18n/useT";
 /**
  * 「這一頁還是示範資料」的橫幅。
  *
@@ -9,10 +10,11 @@
  * 所以這行字是寫給我們自己看的，不是寫給客戶的。
  */
 export default function DemoDataBanner({ doc }: { doc: string }) {
+  const tr = useT();
   return (
     <div className="demo-banner">
-      <b>示範資料</b> · 這一頁的內容是寫死的，尚未接真實資料。僅供內部討論規格與對客戶簡報方向使用。
-      <span className="demo-banner-doc">設計文件：{doc}</span>
+      {tr("demo.banner")}
+      <span className="demo-banner-doc">{tr("demo.doc")}{doc}</span>
     </div>
   );
 }

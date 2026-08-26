@@ -4,6 +4,7 @@ import { catLabel } from "../shared/categoryLabel";
 import { statusLabel } from "../shared/recordStatusLabel";
 import { ApiError, getTicketSource, type TicketSource } from "../api";
 import SourceMessageList from "./SourceMessageList";
+import { useT } from "../i18n/useT";
 
 // 核對前對照：AI 整理的內容 vs 當時的原始訊息。
 // 主管簽下去是要負責的 —— 看不到原文，核對就只是幫 AI 背書。
@@ -34,12 +35,13 @@ function fmtValue(key: string, v: unknown): string {
 
 // 欄位一律顯示中文 · 不把資料庫欄位名丟給使用者看
 const FIELD_LABEL: Record<string, string> = {
-  category: "分類", title: "標題", detail: "內容", status: "狀態",
-  person: "對口", machine_code: "工位", work_order: "案號／車號",
-  customer: "客戶", vehicle: "車輛", site: "站點", issues: "問題",
+  category: "kb.fldCategory", title: "sd.title", detail: "sd.detail", status: "kb.fldStatus",
+  person: "sd.person", machine_code: "sd.machine", work_order: "sd.workOrder",
+  customer: "sd.customer", vehicle: "sd.vehicle", site: "sd.site", issues: "sd.issues",
 };
 
 export default function SourceDrawer({ open, onClose, ticketId, summary, confidence, needsReview }: Props) {
+  const tr = useT();
   const [data, setData] = useState<TicketSource | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -50,21 +52,21 @@ export default function SourceDrawer({ open, onClose, ticketId, summary, confide
     setLoading(true); setErr(null);
     getTicketSource(ticketId)
       .then((d) => { if (alive) setData(d); })
-      .catch((e) => { if (alive) setErr(e instanceof ApiError ? e.message : "載入失敗"); })
+      .catch((e) => { if (alive) setErr(e instanceof ApiError ? e.message : tr("common.loadFailed")); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [open, ticketId]);
 
   return (
-    <Drawer open={open} onClose={onClose} title="來源與整理結果" subtitle={summary ?? ""} width={580}>
+    <Drawer open={open} onClose={onClose} title={tr("sd.title2")} subtitle={summary ?? ""} width={580}>
       <div className="tc-hdr" style={{ marginTop: 0 }}>
         <span className={`tag ${confidence === "high" ? "ok" : confidence === "medium" ? "warn" : "danger"}`}>
-          {confidence === "high" ? "高信心" : confidence === "medium" ? "中信心" : "低信心"}
+          {tr(`wr.conf.${confidence}`)}
         </span>
-        {needsReview && <span className="tag danger">已自動攔截 · 需補資訊</span>}
+        {needsReview && <span className="tag danger">{tr("sd.held")}</span>}
       </div>
 
-      {loading && <div className="tc-empty">載入中…</div>}
+      {loading && <div className="tc-empty">{tr("common.loading")}</div>}
       {err && <div className="tc-empty">{err}</div>}
 
       {/* 取不到原文時要說出原因，不能讓人以為「本來就沒有」 */}
@@ -81,13 +83,13 @@ export default function SourceDrawer({ open, onClose, ticketId, summary, confide
 
       {!loading && !err && data?.extracted && (
         <div className="tc-sec">
-          <span className="tc-sec-lbl">整理出的內容</span>
+          <span className="tc-sec-lbl">{tr("sd.extracted")}</span>
           <div className="tc-extract">
             {Object.entries(data.extracted)
               .filter(([k, v]) => FIELD_LABEL[k] && v != null && v !== "")
               .map(([k, v]) => (
                 <div key={k} className="tc-kv">
-                  <span className="tc-k">{FIELD_LABEL[k]}</span>
+                  <span className="tc-k">{tr(FIELD_LABEL[k])}</span>
                   <span className="tc-v">{fmtValue(k, v)}</span>
                 </div>
               ))}

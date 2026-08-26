@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
+import { useT } from "../i18n/useT";
 
 interface Props {
   open: boolean;
@@ -15,6 +16,7 @@ interface Props {
 // aria-labelledby、body scroll lock — 全由 primitive 處理。
 // 我們只保留視覺 CSS（.drawer-scrim / .drawer / .drawer-hdr / .drawer-body / .drawer-foot）。
 export default function Drawer({ open, onClose, title, subtitle, width = 560, children, footer }: Props) {
+  const tr = useT();
   return (
     <ModalOverlay
       isOpen={open}
@@ -29,7 +31,7 @@ export default function Drawer({ open, onClose, title, subtitle, width = 560, ch
               <Heading slot="title" className="drawer-title">{title}</Heading>
               {subtitle && <div className="drawer-sub">{subtitle}</div>}
             </div>
-            <button className="icon-btn" onClick={onClose} aria-label="關閉">
+            <button className="icon-btn" onClick={onClose} aria-label={tr("common.close")}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M18 6 6 18M6 6l12 12" />
               </svg>

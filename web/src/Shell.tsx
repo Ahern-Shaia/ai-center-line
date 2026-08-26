@@ -7,7 +7,7 @@ import { usePermissions } from "./permission/PermissionContext";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
 import ChangeDisplayNameDialog from "./auth/ChangeDisplayNameDialog";
 import { roleLabel } from "./shared/roleLabel";
-import { LOCALES, LOCALE_NAME } from "./i18n";
+import { LOCALES, LOCALE_NAME, t } from "./i18n";
 import { useLocale, useT } from "./i18n/useT";
 
 // 對照 docs/roles-permissions-matrix.md · 每個 item 綁 permission
@@ -184,13 +184,13 @@ const TENANT_NAME: Record<string, string> = {
 // 方向 A · role-aware sidebar brand
 function brandFor(session: Session): { mark: string; name: string; sub: string } {
   if (session.role === "aiproot_admin") {
-    return { mark: "A", name: "AIPROOT", sub: "平台後台" };
+    return { mark: "A", name: "AIPROOT", sub: t("brand.platform") };
   }
   if (session.role === "consultant") {
-    return { mark: "A", name: "AIPROOT", sub: "顧問視角" };
+    return { mark: "A", name: "AIPROOT", sub: t("brand.consultant") };
   }
   // 客戶方左上角只放公司名（不加「戰情室」副標）· 用戶裁定 2026-08-01
-  const tenantName = TENANT_NAME[session.tenantId] ?? "客戶方";
+  const tenantName = TENANT_NAME[session.tenantId] ?? t("brand.tenant");
   return { mark: tenantName.slice(0, 1), name: tenantName, sub: "" };
 }
 
@@ -209,7 +209,7 @@ interface Props {
 }
 
 export default function Shell({ session, active, pageTitle, onNav, onLogout, onRefresh, onHelp, refreshing, asOf, crumb, children }: Props) {
-  const tenantName = TENANT_NAME[session.tenantId] ?? "客戶方";
+  const tenantName = TENANT_NAME[session.tenantId] ?? t("brand.tenant");
   const brand = brandFor(session);
   const toast = useToast();
   const [locale, setLocale] = useLocale();
@@ -269,7 +269,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
             <div className="sb-brand-name">{brand.name}</div>
             {brand.sub && <div className="sb-brand-sub">{brand.sub}</div>}
           </div>
-          <button className="sb-close" onClick={() => setMobileNavOpen(false)} aria-label="關閉選單">×</button>
+          <button className="sb-close" onClick={() => setMobileNavOpen(false)} aria-label={tr("shell.closeNav")}>×</button>
         </div>
         <nav className="sb-nav">
           {visibleNav.map((g) => {
@@ -300,10 +300,10 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
                     <span>{tr(it.label)}</span>
                     {/* N-3：改過名的項目掛一次性提示，點過就不再出現。
                         沒有它的話，客戶會以為原本那頁被拿掉了。 */}
-                    {it.renamedFrom && !seenRenames.includes(it.key) && (
-                      <span className="sb-renamed" title={`原「${it.renamedFrom}」`}>原：{it.renamedFrom}</span>
+                    {it.renamedFrom && locale === "zh-TW" && !seenRenames.includes(it.key) && (
+                      <span className="sb-renamed" title={tr("shell.renamedTitle", { old: it.renamedFrom })}>{tr("shell.renamed")}{it.renamedFrom}</span>
                     )}
-                    {!it.done && <span className="sb-plan-dot" aria-label="規劃中" title="規劃中" />}
+                    {!it.done && <span className="sb-plan-dot" aria-label={tr("shell.planned")} title={tr("shell.planned")} />}
                   </button>
                 ))}
               </div>
@@ -314,9 +314,9 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
           {/* 手冊是靜態頁不是路由 —— 掛進上面那份權限控管的 nav 會卡，
               而且每個角色都該讀得到，本來就不需要權限判斷。求助資訊已經在這一塊。 */}
           <a className="sb-foot-guide" href="/handbook.html" target="_blank" rel="noreferrer">
-            使用手冊
+            {tr("shell.handbook")}
           </a>
-          <div><span className="sb-foot-brand">aiproot</span> 技術支援</div>
+          <div><span className="sb-foot-brand">aiproot</span> {tr("shell.support")}</div>
           <div className="sb-foot-ver">v0.1</div>
         </div>
       </aside>
@@ -324,7 +324,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
       <div className="main">
         <div className="topbar">
           <div className="topbar-inner">
-          <button className="mobile-menu-btn" onClick={() => setMobileNavOpen(true)} aria-label="選單">
+          <button className="mobile-menu-btn" onClick={() => setMobileNavOpen(true)} aria-label={tr("shell.menu")}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
@@ -337,15 +337,15 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
           {asOf && (
             <span className="as-of">
               <span className="dot" />
-              資料截止 {new Date(asOf).toLocaleString("zh-TW", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+              {tr("shell.asOf")} {new Date(asOf).toLocaleString(locale === "en" ? "en-US" : "zh-TW", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
             </span>
           )}
           {onHelp && (
-            <button className="icon-btn" onClick={onHelp} aria-label="運作原理" title="運作原理">
+            <button className="icon-btn" onClick={onHelp} aria-label={tr("page.onboarding")} title={tr("page.onboarding")}>
               <IconHelp />
             </button>
           )}
-          <button className={`icon-btn${refreshing ? " spin" : ""}`} onClick={onRefresh} aria-label="重新整理" title="重新整理">
+          <button className={`icon-btn${refreshing ? " spin" : ""}`} onClick={onRefresh} aria-label={tr("shell.refresh")} title={tr("shell.refresh")}>
             <IconRefresh />
           </button>
           <MenuTrigger>

@@ -6,6 +6,7 @@ import {
   Select,
   SelectValue,
 } from "react-aria-components";
+import { useT } from "../i18n/useT";
 
 // 專案統一的下拉選單 · 對齊 CategoryManagement / BindingAudit / LlmSettings 樣式
 // 對照 memory feedback_grep_ui_components_before_writing · 別用 native <select>
@@ -41,18 +42,19 @@ interface Props {
 
 export default function StyledSelect({
   items, value, onChange, ariaLabel, disabled,
-  placeholder = "選擇",
+  placeholder,
   allowEmpty = false,
-  emptyLabel = "未分派",
+  emptyLabel,
   width = "100%",
   className = "llm-select",
 }: Props) {
+  const tr = useT();
   const selected = items.find((it) => it.id === value);
   // React-aria Select 需要 key · 空值用特殊 key "__empty__"
   const EMPTY_KEY = "__empty__";
   const selectedKey = value || (allowEmpty ? EMPTY_KEY : undefined);
   const listItems = allowEmpty
-    ? [{ id: EMPTY_KEY, label: emptyLabel }, ...items]
+    ? [{ id: EMPTY_KEY, label: emptyLabel ?? tr("common.unassigned"), hint: undefined }, ...items]
     : items;
 
   return (
@@ -69,9 +71,9 @@ export default function StyledSelect({
       <AriaButton className="llm-select-btn" style={{ width, minWidth: 0 }}>
         <SelectValue className="llm-select-value">
           {() => {
-            if (!value && allowEmpty) return emptyLabel;
-            if (!value) return placeholder;
-            return selected?.label ?? placeholder;
+            if (!value && allowEmpty) return emptyLabel ?? tr("common.unassigned");
+            if (!value) return placeholder ?? tr("common.choose");
+            return selected?.label ?? placeholder ?? tr("common.choose");
           }}
         </SelectValue>
         <svg className="llm-select-chev" width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>

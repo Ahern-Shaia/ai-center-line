@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT } from "./i18n/useT";
 
 // 根治「LINE 內建瀏覽器卡舊 SPA」：app 自我偵測部署新版 → 提示手動更新
 //
@@ -21,6 +22,7 @@ async function fetchLatestHash(): Promise<string | null> {
 }
 
 export default function UpdateBanner() {
+  const tr = useT();
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -59,9 +61,9 @@ export default function UpdateBanner() {
 
   return (
     <div role="status" className="update-banner">
-      <span className="update-banner-text">已有新版本 · 更新後即可正常操作</span>
-      <button className="btn btn-primary small" onClick={() => window.location.reload()}>立即更新</button>
-      <button className="btn small" onClick={() => setShow(false)} aria-label="稍後再更新">稍後</button>
+      <span className="update-banner-text">{tr("update.text")}</span>
+      <button className="btn btn-primary small" onClick={() => window.location.reload()}>{tr("update.now")}</button>
+      <button className="btn small" onClick={() => setShow(false)} aria-label={tr("update.later")}>{tr("update.later")}</button>
     </div>
   );
 }

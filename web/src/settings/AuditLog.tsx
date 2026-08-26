@@ -2,6 +2,8 @@ import Spinner from "../shared/Spinner";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, listAudit, type AuditItem, type AuditScope } from "../api";
 import { useToast } from "../Toast";
+import { t } from "../i18n";
+import { useT } from "../i18n/useT";
 
 // 稽核記錄 · 讀真實的 audit_log
 //
@@ -11,10 +13,10 @@ import { useToast } from "../Toast";
 // 真實資料沒有 IP、沒有對象、沒有部門（那三欄從來沒被寫入），所以這裡就不放這三欄——
 // 擺著空欄位只會讓人以為是資料掉了。
 
-const SCOPES: { id: AuditScope; label: string; hint: string }[] = [
-  { id: "all", label: "全部", hint: "包含查看紀錄，筆數很多" },
-  { id: "write", label: "只看變更", hint: "核對、派發、修改設定等會改到資料的操作" },
-  { id: "login", label: "只看登入", hint: "誰在什麼時候登入" },
+const SCOPES: { id: AuditScope; labelKey: string; hintKey: string }[] = [
+  { id: "all", labelKey: "audit.all", hintKey: "audit.allHint" },
+  { id: "write", labelKey: "audit.write", hintKey: "audit.writeHint" },
+  { id: "login", labelKey: "audit.login", hintKey: "audit.loginHint" },
 ];
 
 function fmtTs(iso: string): string {
@@ -24,6 +26,7 @@ function fmtTs(iso: string): string {
 }
 
 export default function AuditLog() {
+  const tr = useT();
   const toast = useToast();
   const [scope, setScope] = useState<AuditScope>("write");
   const [page, setPage] = useState(1);
@@ -38,7 +41,7 @@ export default function AuditLog() {
       setItems(res.items);
       setHasNext(res.hasNext);
     } catch (e) {
-      toast.show(e instanceof ApiError ? e.message : "載入失敗", "danger");
+      toast.show(e instanceof ApiError ? e.message : tr("common.loadFailed"), "danger");
     } finally {
       setLoading(false);
     }
@@ -51,8 +54,8 @@ export default function AuditLog() {
     <>
       <div className="pane-hdr">
         <div>
-          <h1>稽核記錄</h1>
-          <div className="sub">系統自動記錄每一次操作 · 依時間倒序 · {current.hint}</div>
+          <h1>{tr("nav.audit")}</h1>
+          <div className="sub">{tr("audit.sub")} · {tr(current.hintKey)}</div>
         </div>
       </div>
 
@@ -65,7 +68,7 @@ export default function AuditLog() {
               onClick={() => { setScope(s.id); setPage(1); }}
               disabled={loading}
             >
-              {s.label}
+              {tr(s.labelKey)}
             </button>
           ))}
         </div>
@@ -75,8 +78,8 @@ export default function AuditLog() {
         <Spinner block />
       ) : items.length === 0 ? (
         <div className="dm-empty">
-          這個範圍還沒有紀錄
-          <div className="dm-empty-hint">換一個範圍看看，或稍後再回來</div>
+          {tr("audit.empty")}
+          <div className="dm-empty-hint">{tr("audit.emptyHint")}</div>
         </div>
       ) : (
         <>
@@ -84,11 +87,11 @@ export default function AuditLog() {
             <table className="al-table">
               <thead>
                 <tr>
-                  <th>時間</th>
-                  <th>使用者</th>
-                  <th>角色</th>
-                  <th>動作</th>
-                  <th>結果</th>
+                  <th>{tr("audit.time")}</th>
+                  <th>{tr("audit.user")}</th>
+                  <th>{tr("col.role")}</th>
+                  <th>{tr("audit.action")}</th>
+                  <th>{tr("audit.result")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -104,7 +107,7 @@ export default function AuditLog() {
                         {e.action}
                       </span>
                     </td>
-                    <td><span className={`tag ${e.result === "成功" ? "ok" : "warn"}`}>{e.result}</span></td>
+                    <td><span className={`tag ${e.result === "成功" ? "ok" : "warn"}`}>{tr(`audit.res.${e.result}`)}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -112,9 +115,9 @@ export default function AuditLog() {
           </div>
 
           <div className="ml-pager">
-            <button className="btn" disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>上一頁</button>
-            <span className="ml-pager-at mono">第 {page} 頁</span>
-            <button className="btn" disabled={!hasNext || loading} onClick={() => setPage((p) => p + 1)}>下一頁</button>
+            <button className="btn" disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>{tr("common.prevPage")}</button>
+            <span className="ml-pager-at mono">{tr("common.pageN", { n: page })}</span>
+            <button className="btn" disabled={!hasNext || loading} onClick={() => setPage((p) => p + 1)}>{tr("common.nextPage")}</button>
           </div>
         </>
       )}

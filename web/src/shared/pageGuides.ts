@@ -10,6 +10,7 @@
 //
 // ⚠️ 集中在這一支：文案會一直改，散在 6 個頁面裡等於下次要改 6 個地方。
 
+// ⚠️ 2026-08-27 i18n：四個欄位存的是 **key**，文字在 i18n/*.ts（`guide.<page>.<field>`）
 export interface PageGuide {
   q: string;      // 回答什麼問題
   from: string;   // 資料從哪來
@@ -19,39 +20,39 @@ export interface PageGuide {
 
 export const PAGE_GUIDES: Record<string, PageGuide> = {
   "task-board": {
-    q: "今天有哪些事需要我確認或處理？",
-    from: "AI 每天固定時間讀一次各 LINE 群組的對話，把「有人要做的事」整理成一張張卡片。沒有人需要另外填表。",
-    todo: "看「待核對」那一欄 → 點卡片對照原始對話 → 沒問題就核對掉。每天約 3 分鐘。",
-    who: "部門主管只看得到自己部門的；總經理室看得到全公司。",
+    q: "guide.task-board.q",
+    from: "guide.task-board.from",
+    todo: "guide.task-board.todo",
+    who: "guide.task-board.who",
   },
   warroom: {
-    q: "全公司今天的狀況如何？哪個部門卡住了？",
-    from: "由下方各部門當日的任務與核對狀況即時算出來，不是另外統計的數字。",
-    todo: "看三個圓環抓當天重點 → 哪個部門還沒核對完就點進去看。約 1 分鐘。",
-    who: "總經理室看全公司；部門主管看自己部門。",
+    q: "guide.warroom.q",
+    from: "guide.warroom.from",
+    todo: "guide.warroom.todo",
+    who: "guide.warroom.who",
   },
   "daily-log": {
-    q: "AI 到底有沒有讀到某則訊息？那天群裡在講什麼？",
-    from: "各 LINE 群每天的活動摘要，由 AI 從當日對話抽取。",
-    todo: "覺得「這件事怎麼沒變成任務」的時候來這裡查 —— 看得到 AI 當天讀到什麼、抽出了什麼。平常不用開。",
-    who: "部門主管只看得到自己部門的群；總經理室看全部。",
+    q: "guide.daily-log.q",
+    from: "guide.daily-log.from",
+    todo: "guide.daily-log.todo",
+    who: "guide.daily-log.who",
   },
   depts: {
-    q: "公司有哪些部門？誰在哪個部門？誰是主管？",
-    from: "部門由你自己建；員工則是同仁用 LINE 綁定後自動出現，不用手動建帳號。",
-    todo: "導入時建好部門、指定各部門主管，做一次就好。之後只有人員異動時才進來。",
-    who: "總經理室可以改；其他人看不到這一頁。",
+    q: "guide.depts.q",
+    from: "guide.depts.from",
+    todo: "guide.depts.todo",
+    who: "guide.depts.who",
   },
   channels: {
-    q: "哪些 LINE 群要納入分析？各自算哪個部門的？",
-    from: "把機器人加進 LINE 群之後，群裡第一則訊息就會讓它自動出現在這份清單。",
-    todo: "導入時把每個群分派到對應部門，做一次就好。沒分派的群，它的任務不會出現在任何人的看板上。",
-    who: "總經理室可以改；部門主管只能看。",
+    q: "guide.channels.q",
+    from: "guide.channels.from",
+    todo: "guide.channels.todo",
+    who: "guide.channels.who",
   },
   "scheduler-config": {
-    q: "AI 什麼時候會去讀群組對話？",
-    from: "這裡設定的排程，決定系統每天幾點整理一次前一段時間的對話。",
-    todo: "導入時確認時間（建議每天 18:00，下班前後）就好。沒有排程的話，訊息收得到但不會被整理成任務與日報。",
-    who: "總經理室可以改；部門主管看不到這一頁。",
+    q: "guide.scheduler-config.q",
+    from: "guide.scheduler-config.from",
+    todo: "guide.scheduler-config.todo",
+    who: "guide.scheduler-config.who",
   },
 };

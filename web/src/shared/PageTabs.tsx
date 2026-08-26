@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { usePermissions } from "../permission/PermissionContext";
+import { useT } from "../i18n/useT";
 
 export interface PageTab {
   key: string;
@@ -19,12 +20,13 @@ export interface PageTab {
  * 「看得到卻點不動」比看不到更難查（2026-07-29 總覽儀表 403 的教訓）。
  */
 export default function PageTabs({ tabs, ariaLabel }: { tabs: PageTab[]; ariaLabel: string }) {
+  const tr = useT();
   const perms = usePermissions();
   const visible = tabs.filter((t) => !t.perm || perms.has(t.perm));
   const [active, setActive] = useState(visible[0]?.key ?? "");
 
   if (visible.length === 0) {
-    return <div className="dm-empty">你的角色無權查看此頁 · 請聯繫管理員</div>;
+    return <div className="dm-empty">{tr("common.noPagePermission")}</div>;
   }
 
   const current = visible.find((t) => t.key === active) ?? visible[0];

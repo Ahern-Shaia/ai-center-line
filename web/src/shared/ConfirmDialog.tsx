@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
+import { useT } from "../i18n/useT";
 
 interface Props {
   open: boolean;
@@ -19,9 +20,10 @@ interface Props {
  */
 export default function ConfirmDialog({
   open, onClose, onConfirm, title, body,
-  confirmLabel = "確定", cancelLabel = "取消",
+  confirmLabel, cancelLabel,
   tone = "primary", busy = false,
 }: Props) {
+  const tr = useT();
   return (
     <ModalOverlay
       isOpen={open}
@@ -40,7 +42,7 @@ export default function ConfirmDialog({
               onClick={onConfirm}
               disabled={busy}
             >
-              {busy ? "執行中…" : confirmLabel}
+              {busy ? tr("common.working") : (confirmLabel ?? tr("common.ok"))}
             </button>
           </div>
         </Dialog>

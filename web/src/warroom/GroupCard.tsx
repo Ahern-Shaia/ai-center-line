@@ -4,6 +4,8 @@ import { useToast } from "../Toast";
 import { catLabel } from "../shared/categoryLabel";
 import { statusLabel } from "../shared/recordStatusLabel";
 import { canOpenConvoDetail, navigateTo } from "../nav";
+import { t } from "../i18n";
+import { useT } from "../i18n/useT";
 
 // 群組日誌的一群 = 一列 feed（V4 時間軸脊重構）。
 // 收合＝一行摘要（燈點 + 群名 + 一句話 + 筆數）；展開＝細節（日報/記錄 + 原始訊息）。
@@ -31,10 +33,10 @@ export interface GroupRowProps {
 // 一列的訊號燈 + 一句摘要 + 筆數 + 需注意 pill —— 掃描全靠這個
 function deriveRow(p: GroupRowProps): { signal: Signal; summary: string; count: string; pill: string | null } {
   if (!p.departmentId) {
-    return { signal: "warn", summary: "此群尚未分派部門 · 分析結果不會變成任務", count: "", pill: "未分派部門" };
+    return { signal: "warn", summary: t("gc.noDept"), count: "", pill: t("gc.noDeptPill") };
   }
   if (p.analysisIncomplete) {
-    return { signal: "warn", summary: "這一天的分析尚未完成 · 內容還沒整理出來", count: "", pill: "分析未完成" };
+    return { signal: "warn", summary: t("gc.incomplete"), count: "", pill: t("gc.incompletePill") };
   }
   // 報修派工單優先：它是「有人在等回覆」的待辦，比當日記錄更該被看到
   if (p.serviceIntake.length > 0) {
@@ -43,8 +45,8 @@ function deriveRow(p: GroupRowProps): { signal: Signal; summary: string; count: 
     const issue = typeof first.issue === "string" && first.issue.trim() ? first.issue.trim() : "";
     return {
       signal: "ok",
-      summary: `${p.serviceIntake.length} 張報修派工${who || issue ? ` · ${who ? who + "：" : ""}${issue}` : ""}`,
-      count: `${p.serviceIntake.length} 張`,
+      summary: t("dl.nIntake", { n: p.serviceIntake.length }) + (who || issue ? ` · ${who ? who + "：" : ""}${issue}` : ""),
+      count: t("gc.cntIntake", { n: p.serviceIntake.length }),
       pill: null,
     };
   }
@@ -53,8 +55,8 @@ function deriveRow(p: GroupRowProps): { signal: Signal; summary: string; count: 
     const issue = typeof first.issues === "string" && first.issues.trim() ? first.issues.trim() : null;
     return {
       signal: "ok",
-      summary: `${p.dailyReports.length} 則報工${issue ? ` · ${issue}` : ""}`,
-      count: `${p.dailyReports.length} 則`,
+      summary: t("gc.nReports", { n: p.dailyReports.length }) + (issue ? ` · ${issue}` : ""),
+      count: t("gc.cntReports", { n: p.dailyReports.length }),
       pill: null,
     };
   }
@@ -64,15 +66,16 @@ function deriveRow(p: GroupRowProps): { signal: Signal; summary: string; count: 
     const title = (first.title as string) || (first.detail as string) || "";
     return {
       signal: "ok",
-      summary: `${p.records.length} 項記錄${cat || title ? ` · ${cat ? cat + "：" : ""}${title}` : ""}`,
-      count: `${p.records.length} 項`,
+      summary: t("dl.nRecords", { n: p.records.length }) + (cat || title ? ` · ${cat ? cat + "：" : ""}${title}` : ""),
+      count: t("gc.cntRecords", { n: p.records.length }),
       pill: null,
     };
   }
-  return { signal: "mute", summary: "當日無工作日報", count: "", pill: null };
+  return { signal: "mute", summary: t("gc.noReports"), count: "", pill: null };
 }
 
 export default function GroupCard(props: GroupRowProps) {
+  const tr = useT();
   const { groupId, groupName, departmentId, departmentName, batchDate, dailyReports, records, serviceIntake, uploadId, analysisIncomplete } = props;
   const [expanded, setExpanded] = useState(false);
   const [messages, setMessages] = useState<WarroomGroupMessage[] | null>(null);
@@ -93,7 +96,7 @@ export default function GroupCard(props: GroupRowProps) {
       setMessages(res.messages);
       setTotal(res.total);
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入群訊息失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("gc.loadMsgsFailed"), "danger");
       setRawOpen(false);
     } finally {
       setLoading(false);
@@ -105,7 +108,7 @@ export default function GroupCard(props: GroupRowProps) {
       <button className="dlr-hd" onClick={() => setExpanded((v) => !v)} aria-expanded={expanded}>
         <span className={`dlr-dot dlr-dot-${signal}`} aria-hidden />
         {/* ⚠️ 群 ID（Cf668e5a…）是內部識別碼，不當標題印給客戶看 */}
-        <span className="dlr-name">{groupName ?? `未命名群組 · ${groupId.slice(-6)}`}</span>
+        <span className="dlr-name">{groupName ?? tr("gc.unnamed", { id: groupId.slice(-6) })}</span>
         {departmentName && <span className="dlr-dept">{departmentName}</span>}
         <span className="dlr-sum">{summary}</span>
         {pill && <span className="dlr-pill">{pill}</span>}
@@ -118,30 +121,30 @@ export default function GroupCard(props: GroupRowProps) {
           {/* ⚠️ 沒有部門 = materializer 直接 skip，一張任務都不會建 */}
           {!departmentId && (
             <div className="dl-card-nodept">
-              此群尚未分派部門 · 分析結果<b>不會變成任務</b>
-              <span className="dl-card-nodept-hint">到「設定 → LINE 群組」分派部門後，下次分析才會建立任務</span>
+              {tr("gc.noDept")}
+              <span className="dl-card-nodept-hint">{tr("gc.noDeptHint")}</span>
             </div>
           )}
           {/* ⚠️ 分析沒完成 ≠ 那天很閒 —— 說「還沒好」不是「壞了」 */}
           {analysisIncomplete && (
             <div className="dl-card-nodept">
-              這一天的分析<b>尚未完成</b> · 內容還沒整理出來
-              <span className="dl-card-nodept-hint">已記錄，系統管理員會處理 · 完成後這裡會自動出現內容</span>
+              {tr("gc.incomplete")}
+              <span className="dl-card-nodept-hint">{tr("gc.incompleteHint")}</span>
             </div>
           )}
           {/* 報修派工單 · 獨立一區（不進 dailyReports/records 的 fallback 鏈）——
               同一天可能既有派工單又有其他記錄，用 fallback 會把派工單蓋掉。*/}
           {serviceIntake.length > 0 && (
             <div className="dl-intake">
-              <div className="dl-intake-hdr">報修派工 · {serviceIntake.length} 張</div>
+              <div className="dl-intake-hdr">{tr("gc.intakeHdr", { n: serviceIntake.length })}</div>
               {serviceIntake.slice(0, MAX_ITEMS).map((r, i) => <IntakeItem key={i} r={r} />)}
               {serviceIntake.length > MAX_ITEMS && (
                 <div className="dl-report-more">
                   {canOpenConvoDetail() ? (
                     <button className="nc-lnk" onClick={() => navigateTo({ page: "convo-detail", uploadId })}>
-                      + {serviceIntake.length - MAX_ITEMS} 張 · 查完整對話 →
+                      {tr("gc.moreIntakeFull", { n: serviceIntake.length - MAX_ITEMS })}
                     </button>
-                  ) : <span>+ {serviceIntake.length - MAX_ITEMS} 張</span>}
+                  ) : <span>{tr("gc.moreIntake", { n: serviceIntake.length - MAX_ITEMS })}</span>}
                 </div>
               )}
             </div>
@@ -155,9 +158,9 @@ export default function GroupCard(props: GroupRowProps) {
                 <li className="dl-report-more">
                   {canOpenConvoDetail() ? (
                     <button className="nc-lnk" onClick={() => navigateTo({ page: "convo-detail", uploadId })}>
-                      + {dailyReports.length - MAX_ITEMS} 筆 · 查完整對話 →
+                      {tr("gc.moreReportsFull", { n: dailyReports.length - MAX_ITEMS })}
                     </button>
-                  ) : <span>+ {dailyReports.length - MAX_ITEMS} 筆</span>}
+                  ) : <span>{tr("gc.moreItems", { n: dailyReports.length - MAX_ITEMS })}</span>}
                 </li>
               )}
             </ul>
@@ -168,40 +171,40 @@ export default function GroupCard(props: GroupRowProps) {
                 <div className="dl-report-more">
                   {canOpenConvoDetail() ? (
                     <button className="nc-lnk" onClick={() => navigateTo({ page: "convo-detail", uploadId })}>
-                      + {records.length - MAX_ITEMS} 筆 · 查完整對話 →
+                      {tr("gc.moreRecordsFull", { n: records.length - MAX_ITEMS })}
                     </button>
-                  ) : <span>+ {records.length - MAX_ITEMS} 筆</span>}
+                  ) : <span>{tr("gc.moreItems", { n: records.length - MAX_ITEMS })}</span>}
                 </div>
               )}
             </div>
           ) : analysisIncomplete || !departmentId || serviceIntake.length > 0 ? null : (
             // ⚠️ serviceIntake 有東西時不可再說「當日無工作日報」—— 上面才剛列出派工單，會自相矛盾
-            <div className="dl-card-empty">當日無工作日報</div>
+            <div className="dl-card-empty">{tr("gc.noReports")}</div>
           )}
 
           <button className="dl-card-toggle" onClick={() => void loadRaw()}>
-            {rawOpen ? "收合原始訊息 ▲" : "展開群內原始訊息 ▼"}
+            {rawOpen ? tr("kb.hideSource") : tr("gc.showRaw")}
           </button>
 
           {rawOpen && (
             <div className="dl-raw">
-              {loading && <div style={{ fontSize: 12, color: "var(--ink-3)", padding: 8 }}>載入中…</div>}
+              {loading && <div style={{ fontSize: 12, color: "var(--ink-3)", padding: 8 }}>{tr("common.loading")}</div>}
               {!loading && messages && messages.length === 0 && (
-                <div style={{ fontSize: 12, color: "var(--ink-3)", padding: 8, textAlign: "center" }}>當日此群 bot 無收到訊息</div>
+                <div style={{ fontSize: 12, color: "var(--ink-3)", padding: 8, textAlign: "center" }}>{tr("gc.noRaw")}</div>
               )}
               {!loading && messages && messages.length > 0 && (
                 <>
-                  <div className="dl-raw-hdr">bot 收到的訊息 · {total} 則{total > 100 ? "（顯示前 100）" : ""}</div>
+                  <div className="dl-raw-hdr">{tr("gc.rawHdr", { n: total })}{total > 100 ? tr("gc.first100") : ""}</div>
                   {messages.map((m) => (
                     <div key={m.messageId} className="dl-raw-item">
                       <div className="dl-raw-meta">
                         <span className="dl-raw-time">{formatTime(m.sentAt)}</span>
-                        <span className="dl-raw-who">{m.senderName ?? "(未綁定成員)"}</span>
+                        <span className="dl-raw-who">{m.senderName ?? tr("gc.unbound")}</span>
                       </div>
                       <div className="dl-raw-text">
                         {m.messageType === "text" && m.textContent}
-                        {m.messageType === "sticker" && <span style={{ color: "var(--ink-3)" }}>[貼圖]</span>}
-                        {m.messageType === "image" && <span style={{ color: "var(--ink-3)" }}>[圖片]</span>}
+                        {m.messageType === "sticker" && <span style={{ color: "var(--ink-3)" }}>{tr("gc.sticker")}</span>}
+                        {m.messageType === "image" && <span style={{ color: "var(--ink-3)" }}>{tr("gc.image")}</span>}
                         {!["text", "sticker", "image"].includes(m.messageType) && <span style={{ color: "var(--ink-3)" }}>[{m.messageType}]</span>}
                       </div>
                     </div>
@@ -221,7 +224,7 @@ function formatTime(iso: string): string {
 }
 
 function RecordItem({ r }: { r: Record<string, unknown> }) {
-  const category = r.category ? catLabel(r.category as string) : "未分類";
+  const category = r.category ? catLabel(r.category as string) : t("kb.uncategorized");
   const title = (r.title as string) || "";
   const detail = (r.detail as string) || "";
   const status = r.status as string | null;
@@ -230,10 +233,10 @@ function RecordItem({ r }: { r: Record<string, unknown> }) {
   const workOrder = r.work_order as string | null;
 
   const fields: Array<[string, string]> = [];
-  if (person) fields.push(["對口", person]);
-  if (machineCode) fields.push(["機台", machineCode]);
-  if (workOrder) fields.push(["工單", workOrder]);
-  if (status) fields.push(["狀態", statusLabel(status)]);
+  if (person) fields.push([t("sd.person"), person]);
+  if (machineCode) fields.push([t("gc.machine"), machineCode]);
+  if (workOrder) fields.push([t("gc.workOrder"), workOrder]);
+  if (status) fields.push([t("kb.fldStatus"), statusLabel(status)]);
 
   return (
     <div className="dl-record-item">
@@ -266,17 +269,17 @@ function IntakeItem({ r }: { r: Record<string, unknown> }) {
   const phone = r.phone as string | null;
 
   const fields: Array<[string, string]> = [];
-  if (vehicle) fields.push(["車輛", vehicle]);
-  if (warranty) fields.push(["保固", warranty]);
-  if (contact) fields.push(["聯絡人", contact]);
-  if (phone) fields.push(["電話", phone]);
-  if (status) fields.push(["狀態", status]);
+  if (vehicle) fields.push([t("sd.vehicle"), vehicle]);
+  if (warranty) fields.push([t("gc.warranty"), warranty]);
+  if (contact) fields.push([t("gc.contact"), contact]);
+  if (phone) fields.push([t("gc.phone"), phone]);
+  if (status) fields.push([t("kb.fldStatus"), status]);
 
   // 客戶未抽到時（表單常無「客戶:」欄）用車輛當標題，不要顯示空白列
-  const head = customer || vehicle || "未指明客戶";
+  const head = customer || vehicle || t("gc.noCustomer");
   return (
     <div className="dl-record-item">
-      <div className="dl-record-cat dl-intake-cat">報修</div>
+      <div className="dl-record-cat dl-intake-cat">{t("gc.repair")}</div>
       <div className="dl-record-summary">
         <b>{head}</b>{site && <span style={{ color: "var(--ink-3)" }}> · {site}</span>}
         {issue && <span style={{ color: "var(--ink-2)" }}> · {issue}</span>}
@@ -293,20 +296,20 @@ function IntakeItem({ r }: { r: Record<string, unknown> }) {
 }
 
 function DailyReportSummary({ r }: { r: Record<string, unknown> }) {
-  const reporter = r.reporter_name || r.reporter_code || "未署名";
+  const reporter = r.reporter_name || r.reporter_code || t("gc.anon");
   const parts: string[] = [];
-  if (r.line) parts.push(`線別 ${r.line}`);
-  if (r.machine_code) parts.push(`機台 ${r.machine_code}`);
-  if (r.work_order) parts.push(`工單 ${r.work_order}`);
-  if (r.output_qty != null) parts.push(`產出 ${r.output_qty}`);
-  if (r.defect_qty != null) parts.push(`不良 ${r.defect_qty}`);
-  if (r.work_hours != null) parts.push(`工時 ${r.work_hours}h`);
+  if (r.line) parts.push(`${t("gc.line")} ${r.line}`);
+  if (r.machine_code) parts.push(`${t("gc.machine")} ${r.machine_code}`);
+  if (r.work_order) parts.push(`${t("gc.workOrder")} ${r.work_order}`);
+  if (r.output_qty != null) parts.push(`${t("gc.output")} ${r.output_qty}`);
+  if (r.defect_qty != null) parts.push(`${t("gc.defect")} ${r.defect_qty}`);
+  if (r.work_hours != null) parts.push(`${t("gc.hours")} ${r.work_hours}h`);
   return (
     <>
       <span className="dl-report-who">{String(reporter)}</span>
       <span className="dl-report-parts">{parts.join(" · ") || "—"}</span>
       {r.issues != null && String(r.issues).trim() && (
-        <div className="dl-report-issue">問題：{String(r.issues)}</div>
+        <div className="dl-report-issue">{t("gc.issues")}{String(r.issues)}</div>
       )}
     </>
   );

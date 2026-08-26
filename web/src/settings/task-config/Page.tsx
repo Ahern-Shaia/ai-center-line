@@ -5,6 +5,7 @@ import { useToast } from "../../Toast";
 import PageTabs from "../../shared/PageTabs";
 import CategoryManagement from "../../aiproot-console/CategoryManagement";
 import { useTenantPicker } from "../../shared/TenantPicker";
+import { useT } from "../../i18n/useT";
 
 /**
  * 任務設定 · navigation-and-capability-gating §4
@@ -18,23 +19,24 @@ import { useTenantPicker } from "../../shared/TenantPicker";
  *    UI 不放灰掉的假按鈕 —— 客戶問「這什麼時候有」的成本比少一個區塊高。
  */
 export default function TaskConfigPage() {
+  const tr = useT();
   // 平台角色要先選看哪一家；客戶方只有自己一家，picker 回 null
   const [tenantId, picker, ready] = useTenantPicker();
   return (
     <>
       <div className="pane-hdr">
         <div>
-          <h1>任務設定</h1>
-          <div className="sub">這家公司的任務長什麼樣、多久算逾時</div>
+          <h1>{tr("nav.taskConfig")}</h1>
+          <div className="sub">{tr("tc.sub")}</div>
         </div>
         {picker}
       </div>
-      <PageTabs ariaLabel="任務設定" tabs={[
-        { key: "shape", label: "任務長什麼樣", render: () => <TaskShape tenantId={tenantId} ready={ready} /> },
-        { key: "timing", label: "時間", render: () => <TaskTiming tenantId={tenantId} ready={ready} /> },
+      <PageTabs ariaLabel={tr("nav.taskConfig")} tabs={[
+        { key: "shape", label: tr("tc.tabShape"), render: () => <TaskShape tenantId={tenantId} ready={ready} /> },
+        { key: "timing", label: tr("tc.tabTiming"), render: () => <TaskTiming tenantId={tenantId} ready={ready} /> },
         // doc §4 把分類列為本頁的一個區塊 —— 它決定任務被分成哪幾類，
         // 跟「任務長什麼樣」是同一組決定，不該是另一個側欄項目
-        { key: "category", label: "分類", perm: "categories:view", render: () => <CategoryManagement /> },
+        { key: "category", label: tr("kb.fldCategory"), perm: "categories:view", render: () => <CategoryManagement /> },
       ]} />
     </>
   );
@@ -42,28 +44,29 @@ export default function TaskConfigPage() {
 
 /** 抽取模板 · 唯讀（OQ-NAV-10：走 task-config:template，預設不給，按客戶成熟度再開）*/
 function TaskShape({ tenantId, ready }: { tenantId?: string; ready: boolean }) {
+  const tr = useT();
   const toast = useToast();
   const [cfg, setCfg] = useState<TaskConfig | null>(null);
   useEffect(() => {
     if (!ready) return;
     getTaskConfig(tenantId).then(setCfg).catch((err) =>
-      toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger"));
+      toast.show(err instanceof ApiError ? err.message : tr("common.loadFailed"), "danger"));
   }, [toast, tenantId, ready]);
   return (
     <div className="sc-card">
       <div className="sc-card-hdr">
-        <strong>抽取模板</strong>
-        <span className="sc-status off">由 aiproot 設定</span>
+        <strong>{tr("tc.template")}</strong>
+        <span className="sc-status off">{tr("tc.byAiproot")}</span>
       </div>
       <div className="sc-row">
         <div className="sc-row-lbl">
-          目前使用
-          <span className="sc-row-hint">決定 AI 從對話裡抽哪些欄位</span>
+          {tr("tc.inUse")}
+          <span className="sc-row-hint">{tr("tc.templateHint")}</span>
         </div>
         <div className="sc-row-val">
           {cfg?.template
             ? <><strong>{cfg.template.label}</strong><span className="sc-row-hint">{cfg.template.description}</span></>
-            : <span className="sc-row-hint">載入中…</span>}
+            : <span className="sc-row-hint">{tr("common.loading")}</span>}
         </div>
       </div>
     </div>
@@ -71,6 +74,7 @@ function TaskShape({ tenantId, ready }: { tenantId?: string; ready: boolean }) {
 }
 
 function TaskTiming({ tenantId, ready }: { tenantId?: string; ready: boolean }) {
+  const tr = useT();
   const perms = usePermissions();
   const toast = useToast();
   const canEditTiming = perms.has("task-config:timing");
@@ -94,7 +98,7 @@ function TaskTiming({ tenantId, ready }: { tenantId?: string; ready: boolean }) 
       setTier2(String(r.tierDays[1]));
       setAssignNotify(r.assignNotify);
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("common.loadFailed"), "danger");
     } finally {
       setLoading(false);
     }
@@ -116,86 +120,86 @@ function TaskTiming({ tenantId, ready }: { tenantId?: string; ready: boolean }) 
       // N-6：改動會即時重算歷史任務的「逾時 N 天」。不講的話主管會以為資料被人改過
       toast.show(
         r.affectedTickets > 0
-          ? `已儲存 · 目前有 ${r.affectedTickets} 件任務落在逾時範圍`
-          : "已儲存 · 目前沒有任務落在逾時範圍",
+          ? tr("tc.savedN", { n: r.affectedTickets })
+          : tr("tc.saved0"),
         "ok",
       );
       await refresh();
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "儲存失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("common.saveFailed"), "danger");
     } finally {
       setSaving(false);
     }
   }
 
-  if (loading) return <div className="sc-row-hint">載入中…</div>;
+  if (loading) return <div className="sc-row-hint">{tr("common.loading")}</div>;
 
   return (
     <>
       <div className="sc-card">
         <div className="sc-card-hdr">
-          <strong>時間</strong>
-          {cfg?.isDefault && <span className="sc-status off">目前使用平台預設</span>}
+          <strong>{tr("tc.tabTiming")}</strong>
+          {cfg?.isDefault && <span className="sc-status off">{tr("tc.usingDefault")}</span>}
         </div>
 
         <div className="sc-row">
           <div className="sc-row-lbl">
-            逾時寬限期
-            <span className="sc-row-hint">任務卡幾天沒核對就標記逾時</span>
+            {tr("tc.grace")}
+            <span className="sc-row-hint">{tr("tc.graceHint")}</span>
           </div>
           <div className="sc-row-val">
             <input className="tf" type="number" min={1} max={90} style={{ width: 90 }}
               value={grace} disabled={!canEditTiming}
               onChange={(e) => setGrace(e.target.value)} />
-            <span className="sc-row-hint">天（1–90）</span>
+            <span className="sc-row-hint">{tr("tc.days190")}</span>
           </div>
         </div>
 
         <div className="sc-row">
           <div className="sc-row-lbl">
-            提醒升級階梯
-            <span className="sc-row-hint">同一句話講 30 天，人會自動忽略 · 所以提醒要分級</span>
+            {tr("tc.ladder")}
+            <span className="sc-row-hint">{tr("tc.ladderHint")}</span>
           </div>
           <div className="sc-row-val">
             <input className="tf" type="number" min={1} max={90} style={{ width: 78 }}
               value={tier1} disabled={!canEditTiming}
               onChange={(e) => setTier1(e.target.value)} />
-            <span className="sc-row-hint">天內只提一次</span>
+            <span className="sc-row-hint">{tr("tc.stage1")}</span>
             <input className="tf" type="number" min={1} max={90} style={{ width: 78 }}
               value={tier2} disabled={!canEditTiming}
               onChange={(e) => setTier2(e.target.value)} />
-            <span className="sc-row-hint">天內附上天數 · 超過就不再對當事人重複，改浮到主管端</span>
+            <span className="sc-row-hint">{tr("tc.stage2")}</span>
           </div>
         </div>
 
         <div className="sc-row">
           <div className="sc-row-lbl">
-            指派後通知當事人
-            <span className="sc-row-hint">主管把任務指派給某人時，用貴公司的 LINE 機器人私訊他</span>
+            {tr("tc.notifyAssignee")}
+            <span className="sc-row-hint">{tr("tc.notifyHint")}</span>
           </div>
           <div className="sc-row-val">
             <label style={{ cursor: canEditTiming ? "pointer" : "default" }}>
               <input type="checkbox" checked={assignNotify} disabled={!canEditTiming}
                 onChange={(e) => setAssignNotify(e.target.checked)} />{" "}
               <span style={{ fontSize: 12, color: assignNotify ? "var(--ok, #059669)" : "var(--ink-3)" }}>
-                {assignNotify ? "開啟" : "關閉"}
+                {assignNotify ? tr("common.on") : tr("common.off")}
               </span>
             </label>
             {/* 只私訊當事人一個人，群組看不到 —— 這件事要講，否則主管會怕打擾全群 */}
-            <span className="sc-row-hint">只私訊被指派的那一位 · 群組不會看到</span>
+            <span className="sc-row-hint">{tr("tc.notifyDmOnly")}</span>
           </div>
         </div>
 
         {canEditTiming && (
           <div className="sc-card-foot">
             <button className="btn btn-primary" disabled={!dirty || invalid || saving} onClick={save}>
-              {saving ? "儲存中…" : "儲存"}
+              {saving ? tr("common.saving") : tr("tc.save")}
             </button>
           </div>
         )}
         {invalid && (
           <div className="sc-row-hint" style={{ textAlign: "right" }}>
-            天數需為 1–90 的整數，且第一段要小於第二段
+            {tr("tc.invalid")}
           </div>
         )}
       </div>

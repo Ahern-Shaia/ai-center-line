@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PAGE_GUIDES } from "./pageGuides";
+import { useT } from "../i18n/useT";
 
 // 頁面用途說明 · 對照 docs/mockup/page-guide.html
 //
@@ -20,6 +21,7 @@ import { PAGE_GUIDES } from "./pageGuides";
 //   {guide.panel}
 
 export function usePageGuide(id: keyof typeof PAGE_GUIDES | string) {
+  const tr = useT();
   const [open, setOpen] = useState(false);
   const g = PAGE_GUIDES[id];
   if (!g) return { toggle: null, panel: null };
@@ -31,7 +33,7 @@ export function usePageGuide(id: keyof typeof PAGE_GUIDES | string) {
       aria-expanded={open}
       onClick={() => setOpen((v) => !v)}
     >
-      {open ? "▾ 收起說明" : "這一頁做什麼？"}
+      {open ? tr("guide.close") : tr("guide.toggle")}
     </button>
   );
 
@@ -44,14 +46,14 @@ export function usePageGuide(id: keyof typeof PAGE_GUIDES | string) {
 
   const panel = open ? (
     <div className="pg-panel">
-      {row("回答什麼問題", g.q)}
-      {row("資料從哪來", g.from)}
-      {row("你通常會做什麼", g.todo)}
-      {row("誰看得到", g.who)}
+      {row(tr("guide.rowQ"), tr(g.q))}
+      {row(tr("guide.rowFrom"), tr(g.from))}
+      {row(tr("guide.rowTodo"), tr(g.todo))}
+      {row(tr("guide.rowWho"), tr(g.who))}
       <div className="pg-foot">
-        <button type="button" className="pg-hide" onClick={() => setOpen(false)}>收起</button>
+        <button type="button" className="pg-hide" onClick={() => setOpen(false)}>{tr("guide.collapse")}</button>
         {/* 完整流程走右上角那顆 ?（Onboarding）· 這裡只提示，不另接一套導覽 */}
-        <span className="pg-more">想看完整運作流程 → 右上角的「?」</span>
+        <span className="pg-more">{tr("guide.more")}</span>
       </div>
     </div>
   ) : null;

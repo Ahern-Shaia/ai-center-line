@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { t as t2 } from "./i18n";
 
 type Kind = "ok" | "warn" | "danger" | "info";
 interface Item { id: number; msg: string; kind: Kind; time: string; }
 
-const KIND_LABEL: Record<Kind, string> = { ok: "成功", warn: "警告", danger: "失敗", info: "通知" };
+const KIND_LABEL: Record<Kind, string> = { ok: "toast.ok", warn: "toast.warn", danger: "toast.danger", info: "toast.info" };
 
 const ToastCtx = createContext<{ show: (msg: string, kind?: Kind) => void }>({ show: () => undefined });
 
@@ -32,7 +33,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div key={t.id} className={`toast ${t.kind === "info" ? "" : t.kind}`}>
             <div className="toast-tstamp">
               <span className="time">{t.time}</span>
-              <span className="type">{KIND_LABEL[t.kind]}</span>
+              <span className="type">{t2(KIND_LABEL[t.kind])}</span>
             </div>
             <div className="toast-body">{t.msg}</div>
           </div>

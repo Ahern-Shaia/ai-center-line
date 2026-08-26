@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchMediaBlobUrl } from "../api";
+import { useT } from "../i18n/useT";
 
 /**
  * 訊息裡的照片／影片縮圖。
@@ -11,6 +12,7 @@ import { fetchMediaBlobUrl } from "../api";
  * 另外列的話「這個可以嗎」指的是哪一張就看不出來 —— 而那正是主管要判斷的東西。
  */
 export default function MessageMedia({ mediaId, kind }: { mediaId: string; kind: string }) {
+  const tr = useT();
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [zoom, setZoom] = useState(false);
@@ -24,19 +26,19 @@ export default function MessageMedia({ mediaId, kind }: { mediaId: string; kind:
     return () => { cancelled = true; if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [mediaId]);
 
-  if (failed) return <div className="tm-thumb tm-thumb-failed" title="沒有權限或檔案已刪除">無法顯示</div>;
+  if (failed) return <div className="tm-thumb tm-thumb-failed" title={tr("thumb.noAccess")}>{tr("thumb.cannotShow")}</div>;
   if (!url) return <div className="tm-thumb tm-thumb-loading" />;
   if (kind === "video") return <video className="tm-thumb" src={url} controls preload="metadata" />;
 
   return (
     <>
-      <button className="tm-thumb-btn" onClick={() => setZoom(true)} title="點開看大圖">
-        <img className="tm-thumb" src={url} alt="來源訊息的照片" loading="lazy" />
+      <button className="tm-thumb-btn" onClick={() => setZoom(true)} title={tr("thumb.zoom")}>
+        <img className="tm-thumb" src={url} alt={tr("thumb.alt")} loading="lazy" />
       </button>
       {/* 縮圖看不清楚就等於沒給 */}
       {zoom && (
         <div className="tm-lightbox" onClick={() => setZoom(false)} role="presentation">
-          <img src={url} alt="放大檢視" />
+          <img src={url} alt={tr("thumb.zoomAlt")} />
         </div>
       )}
     </>

@@ -257,12 +257,12 @@ export default function App() {
           {/* 通訊管道 · 兩頁合一（M4）。群組與員工綁定都是「誰在哪個管道上」，
               未來接 Discord 等就是同一頁多一個 tab（對齊 channel-adapter 的方向）。 */}
           {route.page === "channels" && (
-            <PageTabs ariaLabel="LINE 群組" tabs={[
-              { key: "groups", label: "LINE 群組", perm: "line-groups:view", render: () => <LineGroupsPage /> },
-              { key: "binding", label: "員工綁定", perm: "binding:view", render: () => <TenantBindingAudit /> },
+            <PageTabs ariaLabel={t("nav.channels")} tabs={[
+              { key: "groups", label: t("nav.channels"), perm: "line-groups:view", render: () => <LineGroupsPage /> },
+              { key: "binding", label: t("tab.binding"), perm: "binding:view", render: () => <TenantBindingAudit /> },
               // aiproot 的跨租戶版。原本是另一個側欄項目「LINE 綁定稽核」——
               // 跟上面那個 tab 是同一件事，只是看的範圍不同（§1.3 兩個入口）
-              { key: "binding-audit", label: "綁定稽核", perm: "binding:aiproot-view", render: () => <BindingAudit /> },
+              { key: "binding-audit", label: t("tab.bindingAudit"), perm: "binding:aiproot-view", render: () => <BindingAudit /> },
             ]} />
           )}
           {route.page === "convo-list" && (
@@ -293,12 +293,12 @@ export default function App() {
               而且互相解釋 —— 成本高不高要看分析量、接住率低要看抽取健康度。
               分成四個入口的結果是每一個都要點進去看一眼。 */}
           {route.page === "system-health" && (
-            <PageTabs ariaLabel="系統健康" tabs={[
-              { key: "extraction", label: "抽取健康度", perm: "extraction-health:view", render: () => <ExtractionHealth /> },
-              { key: "completion", label: "任務完成追蹤", perm: "completion-tracking:view", render: () => <CompletionTracking /> },
-              { key: "batches", label: "對話分析歷程", perm: "batch-history:view",
+            <PageTabs ariaLabel={t("nav.systemHealth")} tabs={[
+              { key: "extraction", label: t("tab.extraction"), perm: "extraction-health:view", render: () => <ExtractionHealth /> },
+              { key: "completion", label: t("tab.completion"), perm: "completion-tracking:view", render: () => <CompletionTracking /> },
+              { key: "batches", label: t("tab.batches"), perm: "batch-history:view",
                 render: () => <BatchHistory onOpenAnalysis={(id) => setRoute({ page: "convo-detail", uploadId: id })} /> },
-              { key: "cost", label: "AI 成本", perm: "cost-dashboard:view",
+              { key: "cost", label: t("tab.cost"), perm: "cost-dashboard:view",
                 render: () => <CostDashboard onOpenAnalysis={(id) => setRoute({ page: "convo-detail", uploadId: id })} /> },
             ]} />
           )}

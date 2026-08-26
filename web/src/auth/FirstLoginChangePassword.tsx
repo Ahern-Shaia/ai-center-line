@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { changePassword, clearMustChange, logout, ApiError } from "../api";
 import { useToast } from "../Toast";
+import { useT } from "../i18n/useT";
 
 interface Props {
   email: string;
@@ -9,6 +10,7 @@ interface Props {
 
 // 首次登入強制改密碼 · 全螢幕 · 沒改前無法進 shell
 export default function FirstLoginChangePassword({ email, onDone }: Props) {
+  const tr = useT();
   const toast = useToast();
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -20,29 +22,29 @@ export default function FirstLoginChangePassword({ email, onDone }: Props) {
     e.preventDefault();
     setFailures([]);
     if (newPassword !== confirm) {
-      toast.show("新密碼與確認不符", "danger");
+      toast.show(tr("cpw.mismatch"), "danger");
       return;
     }
     if (!oldPassword.trim() || !newPassword.trim()) {
-      toast.show("欄位不可為空", "danger");
+      toast.show(tr("flc.blank"), "danger");
       return;
     }
     setSaving(true);
     try {
       await changePassword(oldPassword, newPassword);
       clearMustChange();
-      toast.show("密碼已更新 · 歡迎使用", "ok");
+      toast.show(tr("flc.done"), "ok");
       onDone();
     } catch (err) {
       if (err instanceof ApiError) {
         // 嘗試撈 failures list
         const raw = (err as unknown as { message: string }).message;
-        toast.show(raw || "更新失敗", "danger");
+        toast.show(raw || tr("common.updateFailed"), "danger");
         if (raw?.includes("密碼不符合安全政策")) {
-          setFailures(["長度需 ≥ 12 字元", "需包含大寫、小寫、數字、符號 四選三"]);
+          setFailures([tr("flc.f1"), tr("flc.f2")]);
         }
       } else {
-        toast.show("更新失敗", "danger");
+        toast.show(tr("common.updateFailed"), "danger");
       }
     } finally {
       setSaving(false);
@@ -53,38 +55,38 @@ export default function FirstLoginChangePassword({ email, onDone }: Props) {
     <div className="firstlogin-wrap">
       <div className="firstlogin-card">
         <div className="firstlogin-hdr">
-          <h1>首次登入 · 請設定新密碼</h1>
-          <p>為確保帳號安全 · 首次登入必須更改密碼。</p>
+          <h1>{tr("flc.title")}</h1>
+          <p>{tr("flc.sub")}</p>
           <p className="firstlogin-email">{email}</p>
         </div>
         <form onSubmit={handleSubmit} className="llm-form">
           <div className="field">
-            <label>目前密碼</label>
+            <label>{tr("cpw.current")}</label>
             <input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} disabled={saving} autoComplete="current-password" required />
           </div>
           <div className="field">
-            <label>新密碼</label>
+            <label>{tr("cpw.new")}</label>
             <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={saving} autoComplete="new-password" required />
             <div className="llm-hint">
-              需 ≥ 12 字 · 大寫、小寫、數字、符號 四選三 · 不可含 email 或姓名 · 不可為常見弱密碼
+              {tr("flc.rule")}
             </div>
           </div>
           <div className="field">
-            <label>確認新密碼</label>
+            <label>{tr("cpw.confirm")}</label>
             <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} disabled={saving} autoComplete="new-password" required />
           </div>
           {failures.length > 0 && (
             <div className="llm-tip" style={{ marginTop: 0 }}>
-              <strong>密碼不符合政策</strong>
+              <strong>{tr("flc.policyFail")}</strong>
               <ul>{failures.map((f, i) => <li key={i}>{f}</li>)}</ul>
             </div>
           )}
           <div className="llm-form-actions">
             <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? "儲存中…" : "設定新密碼並進入系統"}
+              {saving ? tr("common.saving") : tr("flc.submit")}
             </button>
             <button type="button" className="btn btn-ghost" onClick={() => { logout(); location.reload(); }} disabled={saving}>
-              登出
+              {tr("menu.logout")}
             </button>
           </div>
         </form>

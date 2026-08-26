@@ -1,5 +1,6 @@
 import MessageMedia from "../shared/MediaThumb";
 import type { TicketSource } from "../api";
+import { useT } from "../i18n/useT";
 
 /**
  * 任務的來源原文。
@@ -10,11 +11,12 @@ import type { TicketSource } from "../api";
  * 所以收成一份。
  */
 export default function SourceMessageList({ data }: { data: TicketSource }) {
+  const tr = useT();
   return (
     <>
       {data.messages.length > 0 && (
         <>
-          <div className="ts-hd">AI 是根據這 {data.messages.length} 則訊息整理的</div>
+          <div className="ts-hd">{tr("sml.basedOn", { n: data.messages.length })}</div>
           {data.messages.map((m) => (
             <div key={m.id} className="ts-msg">
               <span className="ts-msg-meta">{m.time} {m.sender}</span>
@@ -33,8 +35,7 @@ export default function SourceMessageList({ data }: { data: TicketSource }) {
           自己看到的是全部還是殘缺（prod 39 張任務裡 35 張是前者）。 */}
       {!data.hasSourceLink && (
         <div className="ts-no-link">
-          這張任務建立於「來源訊息連結」上線之前，<b>看不到原始對話與照片</b>。
-          之後新產生的任務都會有。
+          {tr("sml.legacy")}
         </div>
       )}
     </>

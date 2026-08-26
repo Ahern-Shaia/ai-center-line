@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button as AriaButton, ListBox, ListBoxItem, Popover, Select, SelectValue } from "react-aria-components";
 import { getSession, listAiprootTenants, type AiprootTenantOption } from "../api";
+import { useT } from "../i18n/useT";
 
 /**
  * 平台角色（aiproot_admin / consultant）用來選「現在在看哪一家」。
@@ -15,6 +16,7 @@ import { getSession, listAiprootTenants, type AiprootTenantOption } from "../api
  *              後端 resolveTenantId 回「需指定 tenantId」，使用者一進頁面就看到紅色錯誤。
  */
 export function useTenantPicker(): [string | undefined, React.ReactNode, boolean] {
+  const tr = useT();
   const role = getSession()?.role;
   const isPlatform = role === "aiproot_admin" || role === "consultant";
   const [tenants, setTenants] = useState<AiprootTenantOption[]>([]);
@@ -32,17 +34,17 @@ export function useTenantPicker(): [string | undefined, React.ReactNode, boolean
 
   const ui = (
     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-      <span style={{ fontSize: 13.5, color: "var(--ink-2)" }}>租戶</span>
+      <span style={{ fontSize: 13.5, color: "var(--ink-2)" }}>{tr("dm.tenant")}</span>
       <Select
         className="llm-select"
         selectedKey={selected}
         onSelectionChange={(k) => setSelected(String(k))}
-        aria-label="租戶"
+        aria-label={tr("dm.tenant")}
         isDisabled={tenants.length === 0}
       >
         <AriaButton className="llm-select-btn" style={{ minWidth: 220 }}>
           <SelectValue className="llm-select-value">
-            {() => tenants.find((t) => t.tenantId === selected)?.tenantName ?? "選擇租戶"}
+            {() => tenants.find((t) => t.tenantId === selected)?.tenantName ?? tr("dm.pickTenant")}
           </SelectValue>
           <svg className="llm-select-chev" width="12" height="8" viewBox="0 0 12 8" fill="none" aria-hidden>
             <path d="M1 1l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />

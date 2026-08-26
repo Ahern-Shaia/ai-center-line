@@ -6,11 +6,14 @@ import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import GroupCard from "./GroupCard";
 import { usePageGuide } from "../shared/usePageGuide";
+import { t } from "../i18n";
+import { useT } from "../i18n/useT";
 
 // WTB-M4 · 日誌 view · 按天列 · 每 upload 一 card
 // scheduler-config M4 · 加「立即分析」按鈕（tenant_admin / aiproot 可觸發）
 // 對照 docs/modules/warroom-task-board.md §7.3 · docs/modules/scheduler-config.md §6
 export default function DailyLog() {
+  const tr = useT();
   const guide = usePageGuide("daily-log");
   const [data, setData] = useState<WarroomDailyDays | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +36,7 @@ export default function DailyLog() {
       });
       setData(d);
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入日誌失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("dl.loadFailed"), "danger");
     } finally {
       setLoading(false);
     }
@@ -45,11 +48,11 @@ export default function DailyLog() {
     setAnalyzing(true);
     try {
       const res = await triggerWarroomBatchRerun();
-      toast.show(`分析完成 · 掃 ${res.total} 群組 · ${res.completed} 成功 / ${res.empty} 無資料 / ${res.failed} 失敗`, res.failed === 0 ? "ok" : "warn");
+      toast.show(tr("dl.analysisDone", { total: res.total, ok: res.completed, empty: res.empty, failed: res.failed }), res.failed === 0 ? "ok" : "warn");
       setConfirmAnalyze(false);
       await refresh();
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "分析失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("dl.analysisFailed"), "danger");
     } finally {
       setAnalyzing(false);
     }
@@ -59,26 +62,26 @@ export default function DailyLog() {
     <>
       <div className="pane-hdr">
         <div>
-          <h1>群組日誌{guide.toggle}</h1>
-          <div className="sub">各 LINE 群組每日活動摘要 · 由 AI 從當日對話抽取</div>
+          <h1>{tr("nav.dailyLog")}{guide.toggle}</h1>
+          <div className="sub">{tr("dl.sub")}</div>
         </div>
         <div className="hdr-toolbar">
           <div className="hdr-group">
-            <label className="hdr-label">查看範圍</label>
+            <label className="hdr-label">{tr("dl.range")}</label>
             <div style={{ display: "flex", gap: 6 }}>
-              <button className={`btn${days === 7 ? " btn-primary" : ""}`} onClick={() => setDays(7)}>近 7 天</button>
-              <button className={`btn${days === 30 ? " btn-primary" : ""}`} onClick={() => setDays(30)}>近 30 天</button>
+              <button className={`btn${days === 7 ? " btn-primary" : ""}`} onClick={() => setDays(7)}>{tr("dl.days7")}</button>
+              <button className={`btn${days === 30 ? " btn-primary" : ""}`} onClick={() => setDays(30)}>{tr("dl.days30")}</button>
             </div>
           </div>
           {canTriggerAnalyze && (
             <div className="hdr-group">
-              <label className="hdr-label">當日操作</label>
+              <label className="hdr-label">{tr("dl.actions")}</label>
               <button
                 className="btn btn-primary"
                 onClick={() => setConfirmAnalyze(true)}
                 disabled={analyzing}
-              >{analyzing ? "分析中…" : "立即分析"}</button>
-              <div className="hdr-group-hint">AI 掃當日訊息並整理</div>
+              >{analyzing ? tr("dl.analysing") : tr("dl.analyseNow")}</button>
+              <div className="hdr-group-hint">{tr("dl.analyseHint")}</div>
             </div>
           )}
         </div>
@@ -90,27 +93,26 @@ export default function DailyLog() {
         onClose={() => !analyzing && setConfirmAnalyze(false)}
         onConfirm={() => void doAnalyze()}
         busy={analyzing}
-        title="立即分析今日對話"
+        title={tr("dl.analyseTitle")}
         body={
           <div>
-            將對本 tenant 所有 LINE 群組立即跑 AI 分析今日對話 · 需 30–60 秒
+            {tr("dl.analyseBody")}
             <div style={{ marginTop: 10, padding: 10, background: "var(--warn-tint)", border: "1px solid #F5D5A6", borderRadius: 6, fontSize: 12, color: "#7A4E1B" }}>
-              提示 · 若當日訊息還在持續 · 分析後新來的訊息不會即時進入 · {data?.batchRunAt ? `建議 ${data.batchRunAt} 後再手動觸發` : "建議當日訊息結束後再手動觸發"} · 或等隔天自動跑
+              {tr("dl.analyseTip", { when: data?.batchRunAt ?? "" })}
             </div>
           </div>
         }
-        confirmLabel="確定分析"
+        confirmLabel={tr("dl.analyseConfirm")}
         tone="primary"
       />
 
       {loading && !data && <Spinner block />}
       {data && data.days.length === 0 && (
         <div className="dm-empty">
-          這段期間沒有紀錄
+          {tr("dl.noneInRange")}
           {/* 剛導入的頭幾天一定是空的 —— 只說「無日誌」會讓人以為是壞了 */}
           <div className="dm-empty-hint">
-            AI 每天固定時間整理一次群組對話 · 剛導入的頭幾天是空的很正常。<br />
-            想確認 AI 有沒有讀到某則訊息 → 把上方的時間範圍拉大。
+            {tr("dl.noneInRangeHint")}
           </div>
         </div>
       )}
@@ -149,22 +151,24 @@ function daySummary(day: WarroomDailyDays["days"][number]) {
 }
 
 function SummaryBar({ day }: { day: WarroomDailyDays["days"][number] }) {
+  const tr = useT();
   const { attn, active, reports, records, intake } = daySummary(day);
   const parts: string[] = [];
-  if (reports > 0) parts.push(`${reports} 筆日報`);
-  if (intake > 0) parts.push(`${intake} 張報修派工`);
-  if (records > 0) parts.push(`${records} 項記錄`);
+  if (reports > 0) parts.push(t("dl.nReports", { n: reports }));
+  if (intake > 0) parts.push(t("dl.nIntake", { n: intake }));
+  if (records > 0) parts.push(t("dl.nRecords", { n: records }));
   return (
     <div className="dl-sumbar">
-      今日 <b>{active}</b> 群有活動
-      {attn > 0 && <> · <b className="warn">{attn} 群需注意</b></>}
-      {parts.length > 0 && <> · 共 {parts.join("、")}</>}
+      {tr("dl.todayActive", { n: active })}
+      {attn > 0 && <> · <b className="warn">{tr("dl.needAttention", { n: attn })}</b></>}
+      {parts.length > 0 && <> · {parts.join("、")}</>}
     </div>
   );
 }
 
 // 時間軸的一個「日期節點」。今日＝攤開的一頁（實心節點）；往前＝收合的節點（空心，點開翻頁）。
 function TimelineDay({ day, today }: { day: WarroomDailyDays["days"][number]; today: boolean }) {
+  const tr = useT();
   const [open, setOpen] = useState(today);
   const [showQuiet, setShowQuiet] = useState(false);
 
@@ -185,7 +189,7 @@ function TimelineDay({ day, today }: { day: WarroomDailyDays["days"][number]; to
         <button className="dl-tl-date dl-tl-btn" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
           <span className="dl-tl-chev" aria-hidden>{open ? "▾" : "▸"}</span>
           {formatDay(day.batchDate)}
-          <span className="dl-tl-c">{hasContent.length} 群 · {itemCount} 筆{attn.length > 0 && <b className="warn"> · {attn.length} 需注意</b>}</span>
+          <span className="dl-tl-c">{tr("dl.groupsItems", { g: hasContent.length, n: itemCount })}{attn.length > 0 && <b className="warn"> · {tr("dl.attnShort", { n: attn.length })}</b>}</span>
         </button>
       )}
 
@@ -208,18 +212,18 @@ function TimelineDay({ day, today }: { day: WarroomDailyDays["days"][number]; to
           ))}
           {quiet.length > 0 && !showQuiet && (
             <div className="dl-quiet">
-              <span className="dlr-dot dlr-dot-mute" aria-hidden /> 另 <b>{quiet.length} 群今日無活動</b>：
-              {quiet.map((u) => u.groupName ?? `未命名 · ${u.groupId.slice(-6)}`).join("、")}
-              <button className="dl-quiet-toggle" onClick={() => setShowQuiet(true)}>展開</button>
+              <span className="dlr-dot dlr-dot-mute" aria-hidden /> {tr("dl.quiet", { n: quiet.length })}
+              {quiet.map((u) => u.groupName ?? t("dl.unnamed", { id: u.groupId.slice(-6) })).join("、")}
+              <button className="dl-quiet-toggle" onClick={() => setShowQuiet(true)}>{tr("common.expand")}</button>
             </div>
           )}
           {quiet.length > 0 && showQuiet && (
-            <div className="dl-quiet"><button className="dl-quiet-toggle" onClick={() => setShowQuiet(false)}>收合無活動的 {quiet.length} 群</button></div>
+            <div className="dl-quiet"><button className="dl-quiet-toggle" onClick={() => setShowQuiet(false)}>{tr("dl.collapseQuiet", { n: quiet.length })}</button></div>
           )}
           {shown.length === 0 && quiet.length === 0 && (
             <div className="dm-empty" style={{ padding: "10px 0" }}>
-              這一天沒有紀錄
-              <div className="dm-empty-hint">當天群組沒有對話，或分析還沒跑到這一天</div>
+              {tr("dl.noneThatDay")}
+              <div className="dm-empty-hint">{tr("dl.noDayHint")}</div>
             </div>
           )}
         </div>
@@ -240,7 +244,7 @@ function formatDay(iso: string): string {
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
   const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-  if (isSameDay(d, today)) return `今日 · ${d.toLocaleDateString("zh-TW", { month: "numeric", day: "numeric", weekday: "short" })}`;
-  if (isSameDay(d, yesterday)) return `昨日 · ${d.toLocaleDateString("zh-TW", { month: "numeric", day: "numeric", weekday: "short" })}`;
+  if (isSameDay(d, today)) return `${t("dl.today")} · ${d.toLocaleDateString("zh-TW", { month: "numeric", day: "numeric", weekday: "short" })}`;
+  if (isSameDay(d, yesterday)) return `${t("dl.yesterday")} · ${d.toLocaleDateString("zh-TW", { month: "numeric", day: "numeric", weekday: "short" })}`;
   return d.toLocaleDateString("zh-TW", { month: "numeric", day: "numeric", weekday: "short" });
 }
