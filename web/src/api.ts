@@ -1,7 +1,7 @@
 // 後端 API client。dev 走 Vite proxy（/api → :3000）。
 
 // i18n：登入時套用使用者存在伺服器的語言（見 getMyPermissions）
-import { setLocale } from "./i18n";
+import { setLocale, t } from "./i18n";
 
 /**
  * 知會其他人（不改變當責人）· 只發個人私訊，不碰群組。
@@ -150,18 +150,22 @@ export class ApiError extends Error {
   }
 }
 
-// HTTP status → 使用者可讀中文；避免把 Nest 預設英文（Internal server error / Unauthorized）
+// HTTP status → 使用者可讀訊息；避免把 Nest 預設英文（Internal server error / Unauthorized）
 // 直接秀給客戶。真正原因保留在 console（dev）供除錯。
+//
+// ⚠️ 這裡只管**通用 fallback**。server 特意寫的訊息（多為中文）會優先採用 ——
+//    見下方 GENERIC_SERVER_MSG。那些要英文化得讓後端吃 Accept-Language，
+//    是另一個範圍（i18n.md B 軸 · 尚未做）。
 function friendlyStatusMessage(status: number): string {
-  if (status === 400) return "送出的資料不正確，請確認後再試";
-  if (status === 401) return "尚未登入或工作階段已過期，請重新登入";
-  if (status === 403) return "沒有權限執行此操作";
-  if (status === 404) return "找不到對應資料";
-  if (status === 409) return "資料狀態已被他人變更，請重新整理後再試";
-  if (status === 422) return "輸入的資料格式有誤";
-  if (status === 429) return "操作太頻繁，請稍後再試";
-  if (status >= 500) return "系統目前忙碌，請稍後再試";
-  return "發生錯誤，請稍後再試";
+  if (status === 400) return t("err.400");
+  if (status === 401) return t("err.401");
+  if (status === 403) return t("err.403");
+  if (status === 404) return t("err.404");
+  if (status === 409) return t("err.409");
+  if (status === 422) return t("err.422");
+  if (status === 429) return t("err.429");
+  if (status >= 500) return t("err.500");
+  return t("err.unknown");
 }
 
 // 若 server 特意寫了中文訊息（非 Nest 預設英文），優先使用；否則走 mapping。

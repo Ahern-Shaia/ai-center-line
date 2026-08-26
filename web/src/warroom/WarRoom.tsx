@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, confirmSignoff, getWarroom, type Warroom, type WarroomGroup, type WarroomTicket } from "../api";
 import { useToast } from "../Toast";
+import { t } from "../i18n";
+import { useT } from "../i18n/useT";
 import SourceDrawer from "./SourceDrawer";
 import { InfoTip } from "../shared/InfoTip";
 import Gauge from "../shared/Gauge";
@@ -22,6 +24,7 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
   const [confirming, setConfirming] = useState<string | null>(null);
   const [source, setSource] = useState<SourceOpen | null>(null);
   const toast = useToast();
+  const tr = useT();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -38,7 +41,7 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
         return next;
       });
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : "資料載入失敗");
+      setErr(e instanceof ApiError ? e.message : t("wr.loadFailed"));
     } finally {
       setLoading(false);
       onLoadingChange?.(false);
@@ -63,19 +66,19 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
     const pending = g.today_tickets.filter((t) => t.status === "待簽核");
     const confirmable = pending.filter((t) => !t.needs_review);
     if (!confirmable.length) {
-      toast.show(`${g.name}：無可核對（${pending.length} 筆全為低信心攔截）`, "warn");
+      toast.show(t("wr.nothingVerifiable", { name: g.name, n: pending.length }), "warn");
       return;
     }
     setConfirming(g.department_id);
     try {
       const r = await confirmSignoff(confirmable.map((t) => t.ticket_id));
       const parts: string[] = [];
-      if (r.confirmed.length) parts.push(`已核對 ${r.confirmed.length} 筆`);
-      if (pending.length - confirmable.length > 0) parts.push(`${pending.length - confirmable.length} 筆低信心攔截`);
+      if (r.confirmed.length) parts.push(t("wr.verifiedN", { n: r.confirmed.length }));
+      if (pending.length - confirmable.length > 0) parts.push(t("wr.heldN", { n: pending.length - confirmable.length }));
       toast.show(`${g.name}：${parts.join("，")}`, r.blocked.length ? "warn" : "ok");
       await refresh();
     } catch (e) {
-      toast.show(e instanceof ApiError ? e.message : "核對失敗", "danger");
+      toast.show(e instanceof ApiError ? e.message : t("wr.verifyFailed"), "danger");
     } finally {
       setConfirming(null);
     }
@@ -92,9 +95,9 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
   if (err && !wr) {
     return (
       <div className="state">
-        <h3>無法載入戰情室資料</h3>
+        <h3>{tr("wr.loadFailedTitle")}</h3>
         <p>{err}</p>
-        <button className="btn btn-ghost" onClick={refresh}>重試</button>
+        <button className="btn btn-ghost" onClick={refresh}>{tr("common.retry")}</button>
       </div>
     );
   }
@@ -104,11 +107,11 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
     <>
       <div className="pane-hdr">
         <div>
-          <h1>總覽儀表{guide.toggle}</h1>
+          <h1>{tr("nav.warroom")}{guide.toggle}</h1>
           {/* ⚠️ 這個數字是 **departments 的筆數**（warroom.service.ts 的 N = depts.length），
               不是 LINE 群組數。本產品一個部門綁一個群，數字碰巧一樣，
               但名詞混用會讓客戶在「部門/成員」頁對不上帳。 */}
-          <div className="sub">當前配置 {wr.dept_count} 個部門 · 每日 AI 分類結果匯總（可於「部門/成員」自行新增）</div>
+          <div className="sub">{tr("wr.sub", { n: wr.dept_count })}</div>
         </div>
       </div>
       {guide.panel}
@@ -117,17 +120,17 @@ export default function WarRoom({ onRegister, onLoadingChange }: Props) {
         {/* ⚠️ 三個環的分母不同（部門 / 部門 / 已標記筆數），
             前兩個都是「部門」、第三個是「已標記的筆數」。
             不把單位寫完整的話，看的人會以為三個數字可以互相比較。 */}
-        <Gauge value={wr.signoff_rate} label="本日核對率"
-               frac={`${wr.signed_depts} / ${wr.dept_count} 個部門已簽`} color="#4F46E5" />
-        <Gauge value={wr.health_rate} label="部門健康度"
-               frac={`${wr.green_depts} / ${wr.dept_count} 個部門綠燈`} color="#059669" />
-        <Gauge value={wr.high_conf_ratio} label="AI 高信心比例"
-               frac={`${wr.high_num} / ${wr.high_den} 筆已標記`} color="#D97706" />
+        <Gauge value={wr.signoff_rate} label={tr("wr.signoffRate")}
+               frac={tr("wr.fracDeptSigned", { n: wr.signed_depts, total: wr.dept_count })} color="#4F46E5" />
+        <Gauge value={wr.health_rate} label={tr("wr.health")}
+               frac={tr("wr.fracDeptGreen", { n: wr.green_depts, total: wr.dept_count })} color="#059669" />
+        <Gauge value={wr.high_conf_ratio} label={tr("wr.highConf")}
+               frac={tr("wr.fracTagged", { n: wr.high_num, total: wr.high_den })} color="#D97706" />
       </div>
 
       <div className="section">
-        <h2>負責人每日最終確認</h2>
-        <span className="hint">確認後才會正式列入紀錄 · 系統沒把握的內容會先攔下來</span>
+        <h2>{tr("wr.dailySignoff")}</h2>
+        <span className="hint">{tr("wr.dailySignoffHint")}</span>
       </div>
 
       <div className="signoff-list">
@@ -161,6 +164,7 @@ function DeptItem({
 }: {
   g: WarroomGroup; expanded: boolean; onToggle: () => void; onConfirm: () => void; confirming: boolean; onSource: (t: WarroomTicket) => void;
 }) {
+  const tr = useT();
   const pending = g.today_tickets.filter((t) => t.status === "待簽核");
   const lowCount = pending.filter((t) => t.needs_review).length;
   const confirmable = pending.length - lowCount;
@@ -185,34 +189,34 @@ function DeptItem({
           <span className="so-status">
             {g.signed_off ? (
               <>
-                <span className="signer">已由</span>
+                <span className="signer">{tr("wr.signedBy")}</span>
                 <span className="signer-name">{g.signed_by_name ?? "—"}</span>
                 <span className="mono">{signedAt}</span>
-                <span className="signer">核對</span>
+                <span className="signer">{tr("wr.verified")}</span>
               </>
             ) : pending.length === 0 ? (
-              <span style={{ color: "var(--ink-3)" }}>今日無待簽</span>
+              <span style={{ color: "var(--ink-3)" }}>{tr("wr.noneToday")}</span>
             ) : (
               <>
                 <span className="num">{pending.length}</span>
-                <span>筆待簽</span>
+                <span>{tr("wr.toVerify")}</span>
                 {lowCount > 0 && (
                   <>
                     <span style={{ color: "var(--ink-3)" }}>·</span>
-                    <span className="danger">{lowCount} 筆低信心 · 已攔截</span>
+                    <span className="danger">{tr("wr.lowConfHeld", { n: lowCount })}</span>
                   </>
                 )}
               </>
             )}
           </span>
-          <span className="so-chev" aria-hidden>{expanded ? "收合" : "展開"}</span>
+          <span className="so-chev" aria-hidden>{expanded ? tr("common.collapse") : tr("common.expand")}</span>
         </button>
         {/* ⚠️ 沒事可做的列**不掛主要按鈕**。
             原本 disabled 仍是紫色實心，於是整頁視覺重量最高的
             是一整欄長得一樣、而且過半沒事可做的按鈕 ——
             使用者得先讀完文字才知道這顆不用按，那就是多一次判斷。 */}
         {g.signed_off ? (
-          <button className="btn confirmed-tag" disabled>已核對</button>
+          <button className="btn confirmed-tag" disabled>{tr("wr.done")}</button>
         ) : pending.length === 0 ? (
           <span className="so-noop">—</span>
         ) : (
@@ -221,7 +225,7 @@ function DeptItem({
             onClick={(e) => { e.stopPropagation(); onConfirm(); }}
             disabled={confirming}
           >
-            {confirming ? "核對中…" : `確認 ${pending.length} 筆`}
+            {confirming ? tr("wr.verifying") : tr("wr.confirmN", { n: pending.length })}
           </button>
         )}
       </div>
@@ -230,19 +234,18 @@ function DeptItem({
         <div className="so-detail">
           {g.today_tickets.length === 0 && (
             <div className="so-empty">
-              這個群今天還沒有 AI 產出
-              <div className="so-empty-hint">群裡沒人講到「要做的事」時，這裡就是空的 —— 不是漏讀</div>
+              {tr("wr.emptyToday")}
+              <div className="so-empty-hint">{tr("wr.emptyTodayHint")}</div>
             </div>
           )}
           {g.today_tickets.map((t) => {
             const conf = t.confidence ?? "medium";
             const isSigned = t.status === "已簽核";
-            const tagText = isSigned ? "已確認" : t.needs_review ? "低信心 · 已攔截" : conf === "high" ? "高信心" : conf === "medium" ? "中信心" : "低信心";
+            const tagText = isSigned ? tr("wr.tagConfirmed") : t.needs_review ? tr("wr.tagHeld") : tr(`wr.conf.${conf}`);
             const tagClass = isSigned ? "ok" : t.needs_review ? "danger" : conf === "high" ? "ok" : "warn";
             // 說明用固定文案 · 不再依賴示範資料（原本讀 mockdata 的內容真實環境是空的）
-            const tipContent = isSigned ? "已確認 · 正式列入紀錄"
-              : t.needs_review ? "系統對這筆沒把握，已先攔下 · 請點「查來源」核對原文"
-              : conf === "high" ? "系統判斷欄位明確" : conf === "medium" ? "部分內容為推斷 · 建議核對原文" : "訊息不夠明確 · 請核對原文";
+            const tipContent = isSigned ? tr("wr.tipConfirmed")
+              : t.needs_review ? tr("wr.tipHeld") : tr(`wr.tip.${conf}`);
             return (
               <div key={t.ticket_id} className={`so-line${t.needs_review ? " blocked" : ""}${isSigned ? " signed" : ""}`}>
                 <span className="so-box">□</span>
@@ -254,14 +257,14 @@ function DeptItem({
                 ) : (
                   <span className={`tag ${tagClass}`}>{tagText}</span>
                 )}
-                <button className="so-source" onClick={() => onSource(t)}>查來源 →</button>
+                <button className="so-source" onClick={() => onSource(t)}>{tr("wr.viewSource")}</button>
               </div>
             );
           })}
           <div className="so-detail-foot">
-            <span>確認後才會正式列入紀錄</span>
+            <span>{tr("wr.footNote")}</span>
             {!g.signed_off && confirmable > 0 && (
-              <span>可核對 <b>{confirmable}</b> 筆，低信心 <b>{lowCount}</b> 筆將被自動攔截</span>
+              <span>{tr("wr.footCounts", { ok: confirmable, low: lowCount })}</span>
             )}
           </div>
         </div>
