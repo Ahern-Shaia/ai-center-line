@@ -9,62 +9,65 @@
 // 這裡只補「不明顯的那幾項」——「查看知識庫」不必解釋，「核對項目」要講清楚在確認什麼。
 
 /** 分組順序＝側邊欄順序。沒列到的權限會落到「其他」，那代表這張表該補了。 */
+// ⚠️ 2026-08-26 i18n：title 與 hint 改存 **key**，文字在 i18n/*.ts。
+//    分組是「側邊欄的分法」不是資料表的分法 —— 那個決定不變，只是文字搬家。
 export const PERMISSION_GROUPS: Array<{ title: string; ids: string[] }> = [
   {
-    title: "戰情室",
+    title: "permGroup.warroom",
     ids: [
       "warroom:view", "warroom-tasks:view", "warroom-daily:view",
       "signoff:view", "signoff:action", "personal-report:team",
     ],
   },
   {
-    title: "資料與知識",
+    title: "permGroup.data",
     ids: ["rag:view", "media:view", "km:view", "map:view"],
   },
   {
-    title: "個人",
+    title: "permGroup.personal",
     ids: ["personal-report:mine", "trips:mine"],
   },
   {
-    title: "部門與成員",
+    title: "permGroup.people",
     ids: ["departments:view", "departments:manage-tenant", "users:view", "users:create-group-owner"],
   },
   {
-    title: "LINE 群組",
+    title: "permGroup.lineGroups",
     ids: ["line-groups:view", "binding:view"],
   },
   {
-    title: "任務設定",
+    title: "permGroup.taskConfig",
     ids: ["categories:view", "task-config:view", "task-config:timing"],
   },
   {
-    title: "自動化與公司設定",
+    title: "permGroup.automation",
     ids: [
       "scheduler-config:view", "scheduler-config:manage-tenant",
       "tenant-config:view", "tenant-config:manage",
     ],
   },
   {
-    title: "稽核",
+    title: "permGroup.audit",
     ids: ["audit:view"],
   },
 ];
 
 /** 補充說明 · 只寫「光看名稱不知道在做什麼」的那幾項 */
+/** permission_id → i18n key（值是 key 不是文案）· ⚠️ 這裡的 key 是 `resource:action`，DB 值不可翻 */
 export const PERMISSION_HINT: Record<string, string> = {
-  "warroom:view": "每天的核對率、部門健康度那一頁",
-  "warroom-tasks:view": "AI 從對話整理出來的待辦事項",
-  "warroom-daily:view": "確認 AI 有沒有讀到某則訊息",
-  "signoff:action": "確認 AI 整理的內容是對的",
-  "personal-report:team": "只看得到自己部門的",
-  "rag:view": "用問答的方式查公司的對話與文件",
-  "media:view": "群組裡傳過的照片與檔案",
-  "users:create-group-owner": "只能建部門主管，不能建總經理",
-  "binding:view": "看得到哪些同仁還沒綁定",
-  "categories:view": "AI 會把對話分成哪幾類",
-  "task-config:timing": "逾期幾天算超時、什麼時候提醒",
-  "scheduler-config:manage-tenant": "例如每天下午 6 點跑分析",
-  "audit:view": "誰在什麼時候改了什麼",
+  "warroom:view": "permHint.warroom:view",
+  "warroom-tasks:view": "permHint.warroom-tasks:view",
+  "warroom-daily:view": "permHint.warroom-daily:view",
+  "signoff:action": "permHint.signoff:action",
+  "personal-report:team": "permHint.personal-report:team",
+  "rag:view": "permHint.rag:view",
+  "media:view": "permHint.media:view",
+  "users:create-group-owner": "permHint.users:create-group-owner",
+  "binding:view": "permHint.binding:view",
+  "categories:view": "permHint.categories:view",
+  "task-config:timing": "permHint.task-config:timing",
+  "scheduler-config:manage-tenant": "permHint.scheduler-config:manage-tenant",
+  "audit:view": "permHint.audit:view",
 };
 
 /**

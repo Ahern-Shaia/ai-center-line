@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useT } from "../../i18n/useT";
 import {
   ApiError, listTenantPermissions, listTenantRoles,
   updateTenantRolePermissions, resetTenantRole,
@@ -25,15 +26,16 @@ import type { ViewRole } from "./types";
 //    policy 沒有租戶條件）。後端不會再回傳它，前端也不留殘影。
 // 自建角色清單第三行用 · 跟後端 GET /baselines 的 label 一致
 const BASELINE_LABEL: Record<string, string> = {
-  employee: "只有自己", group_owner: "只有自己部門", tenant_admin: "全公司",
+  employee: "baseline.self", group_owner: "baseline.dept", tenant_admin: "baseline.company",
 };
 
 const ROLE_SOURCE: Record<string, string> = {
-  employee: "同仁綁定 LINE 後自動成為員工",
-  group_owner: "在「部門/成員」頁新增",
+  employee: "baselineHint.employee",
+  group_owner: "baselineHint.group_owner",
 };
 
 export default function RolePermissionsPage() {
+  const tr = useT();
   const [perms, setPerms] = useState<TenantPermissionDto[]>([]);
   const [roles, setRoles] = useState<TenantRoleDto[]>([]);
   const [customRoles, setCustomRoles] = useState<CustomRoleDto[]>([]);
@@ -58,7 +60,7 @@ export default function RolePermissionsPage() {
       setCustomRoles(c.roles);
       setSelected((cur) => cur ?? (r.roles[0] ? `b:${r.roles[0].roleKey}` : null));
     } catch (e) {
-      toast.show(e instanceof ApiError ? e.message : "載入權限設定失敗", "danger");
+      toast.show(e instanceof ApiError ? e.message : tr("rm.loadFailed"), "danger");
     } finally {
       setLoading(false);
     }
@@ -78,7 +80,7 @@ export default function RolePermissionsPage() {
     sel: `c:${r.roleId}`, name: r.roleName, permissions: r.permissions,
     memberCount: r.memberCount, isCustom: true, isCustomized: false,
     roleKey: r.roleKey, roleId: r.roleId,
-    sourceHint: `看得到：${BASELINE_LABEL[r.baselineRole] ?? r.baselineRole}`,
+    sourceHint: tr("rm.sees", { what: tr(BASELINE_LABEL[r.baselineRole] ?? "baseline.self") }),
   })), [customRoles]);
 
   const role = useMemo(
@@ -97,7 +99,7 @@ export default function RolePermissionsPage() {
     return [
       ...PERMISSION_GROUPS.map((g) => ({ title: g.title, ids: g.ids.filter((id) => byId.has(id)) }))
         .filter((g) => g.ids.length > 0),
-      ...(rest.length > 0 ? [{ title: "其他", ids: rest }] : []),
+      ...(rest.length > 0 ? [{ title: "permGroup.other", ids: rest }] : []),
     ];
   }, [perms, byId]);
 
@@ -128,17 +130,17 @@ export default function RolePermissionsPage() {
     try {
       if (role.isCustom) {
         await updateCustomRolePermissions(role.roleId!, [...draft]);
-        toast.show("已儲存", "ok");
+        toast.show(tr("common.saved"), "ok");
       } else {
         const res = await updateTenantRolePermissions(role.roleKey, [...draft]);
         toast.show(res.forked
-          ? `已儲存 · 「${role.name}」現在是貴公司專屬的設定`
-          : "已儲存", "ok");
+          ? tr("rm.savedCustom", { name: role.name })
+          : tr("common.saved"), "ok");
       }
       setForkNotice(false); setCriticalWarn(null);
       await load();
     } catch (e) {
-      toast.show(e instanceof ApiError ? e.message : "儲存失敗", "danger");
+      toast.show(e instanceof ApiError ? e.message : tr("common.saveFailed"), "danger");
     } finally {
       setSaving(false);
     }
@@ -149,11 +151,11 @@ export default function RolePermissionsPage() {
     setSaving(true);
     try {
       await resetTenantRole(role.roleKey);
-      toast.show(`「${role.name}」已還原成系統預設`, "ok");
+      toast.show(tr("rm.reverted", { name: role.name }), "ok");
       setResetting(false);
       await load();
     } catch (e) {
-      toast.show(e instanceof ApiError ? e.message : "還原失敗", "danger");
+      toast.show(e instanceof ApiError ? e.message : tr("rm.revertFailed"), "danger");
     } finally {
       setSaving(false);
     }
@@ -165,8 +167,8 @@ export default function RolePermissionsPage() {
     <div className="pane">
       <div className="pane-hdr">
         <div>
-          <h1>權限管理</h1>
-          <p className="sub">調整每個角色可以做哪些事 · 改完立即生效，套用到所有使用該角色的成員</p>
+          <h1>{tr("nav.rolePermissions")}</h1>
+          <p className="sub">{tr("rm.sub")}</p>
         </div>
       </div>
 
@@ -183,27 +185,26 @@ export default function RolePermissionsPage() {
               <div className="rm-editor-title">
                 {role.name}
                 <span className={`rm-role-badge ${role.isCustom || role.isCustomized ? "custom" : ""}`}>
-                  {role.isCustom ? "本公司自建" : role.isCustomized ? "已自行調整" : "系統預設"}
+                  {tr(role.isCustom ? "rm.custom" : role.isCustomized ? "rm.adjusted" : "rm.builtin")}
                 </span>
               </div>
               {role.isCustom && (
                 <div className="rm-custom-note">
-                  <span>看得到的資料：<b>{BASELINE_LABEL[
+                  <span>{tr("rm.dataScope")}<b>{tr(BASELINE_LABEL[
                     customRoles.find((c) => c.roleId === role.roleId)?.baselineRole ?? ""
-                  ] ?? "—"}</b> · 這一項建立後不能改</span>
+                  ] ?? "baseline.self")}</b> · {tr("rm.scopeLocked")}</span>
                   <button className="btn small" onClick={() => setConfirmDelete(role)} disabled={saving}>
-                    刪除這個角色
+                    {tr("rm.deleteRole")}
                   </button>
                 </div>
               )}
               {!role.isCustom && role.isCustomized && (
                 <div className="rm-custom-note">
                   <span>
-                    這個角色已由貴公司自行調整過。日後 AIPROOT 為這個角色新增功能時，
-                    <b>不會自動套用到貴公司</b>。
+                    {tr("rm.adjustedNote")}
                   </span>
                   <button className="btn small" onClick={() => setResetting(true)} disabled={saving}>
-                    還原成系統預設
+                    {tr("rm.revert")}
                   </button>
                 </div>
               )}
@@ -223,7 +224,7 @@ export default function RolePermissionsPage() {
                           <span className="rm-perm-desc">
                             {p.description}
                             {/* 內部分類（tenant/department）不外露 · 只標對使用者有意義的範圍 */}
-                            {p.scope === "department" && <span className="rm-perm-scope">僅限自己部門</span>}
+                            {p.scope === "department" && <span className="rm-perm-scope">{tr("rm.deptOnly")}</span>}
                           </span>
                           {hint && <span className="rm-perm-hint">{hint}</span>}
                         </span>
@@ -235,12 +236,12 @@ export default function RolePermissionsPage() {
             </div>
 
             <div className="rm-editor-foot">
-              <span className="rm-editor-sub">已勾 <b>{draft.size}</b> / {perms.length} 項</span>
+              <span className="rm-editor-sub">{tr("rm.checked", { n: draft.size, total: perms.length })}</span>
               <div className="rm-foot-acts">
                 <button className="btn" disabled={!dirty || saving}
-                  onClick={() => setDraft(new Set(role.permissions))}>取消</button>
+                  onClick={() => setDraft(new Set(role.permissions))}>{tr("common.cancel")}</button>
                 <button className="btn btn-primary" disabled={!dirty || saving} onClick={trySave}>
-                  {saving ? "儲存中…" : "儲存變更"}
+                  {saving ? tr("common.saving") : tr("common.save")}
                 </button>
               </div>
             </div>
@@ -251,12 +252,10 @@ export default function RolePermissionsPage() {
       <ConfirmDialog
         open={forkNotice} busy={saving}
         onClose={() => setForkNotice(false)} onConfirm={() => void save()}
-        title="這是貴公司第一次調整這個角色"
-        confirmLabel="了解，繼續調整"
+        title={tr("rm.firstAdjustTitle")}
+        confirmLabel={tr("rm.firstAdjustOk")}
         body={<>
-          調整之後，「{role?.name}」就變成<b>貴公司專屬</b>的設定。<br />
-          日後我們為這個角色新增功能時，<b>不會自動套用到貴公司</b> —— 需要的話再請通知我們。<br />
-          隨時可以按「還原成系統預設」改回原本的設定。
+          {tr("rm.firstAdjustBody", { name: role?.name ?? "" })}
         </>}
       />
 
@@ -264,24 +263,22 @@ export default function RolePermissionsPage() {
         open={criticalWarn !== null} busy={saving} tone="danger"
         onClose={() => setCriticalWarn(null)}
         onConfirm={() => { setCriticalWarn(null); if (role?.isCustomized) void save(); else setForkNotice(true); }}
-        title={`這會讓 ${role?.memberCount ?? 0} 位成員看不到部分頁面`}
-        confirmLabel="仍要移除" cancelLabel="先不要"
+        title={tr("rm.removeWarnTitle", { n: role?.memberCount ?? 0 })}
+        confirmLabel={tr("rm.removeAnyway")} cancelLabel={tr("common.notNow")}
         body={<>
-          你正要移除
+          {tr("rm.aboutToRemove")}
           {criticalWarn?.map((id) => `「${byId.get(id)?.description ?? id}」`).join("、")}。<br />
-          目前有 <b>{role?.memberCount ?? 0} 位</b>成員使用「{role?.name}」這個角色，
-          他們儲存後<b>會立刻失去對應的頁面</b>。
+          {tr("rm.removeWarnBody", { n: role?.memberCount ?? 0, name: role?.name ?? "" })}
         </>}
       />
 
       <ConfirmDialog
         open={resetting} busy={saving}
         onClose={() => setResetting(false)} onConfirm={() => void doReset()}
-        title="還原成系統預設？"
-        confirmLabel="還原"
+        title={tr("rm.revertTitle")}
+        confirmLabel={tr("common.undo")}
         body={<>
-          「{role?.name}」會回到 AIPROOT 的預設設定，貴公司目前的調整<b>會被覆蓋</b>。<br />
-          之後這個角色會重新跟隨系統更新。
+          {tr("rm.revertBody", { name: role?.name ?? "" })}
         </>}
       />
 
@@ -307,23 +304,22 @@ export default function RolePermissionsPage() {
           setSaving(true);
           try {
             await deleteCustomRole(confirmDelete.roleId);
-            toast.show(`「${confirmDelete.name}」已刪除`, "ok");
+            toast.show(tr("rm.deleted", { name: confirmDelete.name }), "ok");
             setConfirmDelete(null);
             setSelected(null);
             await load();
           } catch (e) {
-            toast.show(e instanceof ApiError ? e.message : "刪除失敗", "danger");
+            toast.show(e instanceof ApiError ? e.message : tr("rm.deleteFailed"), "danger");
           } finally {
             setSaving(false);
           }
         }}
-        title={`刪除「${confirmDelete?.name ?? ""}」？`}
-        confirmLabel="刪除" cancelLabel="先不要"
+        title={tr("rm.deleteTitle", { name: confirmDelete?.name ?? "" })}
+        confirmLabel={tr("common.delete")} cancelLabel={tr("common.notNow")}
         body={<>
-          這個角色會從清單與成員的角色下拉中消失。<br />
+          {tr("rm.deleteBody")}
           {(confirmDelete?.memberCount ?? 0) > 0
-            ? <>目前有 <b>{confirmDelete?.memberCount} 位</b>成員在使用，<b>要先幫他們改成別的角色才能刪除</b>。</>
-            : <>目前沒有人使用這個角色。</>}
+            ? tr("rm.deleteInUse", { n: confirmDelete?.memberCount ?? 0 }) : tr("rm.deleteUnused")}
         </>}
       />
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT } from "../../i18n/useT";
 import { ApiError, createCustomRole, listBaselines, type BaselineDto } from "../../api";
 import { useToast } from "../../Toast";
 import Drawer from "../../shared/Drawer";
@@ -19,6 +20,7 @@ export default function CreateRoleDrawer({ onClose, onCreated }: {
   /** 建好之後把畫面切到那個新角色，讓人接著勾權限 */
   onCreated: (roleKey: string) => void;
 }) {
+  const tr = useT();
   const toast = useToast();
   const [baselines, setBaselines] = useState<BaselineDto[]>([]);
   const [roleName, setRoleName] = useState("");
@@ -32,40 +34,40 @@ export default function CreateRoleDrawer({ onClose, onCreated }: {
         setBaselines(r.baselines);
         setBaseline((cur) => cur || r.baselines[1]?.id || r.baselines[0]?.id || "");
       })
-      .catch(() => toast.show("載入資料範圍選項失敗", "danger"));
+      .catch(() => toast.show(tr("cr.loadScopeFailed"), "danger"));
   }, [toast]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!roleName.trim()) { toast.show("請填角色名稱", "danger"); return; }
-    if (!baseline) { toast.show("請選這個角色看得到誰的資料", "danger"); return; }
+    if (!roleName.trim()) { toast.show(tr("cr.needName"), "danger"); return; }
+    if (!baseline) { toast.show(tr("cr.needScope"), "danger"); return; }
     setSaving(true);
     try {
       const r = await createCustomRole({ roleName: roleName.trim(), baselineRole: baseline, permissionIds: [] });
-      toast.show(`「${roleName.trim()}」已建立 · 接著勾選它可以做哪些事`, "ok");
+      toast.show(tr("cr.created", { name: roleName.trim() }), "ok");
       onCreated(r.roleKey);
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "建立失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("cr.createFailed"), "danger");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Drawer open onClose={onClose} title="建立角色">
+    <Drawer open onClose={onClose} title={tr("cr.title")}>
       <form onSubmit={submit} className="llm-form">
         <div className="field">
-          <label>角色名稱 *</label>
+          <label>{tr("cr.name")} *</label>
           <input
             type="text" value={roleName} disabled={saving} autoFocus
             onChange={(e) => setRoleName(e.target.value)}
-            placeholder="例：品保組長"
+            placeholder={tr("cr.namePlaceholder")}
           />
-          <div className="llm-hint">成員清單與這一頁都會顯示這個名字</div>
+          <div className="llm-hint">{tr("cr.nameHint")}</div>
         </div>
 
         <div className="field">
-          <label>這個角色看得到誰的資料 *</label>
+          <label>{tr("cr.scope")} *</label>
           {baselines.map((b) => (
             <label className={`cr-scope${baseline === b.id ? " on" : ""}`} key={b.id}>
               <input
@@ -80,21 +82,20 @@ export default function CreateRoleDrawer({ onClose, onCreated }: {
             </label>
           ))}
           <div className="llm-hint">
-            這一項<b>建立後不能改</b> —— 改了會讓已經指派的人資料範圍突然變動，而沒有人會收到通知。
-            要換範圍請建一個新角色。
+            {tr("cr.scopeLockedNote")}
           </div>
         </div>
 
         <div className="field">
-          <label>這個角色可以做哪些事</label>
-          <div className="llm-hint">建立後就在權限清單勾選 · 只列得出你自己有的權限</div>
+          <label>{tr("cr.perms")}</label>
+          <div className="llm-hint">{tr("cr.permsHint")}</div>
         </div>
 
         <div className="llm-form-actions">
           <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? "建立中…" : "建立"}
+            {saving ? tr("cr.creating") : tr("common.create")}
           </button>
-          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>取消</button>
+          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>{tr("common.cancel")}</button>
         </div>
       </form>
     </Drawer>
