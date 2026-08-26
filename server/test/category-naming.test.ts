@@ -23,13 +23,12 @@ test("⭐⭐ 每個內建分類都要有中文名 —— 漏一個，模型就�
   }
 });
 
-test("⭐⭐ 後端的中文名要跟前端 categoryLabel.ts 一致（兩份漂移過一次）", () => {
+test("⭐⭐ 後端的中文名要跟前端 i18n/zh-TW.ts 一致（兩份漂移過一次）", () => {
   // 跨了後端／前端那道最常漂移的邊界。純資料常數，用正則取出來夠可靠。
-  const src = readFileSync(new URL("../../web/src/shared/categoryLabel.ts", import.meta.url), "utf8");
-  const body = src.slice(src.indexOf("CATEGORY_LABEL"), src.indexOf("};", src.indexOf("CATEGORY_LABEL")));
-
+  // ⚠️ 2026-08-26 i18n：前端的分類名搬到 web/src/i18n/zh-TW.ts 的 `category.*`
+  const src = readFileSync(new URL("../../web/src/i18n/zh-TW.ts", import.meta.url), "utf8");
   const web: Record<string, string> = {};
-  for (const m of body.matchAll(/^\s*(\w+):\s*"([^"]+)"/gm)) web[m[1]!] = m[2]!;
+  for (const m of src.matchAll(/^\s*"category\.(\w+)":\s*"([^"]+)"/gm)) web[m[1]!] = m[2]!;
 
   for (const slug of DEFAULT_CATEGORIES) {
     assert.equal(

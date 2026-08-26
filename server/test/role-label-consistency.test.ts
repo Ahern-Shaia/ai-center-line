@@ -40,15 +40,15 @@ test("⭐⭐ DB roles.role_name 要跟伺服器的角色顯示名一致", async 
 test("⭐⭐ 前端的角色顯示名要跟伺服器一致", () => {
   // 直接讀原始檔比對 —— server 的測試跑不到 web 的模組（不同 tsconfig / 無 DOM），
   // 但這個常數是純資料，用正則取出來足夠可靠，而且**跨了那道最常漂移的邊界**。
-  const src = readFileSync(new URL("../../web/src/shared/roleLabel.ts", import.meta.url), "utf8");
-  const body = src.slice(src.indexOf("ROLE_LABEL"), src.indexOf("};", src.indexOf("ROLE_LABEL")));
-
+  // ⚠️ 2026-08-26 i18n：前端的角色名搬到 web/src/i18n/zh-TW.ts 的 `role.*`
+  //    （shared/roleLabel.ts 現在只剩查表函式）。比對對象跟著搬。
+  const src = readFileSync(new URL("../../web/src/i18n/zh-TW.ts", import.meta.url), "utf8");
   const web: Record<string, string> = {};
-  for (const m of body.matchAll(/^\s*(\w+):\s*"([^"]+)"/gm)) web[m[1]!] = m[2]!;
+  for (const m of src.matchAll(/^\s*"role\.(\w+)":\s*"([^"]+)"/gm)) web[m[1]!] = m[2]!;
 
   assert.deepEqual(
     web, ROLE_LABEL,
-    "web/src/shared/roleLabel.ts 與 server/src/auth/role-label.ts 不一致 —— 兩邊要同時改",
+    "web/src/i18n/zh-TW.ts 的 role.* 與 server/src/auth/role-label.ts 不一致 —— 兩邊要同時改",
   );
 });
 

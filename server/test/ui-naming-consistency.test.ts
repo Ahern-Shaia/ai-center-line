@@ -54,7 +54,11 @@ function isDbLiteral(line: string): boolean {
   return /===\s*"[^"]*(簽核|待確認)"/.test(line)
     || /"[^"]*(簽核|待確認)"\s*\|/.test(line)
     || /\|\s*"[^"]*(簽核|待確認)"/.test(line)
-    || /^\s*(待簽核|已簽核|待確認|逾時警示|已忽略|存查):/.test(line)   // 對照表的 key
+    || /^\s*(待簽核|已簽核|待確認|逾時警示|已忽略|存查):/.test(line)   // 對照表的 key（舊寫法）
+    // i18n 字典的 key：`"confirmStatus.待簽核": "待核對"` —— 點號前綴的新寫法。
+    // ⚠️ key 就是 DB 值本身（見 web/src/i18n/zh-TW.ts 檔頭 · FMEA F-1）；
+    //    翻掉 key 會讓全站狀態比對靜默失效，所以它**必須**留舊字串。
+    || /^\s*"\w+\.(待簽核|已簽核|待確認|逾時警示|已忽略|存查)"\s*:/.test(line)
     || /confirm_status|string_to_array|\$type<|ANY\(/.test(line);
 }
 
