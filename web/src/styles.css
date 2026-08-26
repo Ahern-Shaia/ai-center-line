@@ -129,6 +129,11 @@ button { cursor:pointer; }
 @keyframes menu-in { from { opacity:0; transform:translateY(calc(-4px * var(--m-shift))); } to { opacity:1; transform:none; } }
 @keyframes menu-out { to { opacity:0; transform:translateY(calc(-4px * var(--m-shift))); } }
 .user-menu { min-width:240px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--sh); padding:6px; outline:none; }
+/* 登入頁的語言切換 · 品牌列右側 —— 那裡還沒有使用者選單 */
+.login-locale { margin-left:auto; background:none; border:0; padding:2px 6px; cursor:pointer;
+  font:inherit; font-size:12.5px; color:var(--ink-3); text-decoration:underline; text-underline-offset:3px; }
+.login-locale:hover { color:var(--primary); }
+.login-brand { display:flex; align-items:center; gap:8px; }
 .user-menu-hdr { padding:10px 12px 8px; }
 /* 語言切換的小標 · 比 hdr 輕，只是分組不是資訊 */
 .user-menu-sub { padding:7px 12px 3px; font-size:10.5px; font-weight:600; letter-spacing:.05em; color:var(--ink-3); }

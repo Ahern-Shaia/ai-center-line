@@ -538,6 +538,24 @@ export default {
   "og.membersLabel": "成員：",
   "og.cannotInfer": "（系統推不出部門）",
 
+  "login.lineFailed": "LINE 登入失敗",
+  "login.pickOrgFailed": "選擇組織失敗 · 請重新以 LINE 登入",
+  "login.badCredentials": "帳號或密碼錯誤",
+  "login.failed": "登入失敗 · 請稍後再試",
+  "login.lineUrlFailed": "無法產生 LINE 登入連結 · 請確認 aiproot 端已配置",
+  "login.pickOrg": "選擇組織",
+  "login.pickOrgSub": "你的 LINE 帳號在多個組織有帳號 · 請選擇要登入哪一個",
+  "login.unnamedOrg": "（未命名組織）",
+  "login.title": "登入",
+  "login.sub": "主管級請用公司帳號 · 員工可直接用 LINE 登入",
+  "login.email": "電子郵件",
+  "login.signingIn": "登入中…",
+  "login.or": "或",
+  "login.withLine": "以 LINE 登入",
+  "login.withLineEmployee": "以 LINE 登入（員工用）",
+  "login.working": "處理中…",
+  "login.hint": "員工：先加公司 LINE Bot 好友完成綁定 · 才能用 LINE 登入。主管：兩者皆可 · 建議用公司帳號密碼（有 2FA 保護）。",
+
   // ── 任務分區（軸2：AI 寫的內容對不對）───────────────────────
   // 三條軸各用不同的詞，理由見 shared/confirmStatusLabel.ts 檔頭
   "confirmStatus.待確認": "待判定",

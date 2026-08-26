@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { ApiError, login, getLineOauthUrl, completeLineOauth, selectLineTenant, type TenantChoice } from "./api";
 import { roleLabel } from "./shared/roleLabel";
+import { useLocale, useT } from "./i18n/useT";
 
 // LINE OAuth state 由後端簽章並驗證（見 line-oauth.service）。
 // 早期版本存在 sessionStorage 前端自驗 → 手機上 LINE 內建瀏覽器把導回交給 Safari 時，
 // 兩者儲存空間不同、state 讀不到，員工會卡在「state 不符」完全登不進去。
 
 export default function Login({ onLogin }: { onLogin: () => void }) {
+  const tr = useT();
+  const [locale, setLocale] = useLocale();
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
@@ -29,7 +32,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
         else onLogin();
       })
       .catch((e) => {
-        setErr(e instanceof ApiError ? e.message : "LINE 登入失敗");
+        setErr(e instanceof ApiError ? e.message : tr("login.lineFailed"));
         window.history.replaceState({}, "", window.location.pathname);
       })
       .finally(() => setLineBusy(false));
@@ -43,7 +46,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       await selectLineTenant(tenantChoice.selectionToken, tenantId);
       onLogin();
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : "選擇組織失敗 · 請重新以 LINE 登入");
+      setErr(e instanceof ApiError ? e.message : tr("login.pickOrgFailed"));
       setTenantChoice(null);
     } finally {
       setLineBusy(false);
@@ -59,9 +62,9 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       await login(email, pw);
       onLogin();
     } catch (e) {
-      if (e instanceof ApiError && e.status === 401) setErr("帳號或密碼錯誤");
+      if (e instanceof ApiError && e.status === 401) setErr(tr("login.badCredentials"));
       else if (e instanceof ApiError) setErr(e.message);
-      else setErr("登入失敗 · 請稍後再試");
+      else setErr(tr("login.failed"));
     } finally {
       setBusy(false);
     }
@@ -76,7 +79,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       // state 已編在 url 裡、由後端驗簽 · 前端不再存（跨瀏覽器交接會遺失）
       window.location.href = url;
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : "無法產生 LINE 登入連結 · 請確認 aiproot 端已配置");
+      setErr(e instanceof ApiError ? e.message : tr("login.lineUrlFailed"));
       setLineBusy(false);
     }
   }
@@ -86,12 +89,19 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       <div className="login-card">
         <div className="login-brand">
           <span className="mark">AI</span>
-          <span className="name">aiproot 戰情室</span>
+          <span className="name">{tr("app.name")}</span>
+          {/* ⚠️ 登入頁**必須**自己有一個切換入口 —— 這裡還沒有使用者、沒有頭像選單。
+              少了它，偵測猜錯語言的人（例如公司電腦是中文 locale 的外籍主管）
+              會卡在一個他看不懂的畫面，而且完全沒有出口。 */}
+          <button type="button" className="login-locale"
+            onClick={() => setLocale(locale === "en" ? "zh-TW" : "en")}>
+            {locale === "en" ? "繁體中文" : "English"}
+          </button>
         </div>
         {tenantChoice ? (
           <div>
-            <div className="login-h1">選擇組織</div>
-            <div className="login-sub">你的 LINE 帳號在多個組織有帳號 · 請選擇要登入哪一個</div>
+            <div className="login-h1">{tr("login.pickOrg")}</div>
+            <div className="login-sub">{tr("login.pickOrgSub")}</div>
             {err && <div className="login-err" role="alert" style={{ marginTop: 10 }}>{err}</div>}
             <div className="tenant-pick">
               {tenantChoice.options.map((o) => (
@@ -102,57 +112,56 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                   onClick={() => void pickTenant(o.tenantId)}
                   disabled={lineBusy}
                 >
-                  <span className="tp-name">{o.tenantName ?? "（未命名組織）"}</span>
+                  <span className="tp-name">{o.tenantName ?? tr("login.unnamedOrg")}</span>
                   <span className="tp-role">{roleLabel(o.role)}</span>
                 </button>
               ))}
             </div>
             <button type="button" className="btn btn-ghost" style={{ marginTop: 12 }} onClick={() => { setTenantChoice(null); setErr(""); }} disabled={lineBusy}>
-              取消
+              {tr("common.cancel")}
             </button>
           </div>
         ) : (
         <>
         <div>
-          <div className="login-h1">登入</div>
-          <div className="login-sub">主管級請用公司帳號 · 員工可直接用 LINE 登入</div>
+          <div className="login-h1">{tr("login.title")}</div>
+          <div className="login-sub">{tr("login.sub")}</div>
         </div>
 
         <form onSubmit={submit}>
           <div className="field">
-            <label htmlFor="email">電子郵件</label>
+            <label htmlFor="email">{tr("login.email")}</label>
             <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" placeholder="you@company.com" />
           </div>
           <div className="field">
-            <label htmlFor="pw">密碼</label>
+            <label htmlFor="pw">{tr("mb.colPassword")}</label>
             <input id="pw" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" />
           </div>
           {err && <div className="login-err" role="alert">{err}</div>}
           <button type="submit" className="btn btn-primary" disabled={busy || lineBusy || !email || !pw}>
-            {busy ? "登入中…" : "登入"}
+            {busy ? tr("login.signingIn") : tr("login.title")}
           </button>
         </form>
 
-        <div className="login-divider"><span>或</span></div>
+        <div className="login-divider"><span>{tr("login.or")}</span></div>
 
         <button
           type="button"
           className="btn line-login-btn"
           onClick={() => void loginWithLine()}
           disabled={busy || lineBusy}
-          aria-label="以 LINE 登入"
+          aria-label={tr("login.withLine")}
         >
           <span className="line-login-icon" aria-hidden>
             <svg width="20" height="20" viewBox="0 0 100 100" fill="currentColor">
               <path d="M50 6C25.7 6 6 22 6 41.7c0 17.7 15.6 32.5 36.7 35.3 1.4.3 3.4.9 3.9 2.2.4 1.1.3 2.9.1 4.1l-.6 3.8c-.2 1.1-.9 4.4 3.9 2.4 4.8-2 25.9-15.2 35.3-26.1C91.7 55.9 94 49 94 41.7 94 22 74.3 6 50 6zm-16.3 47H26c-.5 0-1-.4-1-1V37c0-.5.4-1 1-1h2c.5 0 1 .4 1 1v13h4.7c.5 0 1 .4 1 1v2c0 .5-.5 1-1 1zm7-1c0 .5-.4 1-1 1h-2c-.5 0-1-.4-1-1V37c0-.5.4-1 1-1h2c.5 0 1 .4 1 1v15zm18 0c0 .5-.4 1-1 1h-2c-.1 0-.2 0-.3-.1l-6.9-9.3v9.4c0 .5-.4 1-1 1h-2c-.5 0-1-.4-1-1V37c0-.5.4-1 1-1h2c.1 0 .2 0 .3.1l6.9 9.3V37c0-.5.4-1 1-1h2c.5 0 1 .4 1 1v15zm12-13H65v3h5.7c.5 0 1 .4 1 1v2c0 .5-.4 1-1 1H65v3h5.7c.5 0 1 .4 1 1v2c0 .5-.4 1-1 1H62c-.5 0-1-.4-1-1V37c0-.5.4-1 1-1h8.7c.5 0 1 .4 1 1v2c0 .5-.5 1-1 1z"/>
             </svg>
           </span>
-          <span>{lineBusy ? "處理中…" : "以 LINE 登入（員工用）"}</span>
+          <span>{lineBusy ? tr("login.working") : tr("login.withLineEmployee")}</span>
         </button>
 
         <div className="login-hint">
-          <b>員工</b>：先加公司 LINE Bot 好友完成綁定 · 才能用 LINE 登入<br />
-          <b>主管</b>：兩者皆可 · 建議用公司帳號密碼（有 2FA 保護）
+          {tr("login.hint")}
         </div>
         </>
         )}

@@ -540,6 +540,24 @@ export default {
   "og.membersLabel": "People: ",
   "og.cannotInfer": " (department could not be inferred)",
 
+  "login.lineFailed": "LINE sign-in failed",
+  "login.pickOrgFailed": "Could not select the organisation \u00b7 sign in with LINE again",
+  "login.badCredentials": "Wrong email or password",
+  "login.failed": "Sign-in failed \u00b7 please try again",
+  "login.lineUrlFailed": "Could not build the LINE sign-in link \u00b7 check the AIPROOT configuration",
+  "login.pickOrg": "Choose an organisation",
+  "login.pickOrgSub": "Your LINE account belongs to several organisations \u00b7 pick one to sign in to",
+  "login.unnamedOrg": "(unnamed organisation)",
+  "login.title": "Sign in",
+  "login.sub": "Managers: use your company account \u00b7 employees can sign in with LINE",
+  "login.email": "Email",
+  "login.signingIn": "Signing in\u2026",
+  "login.or": "or",
+  "login.withLine": "Sign in with LINE",
+  "login.withLineEmployee": "Sign in with LINE (employees)",
+  "login.working": "Working\u2026",
+  "login.hint": "Employees: add the company LINE bot and finish linking before signing in with LINE. Managers: either works \u2014 the company account is recommended (2FA protected).",
+
   // Three separate axes, three separate words — see shared/confirmStatusLabel.ts.
   // 「核對」means "verify what the AI wrote", NOT "the work is done".
   "confirmStatus.待確認": "To triage",
