@@ -182,7 +182,7 @@ export default function PunchView() {
               <span>
                 第 {i + 1} 段
                 {/* 沒標「原地打卡」的話，站在同一個地方測試會看到一排 0.0，看起來像壞掉 */}
-                {t.routeProvider === "same_location" && <span className="liff-note"> · {SAME_LOCATION_LABEL}</span>}
+                {t.routeProvider === "same_location" && <span className="liff-note"> · {SAME_LOCATION_LABEL()}</span>}
               </span>
               <span className="liff-pct">{t.distanceM != null ? `${(t.distanceM / 1000).toFixed(1)} km` : "里程計算中"}</span>
             </div>
@@ -194,9 +194,9 @@ export default function PunchView() {
           {hasSameLocation && (
             <div className="liff-explain">
               <b>為什麼距離是 0？</b>
-              <div>{SAME_LOCATION_WHY}</div>
-              <div>{SAME_LOCATION_REASON}</div>
-              <div><b>{SAME_LOCATION_NEXT}</b></div>
+              <div>{SAME_LOCATION_WHY()}</div>
+              <div>{SAME_LOCATION_REASON()}</div>
+              <div><b>{SAME_LOCATION_NEXT()}</b></div>
             </div>
           )}
         </>

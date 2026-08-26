@@ -10,6 +10,7 @@ import StyledSelect from "../shared/StyledSelect";
 import { getTaipeiDate } from "../shared/taipeiDate";
 import { useDebounced } from "../shared/useDebounced";
 import { useToast } from "../Toast";
+import { useT } from "../i18n/useT";
 
 // 素材看板 · docs/modules/media-and-vision.md §2
 //
@@ -19,7 +20,7 @@ import { useToast } from "../Toast";
 // 縮圖刻意不做（要多裝影像處理套件）：改成分頁 + 進到畫面才載圖，
 // 沒被捲到的圖一個位元組都不會下載。
 
-const KIND_LABEL: Record<MediaKind, string> = { image: "圖片", video: "影片", audio: "語音", file: "檔案" };
+const KIND_LABEL: Record<MediaKind, string> = { image: "ml.image", video: "ml.video", audio: "ml.audio", file: "ml.file" };
 const KIND_ICON: Record<MediaKind, string> = { image: "▩", video: "▶", audio: "◉", file: "▤" };
 const KIND_FILTERS: (MediaKind | "all")[] = ["all", "image", "video", "file", "audio"];
 
@@ -40,6 +41,7 @@ function displayName(f: MediaItem): string {
 
 /** 帶授權的縮圖 · 捲到畫面上才去要檔案，離開畫面就把記憶體還回去 */
 function Thumb({ item }: { item: MediaItem }) {
+  const tr = useT();
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [node, setNode] = useState<HTMLDivElement | null>(null);
@@ -73,12 +75,13 @@ function Thumb({ item }: { item: MediaItem }) {
   return (
     <div className="ml-card-thumb">
       <span className="ml-card-icon" aria-hidden>{KIND_ICON[item.kind]}</span>
-      <span className="ml-card-ext mono">{failed ? "無法顯示" : KIND_LABEL[item.kind]}</span>
+      <span className="ml-card-ext mono">{failed ? tr("ml.cantShow") : tr(KIND_LABEL[item.kind])}</span>
     </div>
   );
 }
 
 export default function MediaLibrary() {
+  const tr = useT();
   const toast = useToast();
   const [filter, setFilter] = useState<MediaKind | "all">("all");
   const [page, setPage] = useState(1);
@@ -102,7 +105,7 @@ export default function MediaLibrary() {
   const load = useCallback(async () => {
     setLoading(true);
     try { setData(await listMedia(filter, page, trash, { from, to, groupId, q })); }
-    catch (e) { toast.show(e instanceof ApiError ? e.message : "載入失敗", "danger"); }
+    catch (e) { toast.show(e instanceof ApiError ? e.message : tr("common.loadFailed"), "danger"); }
     finally { setLoading(false); }
   }, [filter, page, trash, from, to, groupId, q, toast]);
   useEffect(() => { void load(); }, [load]);
@@ -122,7 +125,7 @@ export default function MediaLibrary() {
       setConfirm(null);
       await load();
     } catch (e) {
-      toast.show(e instanceof ApiError ? e.message : "操作失敗", "danger");
+      toast.show(e instanceof ApiError ? e.message : tr("ml.opFailed"), "danger");
     } finally {
       setBusy(false);
     }
@@ -138,14 +141,14 @@ export default function MediaLibrary() {
       <div className="pane-hdr">
         <div>
           {/* 標題要跟著換 —— 只改副標的話，切過去第一眼看不出自己在哪一頁 */}
-          <h1>{trash ? "素材 · 已刪除" : "素材"}</h1>
+          <h1>{trash ? tr("ml.titleTrash") : tr("nav.media")}</h1>
           <div className="sub">
             {trash
-              ? "已刪除的檔案會保留 30 天，期限內可以還原，到期後自動清除"
-              : "LINE 群組傳的照片與檔案自動保存於此"}
+              ? tr("ml.subTrash")
+              : tr("ml.sub")}
             {/* 有篩選時不能只寫「共 N 個」—— 那會被讀成「總共就這麼多」，
                 看起來像檔案不見了 */}
-            {counts ? ` · ${hasFilter ? "符合條件" : "共"} ${counts.all.toLocaleString()} 個檔案` : ""}
+            {counts ? ` · ${tr(hasFilter ? "ml.matchN" : "ml.totalN", { n: counts.all.toLocaleString() })}` : ""}
           </div>
         </div>
         {canDelete && (
@@ -157,7 +160,7 @@ export default function MediaLibrary() {
               onClick={() => { setTrash(!trash); setPage(1); setFilter("all"); clearFilter(); }}
               disabled={loading}
             >
-              {trash ? "回到素材" : "已刪除"}
+              {trash ? tr("ml.backToMedia") : tr("ml.trash")}
             </button>
           </div>
         )}
@@ -169,18 +172,18 @@ export default function MediaLibrary() {
             光比檔名的話客戶想找的那張報價單永遠搜不到 */}
       <div className="ml-filterbar">
         <div className="hdr-group ml-filter-search">
-          <label className="hdr-label" htmlFor="ml-kw">關鍵字</label>
+          <label className="hdr-label" htmlFor="ml-kw">{tr("ml.keyword")}</label>
           <div className="nc-tb-search">
             <span className="ic" aria-hidden>⌕</span>
             <input
               id="ml-kw" className="tf" value={kw}
               onChange={(e) => setKw(e.target.value)}
-              placeholder="檔名，或圖片前後的訊息內容"
+              placeholder={tr("ml.keywordPh")}
             />
           </div>
         </div>
         <div className="hdr-group">
-          <label className="hdr-label" htmlFor="ml-from">開始日期</label>
+          <label className="hdr-label" htmlFor="ml-from">{tr("ml.from")}</label>
           <input
             id="ml-from" type="date" className="tf" value={from}
             max={to || getTaipeiDate()}
@@ -189,7 +192,7 @@ export default function MediaLibrary() {
           />
         </div>
         <div className="hdr-group">
-          <label className="hdr-label" htmlFor="ml-to">結束日期</label>
+          <label className="hdr-label" htmlFor="ml-to">{tr("ml.to")}</label>
           <input
             id="ml-to" type="date" className="tf" value={to}
             min={from || undefined} max={getTaipeiDate()}
@@ -199,15 +202,15 @@ export default function MediaLibrary() {
         </div>
         {(data?.groups.length ?? 0) > 1 && (
           <div className="hdr-group ml-filter-group">
-            <span className="hdr-label">群組</span>
+            <span className="hdr-label">{tr("col.group")}</span>
             <StyledSelect
               items={(data?.groups ?? []).map((g) => ({ id: g.groupId, label: g.name }))}
               value={groupId}
               onChange={(v) => applyFilter(() => setGroupId(v))}
-              ariaLabel="依群組篩選"
+              ariaLabel={tr("ml.byGroup")}
               allowEmpty
-              emptyLabel="全部群組"
-              placeholder="全部群組"
+              emptyLabel={tr("ml.allGroups")}
+              placeholder={tr("ml.allGroups")}
               disabled={loading}
             />
           </div>
@@ -216,7 +219,7 @@ export default function MediaLibrary() {
           <div className="hdr-group">
             {/* 佔位讓按鈕跟上面的輸入框對齊底線 */}
             <span className="hdr-label" aria-hidden>&nbsp;</span>
-            <button className="btn" onClick={clearFilter} disabled={loading}>清除篩選</button>
+            <button className="btn" onClick={clearFilter} disabled={loading}>{tr("ml.clearFilter")}</button>
           </div>
         )}
       </div>
@@ -232,7 +235,7 @@ export default function MediaLibrary() {
               onClick={() => { setFilter(k); setPage(1); }}
               disabled={loading}
             >
-              {k === "all" ? "全部" : KIND_LABEL[k]}
+              {k === "all" ? tr("audit.all") : tr(KIND_LABEL[k])}
               <span className="ml-filter-count">{counts[k]}</span>
             </button>
           ))}
@@ -246,20 +249,20 @@ export default function MediaLibrary() {
           {/* ⚠️ 有篩選時一定要先講「是篩選的關係」——
               寫「還沒有任何檔案」會被讀成檔案不見了，那是最糟的誤會 */}
           {hasFilter
-            ? "沒有符合條件的檔案"
+            ? tr("ml.emptyFiltered")
             : trash
-              ? "沒有已刪除的檔案"
-              : filter === "all" ? "還沒有任何檔案" : `沒有${KIND_LABEL[filter as MediaKind]}類型的檔案`}
+              ? tr("ml.emptyTrash")
+              : filter === "all" ? tr("ml.emptyAll") : tr("ml.emptyKind", { kind: tr(KIND_LABEL[filter as MediaKind]) })}
           <div className="dm-empty-hint">
             {hasFilter
-              ? "檔案都還在，只是不在這個範圍裡"
+              ? tr("ml.emptyFilteredHint")
               : trash
-                ? "刪除的檔案會先放在這裡，30 天內都還救得回來"
-                : "群組裡傳的照片、影片、檔案會自動出現在這裡（貼圖不保存）"}
+                ? tr("ml.emptyTrashHint")
+                : tr("ml.emptyAllHint")}
           </div>
           {hasFilter && (
             <button className="btn btn-sm" style={{ marginTop: 10 }} onClick={clearFilter}>
-              清除篩選
+              {tr("ml.clearFilter")}
             </button>
           )}
         </div>
@@ -271,7 +274,7 @@ export default function MediaLibrary() {
                 <Thumb item={f} />
                 <div className="ml-card-name" title={f.filename ?? f.caption ?? ""}>{displayName(f)}</div>
                 <div className="ml-card-meta">
-                  <span>{f.departmentName ?? f.groupName ?? "未分派部門"}</span>
+                  <span>{f.departmentName ?? f.groupName ?? tr("gc.noDeptPill")}</span>
                   {f.senderName && <><span className="ml-card-dot">·</span><span>{f.senderName}</span></>}
                 </div>
                 <div className="ml-card-foot mono">
@@ -283,17 +286,17 @@ export default function MediaLibrary() {
                 {trash ? (
                   <div className="ml-card-act">
                     <span className={`ml-card-left${(f.daysLeft ?? 0) <= 3 ? " urgent" : ""}`}>
-                      {(f.daysLeft ?? 0) === 0 ? "今天到期" : `還剩 ${f.daysLeft} 天`}
-                      {f.deletedByName ? ` · ${f.deletedByName} 刪除` : ""}
+                      {(f.daysLeft ?? 0) === 0 ? tr("ml.expiresToday") : tr("ml.daysLeft", { n: f.daysLeft ?? 0 })}
+                      {f.deletedByName ? ` · ${tr("ml.deletedBy", { who: f.deletedByName })}` : ""}
                     </span>
                     <button className="btn" disabled={busy}
-                      onClick={() => void run(() => restoreMedia(f.mediaId), "已還原")}>
-                      還原
+                      onClick={() => void run(() => restoreMedia(f.mediaId), tr("ml.restored"))}>
+                      {tr("ml.restore")}
                     </button>
                     {canPurge && (
                       <button className="btn danger" disabled={busy}
                         onClick={() => setConfirm({ item: f, mode: "purge" })}>
-                        立即清除
+                        {tr("ml.purge")}
                       </button>
                     )}
                   </div>
@@ -309,17 +312,17 @@ export default function MediaLibrary() {
                         try {
                           await downloadMedia(f.mediaId, f.filename);
                         } catch (e) {
-                          toast.show(e instanceof ApiError ? e.message : "下載失敗", "danger");
+                          toast.show(e instanceof ApiError ? e.message : tr("ml.downloadFailed"), "danger");
                         } finally {
                           setBusy(false);
                         }
                       }}>
-                      下載
+                      {tr("ml.download")}
                     </button>
                     {canDelete && (
                       <button className="btn" disabled={busy}
                         onClick={() => setConfirm({ item: f, mode: "delete" })}>
-                        刪除
+                        {tr("common.delete")}
                       </button>
                     )}
                   </div>
@@ -330,9 +333,9 @@ export default function MediaLibrary() {
 
           {lastPage > 1 && (
             <div className="ml-pager">
-              <button className="btn" disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>上一頁</button>
-              <span className="ml-pager-at mono">第 {page} / {lastPage} 頁</span>
-              <button className="btn" disabled={page >= lastPage || loading} onClick={() => setPage((p) => p + 1)}>下一頁</button>
+              <button className="btn" disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>{tr("common.prevPage")}</button>
+              <span className="ml-pager-at mono">{tr("ml.pageOf", { n: page, total: lastPage })}</span>
+              <button className="btn" disabled={page >= lastPage || loading} onClick={() => setPage((p) => p + 1)}>{tr("common.nextPage")}</button>
             </div>
           )}
         </>
@@ -344,25 +347,25 @@ export default function MediaLibrary() {
         onConfirm={() => {
           if (!confirm) return;
           void (confirm.mode === "purge"
-            ? run(() => purgeMedia(confirm.item.mediaId), "已徹底清除")
-            : run(() => deleteMedia(confirm.item.mediaId), "已刪除，30 天內可還原"));
+            ? run(() => purgeMedia(confirm.item.mediaId), tr("ml.purged"))
+            : run(() => deleteMedia(confirm.item.mediaId), tr("ml.deleted")));
         }}
         busy={busy}
         tone="danger"
-        title={confirm?.mode === "purge" ? "徹底清除這個檔案？" : "刪除這個檔案？"}
-        confirmLabel={confirm?.mode === "purge" ? "徹底清除" : "刪除"}
+        title={tr(confirm?.mode === "purge" ? "ml.purgeTitle" : "ml.deleteTitle")}
+        confirmLabel={tr(confirm?.mode === "purge" ? "ml.purge" : "common.delete")}
         body={confirm && (
           <>
             <div style={{ fontWeight: 600, marginBottom: 6 }}>{displayName(confirm.item)}</div>
             {confirm.mode === "purge" ? (
-              <p>檔案會立刻從儲存空間移除，<b>無法還原</b>。系統會留下「這個檔案被誰在何時清除」的紀錄。</p>
+              <p>{tr("ml.purgeBody")}</p>
             ) : (
-              <p>檔案會從素材移除，<b>30 天內都可以在「已刪除」裡還原</b>，到期後自動清除。</p>
+              <p>{tr("ml.deleteBody")}</p>
             )}
             {/* 一定要講：使用者對「刪除」的直覺是「收回」，但 LINE 不讓 bot 收回別人的訊息 */}
             <p style={{ color: "var(--ink-3)", fontSize: 12.5, marginTop: 8 }}>
-              請注意：這只會移除系統裡的副本，<b>LINE 群組裡的那則訊息仍然存在</b>，
-              需要另外請群組成員自行收回。
+              {tr("ml.deleteNote1")}
+              {tr("ml.deleteNote2")}
             </p>
           </>
         )}

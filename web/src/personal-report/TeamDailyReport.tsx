@@ -8,6 +8,8 @@ import {
 import StyledSelect from "../shared/StyledSelect";
 import { useTenantPicker } from "../shared/TenantPicker";
 import { useToast } from "../Toast";
+import { t } from "../i18n";
+import { useT } from "../i18n/useT";
 
 // 部門日報 · 主管（group_owner / tenant_admin）看下屬送出的個人日報
 // 對應 LINE 通知「○○ 已送出 個人日報 · 進戰情室 → 部門日報查看」的落點
@@ -23,28 +25,29 @@ import { useToast } from "../Toast";
 
 // 狀態 pill 沿用表格狀態欄慣例 .nc-pill（同 TenantManagement / notify LogsTab），非 inline 的 .pill
 const STATUS: Record<PersonalDailyReportRow["status"], { label: string; pill: string }> = {
-  sent: { label: "已送出", pill: "ok" },
-  confirmed: { label: "待送出", pill: "warn" },
-  draft: { label: "草稿", pill: "mut" },
-  empty: { label: "當日無內容", pill: "mut" },
-  failed: { label: "產生失敗", pill: "danger" },
+  sent: { label: "tdr.sent", pill: "ok" },
+  confirmed: { label: "tdr.confirmed", pill: "warn" },
+  draft: { label: "tdr.draft", pill: "mut" },
+  empty: { label: "tdr.emptyDay", pill: "mut" },
+  failed: { label: "tdr.failed", pill: "danger" },
 };
 
 type Filter = "content" | "empty" | "all";
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: "content", label: "有內容" },
-  { key: "empty", label: "未回報" },
-  { key: "all", label: "全部" },
+const FILTERS: { key: Filter; labelKey: string }[] = [
+  { key: "content", labelKey: "tdr.hasContent" },
+  { key: "empty", labelKey: "tdr.noReport" },
+  { key: "all", labelKey: "audit.all" },
 ];
 
-const WEEKDAY = ["日", "一", "二", "三", "四", "五", "六"];
+const WEEKDAY = ["wd.0", "wd.1", "wd.2", "wd.3", "wd.4", "wd.5", "wd.6"];
 function weekdayOf(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
   if (!y || !m || !d) return "";
-  return `星期${WEEKDAY[new Date(y, m - 1, d).getDay()]}`;
+  return t(WEEKDAY[new Date(y, m - 1, d).getDay()]);
 }
 
 export default function TeamDailyReport() {
+  const tr = useT();
   const toast = useToast();
   // 平台角色要指定看哪一家；租戶角色回 undefined（後端用 JWT 的 tenant_id）
   const [pickedTenantId, tenantPicker, tenantReady] = useTenantPicker();
@@ -71,7 +74,7 @@ export default function TeamDailyReport() {
       });
       setRows(r.reports);
     } catch (e) {
-      toast.show(e instanceof ApiError ? e.message : "載入部門日報失敗", "danger");
+      toast.show(e instanceof ApiError ? e.message : tr("tdr.loadFailed"), "danger");
     } finally {
       setLoading(false);
     }
@@ -120,8 +123,8 @@ export default function TeamDailyReport() {
     <div className="pane">
       <div className="pane-hdr">
         <div>
-          <h1>部門日報</h1>
-          <div className="sub">部門成員送出的每日工作日報 · 點一列展開看內容</div>
+          <h1>{tr("nav.teamReport")}</h1>
+          <div className="sub">{tr("tdr.sub")}</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {tenantPicker}
@@ -132,7 +135,7 @@ export default function TeamDailyReport() {
                 className={filter === f.key ? "on" : ""}
                 aria-pressed={filter === f.key}
                 onClick={() => setFilter(f.key)}
-              >{f.label}</button>
+              >{tr(f.labelKey)}</button>
             ))}
           </div>
           {departments.length > 1 && (
@@ -141,16 +144,16 @@ export default function TeamDailyReport() {
                 items={departments.map((d) => ({ id: d, label: d }))}
                 value={dept}
                 onChange={setDept}
-                ariaLabel="依部門過濾"
+                ariaLabel={tr("tdr.byDept")}
                 allowEmpty
-                emptyLabel="全部部門"
+                emptyLabel={tr("tdr.allDepts")}
                 width={132}
               />
             </div>
           )}
           <div className="seg">
-            <button className={days === 7 ? "on" : ""} onClick={() => setDays(7)}>近 7 天</button>
-            <button className={days === 30 ? "on" : ""} onClick={() => setDays(30)}>近 30 天</button>
+            <button className={days === 7 ? "on" : ""} onClick={() => setDays(7)}>{tr("dl.days7")}</button>
+            <button className={days === 30 ? "on" : ""} onClick={() => setDays(30)}>{tr("dl.days30")}</button>
           </div>
         </div>
       </div>
@@ -159,21 +162,21 @@ export default function TeamDailyReport() {
         <Spinner block />
       ) : rows.length === 0 ? (
         <div className="dm-empty">
-          此範圍內尚無部門日報
+          {tr("tdr.noneInRange")}
           <div className="dm-empty-hint">
-            員工於 LINE 私訊 bot 後由 AI 生成日報、確認送出，才會出現在這裡。
-            group_owner 只看得到自己部門的成員。
+            {tr("tdr.noneHint1")}
+            {tr("tdr.noneHint2")}
           </div>
         </div>
       ) : visible.length === 0 ? (
         <div className="dm-empty">
           {filter === "content"
-            ? "這段期間部門成員都沒有送出有內容的日報"
+            ? tr("tdr.emptyContent")
             : filter === "empty"
-              ? "這段期間每個人都有回報，沒有空日報"
-              : "此部門在這段期間沒有日報"}
+              ? tr("tdr.emptyNone")
+              : tr("tdr.emptyDept")}
           {filter === "content" && hiddenEmpty > 0 && (
-            <div className="dm-empty-hint">切「未回報」可看有哪 {hiddenEmpty} 筆當日無內容。</div>
+            <div className="dm-empty-hint">{tr("tdr.emptyHint", { n: hiddenEmpty })}</div>
           )}
         </div>
       ) : (
@@ -181,10 +184,10 @@ export default function TeamDailyReport() {
           <table className="dm-table">
             <thead>
               <tr>
-                <th style={{ width: "22%" }}>姓名</th>
-                <th style={{ width: "22%" }}>部門</th>
-                <th className="num" style={{ width: "9%" }}>項數</th>
-                <th style={{ width: "18%" }}>狀態</th>
+                <th style={{ width: "22%" }}>{tr("col.name")}</th>
+                <th style={{ width: "22%" }}>{tr("col.dept")}</th>
+                <th className="num" style={{ width: "9%" }}>{tr("tdr.items")}</th>
+                <th style={{ width: "18%" }}>{tr("kb.fldStatus")}</th>
                 <th></th>
               </tr>
             </thead>
@@ -198,7 +201,7 @@ export default function TeamDailyReport() {
                         <span className="gchev">{gCollapsed ? "▸" : "▾"}</span>
                         <span className="mono">{date}</span>
                         <span className="wk">{weekdayOf(date)}</span>
-                        <span className="c">{list.length} 筆</span>
+                        <span className="c">{tr("tdr.nRows", { n: list.length })}</span>
                       </td>
                     </tr>
                     {!gCollapsed && list.map((r) => (
@@ -226,14 +229,14 @@ export default function TeamDailyReport() {
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setFilter("empty"); } }}
           style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
         >
-          <span>另有 <b>{hiddenEmpty}</b> 筆當日無內容（預設隱藏）</span>
-          <span style={{ marginLeft: "auto", color: "var(--primary)", fontWeight: 600 }}>顯示 →</span>
+          <span>{tr("tdr.hiddenN", { n: hiddenEmpty })}</span>
+          <span style={{ marginLeft: "auto", color: "var(--primary)", fontWeight: 600 }}>{tr("tdr.show")}</span>
         </div>
       )}
 
       {!loading && rows.length > 0 && (
         <div className="login-hint" style={{ marginTop: 12 }}>
-          顯示 {visible.length} 筆 · 依你的角色範圍：部門主管看自己部門、租戶管理者看全公司。空日報預設隱藏。
+          {tr("tdr.foot", { n: visible.length })}
         </div>
       )}
     </div>
@@ -245,33 +248,34 @@ function TeamReportRow({ row, open, onToggle }: {
   open: boolean;
   onToggle: () => void;
 }) {
+  const tr = useT();
   const items = row.finalItems ?? row.aiItems ?? [];
   const st = STATUS[row.status];
   return (
     <>
       <tr onClick={onToggle} style={{ cursor: "pointer" }}>
-        <td className="dm-td-name">{row.userDisplayName ?? "（未命名）"}</td>
-        <td>{row.departmentName ?? <span style={{ color: "var(--ink-3)" }}>未分派部門</span>}</td>
+        <td className="dm-td-name">{row.userDisplayName ?? tr("tdr.unnamed")}</td>
+        <td>{row.departmentName ?? <span style={{ color: "var(--ink-3)" }}>{tr("gc.noDeptPill")}</span>}</td>
         <td className="num">{items.length}</td>
-        <td><span className={`st-dot ${st.pill}`} /><span className={`nc-pill ${st.pill}`}>{st.label}</span></td>
-        <td style={{ textAlign: "right", color: "var(--ink-3)" }}>{open ? "收合 ▲" : "展開 ▼"}</td>
+        <td><span className={`st-dot ${st.pill}`} /><span className={`nc-pill ${st.pill}`}>{tr(st.label)}</span></td>
+        <td style={{ textAlign: "right", color: "var(--ink-3)" }}>{tr(open ? "tdr.collapse" : "tdr.expand")}</td>
       </tr>
       {open && (
         <tr>
           <td colSpan={5} style={{ background: "var(--surface-2, #F5F6F8)", padding: "10px 14px" }}>
             {items.length === 0 ? (
-              <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>這份日報沒有項目。</div>
+              <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>{tr("tdr.noItems")}</div>
             ) : (
               items.map((it, i) => (
                 <div key={i} className="pdr-item">
                   <div className="pdr-item-hdr">
                     <span className="pdr-item-idx">{i + 1}</span>
                     {it.time && <span className="pdr-item-time">{it.time}</span>}
-                    <span className="pdr-item-title">{it.title || "（未命名事項）"}</span>
+                    <span className="pdr-item-title">{it.title || tr("pdr.untitled")}</span>
                   </div>
                   {it.detail && <div className="pdr-item-detail">{it.detail}</div>}
                   {it.followup && (
-                    <div className="pdr-item-followup"><b>追蹤</b> · {it.followup}</div>
+                    <div className="pdr-item-followup"><b>{tr("pdr.followup")}</b> · {it.followup}</div>
                   )}
                 </div>
               ))

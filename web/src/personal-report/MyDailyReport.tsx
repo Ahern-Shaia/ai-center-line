@@ -15,12 +15,15 @@ import {
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import SourceMessageList from "../warroom/SourceMessageList";
+import { t } from "../i18n";
+import { useT } from "../i18n/useT";
 
 type AssignedTask = { ticketId: string; summary: string | null; canSeeSource?: boolean };
 
 // PDR-M4 · 我的日報頁
 // 對照 docs/modules/personal-daily-report.md §7
 export default function MyDailyReport() {
+  const tr = useT();
   const [date, setDate] = useState<string>(getTaipeiDate());
   const [report, setReport] = useState<PersonalDailyReportRow | null>(null);
   const [items, setItems] = useState<PersonalDailyReportItem[]>([]);
@@ -60,7 +63,7 @@ export default function MyDailyReport() {
       else if (r?.aiItems) setItems(r.aiItems);
       else setItems([]);
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("common.loadFailed"), "danger");
     } finally {
       setLoading(false);
     }
@@ -72,11 +75,11 @@ export default function MyDailyReport() {
     setBusy(true);
     try {
       await savePersonalReport({ date, items, action });
-      toast.show(action === "send" ? "日報已送出主管" : "草稿已儲存", "ok");
+      toast.show(tr(action === "send" ? "pdr.sentToast" : "pdr.draftSaved"), "ok");
       setConfirmSend(false);
       void refresh();
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "儲存失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("common.saveFailed"), "danger");
     } finally {
       setBusy(false);
     }
@@ -86,12 +89,12 @@ export default function MyDailyReport() {
     setRegenerating(true);
     try {
       const res = await regeneratePersonalReport(date);
-      if (res.status === "empty") toast.show("今日無私訊記錄 · 傳幾則給 LINE 官方帳號後再重新生成", "warn");
-      else if (res.status === "completed") toast.show(`AI 整理 ${res.itemCount} 項`, "ok");
-      else toast.show(res.errorMessage ?? "生成失敗", "danger");
+      if (res.status === "empty") toast.show(tr("pdr.noDm"), "warn");
+      else if (res.status === "completed") toast.show(tr("pdr.aiDone", { n: res.itemCount }), "ok");
+      else toast.show(res.errorMessage ?? tr("pdr.genFailed"), "danger");
       void refresh();
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "生成失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("pdr.genFailed"), "danger");
     } finally {
       setRegenerating(false);
     }
@@ -122,12 +125,12 @@ export default function MyDailyReport() {
   const displayDate = useMemo(() => formatDay(date), [date]);
   const dateHint = useMemo(() => {
     const today = getTaipeiDate();
-    if (date === today) return "今日";
+    if (date === today) return t("dl.today");
     const d1 = new Date(`${date}T00:00:00`);
     const d2 = new Date(`${today}T00:00:00`);
     const diff = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
-    if (diff === 1) return "昨天";
-    if (diff > 0) return `${diff} 天前`;
+    if (diff === 1) return t("dl.yesterday");
+    if (diff > 0) return t("pdr.daysAgo", { n: diff });
     return "";
   }, [date]);
 
@@ -135,24 +138,24 @@ export default function MyDailyReport() {
     <div className="pane">
       <div className="pane-hdr">
         <div>
-          <h1>我的日報 · {displayDate}</h1>
+          <h1>{tr("nav.myDailyReport")} · {displayDate}</h1>
           <div className="sub">
             {report?.aiGeneratedAt && !isSent && !isFailed && (
-              <>AI 已於 {formatDateTime(report.aiGeneratedAt)} 整理 · 請確認或微調</>
+              <>{tr("pdr.aiAt", { at: formatDateTime(report.aiGeneratedAt) })}</>
             )}
-            {isSent && !hasUnsentUpdate && <>已於 {formatDateTime(report.sentAt!)} 送出</>}
+            {isSent && !hasUnsentUpdate && <>{tr("pdr.sentAt", { at: formatDateTime(report.sentAt!) })}</>}
             {isSent && hasUnsentUpdate && (
               <span style={{ color: "var(--warn)" }}>
-                已於 {formatDateTime(report.sentAt!)} 送出 · <b>送出後有新訊息，AI 已重新整理</b> · 確認後可再次送出給主管
+                {tr("pdr.sentAt", { at: formatDateTime(report.sentAt!) })} · <b>{tr("pdr.newSinceSent")}</b> · {tr("pdr.canResend")}
               </span>
             )}
-            {isEmpty && <>今日尚未記錄 · 私訊 bot 一些內容後可按重新生成</>}
-            {isFailed && <>AI 整理失敗 · 可重新生成 or 聯繫業助</>}
+            {isEmpty && <>{tr("pdr.subEmpty")}</>}
+            {isFailed && <>{tr("pdr.subFailed")}</>}
           </div>
         </div>
         <div className="hdr-toolbar">
           <div className="hdr-group">
-            <label className="hdr-label" htmlFor="pdr-date">查看日期</label>
+            <label className="hdr-label" htmlFor="pdr-date">{tr("mt.viewDate")}</label>
             <input
               id="pdr-date"
               type="date"
@@ -165,15 +168,15 @@ export default function MyDailyReport() {
             <div className="hdr-group-hint">{dateHint}</div>
           </div>
           <div className="hdr-group">
-            <label className="hdr-label">當日操作</label>
+            <label className="hdr-label">{tr("dl.actions")}</label>
             <button
               className="btn"
               onClick={() => void doRegenerate()}
               disabled={busy || regenerating}
             >
-              {regenerating ? "生成中…" : "重新生成"}
+              {regenerating ? tr("pdr.generating") : tr("pdr.regenerate")}
             </button>
-            <div className="hdr-group-hint">重跑 AI · 保留手動編輯</div>
+            <div className="hdr-group-hint">{tr("pdr.regenHint")}</div>
           </div>
         </div>
       </div>
@@ -184,21 +187,21 @@ export default function MyDailyReport() {
         pendingMessageCount > 0 ? (
           <div>
             <div className="dm-empty" style={{ marginBottom: 12 }}>
-              <div>你今日已私訊 bot <b>{pendingMessageCount}</b> 則 · AI 尚未整理</div>
-              <div className="dm-empty-hint">下方是 bot 收到的原始訊息 · 按「立即整理」讓 AI 抽成日報項目 · {aiRunAt ? `或等 ${aiRunAt} 自動整理` : "或等系統自動整理"}</div>
+              <div>{tr("pdr.pendingA")}<b>{pendingMessageCount}</b>{tr("pdr.pendingB")}</div>
+              <div className="dm-empty-hint">{tr("pdr.pendingHint")} · {aiRunAt ? tr("pdr.orWaitAt", { at: aiRunAt }) : tr("pdr.orWait")}</div>
               <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={() => void doRegenerate()} disabled={regenerating}>
-                {regenerating ? "生成中…" : "立即整理"}
+                {regenerating ? tr("pdr.generating") : tr("pdr.organizeNow")}
               </button>
             </div>
             <div className="pdr-raw-list">
-              <div className="pdr-raw-hdr">bot 收到的原始訊息 · 依時間排序</div>
+              <div className="pdr-raw-hdr">{tr("pdr.rawHdr")}</div>
               {pendingMessages.map((m) => (
                 <div key={m.messageId} className="pdr-raw-item">
                   <div className="pdr-raw-time">{formatTimeHM(m.sentAt)}</div>
                   <div className="pdr-raw-text">
                     {m.messageType === "text" && m.textContent}
-                    {m.messageType === "sticker" && <span style={{ color: "var(--ink-3)" }}>[貼圖]</span>}
-                    {m.messageType === "image" && <span style={{ color: "var(--ink-3)" }}>[圖片]</span>}
+                    {m.messageType === "sticker" && <span style={{ color: "var(--ink-3)" }}>{tr("gc.sticker")}</span>}
+                    {m.messageType === "image" && <span style={{ color: "var(--ink-3)" }}>{tr("gc.image")}</span>}
                     {!["text", "sticker", "image"].includes(m.messageType) && <span style={{ color: "var(--ink-3)" }}>[{m.messageType}]</span>}
                   </div>
                 </div>
@@ -207,17 +210,17 @@ export default function MyDailyReport() {
           </div>
         ) : (
           <div className="dm-empty">
-            <div>今日尚未有記錄</div>
+            <div>{tr("pdr.emptyToday")}</div>
             {/* 不寫租戶名 —— 這頁是從各租戶自己的 bot 開的，寫死一家的名字對其他租戶就是錯的。
                 頁首副標也是用「私訊 bot」，維持一致。 */}
-            <div className="dm-empty-hint">私訊 bot 幾則今日工作 · AI 會自動整理{aiRunAt ? ` · ${aiRunAt} 也會自動觸發` : ""}</div>
+            <div className="dm-empty-hint">{tr("pdr.emptyTodayHint")}{aiRunAt ? ` · ${tr("pdr.alsoAutoAt", { at: aiRunAt })}` : ""}</div>
           </div>
         )
       )}
 
       {isFailed && !loading && (
         <div className="dm-empty" style={{ background: "var(--warn-tint)", border: "1px solid #F5D5A6" }}>
-          <b>AI 整理失敗</b>
+          <b>{tr("pdr.aiFailed")}</b>
           {report?.errorMessage && <div style={{ marginTop: 6, fontSize: 12 }}>{report.errorMessage}</div>}
         </div>
       )}
@@ -231,7 +234,7 @@ export default function MyDailyReport() {
         {isToday && todayVisits.length > 0 && (
           <div className="pdr-raw-list" style={{ marginTop: 16 }}>
             <div className="pdr-raw-hdr">
-              今天打卡去過 <b>{todayVisits.length}</b> 個地方
+              {tr("pdr.visitsA")}<b>{todayVisits.length}</b>{tr("pdr.visitsB")}
             </div>
             {todayVisits.map((v, i) => (
               <div key={`${v.place}-${v.at}-${i}`} className="pdr-raw-item" style={{ alignItems: "center" }}>
@@ -240,7 +243,7 @@ export default function MyDailyReport() {
                 <button className="btn btn-sm" disabled={!canEdit}
                   onClick={() => setItems((s) => [...s, {
                     title: v.place, detail: "", time: v.at, followup: "", source: "attendance",
-                  } as PersonalDailyReportItem])}>加入日報</button>
+                  } as PersonalDailyReportItem])}>{tr("pdr.addToReport")}</button>
               </div>
             ))}
           </div>
@@ -251,7 +254,7 @@ export default function MyDailyReport() {
         {isToday && assignedTasks.length > 0 && (
           <div className="pdr-raw-list" style={{ marginTop: 16, borderColor: "var(--primary)" }}>
             <div className="pdr-raw-hdr">
-              有 <b>{assignedTasks.length}</b> 項指派給你的任務尚未加入日報
+              {tr("pdr.tasksA")}<b>{assignedTasks.length}</b>{tr("pdr.tasksB")}
             </div>
             {assignedTasks.map((t) => (
               <AssignedTaskItem
@@ -289,7 +292,7 @@ export default function MyDailyReport() {
 
             {canEdit && (
               <button className="btn pdr-add" onClick={() => { setEditingIdx(items.length); setItems((s) => [...s, { title: "", detail: "", time: "", followup: "" }]); }}>
-                + 手動加一項
+                {tr("pdr.addManual")}
               </button>
             )}
           </div>
@@ -298,9 +301,9 @@ export default function MyDailyReport() {
           {unorganizedMessages.length > 0 && (
             <div className="pdr-raw-list" style={{ marginTop: 16, borderColor: "var(--warn)" }}>
               <div className="pdr-raw-hdr" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                <span>bot 已收到 <b>{unorganizedMessages.length}</b> 則新訊息 · 尚未整理進日報</span>
+                <span>{tr("pdr.unorgA")}<b>{unorganizedMessages.length}</b>{tr("pdr.unorgB")}</span>
                 <button className="btn btn-sm" onClick={() => void doRegenerate()} disabled={regenerating}>
-                  {regenerating ? "整理中…" : "整理進日報"}
+                  {regenerating ? tr("pdr.organizing") : tr("pdr.organizeInto")}
                 </button>
               </div>
               {unorganizedMessages.map((m) => (
@@ -308,8 +311,8 @@ export default function MyDailyReport() {
                   <div className="pdr-raw-time">{formatTimeHM(m.sentAt)}</div>
                   <div className="pdr-raw-text">
                     {m.messageType === "text" && m.textContent}
-                    {m.messageType === "sticker" && <span style={{ color: "var(--ink-3)" }}>[貼圖]</span>}
-                    {m.messageType === "image" && <span style={{ color: "var(--ink-3)" }}>[圖片]</span>}
+                    {m.messageType === "sticker" && <span style={{ color: "var(--ink-3)" }}>{tr("gc.sticker")}</span>}
+                    {m.messageType === "image" && <span style={{ color: "var(--ink-3)" }}>{tr("gc.image")}</span>}
                     {!["text", "sticker", "image"].includes(m.messageType) && <span style={{ color: "var(--ink-3)" }}>[{m.messageType}]</span>}
                   </div>
                 </div>
@@ -335,22 +338,22 @@ export default function MyDailyReport() {
       {(report || items.length > 0) && !isEmpty && !isFailed && (
         <div className={`pdr-foot${editingIdx !== null ? " pdr-foot-flow" : ""}`}>
           <div style={{ fontSize: 12, color: "var(--ink-3)" }}>
-            {(report?.messageCount ?? 0) > 0 && <>今日私訊 {report!.messageCount} 則 · </>}
+            {(report?.messageCount ?? 0) > 0 && <>{tr("pdr.dmCount", { n: report!.messageCount })} · </>}
             {isSent && !hasUnsentUpdate
-              ? <span style={{ color: "var(--ok-600)" }}>已送出 · 主管已收到通知</span>
+              ? <span style={{ color: "var(--ok-600)" }}>{tr("pdr.sentNotified")}</span>
               : hasUnsentUpdate
-                ? <span style={{ color: "var(--warn)" }}>{items.length} 項 · 含送出後的新內容，尚未再次送出</span>
+                ? <span style={{ color: "var(--warn)" }}>{tr("pdr.hasUnsent", { n: items.length })}</span>
                 : items.length > 0
-                  ? `${items.length} 項待送出`
-                  : "尚無項目"}
+                  ? t("pdr.nPending", { n: items.length })
+                  : t("pdr.noItems")}
           </div>
           {(!isSent || hasUnsentUpdate) && (
             <div style={{ display: "flex", gap: 8 }}>
               <button className="btn" onClick={() => void doSave("save_draft")} disabled={busy || !hasItems}>
-                儲存草稿
+                {tr("pdr.saveDraft")}
               </button>
               <button className="btn btn-primary" onClick={() => setConfirmSend(true)} disabled={busy || !hasItems}>
-                {hasUnsentUpdate ? "再次送出" : "送出日報"}
+                {tr(hasUnsentUpdate ? "pdr.resend" : "pdr.send")}
               </button>
             </div>
           )}
@@ -362,16 +365,16 @@ export default function MyDailyReport() {
         onClose={() => !busy && setConfirmSend(false)}
         onConfirm={() => void doSave("send")}
         busy={busy}
-        title="送出今日日報"
+        title={tr("pdr.sendTitle")}
         body={
           <div>
             <div style={{ marginBottom: 10, fontSize: 13, color: "var(--ink-3)" }}>
-              主管將收到以下 <b style={{ color: "var(--ink)" }}>{items.length}</b> 項 · 送出後不能再改
+              {tr("pdr.sendBodyA")}<b style={{ color: "var(--ink)" }}>{items.length}</b>{tr("pdr.sendBodyB")}
             </div>
             <ReportPreview items={items} userDisplayName={userDisplayName} displayDate={displayDate} isSent={false} live={false} />
           </div>
         }
-        confirmLabel="確定送出"
+        confirmLabel={tr("pdr.confirmSend")}
         tone="primary"
       />
     </div>
@@ -404,12 +407,13 @@ function ItemCard({
   onStopEdit: () => void;
   readonly: boolean;
 }) {
+  const tr = useT();
   const [timeErr, setTimeErr] = useState("");
 
   function finishEdit() {
     const t = (item.time ?? "").trim();
     if (t && !TIME_RE.test(t)) {
-      setTimeErr("時間直接打數字就好，例 0900（會自動變 09:00）、區間 0900-1000 · 不填也可以");
+      setTimeErr(tr("pdr.timeErr"));
       return;
     }
     setTimeErr("");
@@ -423,34 +427,34 @@ function ItemCard({
           <input
             className="tf pdr-time"
             inputMode="numeric"
-            placeholder="時間 · 直接打數字，例 0900、0900-1000"
+            placeholder={tr("pdr.timePh")}
             value={item.time ?? ""}
             onChange={(e) => { onChange({ ...item, time: cleanTimeInput(e.target.value) }); if (timeErr) setTimeErr(""); }}
             onBlur={() => { const v = normalizeTimeOnBlur(item.time ?? ""); if (v !== (item.time ?? "")) onChange({ ...item, time: v }); }}
           />
           <input
             className="tf pdr-title"
-            placeholder="事項標題"
+            placeholder={tr("pdr.titlePh")}
             value={item.title}
             onChange={(e) => onChange({ ...item, title: e.target.value })}
           />
         </div>
         <textarea
           className="tf pdr-detail"
-          placeholder="內容摘要"
+          placeholder={tr("pdr.detailPh")}
           rows={3}
           value={item.detail ?? ""}
           onChange={(e) => onChange({ ...item, detail: e.target.value })}
         />
         <input
           className="tf"
-          placeholder="追蹤事項 · 例 明日 09:00 跟人資申請"
+          placeholder={tr("pdr.followupPh")}
           value={item.followup ?? ""}
           onChange={(e) => onChange({ ...item, followup: e.target.value })}
         />
         {timeErr && <div style={{ color: "var(--danger)", fontSize: 12, lineHeight: 1.5 }}>{timeErr}</div>}
         <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-          <button className="btn small btn-primary" onClick={finishEdit}>完成</button>
+          <button className="btn small btn-primary" onClick={finishEdit}>{tr("pdr.done")}</button>
         </div>
       </div>
     );
@@ -460,18 +464,18 @@ function ItemCard({
       <div className="pdr-item-hdr">
         <span className="pdr-item-idx">{idx + 1}</span>
         {item.time && <span className="pdr-item-time">{item.time}</span>}
-        <span className="pdr-item-title">{item.title || "（未命名事項）"}</span>
+        <span className="pdr-item-title">{item.title || tr("pdr.untitled")}</span>
         {!readonly && (
           <div className="pdr-item-actions">
-            <button className="btn small" onClick={onStartEdit}>編輯</button>
-            <button className="btn small" onClick={onDelete}>刪除</button>
+            <button className="btn small" onClick={onStartEdit}>{tr("pdr.edit")}</button>
+            <button className="btn small" onClick={onDelete}>{tr("common.delete")}</button>
           </div>
         )}
       </div>
       {item.detail && <div className="pdr-item-detail">{item.detail}</div>}
       {item.followup && (
         <div className="pdr-item-followup">
-          <b>追蹤</b> · {item.followup}
+          <b>{tr("pdr.followup")}</b> · {item.followup}
         </div>
       )}
     </div>
@@ -487,26 +491,27 @@ function ReportPreview({
   isSent: boolean;
   live: boolean;
 }) {
+  const tr = useT();
   return (
     <div className="pdr-preview">
       <div className="pdr-preview-hdr">
-        <span>主管將看到 · 預覽</span>
+        <span>{tr("pdr.preview")}</span>
         {live && <span className="pdr-preview-badge">live preview</span>}
       </div>
-      <div className="pdr-preview-title">{userDisplayName || "員工"} · 個人日報</div>
+      <div className="pdr-preview-title">{userDisplayName || tr("pdr.employee")} · {tr("pdr.personalReport")}</div>
       <div className="pdr-preview-date">{displayDate}</div>
       {items.map((it, idx) => (
         <div key={idx} className="pdr-preview-item">
           <div className="pdr-preview-item-hdr">
             <span className="pdr-preview-idx">{idx + 1}.</span>
-            <span className="pdr-preview-title-text">{it.title || "（未命名事項）"}</span>
+            <span className="pdr-preview-title-text">{it.title || tr("pdr.untitled")}</span>
             {it.time && <span className="pdr-preview-time">{it.time}</span>}
           </div>
           {it.detail && <div className="pdr-preview-detail">{it.detail}</div>}
-          {it.followup && <div className="pdr-preview-followup">→ 追蹤 · {it.followup}</div>}
+          {it.followup && <div className="pdr-preview-followup">→ {tr("pdr.followup")} · {it.followup}</div>}
         </div>
       ))}
-      <div className="pdr-preview-foot">共 {items.length} 項 · {isSent ? "已送出" : "未送出"}</div>
+      <div className="pdr-preview-foot">{tr("pdr.previewFoot", { n: items.length })} · {tr(isSent ? "pdr.isSent" : "pdr.notSent")}</div>
     </div>
   );
 }
@@ -537,6 +542,7 @@ function AssignedTaskItem({ task, canEdit, onAdd }: {
   canEdit: boolean;
   onAdd: () => void;
 }) {
+  const tr = useT();
   const [open, setOpen] = useState(false);
   const [source, setSource] = useState<TicketSource | null>(null);
   const [loading, setLoading] = useState(false);
@@ -550,7 +556,7 @@ function AssignedTaskItem({ task, canEdit, onAdd }: {
     try {
       setSource(await getAssignedTaskSource(task.ticketId));
     } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : "載入來源失敗", "danger");
+      toast.show(err instanceof ApiError ? err.message : tr("pdr.loadSourceFailed"), "danger");
       setOpen(false);
     } finally {
       setLoading(false);
@@ -560,17 +566,17 @@ function AssignedTaskItem({ task, canEdit, onAdd }: {
   return (
     <div className="pdr-raw-item" style={{ flexDirection: "column", alignItems: "stretch" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div className="pdr-raw-text" style={{ flex: 1 }}>{task.summary ?? "（無摘要）"}</div>
-        <button className="btn btn-sm" disabled={!canEdit} onClick={onAdd}>加入日報</button>
+        <div className="pdr-raw-text" style={{ flex: 1 }}>{task.summary ?? tr("pdr.noSummary")}</div>
+        <button className="btn btn-sm" disabled={!canEdit} onClick={onAdd}>{tr("pdr.addToReport")}</button>
       </div>
       {task.canSeeSource && (
         <button className="dl-card-toggle" style={{ alignSelf: "flex-start", marginTop: 6 }} onClick={() => void toggle()}>
-          {open ? "收合原始訊息 ▲" : "對照原始訊息 ▼"}
+          {tr(open ? "kb.hideSource" : "pdr.showSource")}
         </button>
       )}
       {open && (
         <div className="dl-raw" style={{ marginTop: 6 }}>
-          {loading && <div style={{ fontSize: 12, color: "var(--ink-3)", padding: 8 }}>載入中…</div>}
+          {loading && <div style={{ fontSize: 12, color: "var(--ink-3)", padding: 8 }}>{tr("common.loading")}</div>}
           {!loading && source && <SourceMessageList data={source} />}
         </div>
       )}

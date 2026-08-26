@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useT } from "../i18n/useT";
 
 // 權限設定教學 · 站內導引頁（讀者＝總經理室，電腦小白）
 // 沿用「運作原理」(Onboarding) 的 .ob-* 樣式，視覺與產品一致。
@@ -23,45 +24,46 @@ function svg(children: ReactNode) {
 }
 
 export default function PermissionSetupGuide({ onNavigate, onDone }: Props) {
+  const tr = useT();
   return (
     <>
       <div className="pane-hdr">
         <div>
-          <h1>權限設定教學</h1>
-          <div className="sub">設定成「總經理看全公司、各部門主管只看自己部門」· 照著點，約 10 分鐘</div>
+          <h1>{tr("psg.title")}</h1>
+          <div className="sub">{tr("psg.sub")}</div>
         </div>
         <div className="actions">
-          <button className="btn" onClick={onDone}>關閉</button>
+          <button className="btn" onClick={onDone}>{tr("psg.close")}</button>
         </div>
       </div>
 
       {/* 觀念：兩種身分看到的範圍 */}
       <div className="psg-concept">
-        <div className="psg-concept-h">先搞懂：身分決定看得到多少</div>
+        <div className="psg-concept-h">{tr("psg.conceptH")}</div>
         <table className="psg-tbl">
           <thead>
-            <tr><th>畫面上的身分</th><th>這是誰</th><th>看得到</th></tr>
+            <tr><th>{tr("psg.colRole")}</th><th>{tr("psg.colWho")}</th><th>{tr("psg.colSees")}</th></tr>
           </thead>
           <tbody>
             <tr>
-              <td><span className="psg-pill psg-pill-all">總經理室</span></td>
-              <td>老闆、管理層</td>
-              <td><b>全公司</b>所有部門</td>
+              <td><span className="psg-pill psg-pill-all">{tr("role.tenant_admin")}</span></td>
+              <td>{tr("psg.gmWho")}</td>
+              <td>{tr("psg.gmSees")}</td>
             </tr>
             <tr>
-              <td><span className="psg-pill psg-pill-dept">部門主管</span></td>
-              <td>各部門主管</td>
-              <td><b>只有他自己那一個部門</b></td>
+              <td><span className="psg-pill psg-pill-dept">{tr("role.group_owner")}</span></td>
+              <td>{tr("psg.ownerWho")}</td>
+              <td>{tr("psg.ownerSees")}</td>
             </tr>
             <tr>
-              <td><span className="psg-pill psg-pill-emp">員工</span></td>
-              <td>一般同仁</td>
-              <td>只有他自己的日報</td>
+              <td><span className="psg-pill psg-pill-emp">{tr("role.employee")}</span></td>
+              <td>{tr("psg.empWho")}</td>
+              <td>{tr("psg.empSees")}</td>
             </tr>
           </tbody>
         </table>
         <div className="psg-note">
-          範圍限制由系統自動處理，主管<b>不可能</b>點到別部門的資料 —— 設錯也不會外洩，放心。
+          {tr("psg.scopeNote")}
         </div>
       </div>
 
@@ -74,14 +76,14 @@ export default function PermissionSetupGuide({ onNavigate, onDone }: Props) {
               <span className="ob-icon" aria-hidden>{svg(<>
                 <rect x="3" y="4" width="18" height="7" rx="1.5" /><rect x="3" y="13" width="18" height="7" rx="1.5" />
               </>)}</span>
-              <span className="ob-title">先把「部門」建好</span>
+              <span className="ob-title">{tr("psg.s1")}</span>
             </div>
             <div className="ob-desc">
-              主管要綁到部門，所以部門要先存在。到「部門 / 成員」的<b>部門</b>分頁，
-              按「＋ 新增部門」，把業務部、技術部、售後服務部等一個個建起來。
+              {tr("psg.d1a")}
+              {tr("psg.d1b")}
             </div>
             <button className="btn btn-primary psg-go" onClick={() => onNavigate({ page: "depts", tab: "dept" })}>
-              帶我去建部門 →
+              {tr("psg.go1")}
             </button>
           </div>
           <div className="ob-arrow" aria-hidden>↓</div>
@@ -95,22 +97,22 @@ export default function PermissionSetupGuide({ onNavigate, onDone }: Props) {
               <span className="ob-icon" aria-hidden>{svg(<>
                 <circle cx="12" cy="8" r="3.2" /><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" />
               </>)}</span>
-              <span className="ob-title">建立各部門主管</span>
+              <span className="ob-title">{tr("psg.s2")}</span>
             </div>
             <div className="ob-desc">
-              切到<b>成員</b>分頁 → 「＋ 新增成員」。角色選「<b>部門主管</b>」，
-              並在「<b>所屬部門</b>」選他負責的那個部門。填 Email、顯示名稱、初始密碼即可。
+              {tr("psg.d2a")}
+              {tr("psg.d2b")}
             </div>
             <div className="psg-warn">
-              ⚠️ <b>「所屬部門」一定要選。</b>沒選的主管，系統會保守處理成「幾乎看不到東西」（不是看全部）。
+              {tr("psg.w2")}
             </div>
             <div className="ob-desc" style={{ marginTop: 10 }}>
-              <b>既有成員也能直接改（不用找 AIPROOT）：</b>在成員列上，<b>角色</b>（員工 ↔ 部門主管）和<b>所屬部門</b>
-              都能直接用下拉調整；要移除某位成員，按該列的「<b>刪除</b>」。
-              （「總經理室」這一級由 AIPROOT 建立與調整，你這邊碰不到，屬正常保護。）
+              {tr("psg.d2c")}
+              {tr("psg.d2d")}
+              {tr("psg.d2e")}
             </div>
             <button className="btn btn-primary psg-go" onClick={() => onNavigate({ page: "depts", tab: "member" })}>
-              帶我去成員頁 →
+              {tr("psg.go2")}
             </button>
           </div>
           <div className="ob-arrow" aria-hidden>↓</div>
@@ -124,17 +126,17 @@ export default function PermissionSetupGuide({ onNavigate, onDone }: Props) {
               <span className="ob-icon" aria-hidden>{svg(<>
                 <path d="M4 6h16v10H8l-4 4V6z" /><path d="M9 11h6" />
               </>)}</span>
-              <span className="ob-title">把 LINE 群組分派到部門</span>
+              <span className="ob-title">{tr("psg.s3")}</span>
             </div>
             <div className="ob-desc">
-              這一步決定「哪個 LINE 群的對話，算哪個部門的任務」。到「LINE 群組」的
-              <b> LINE 群組</b>分頁，每個群右邊的「部門」下拉選好。上方若顯示「N 群未分派部門」，就是還沒選完。
+              {tr("psg.d3a")}
+              {tr("psg.d3b")}
             </div>
             <div className="psg-warn">
-              ⚠️ 沒做這步，主管的部門會是<b>空的</b> —— 對話進不到他的部門。
+              {tr("psg.w3")}
             </div>
             <button className="btn btn-primary psg-go" onClick={() => onNavigate({ page: "channels" })}>
-              帶我去分派群組 →
+              {tr("psg.go3")}
             </button>
           </div>
         </div>
@@ -142,24 +144,24 @@ export default function PermissionSetupGuide({ onNavigate, onDone }: Props) {
 
       {/* 常見問題 */}
       <div className="psg-faq">
-        <div className="psg-concept-h">設錯時對照這裡</div>
+        <div className="psg-concept-h">{tr("psg.faqH")}</div>
         {[
-          ["部門主管登入後什麼都看不到？", "最常見是忘了選「所屬部門」。回成員分頁編輯他，把所屬部門補上。"],
-          ["部門主管看得到別部門的資料？", "檢查他的角色是不是被設成「總經理室」了 —— 那個身分本來就看全公司。改成「部門主管」。"],
-          ["一位主管同時管兩個部門？", "目前一個人只能綁一個部門。要同時看兩個，只能給「總經理室」（但會看到全公司），或請 AIPROOT 評估。"],
-          ["現在好像每個人都看得到全部？", "因為多數帳號目前是「總經理室」。把該當主管的人逐一改成「部門主管」並指定部門即可。"],
+          ["psg.q1", "psg.a1"],
+          ["psg.q2", "psg.a2"],
+          ["psg.q3", "psg.a3"],
+          ["psg.q4", "psg.a4"],
         ].map(([q, a]) => (
-          <details key={q} className="psg-qa">
-            <summary>{q}</summary>
-            <div>{a}</div>
+          <details key={tr(q)} className="psg-qa">
+            <summary>{tr(q)}</summary>
+            <div>{tr(a)}</div>
           </details>
         ))}
       </div>
 
       <div className="ob-cta">
         <div>
-          <div className="ob-cta-h">準備好開始設定了嗎？</div>
-          <div className="ob-cta-sub">建議照 1 → 2 → 3 的順序做</div>
+          <div className="ob-cta-h">{tr("psg.ctaH")}</div>
+          <div className="ob-cta-sub">{tr("psg.ctaSub")}</div>
         </div>
         <button className="btn btn-primary" onClick={() => onNavigate({ page: "depts", tab: "dept" })}>開始設定</button>
       </div>

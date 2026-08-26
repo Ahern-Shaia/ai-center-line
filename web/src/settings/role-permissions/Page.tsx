@@ -213,7 +213,7 @@ export default function RolePermissionsPage() {
             <div className="rm-perms-scroll">
               {groups.map((g) => (
                 <div className="rm-perm-group" key={g.title}>
-                  <div className="rm-perm-group-hdr">{g.title}</div>
+                  <div className="rm-perm-group-hdr">{tr(g.title)}</div>
                   {g.ids.map((id) => {
                     const p = byId.get(id)!;
                     const hint = PERMISSION_HINT[id];
@@ -226,7 +226,7 @@ export default function RolePermissionsPage() {
                             {/* 內部分類（tenant/department）不外露 · 只標對使用者有意義的範圍 */}
                             {p.scope === "department" && <span className="rm-perm-scope">{tr("rm.deptOnly")}</span>}
                           </span>
-                          {hint && <span className="rm-perm-hint">{hint}</span>}
+                          {hint && <span className="rm-perm-hint">{tr(hint)}</span>}
                         </span>
                       </label>
                     );
