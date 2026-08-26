@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Button as AriaButton, Header as AriaHeader, Menu, MenuItem, MenuTrigger, Popover, Separator } from "react-aria-components";
 import { useState } from "react";
-import type { Session } from "./api";
+import { updateMyLocale, type Session } from "./api";
 import { useToast } from "./Toast";
 import { usePermissions } from "./permission/PermissionContext";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
@@ -36,70 +36,70 @@ const NAV: Array<{
     // ⚠️ 分組是按「這是誰的東西」，不是按我們的內部模組。
     // 原本的「AI 對話分析／通訊接頭層／AIPROOT 管理」是**我們的架構圖**，
     // 對使用者沒有意義 —— 客戶不知道自己要找的東西屬於哪個模組。
-    group: "我的",
+    group: "navGroup.mine",
     items: [
-      { key: "my-daily-report", label: "我的日報", ic: iconBook, done: true, perm: "personal-report:mine" },
-      { key: "my-trips", label: "我的行程", ic: iconMap, done: true, perm: "trips:mine" },
+      { key: "my-daily-report", label: "nav.myDailyReport", ic: iconBook, done: true, perm: "personal-report:mine" },
+      { key: "my-trips", label: "nav.myTrips", ic: iconMap, done: true, perm: "trips:mine" },
     ],
   },
   {
-    group: "營運",
+    group: "navGroup.ops",
     items: [
       // ⭐ 任務看板放第一個：這是整套系統每天在產出的東西。
       // 原本它藏在「總覽儀表」的 tab 裡要點兩次，而次要的素材看板有一級入口。
-      { key: "task-board", label: "任務看板", ic: iconTask, done: true, perm: "warroom-tasks:view" },
-      { key: "warroom", label: "總覽儀表", ic: iconGauge, done: true, perm: "warroom:view" },
+      { key: "task-board", label: "nav.taskBoard", ic: iconTask, done: true, perm: "warroom-tasks:view" },
+      { key: "warroom", label: "nav.warroom", ic: iconGauge, done: true, perm: "warroom:view" },
       // 客戶驗證「AI 到底有沒有看到我的訊息」的地方（OQ-NAV-4）
-      { key: "daily-log", label: "群組日誌", ic: iconChat, done: true, perm: "warroom-daily:view", renamedFrom: "今日日誌" },
+      { key: "daily-log", label: "nav.dailyLog", ic: iconChat, done: true, perm: "warroom-daily:view", renamedFrom: "今日日誌" },
       // 主管看下屬送出的個人日報 · LINE 通知「進戰情室 → 部門日報查看」的落點
       // scope 由後端 RLS 處理：group_owner 限自己部門、tenant_admin 看全租戶
-      { key: "team-report", label: "部門日報", ic: iconBook, done: true, perm: "personal-report:team" },
-      { key: "media", label: "素材", ic: iconMedia, done: true, perm: "media:view", renamedFrom: "素材看板" },
+      { key: "team-report", label: "nav.teamReport", ic: iconBook, done: true, perm: "personal-report:team" },
+      { key: "media", label: "nav.media", ic: iconMedia, done: true, perm: "media:view", renamedFrom: "素材看板" },
     ],
   },
   {
-    group: "設定",
+    group: "navGroup.settings",
     items: [
-      { key: "depts", label: "部門 / 成員", ic: iconTeam, done: true, permAny: ["departments:view", "users:view"] },
+      { key: "depts", label: "nav.depts", ic: iconTeam, done: true, permAny: ["departments:view", "users:view"] },
       // ⚠️ 2026-08-24 改回「LINE 群組」。原本為了 Channel Adapter 的通道中立性改成
       //    「通訊管道」，但 AGENTS.md 那條紀律管的是**程式碼**（表名／模組名／端點），
       //    **使用者看得到的字串不在它的範圍**。對工廠客戶來說「LINE 群組」好懂太多 ——
       //    不該為了我們某天可能接 Slack，讓客戶現在先學一個抽象詞。
       //    而且頁內標題本來就一直是「LINE 群組」，側欄改了頁內沒改＝自相矛盾。
-      { key: "channels", label: "LINE 群組", ic: iconChat, done: true, permAny: ["line-groups:view", "binding:view", "binding:aiproot-view"], renamedFrom: "通訊管道" },
-      { key: "task-config", label: "任務設定", ic: iconTask, done: true, permAny: ["task-config:view", "categories:view"] },
+      { key: "channels", label: "nav.channels", ic: iconChat, done: true, permAny: ["line-groups:view", "binding:view", "binding:aiproot-view"], renamedFrom: "通訊管道" },
+      { key: "task-config", label: "nav.taskConfig", ic: iconTask, done: true, permAny: ["task-config:view", "categories:view"] },
       // 「自動化」太抽象、「定時任務」跟本產品的「任務」撞名 —— 都叫「分析排程」，
       // 說的是它實際在排的東西（AI 幾點去讀群組對話）。頁內標題同步改。
-      { key: "scheduler-config", label: "分析排程", ic: iconCog, done: true, perm: "scheduler-config:view", renamedFrom: "自動化" },
+      { key: "scheduler-config", label: "nav.schedulerConfig", ic: iconCog, done: true, perm: "scheduler-config:view", renamedFrom: "自動化" },
       // 租戶自管角色權限（docs/modules/tenant-role-permissions.md）·
       // aiproot 側另有「平台 → 權限管理」，兩者是同一件事的兩種可見範圍
-      { key: "role-permissions", label: "權限管理", ic: iconShield, done: true, perm: "roles:manage-tenant" },
-      { key: "audit", label: "稽核記錄", ic: iconShield, done: true, perm: "audit:view" },
+      { key: "role-permissions", label: "nav.rolePermissions", ic: iconShield, done: true, perm: "roles:manage-tenant" },
+      { key: "audit", label: "nav.audit", ic: iconShield, done: true, perm: "audit:view" },
     ],
   },
   {
-    group: "平台",
+    group: "navGroup.platform",
     items: [
-      { key: "tenant-mgmt", label: "租戶管理", ic: iconTeam, done: true, perm: "tenants:manage" },
-      { key: "system-health", label: "系統健康", ic: iconGauge, done: true,
+      { key: "tenant-mgmt", label: "nav.tenantMgmt", ic: iconTeam, done: true, perm: "tenants:manage" },
+      { key: "system-health", label: "nav.systemHealth", ic: iconGauge, done: true,
         permAny: ["extraction-health:view", "completion-tracking:view", "batch-history:view", "cost-dashboard:view"] },
-      { key: "convo-list", label: "分析列表", ic: iconChat, done: true, perm: "convo:view" },
-      { key: "convo-upload", label: "上傳新對話", ic: iconMedia, done: true, perm: "convo:upload" },
-      { key: "llm-settings", label: "語言模型設定", ic: iconCog, done: true, perm: "llm-config:view" },
-      { key: "line-bots", label: "LINE 機器人", ic: iconChat, done: true, perm: "line-bots:view" },
-      { key: "map-config", label: "地圖里程設定", ic: iconCog, done: true, perm: "map-config:view" },
-      { key: "notify-config", label: "通知設定", ic: iconChat, done: true, perm: "notify-config:view" },
+      { key: "convo-list", label: "nav.convoList", ic: iconChat, done: true, perm: "convo:view" },
+      { key: "convo-upload", label: "nav.convoUpload", ic: iconMedia, done: true, perm: "convo:upload" },
+      { key: "llm-settings", label: "nav.llmSettings", ic: iconCog, done: true, perm: "llm-config:view" },
+      { key: "line-bots", label: "nav.lineBots", ic: iconChat, done: true, perm: "line-bots:view" },
+      { key: "map-config", label: "nav.mapConfig", ic: iconCog, done: true, perm: "map-config:view" },
+      { key: "notify-config", label: "nav.notifyConfig", ic: iconChat, done: true, perm: "notify-config:view" },
       // ⚠️ 0051 起用自己的權限碼。原本借用 "notify-config:view" —— 助理有那個碼，
       //    於是選單看得到、點進去被後端的角色白名單擋掉、畫面還渲染成「0 筆客戶」。
-      { key: "master-data", label: "資料來源", ic: iconBook, done: true, perm: "master-data:manage" },
-      { key: "roles-mgmt", label: "權限管理", ic: iconShield, done: true, perm: "roles:view" },
+      { key: "master-data", label: "nav.masterData", ic: iconBook, done: true, perm: "master-data:manage" },
+      { key: "roles-mgmt", label: "nav.rolesMgmt", ic: iconShield, done: true, perm: "roles:view" },
       // ⚠️ 這兩頁跑的是**寫死的示範資料**（ragQA.ts 是 177 行預錄問答對）。
       //    2026-07-27 因為「不可在客戶畫面上放做不到的東西」下架，
       //    2026-07-29 掛回來但只給平台側 —— 對內討論規格、對客戶簡報方向要用。
       //    對應的權限碼已於 migration 0043 從客戶端三個角色收回。
       //    接真資料的設計見 docs/modules/rag-conversations.md（M0 待裁定）。
-      { key: "rag", label: "智慧檢索", ic: iconChat, done: true, perm: "rag:view" },
-      { key: "km", label: "知識庫", ic: iconBook, done: true, perm: "km:view" },
+      { key: "rag", label: "nav.rag", ic: iconChat, done: true, perm: "rag:view" },
+      { key: "km", label: "nav.km", ic: iconBook, done: true, perm: "km:view" },
     ],
   },
 ];
@@ -283,7 +283,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
                   onClick={() => toggleGroup(g.group)}
                   aria-expanded={open}
                 >
-                  <span>{g.group}</span>
+                  <span>{tr(g.group)}</span>
                   <svg className="sb-chev" width="12" height="12" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M6 9l6 6 6-6" />
@@ -293,11 +293,11 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
                   <button
                     key={it.key}
                     className={`sb-link${active === it.key ? " active" : ""}${!it.done ? " planned" : ""}`}
-                    onClick={() => it.done ? handleNav(it.key) : toast.show(`「${it.label}」規劃於後續版本推出`)}
+                    onClick={() => it.done ? handleNav(it.key) : toast.show(tr("nav.comingSoon", { name: tr(it.label) }))}
                     aria-current={active === it.key ? "page" : undefined}
                   >
                     <it.ic />
-                    <span>{it.label}</span>
+                    <span>{tr(it.label)}</span>
                     {/* N-3：改過名的項目掛一次性提示，點過就不再出現。
                         沒有它的話，客戶會以為原本那頁被拿掉了。 */}
                     {it.renamedFrom && !seenRenames.includes(it.key) && (
@@ -331,7 +331,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
           </button>
           <div className="crumb">
             {crumb && <><b>{crumb}</b><span className="sep" aria-hidden>›</span></>}
-            <span className="cur">{pageTitle ?? crumb ?? "總覽"}</span>
+            <span className="cur">{pageTitle ?? crumb ?? tr("nav.warroom")}</span>
           </div>
           <div className="topbar-spacer" />
           {asOf && (
@@ -363,7 +363,11 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
                 else if (key === "change-name") setChangeNameOpen(true);
                 // 語言：key 形如 `locale:en` —— 之後要加第三語言不用改這裡（OQ-I18N-7）
                 else if (typeof key === "string" && key.startsWith("locale:")) {
-                  setLocale(key.slice(7) as (typeof LOCALES)[number]);
+                  const next = key.slice(7) as (typeof LOCALES)[number];
+                  setLocale(next);                       // 先切畫面 —— 語言是即時的本機狀態
+                  // 再寫回伺服器讓它跨裝置。⚠️ 刻意不 await、失敗也不擋：
+                  // 寫回失敗（離線／401）只該讓它「僅這台生效」，不該讓使用者切不動。
+                  void updateMyLocale(next).catch(() => { /* 靜默 · 本機已生效 */ });
                 }
               }}>
                 <AriaHeader className="user-menu-hdr">
@@ -372,9 +376,9 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
                   <div className="t">{roleLabel(session.role)} · {tenantName}</div>
                 </AriaHeader>
                 <Separator className="user-menu-sep" />
-                <MenuItem id="change-name">變更顯示名稱</MenuItem>
-                <MenuItem id="change-password">變更密碼</MenuItem>
-                <MenuItem id="switch" isDisabled>切換租戶</MenuItem>
+                <MenuItem id="change-name">{tr("menu.changeName")}</MenuItem>
+                <MenuItem id="change-password">{tr("menu.changePassword")}</MenuItem>
+                <MenuItem id="switch" isDisabled>{tr("menu.switchTenant")}</MenuItem>
                 <Separator className="user-menu-sep" />
                 {/* 語言切換 · 放在使用者選單，跟「變更密碼」同一處
                     —— 那是「關於我」的設定，不是系統設定（外籍主管找得到的地方）*/}
@@ -384,7 +388,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
                     {l === locale ? "✓ " : "\u2007"}{LOCALE_NAME[l]}
                   </MenuItem>
                 ))}
-                <MenuItem id="logout" className="danger">登出</MenuItem>
+                <MenuItem id="logout" className="danger">{tr("menu.logout")}</MenuItem>
               </Menu>
             </Popover>
           </MenuTrigger>

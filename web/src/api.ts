@@ -1,5 +1,8 @@
 // 後端 API client。dev 走 Vite proxy（/api → :3000）。
 
+// i18n：登入時套用使用者存在伺服器的語言（見 getMyPermissions）
+import { setLocale } from "./i18n";
+
 /**
  * 知會其他人（不改變當責人）· 只發個人私訊，不碰群組。
  * ⚠️ 刻意是獨立端點而不是塞進 assignTicket —— 指派是「一次點擊、零個選擇」，
@@ -1291,13 +1294,24 @@ export interface RoleDto {
 }
 
 export const getMyPermissions = async () => {
-  const res = await req<{ permissions: string[]; displayName?: string | null }>("/me/permissions");
+  const res = await req<{ permissions: string[]; displayName?: string | null; locale?: string }>("/me/permissions");
   // 登入 / identity 變時會呼叫 → 順便把顯示名稱同步進 localStorage（topbar 用）· 變了才通知避免多餘 render
   if ((res.displayName || null) !== (localStorage.getItem(DISPLAY_KEY) || null)) {
     setLocalDisplayName(res.displayName || null);
   }
+  // 0071 · 套用這個人存在伺服器的語言偏好 —— localStorage 只在本機，換裝置就沒了
+  if (res.locale === "zh-TW" || res.locale === "en") setLocale(res.locale);
   return res;
 };
+
+/**
+ * 自服務改介面語言 · 寫回伺服器讓它跨裝置。
+ *
+ * ⚠️ 呼叫端**不要 await 它才切畫面** —— 語言是即時的本機狀態，
+ *    寫回失敗（離線、401）不該讓使用者切不動。失敗就只在這台機器生效。
+ */
+export const updateMyLocale = (locale: "zh-TW" | "en") =>
+  req<{ locale: string }>("/auth/locale", { method: "POST", body: JSON.stringify({ locale }) });
 
 // 自服務改顯示名稱（含 LINE 登入用戶）· 成功後同步 topbar
 export const updateMyDisplayName = async (displayName: string) => {

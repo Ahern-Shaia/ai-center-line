@@ -3,6 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePermissions } from "./permission/PermissionContext";
 import Login from "./Login";
 import Shell, { canOpenPage, firstAllowedPage, NAV_TITLE, PAGE_GROUP } from "./Shell";
+// document.title 在 effect 裡設，不是 render —— 用純函式 t() 而非 useT()
+import { t } from "./i18n";
+import { useT } from "./i18n/useT";
 import WarRoom from "./warroom/WarRoom";
 import TaskBoard from "./warroom/TaskBoard";
 import DailyLog from "./warroom/DailyLog";
@@ -84,11 +87,11 @@ const PAGE_TITLE: Record<string, string> = {
   // 側欄有的頁一律用側欄那個名字 —— 手抄第二份就是下次改名漏掉的地方
   ...NAV_TITLE,
   // 以下是**不在側欄**的頁（從別處點進來的子頁）
-  onboarding: "運作原理",
-  "permission-guide": "權限設定教學",
-  map: "客戶地圖",
-  "convo-detail": "分析詳情",
-  "convo-insights": "抽取準確率",
+  onboarding: "page.onboarding",
+  "permission-guide": "page.permissionGuide",
+  map: "page.map",
+  "convo-detail": "page.convoDetail",
+  "convo-insights": "page.convoInsights",
 };
 
 // 權限還沒載回來時的暫時落地頁 · 載回來後由 firstAllowedPage 修正（見下方守衛）
@@ -105,6 +108,7 @@ function defaultRouteFor(session: Session | null): Route {
 // 現在只剩一套：Shell.tsx 的 NAV 推導出 PAGE_PERM，側欄與這道守衛共吃同一份。
 
 export default function App() {
+  const tr = useT();          // 側欄／麵包屑要跟著語言重繪
   const [session, setSession] = useState<Session | null>(() => getSession());
   const [route, setRoute] = useState<Route>(() => defaultRouteFor(getSession()));
   const [refreshing, setRefreshing] = useState(false);
@@ -182,7 +186,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    document.title = `${PAGE_TITLE[route.page]} · aiproot 戰情室`;
+    document.title = `${t(PAGE_TITLE[route.page])} · ${t("app.name")}`;
   }, [route.page]);
 
   if (!session) return <Login onLogin={() => setSession(getSession())} />;
@@ -193,7 +197,7 @@ export default function App() {
   }
 
   const navActive = route.page === "warroom" ? "warroom" : route.page;
-  const crumb = PAGE_GROUP[route.page] ?? "";
+  const crumb = PAGE_GROUP[route.page] ? tr(PAGE_GROUP[route.page]) : "";
 
   /**
    * ⚠️ 這裡原本是一長串逐 key 的 `if (session.role !== ...) return` ——
@@ -219,7 +223,7 @@ export default function App() {
         refreshing={refreshing}
         asOf={route.page === "warroom" ? asOf : undefined}
         crumb={crumb}
-        pageTitle={PAGE_TITLE[route.page]}
+        pageTitle={t(PAGE_TITLE[route.page])}
         onLogout={() => { logout(); setSession(null); }}
         onHelp={() => setRoute({ page: "onboarding" })}
       >
