@@ -6,6 +6,7 @@ import { LineOauthService } from "./line-oauth.service.js";
 import { Public } from "./public.decorator.js";
 import { ChangePasswordSchema } from "./dto/change-password.dto.js";
 import { DisplayNameSchema } from "./dto/display-name.dto.js";
+import { LocaleSchema } from "./dto/locale.dto.js";
 import { AllowAnyUser } from "../auth/allow-any-user.decorator.js";
 
 @Controller("auth")
@@ -52,6 +53,21 @@ export class AuthController {
     }
     const displayName = await this.auth.changeDisplayName(user.user_id, parsed.data.displayName);
     return { displayName };
+  }
+
+  // 自服務改介面語言 · 任何登入使用者皆可（只改自己的）
+  @Post("locale")
+  @AllowAnyUser()
+  async changeLocale(@CurrentUser() user: JwtUser, @Body() body: unknown) {
+    const parsed = LocaleSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        status: "invalid_body",
+        errors: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+      });
+    }
+    const locale = await this.auth.changeLocale(user.user_id, parsed.data.locale);
+    return { locale };
   }
 
   // LINE Login OAuth · 前端拿 auth URL

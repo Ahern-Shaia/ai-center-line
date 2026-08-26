@@ -39,6 +39,8 @@ export const users = pgTable("users", {
   lineUserId: text("line_user_id"),
   email: text("email"),
   displayName: text("display_name"), // 戰情室 UI 顯示用；為 null 時 fallback email prefix
+  // 0071 · 介面語言偏好 · LINE 推播要用「收件人」這一欄，不是發起者的（i18n.md FMEA F-4）
+  locale: text("locale").notNull().default("zh-TW").$type<"zh-TW" | "en">(),
   passwordHash: text("password_hash"),
   // 密碼 policy (migration 0009 · tenant-provisioning M1)
   passwordUpdatedAt: timestamp("password_updated_at", { withTimezone: true }),

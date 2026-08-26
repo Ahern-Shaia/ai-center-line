@@ -52,6 +52,13 @@ export class PermissionService {
     return res.rows[0]?.display_name ?? null;
   }
 
+  /** 0071 · 介面語言 · 讀不到一律回 zh-TW（新帳號/舊資料都有 DEFAULT，這只是保險） */
+  async getLocale(userId: string): Promise<string> {
+    const res = await withAuthLookup((tx) =>
+      tx.execute<{ locale: string }>(sql`SELECT locale FROM users WHERE user_id = ${userId} LIMIT 1`));
+    return res.rows[0]?.locale ?? "zh-TW";
+  }
+
   // Cache invalidation · 改 role_permissions 或 user.role_id 時呼叫
   invalidateUser(userId: string): void {
     this.cache.delete(userId);

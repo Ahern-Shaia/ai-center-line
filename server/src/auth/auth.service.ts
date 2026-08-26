@@ -162,4 +162,20 @@ export class AuthService {
     if (!rows[0]) throw new NotFoundException("使用者不存在");
     return rows[0].displayName ?? displayName;
   }
+
+  /**
+   * 自服務改介面語言 · 只改自己那一列（0071）。
+   *
+   * ⚠️ 這一欄之後也會給 LINE 推播用，但**那時要讀收件人的**不是發起者的
+   *    （i18n.md FMEA F-4）。這支只處理「我改我自己的」。
+   */
+  async changeLocale(userId: string, locale: "zh-TW" | "en"): Promise<string> {
+    const tx = currentTx();
+    const rows = await tx.update(users)
+      .set({ locale })
+      .where(eq(users.userId, userId))
+      .returning({ locale: users.locale });
+    if (!rows[0]) throw new NotFoundException("使用者不存在");
+    return rows[0].locale;
+  }
 }

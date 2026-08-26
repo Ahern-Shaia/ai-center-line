@@ -14,11 +14,13 @@ export class PermissionController {
   @Get("me/permissions")
   @AllowAnyUser()
   async myPermissions(@CurrentUser() user: JwtUser) {
-    const [perms, displayName] = await Promise.all([
+    const [perms, displayName, locale] = await Promise.all([
       this.svc.getUserPermissions(user.user_id),
       this.svc.getDisplayName(user.user_id),
+      // 0071 · 讓使用者換裝置也維持自己的語言（localStorage 只在本機）
+      this.svc.getLocale(user.user_id),
     ]);
-    return { permissions: Array.from(perms), displayName };
+    return { permissions: Array.from(perms), displayName, locale };
   }
 
   // GET /permissions · 全部 64 項（含 platform）· aiproot 側建 role 用
