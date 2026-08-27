@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { currentTx } from "../db/client.js";
 import { MediaStorageService } from "../line-ingest/media-storage.service.js";
 import { likeContains } from "../common/query-like.js";
+import { msg } from "../i18n/index.js";
 
 // 素材看板 · docs/modules/media-and-vision.md §2
 //
@@ -233,10 +234,10 @@ export class MediaService {
     `);
     const row = res.rows[0];
     // 查無：不存在、下載失敗、已清除、或不在你的部門範圍 —— 對外一律 404，不透露是哪一種
-    if (!row) throw new NotFoundException("找不到這個檔案");
+    if (!row) throw new NotFoundException(msg("srv.media.notFound"));
 
     const body = await this.storage.get(row.storage_key);
-    if (!body) throw new NotFoundException("檔案已不在儲存空間中");
+    if (!body) throw new NotFoundException(msg("srv.media.gone"));
 
     return {
       body,
@@ -264,7 +265,7 @@ export class MediaService {
        RETURNING md.media_id::text
     `);
     // 改到 0 列＝不存在、已經刪過、或不在權限範圍。三種都回 404，不透露是哪一種。
-    if (res.rows.length === 0) throw new NotFoundException("找不到這個檔案，或它已經被刪除了");
+    if (res.rows.length === 0) throw new NotFoundException(msg("srv.media.deleted"));
     return { daysLeft: RETENTION_DAYS };
   }
 
@@ -282,7 +283,7 @@ export class MediaService {
          AND ${DEPT_SCOPE}
        RETURNING md.media_id
     `);
-    if (res.rows.length === 0) throw new NotFoundException("找不到可還原的檔案（可能已經徹底清除）");
+    if (res.rows.length === 0) throw new NotFoundException(msg("srv.media.noRestorable"));
   }
 
   /**
@@ -298,7 +299,7 @@ export class MediaService {
        LIMIT 1
     `);
     const row = res.rows[0];
-    if (!row) throw new NotFoundException("找不到這個檔案，或它已經被清除了");
+    if (!row) throw new NotFoundException(msg("srv.media.purged"));
 
     if (row.storage_key) {
       if (!this.storage.enabled) throw new Error("儲存空間未設定 · 無法清除檔案");

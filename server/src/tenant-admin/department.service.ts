@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { currentTx } from "../db/client.js";
 import { DepartmentRepository, type DepartmentRow } from "./department.repository.js";
+import { msg } from "../i18n/index.js";
 
 export interface DepartmentDto {
   departmentId: string;
@@ -46,7 +47,7 @@ export class DepartmentService {
     const tx = currentTx();
     await this.repo.setTenantContext(tx, tenantId);
     const existing = await this.repo.getById(tx, departmentId);
-    if (!existing) throw new NotFoundException("找不到部門");
+    if (!existing) throw new NotFoundException(msg("srv.user.deptNotFound"));
     await this.repo.update(tx, departmentId, patch);
     const updated = await this.repo.getById(tx, departmentId);
     if (!updated) throw new Error("剛更新的部門找不到");
@@ -57,7 +58,7 @@ export class DepartmentService {
     const tx = currentTx();
     await this.repo.setTenantContext(tx, tenantId);
     const existing = await this.repo.getById(tx, departmentId);
-    if (!existing) throw new NotFoundException("找不到部門");
+    if (!existing) throw new NotFoundException(msg("srv.user.deptNotFound"));
     // 兩道檢查一次講完，而且要指出「去哪裡、按什麼」。
     // 原本一次只回一道：使用者解完群綁定回來，再撞一次成員那道牆。
     // 而且「解除綁定」在 LINE 機器人管理頁根本不是這個字 —— 那裡叫「分派部門」選「未分派」。

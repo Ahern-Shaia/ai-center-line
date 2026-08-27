@@ -5,6 +5,7 @@ import type { JwtUser } from "../auth/jwt-user.js";
 import { RequirePermission } from "./require-permission.decorator.js";
 import { PermissionService } from "./permission.service.js";
 import { AllowAnyUser } from "../auth/allow-any-user.decorator.js";
+import { msg } from "../i18n/index.js";
 
 @Controller()
 export class PermissionController {
@@ -58,10 +59,10 @@ export class PermissionController {
     permissionIds?: string[];
   }) {
     if (!body?.roleKey || !body?.roleName) {
-      throw new BadRequestException("roleKey 和 roleName 必要");
+      throw new BadRequestException(msg("srv.v.needRoleKeyName"));
     }
     if (!/^[a-z][a-z0-9_-]{0,50}$/.test(body.roleKey)) {
-      throw new BadRequestException("roleKey 需 lowercase · 開頭字母 · 只允許 a-z 0-9 _ -");
+      throw new BadRequestException(msg("srv.v.roleKeyFormat"));
     }
     return this.svc.createCustomRole({
       roleKey: body.roleKey,
@@ -79,7 +80,7 @@ export class PermissionController {
     @Body() body: { permissionIds?: string[] },
   ) {
     if (!Array.isArray(body?.permissionIds)) {
-      throw new BadRequestException("permissionIds 需為 array");
+      throw new BadRequestException(msg("srv.v.permIdsArray"));
     }
     await this.svc.updateRolePermissions(roleId, body.permissionIds);
     return { success: true };
@@ -89,7 +90,7 @@ export class PermissionController {
   @Patch("roles/:roleId")
   @RequirePermission("roles:manage")
   async renameRole(@Param("roleId") roleId: string, @Body() body: { roleName?: string }) {
-    if (!body?.roleName) throw new BadRequestException("roleName 必要");
+    if (!body?.roleName) throw new BadRequestException(msg("srv.v.needRoleName"));
     await this.svc.renameRole(roleId, body.roleName);
     return { success: true };
   }
@@ -113,7 +114,7 @@ export class PermissionController {
     @Param("userId") userId: string,
     @Body() body: { roleId?: string },
   ) {
-    if (!body?.roleId) throw new BadRequestException("roleId 必要");
+    if (!body?.roleId) throw new BadRequestException(msg("srv.v.needRoleId"));
     await this.svc.assignRoleToUser(userId, body.roleId);
     return { success: true };
   }

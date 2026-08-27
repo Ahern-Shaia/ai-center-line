@@ -6,6 +6,7 @@ import { IS_PUBLIC_KEY } from "./public.decorator.js";
 import { REQUIRE_PERMISSION_KEY } from "../permission/require-permission.decorator.js";
 import type { Role } from "../db/schema.js";
 import type { JwtUser } from "./jwt-user.js";
+import { msg } from "../i18n/index.js";
 
 /**
  * 第二道：角色檢查。
@@ -57,7 +58,7 @@ export class RolesGuard implements CanActivate {
 
     const req = context.switchToHttp().getRequest<{ user?: JwtUser }>();
     if (!req.user || !roles.includes(req.user.role)) {
-      throw new ForbiddenException("角色無權限");
+      throw new ForbiddenException(msg("srv.auth.roleForbidden"));
     }
     return true;
   }

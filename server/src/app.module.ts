@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { JwtModule } from "@nestjs/jwt";
 import { ScheduleModule } from "@nestjs/schedule";
@@ -12,6 +12,7 @@ import { PasswordHistoryRepository } from "./auth/password-history.repository.js
 import { JwtAuthGuard } from "./auth/jwt-auth.guard.js";
 import { RolesGuard } from "./auth/roles.guard.js";
 import { TenantTxInterceptor } from "./tenant/tenant.interceptor.js";
+import { LocaleMiddleware } from "./i18n/locale.middleware.js";
 import { SignoffController } from "./signoff/signoff.controller.js";
 import { SignoffService } from "./signoff/signoff.service.js";
 import { WarroomController } from "./warroom/warroom.controller.js";
@@ -93,4 +94,10 @@ import { AuditModule } from "./audit/audit.module.js";
     { provide: APP_INTERCEPTOR, useClass: TenantTxInterceptor },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  // ⚠️ middleware 而非 interceptor：guard 比 interceptor 早跑，
+  //    guard 丟的訊息要吃得到語言就只能在這一層設（見 i18n/locale.middleware.ts）。
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(LocaleMiddleware).forRoutes("*");
+  }
+}

@@ -5,6 +5,7 @@ import { resolveTenantId } from "../auth/resolve-tenant-id.js";
 import { RequirePermission } from "../permission/require-permission.decorator.js";
 import { withTenant } from "../db/client.js";
 import { CategoryRegistryRepository } from "./category-registry.repository.js";
+import { msg } from "../i18n/index.js";
 
 /**
  * Category Registry Controller · WTB-M5
@@ -36,7 +37,7 @@ export class CategoryRegistryController {
   @Post(":categoryId/rename")
   @RequirePermission("categories:manage")
   async rename(@Param("categoryId") categoryId: string, @Body() body: { name?: string }) {
-    if (!body?.name || body.name.trim().length === 0) throw new BadRequestException("name 必要");
+    if (!body?.name || body.name.trim().length === 0) throw new BadRequestException(msg("srv.v.needName"));
     await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.repo.rename(tx, categoryId, body.name!.trim()));
     return { success: true };
   }

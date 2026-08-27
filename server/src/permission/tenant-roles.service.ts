@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, Logger } from "@ne
 import { sql } from "drizzle-orm";
 import { currentTx } from "../db/client.js";
 import { PermissionService } from "./permission.service.js";
+import { msg } from "../i18n/index.js";
 
 // 租戶自管角色權限 · docs/modules/tenant-role-permissions.md v0.2
 //
@@ -150,14 +151,14 @@ export class TenantRolesService {
   }): Promise<{ forked: boolean; count: number }> {
     const { tenantId, roleKey } = args;
     if (!TENANT_EDITABLE_ROLE_KEYS.includes(roleKey as typeof TENANT_EDITABLE_ROLE_KEYS[number])) {
-      throw new ForbiddenException(`「${roleKey}」這個角色不開放自行調整，請聯繫 AIPROOT`);
+      throw new ForbiddenException(msg("srv.perm.roleLocked", { role: roleKey }));
     }
 
     // 不信前端傳來的清單 —— 逐項驗證都在允許範圍內
     const allowed = new Set((await this.listPermissions()).map((p) => p.permissionId));
     const bad = args.permissionIds.filter((p) => !allowed.has(p));
     if (bad.length > 0) {
-      throw new BadRequestException(`有 ${bad.length} 項權限不開放調整`);
+      throw new BadRequestException(msg("srv.perm.lockedPerms", { n: bad.length }));
     }
 
     const tx = currentTx();
@@ -173,7 +174,7 @@ export class TenantRolesService {
       const sys = await tx.execute<{ role_name: string }>(sql`
         SELECT role_name FROM roles WHERE role_key = ${roleKey} AND is_system = true LIMIT 1
       `);
-      if (!sys.rows[0]) throw new BadRequestException(`找不到角色「${roleKey}」`);
+      if (!sys.rows[0]) throw new BadRequestException(msg("srv.perm.roleNotFound", { role: roleKey }));
 
       const created = await tx.execute<{ role_id: string }>(sql`
         INSERT INTO roles (role_key, role_name, tenant_id, is_system)
@@ -247,7 +248,7 @@ export class TenantRolesService {
   async resetToDefault(args: { tenantId: string; roleKey: string }): Promise<{ restored: boolean }> {
     const { tenantId, roleKey } = args;
     if (!TENANT_EDITABLE_ROLE_KEYS.includes(roleKey as typeof TENANT_EDITABLE_ROLE_KEYS[number])) {
-      throw new ForbiddenException(`「${roleKey}」這個角色不開放自行調整，請聯繫 AIPROOT`);
+      throw new ForbiddenException(msg("srv.perm.roleLocked", { role: roleKey }));
     }
     const tx = currentTx();
 
@@ -259,7 +260,7 @@ export class TenantRolesService {
     const sys = await tx.execute<{ role_id: string }>(sql`
       SELECT role_id FROM roles WHERE role_key = ${roleKey} AND is_system = true LIMIT 1
     `);
-    if (!sys.rows[0]) throw new BadRequestException(`找不到「${roleKey}」的系統預設`);
+    if (!sys.rows[0]) throw new BadRequestException(msg("srv.perm.noSystemDefault", { role: roleKey }));
 
     // ⚠️ 先把人指回內建角色，再刪租戶版。
     //    順序反了的話 role_permissions 會被 CASCADE 掉、而 users.role_id 還指著

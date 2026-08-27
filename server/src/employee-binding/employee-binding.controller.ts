@@ -11,6 +11,7 @@ import { EmployeeBindingService } from "./employee-binding.service.js";
 import { UserLineBindingRepository } from "./user-line-binding.repository.js";
 import { NudgeService } from "./nudge.service.js";
 import { verifyLiffAccessToken } from "../auth/liff-verify.js";
+import { msg } from "../i18n/index.js";
 
 /**
  * Employee Binding Controller · 方向 8 LIFF Zero-Config
@@ -43,10 +44,10 @@ export class EmployeeBindingController {
   @Get("liff/prefill")
   async liffPrefill(@Query("botId") botId: string, @Query("lineUserId") lineUserId: string) {
     if (!botId || !lineUserId) {
-      throw new BadRequestException("botId 和 lineUserId 必要");
+      throw new BadRequestException(msg("srv.v.needBotAndUser"));
     }
     if (!isValidUuid(botId)) {
-      throw new BadRequestException("botId 格式錯 · 需為 UUID");
+      throw new BadRequestException(msg("srv.v.botId"));
     }
     return this.svc.getLiffPrefill(botId, lineUserId);
   }
@@ -66,10 +67,10 @@ export class EmployeeBindingController {
   }) {
     // Option C · Alice 綁定後可自設 email + 密碼 · 提供 email 登入備援
     if (!body?.botId || !body?.email || !body?.password) {
-      throw new BadRequestException("botId, email, password 必要");
+      throw new BadRequestException(msg("srv.v.needBotEmailPw"));
     }
     if (!isValidUuid(body.botId)) {
-      throw new BadRequestException("botId 格式錯 · 需為 UUID");
+      throw new BadRequestException(msg("srv.v.botId"));
     }
     const lineUserId = await this.resolveLiffUserId(body);
     return this.svc.setPasswordViaLiff({
@@ -91,10 +92,10 @@ export class EmployeeBindingController {
   }) {
     // v2 · 只需 botId + lineUserId + displayName · 部門由後端 derive (不接受 primaryGroupId)
     if (!body?.botId || !body?.displayName) {
-      throw new BadRequestException("botId, displayName 必要");
+      throw new BadRequestException(msg("srv.v.needBotDisplayName"));
     }
     if (!isValidUuid(body.botId)) {
-      throw new BadRequestException("botId 格式錯 · 需為 UUID");
+      throw new BadRequestException(msg("srv.v.botId"));
     }
     const lineUserId = await this.resolveLiffUserId(body, body.botId);
     return this.svc.completeLiffBinding({
@@ -115,7 +116,7 @@ export class EmployeeBindingController {
       return verifyLiffAccessToken(body.accessToken, expected);
     }
     if (body.lineUserId) return body.lineUserId;
-    throw new BadRequestException("需 accessToken 或 lineUserId");
+    throw new BadRequestException(msg("srv.v.needTokenOrUser"));
   }
 
   /** 0060 · 該 bot 綁定的 LINE Login channel · 未設回 null（退回 env 允許清單） */
@@ -160,7 +161,7 @@ export class EmployeeBindingController {
   @RequirePermission("binding:view")
   async tenantList(@CurrentUser() user: JwtUser, @Query("status") status?: "active" | "revoked") {
     const tenantId = user.tenant_id;
-    if (!tenantId) throw new BadRequestException("缺租戶識別");
+    if (!tenantId) throw new BadRequestException(msg("srv.v.needTenant"));
     const rows = await withTenant({ tenantId, role: "tenant_admin" }, (tx) => this.bindingRepo.listByTenant(tx, tenantId, { status, limit: 500 }));
     return { bindings: rows };
   }
@@ -172,8 +173,8 @@ export class EmployeeBindingController {
   @Post("tenant/revoke/:bindingId")
   @Roles("tenant_admin")
   async tenantRevoke(@Param("bindingId") bindingId: string, @CurrentUser() user: JwtUser) {
-    if (!user.tenant_id) throw new BadRequestException("缺租戶識別");
-    if (!isValidUuid(bindingId)) throw new BadRequestException("bindingId 格式錯 · 需為 UUID");
+    if (!user.tenant_id) throw new BadRequestException(msg("srv.v.needTenant"));
+    if (!isValidUuid(bindingId)) throw new BadRequestException(msg("srv.v.bindingId"));
     await this.svc.revokeBindingForTenant(bindingId, user.tenant_id, user.user_id);
     return { success: true };
   }
@@ -186,8 +187,8 @@ export class EmployeeBindingController {
   @Delete("tenant/:bindingId")
   @Roles("tenant_admin")
   async tenantDeleteRevoked(@Param("bindingId") bindingId: string, @CurrentUser() user: JwtUser) {
-    if (!user.tenant_id) throw new BadRequestException("缺租戶識別");
-    if (!isValidUuid(bindingId)) throw new BadRequestException("bindingId 格式錯 · 需為 UUID");
+    if (!user.tenant_id) throw new BadRequestException(msg("srv.v.needTenant"));
+    if (!isValidUuid(bindingId)) throw new BadRequestException(msg("srv.v.bindingId"));
     await this.svc.deleteRevokedBindingForTenant(bindingId, user.tenant_id, user.user_id);
     return { success: true };
   }
@@ -196,7 +197,7 @@ export class EmployeeBindingController {
   @Delete("aiproot/:bindingId")
   @RequirePermission("binding:aiproot-manage")
   async aiprootDeleteRevoked(@Param("bindingId") bindingId: string, @CurrentUser() user: JwtUser) {
-    if (!isValidUuid(bindingId)) throw new BadRequestException("bindingId 格式錯 · 需為 UUID");
+    if (!isValidUuid(bindingId)) throw new BadRequestException(msg("srv.v.bindingId"));
     await this.svc.deleteRevokedBinding(bindingId, user.user_id);
     return { success: true };
   }
@@ -207,7 +208,7 @@ export class EmployeeBindingController {
   @Get("tenant/unbound-stats")
   @RequirePermission("binding:view")
   async tenantUnboundStats(@CurrentUser() user: JwtUser) {
-    if (!user.tenant_id) throw new BadRequestException("缺租戶識別");
+    if (!user.tenant_id) throw new BadRequestException(msg("srv.v.needTenant"));
     return { stats: await this.nudge.computeUnboundStatsForTenant(user.tenant_id) };
   }
 
@@ -218,7 +219,7 @@ export class EmployeeBindingController {
   @Roles("aiproot_admin", "consultant", "tenant_admin", "group_owner")
   async selfRevoke(@CurrentUser() user: JwtUser) {
     const binding = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.bindingRepo.getActiveByUserId(tx, user.user_id));
-    if (!binding) throw new BadRequestException("你沒有 active binding");
+    if (!binding) throw new BadRequestException(msg("srv.bind.noActive"));
     await this.svc.revokeBinding(binding.bindingId, user.user_id, "self_revoke");
     return { success: true };
   }

@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { currentTx } from "../db/client.js";
 import type { Role } from "../db/schema.js";
 import { UserRepository, type UserRow } from "./user.repository.js";
+import { msg } from "../i18n/index.js";
 
 // tenant_admin 只能動這兩種角色的成員（碰不到 總經理室/助理/aiproot＝不構成提權）
 const MEMBER_ROLES: readonly string[] = ["employee", "group_owner"];
@@ -66,7 +67,7 @@ export class UserService {
     const tx = currentTx();
     await this.repo.setTenantContext(tx, tenantId);
     const existing = await this.repo.getById(tx, userId);
-    if (!existing) throw new NotFoundException("找不到使用者");
+    if (!existing) throw new NotFoundException(msg("srv.auth.userNotFound"));
     const patchDb: {
       role?: Role;
       displayName?: string | null;
@@ -96,13 +97,13 @@ export class UserService {
     await this.repo.setTenantContext(tx, tenantId);
     const existing = await this.repo.getById(tx, userId);
     // RLS 之下看不到＝不在這個租戶（或不存在）· 都回 404，不洩漏「存在但跨租戶」
-    if (!existing || existing.tenantId !== tenantId) throw new NotFoundException("找不到該成員");
+    if (!existing || existing.tenantId !== tenantId) throw new NotFoundException(msg("srv.user.notFound"));
     // 不能改自己的部門（與 assignRole/deleteMember 的 self-guard 一致）——
     // 管理者調整的是「別人」的歸屬；自己的歸屬由上一層管，避免自我改動造成 scope 混亂。
-    if (userId === actorUserId) throw new ForbiddenException("不能修改自己的部門");
+    if (userId === actorUserId) throw new ForbiddenException(msg("srv.user.noSelfDept"));
     if (departmentId) {
       const ok = await this.repo.departmentBelongsToTenant(tx, departmentId, tenantId);
-      if (!ok) throw new BadRequestException("該部門不屬於這個公司");
+      if (!ok) throw new BadRequestException(msg("srv.user.deptOtherTenant"));
     }
     await this.repo.assignDepartment(tx, { userId, departmentId, actorUserId });
     const updated = await this.repo.getById(tx, userId);
@@ -114,7 +115,7 @@ export class UserService {
     const tx = currentTx();
     await this.repo.setTenantContext(tx, tenantId);
     const existing = await this.repo.getById(tx, userId);
-    if (!existing) throw new NotFoundException("找不到使用者");
+    if (!existing) throw new NotFoundException(msg("srv.auth.userNotFound"));
     await this.repo.delete(tx, userId);
   }
 
@@ -128,10 +129,10 @@ export class UserService {
     const tx = currentTx();
     await this.repo.setTenantContext(tx, tenantId);
     const existing = await this.repo.getById(tx, userId);
-    if (!existing || existing.tenantId !== tenantId) throw new NotFoundException("找不到該成員");
-    if (userId === callerUserId) throw new ForbiddenException("不能修改自己的角色");
+    if (!existing || existing.tenantId !== tenantId) throw new NotFoundException(msg("srv.user.notFound"));
+    if (userId === callerUserId) throw new ForbiddenException(msg("srv.user.noSelfRole"));
     if (!MEMBER_ROLES.includes(existing.role)) {
-      throw new ForbiddenException("只能調整員工或部門主管的角色 · 高階帳號請聯繫 aiproot");
+      throw new ForbiddenException(msg("srv.user.roleScope"));
     }
     await this.repo.update(tx, userId, { role: newRole as Role });
     const updated = await this.repo.getById(tx, userId);
@@ -144,10 +145,10 @@ export class UserService {
     const tx = currentTx();
     await this.repo.setTenantContext(tx, tenantId);
     const existing = await this.repo.getById(tx, userId);
-    if (!existing || existing.tenantId !== tenantId) throw new NotFoundException("找不到該成員");
-    if (userId === callerUserId) throw new ForbiddenException("不能刪除自己");
+    if (!existing || existing.tenantId !== tenantId) throw new NotFoundException(msg("srv.user.notFound"));
+    if (userId === callerUserId) throw new ForbiddenException(msg("srv.user.noSelfDelete"));
     if (!MEMBER_ROLES.includes(existing.role)) {
-      throw new ForbiddenException("只能刪除員工或部門主管 · 高階帳號請聯繫 aiproot");
+      throw new ForbiddenException(msg("srv.user.deleteScope"));
     }
     // 任務會記下「誰簽核 / 誰指派 / 誰代簽」，那三個外鍵都是 NO ACTION —— 有引用就刪不掉人。
     // 先算清楚再擋，否則使用者拿到的是 `tickets_confirmed_by_fkey` 這種 Postgres 原文，

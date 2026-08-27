@@ -5,6 +5,7 @@ import { displayState, type ConfirmStatus } from "../warroom-task-board/ticket-l
 import { TICKET_SELECT, makeTicketMapper, type TicketRow } from "./ticket-row.js";
 import { TaskConfigService } from "../task-config/task-config.service.js";
 import { AssignNotifyService } from "./assign-notify.service.js";
+import { msg } from "../i18n/index.js";
 
 /**
  * WarroomTasksService · WTB-M3
@@ -383,7 +384,7 @@ export class WarroomTasksService {
       FROM tickets WHERE ticket_id = ${ticketId}::uuid LIMIT 1
     `);
     const ticket = t.rows[0];
-    if (!ticket) throw new NotFoundException("找不到這張任務，或你沒有權限查看");
+    if (!ticket) throw new NotFoundException(msg("srv.wr.ticketNotFoundView"));
 
     const hasSourceLink = (ticket.source_message_ids?.length ?? 0) > 0;
     const empty = (reason: string) => ({
@@ -459,7 +460,7 @@ export class WarroomTasksService {
              t.assignee_user_id::text AS assignee_id
         FROM tickets t WHERE t.ticket_id = ${ticketId}::uuid`);
     const m = meta.rows[0];
-    if (!m) throw new NotFoundException("找不到這張任務，或你沒有權限操作");
+    if (!m) throw new NotFoundException(msg("srv.wr.ticketNotFoundAct"));
 
     // 同租戶檢查（RLS 已 scope tickets，users 要自己擋）
     const valid = await tx.execute<{ user_id: string }>(sql`
@@ -469,7 +470,7 @@ export class WarroomTasksService {
 
     const targets = userIds.filter((id) => validSet.has(id) && id !== m.assignee_id);
     if (targets.length === 0) {
-      throw new NotFoundException("沒有可通知的對象（可能已是當責人，或不屬於貴公司）");
+      throw new NotFoundException(msg("srv.wr.noNotifyTarget"));
     }
 
     const results = await this.assignNotify.notifyOthers(tx, {
@@ -489,7 +490,7 @@ export class WarroomTasksService {
       const ok = await tx.execute<{ n: number }>(sql`
         SELECT count(*)::int AS n FROM users WHERE user_id = ${assigneeUserId}::uuid
       `);
-      if ((ok.rows[0]?.n ?? 0) === 0) throw new NotFoundException("找不到這個成員，或不屬於貴公司");
+      if ((ok.rows[0]?.n ?? 0) === 0) throw new NotFoundException(msg("srv.wr.memberNotFound"));
     }
     const status = assigneeUserId ? "assigned" : "unclaimed";
     const res = await tx.execute<{ ticket_id: string; name: string | null }>(sql`
@@ -503,7 +504,7 @@ export class WarroomTasksService {
       RETURNING t.ticket_id::text,
                 (SELECT display_name FROM users WHERE user_id = ${assigneeUserId}::uuid) AS name
     `);
-    if (res.rows.length === 0) throw new NotFoundException("找不到這張任務，或你沒有權限操作");
+    if (res.rows.length === 0) throw new NotFoundException(msg("srv.wr.ticketNotFoundAct"));
 
     // 摘要與操作者姓名 —— 通知內文要用
     const meta = await tx.execute<{ summary: string; actor: string | null }>(sql`
@@ -556,7 +557,7 @@ export class WarroomTasksService {
       RETURNING ticket_id::text
     `);
     // 改到 0 列＝不存在、已經被別人處理過、或不在權限範圍。不透露是哪一種。
-    if (res.rows.length === 0) throw new NotFoundException("找不到這張任務，或它已經被處理了");
+    if (res.rows.length === 0) throw new NotFoundException(msg("srv.wr.ticketHandled"));
     return { ticketId, confirmStatus: next };
   }
 

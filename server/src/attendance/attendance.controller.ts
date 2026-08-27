@@ -3,6 +3,7 @@ import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { AttendanceService } from "./attendance.service.js";
 import { AllowAnyUser } from "../auth/allow-any-user.decorator.js";
+import { msg } from "../i18n/index.js";
 
 const PUNCH_TYPES = ["clock_in", "arrive_site", "clock_out"] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -20,13 +21,13 @@ export class AttendanceController {
     @Body() body: { punchType?: string; lat?: number; lng?: number; accuracyM?: number; customerName?: string },
   ) {
     if (!body?.punchType || !(PUNCH_TYPES as readonly string[]).includes(body.punchType)) {
-      throw new BadRequestException("punchType 必要 · 需為 clock_in | arrive_site | clock_out");
+      throw new BadRequestException(msg("srv.v.punchType"));
     }
     const lat = typeof body.lat === "number" ? body.lat : null;
     const lng = typeof body.lng === "number" ? body.lng : null;
-    if ((lat === null) !== (lng === null)) throw new BadRequestException("lat/lng 需成對提供");
+    if ((lat === null) !== (lng === null)) throw new BadRequestException(msg("srv.v.latLngPair"));
     if (lat !== null && lng !== null && (lat < -90 || lat > 90 || lng < -180 || lng > 180)) {
-      throw new BadRequestException("座標超出合理範圍");
+      throw new BadRequestException(msg("srv.v.coordRange"));
     }
     return this.svc.punch(user, {
       punchType: body.punchType as (typeof PUNCH_TYPES)[number],
@@ -46,7 +47,7 @@ export class AttendanceController {
     @Param("punchId") punchId: string,
     @Body() body: { customerName?: string | null },
   ) {
-    if (!UUID_RE.test(punchId)) throw new BadRequestException("punchId 格式不正確");
+    if (!UUID_RE.test(punchId)) throw new BadRequestException(msg("srv.v.punchId"));
     return this.svc.relabelPunch(user, punchId, typeof body?.customerName === "string" ? body.customerName : null);
   }
 

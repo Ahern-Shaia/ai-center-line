@@ -7,6 +7,7 @@ import { RequirePermission } from "../permission/require-permission.decorator.js
 import { MediaService } from "./media.service.js";
 import { isDate } from "../common/query-date.js";
 import { normalizeQuery } from "../common/query-like.js";
+import { msg } from "../i18n/index.js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -31,13 +32,13 @@ export class MediaController {
     @Query("q") q?: string,
   ) {
     const p = page ? Number(page) : 1;
-    if (!Number.isFinite(p) || p < 1) throw new BadRequestException("page 格式不正確");
+    if (!Number.isFinite(p) || p < 1) throw new BadRequestException(msg("srv.v.page"));
     // ⚠️ 日期一定要在這裡擋下來。放行到 SQL 的話 `'2026-13-45'::date` 會是 pg 22008，
     //    使用者拿到的是一個 500 —— 那是我們的錯卻長得像系統壞了。
-    if (from && !isDate(from)) throw new BadRequestException("開始日期格式不正確");
-    if (to && !isDate(to)) throw new BadRequestException("結束日期格式不正確");
-    if (from && to && from > to) throw new BadRequestException("開始日期不能晚於結束日期");
-    if (groupId && groupId.length > 128) throw new BadRequestException("群組代碼格式不正確");
+    if (from && !isDate(from)) throw new BadRequestException(msg("srv.v.dateFrom"));
+    if (to && !isDate(to)) throw new BadRequestException(msg("srv.v.dateTo"));
+    if (from && to && from > to) throw new BadRequestException(msg("srv.v.dateOrder"));
+    if (groupId && groupId.length > 128) throw new BadRequestException(msg("srv.v.groupCode"));
     return this.svc.list({ kind, page: p, deleted: deleted === "true", from, to, groupId, q: normalizeQuery(q) });
   }
 
@@ -45,7 +46,7 @@ export class MediaController {
   @Get(":mediaId/content")
   @RequirePermission("media:view")
   async content(@Param("mediaId") mediaId: string, @Res() res: FastifyReply) {
-    if (!UUID_RE.test(mediaId)) throw new BadRequestException("mediaId 格式不正確");
+    if (!UUID_RE.test(mediaId)) throw new BadRequestException(msg("srv.v.mediaId"));
     const file = await this.svc.content(mediaId);
 
     // 檔名走 RFC 5987 · 中文檔名不會壞，也不讓檔名裡的引號/換行有機會插進 header
@@ -69,7 +70,7 @@ export class MediaController {
     @Param("mediaId") mediaId: string,
     @Body() body?: { reason?: string },
   ) {
-    if (!UUID_RE.test(mediaId)) throw new BadRequestException("mediaId 格式不正確");
+    if (!UUID_RE.test(mediaId)) throw new BadRequestException(msg("srv.v.mediaId"));
     const reason = body?.reason?.trim().slice(0, 200) || null;
     return this.svc.softDelete(mediaId, user.user_id, reason);
   }
@@ -77,7 +78,7 @@ export class MediaController {
   @Post(":mediaId/restore")
   @Roles(...DELETERS)
   async restore(@Param("mediaId") mediaId: string) {
-    if (!UUID_RE.test(mediaId)) throw new BadRequestException("mediaId 格式不正確");
+    if (!UUID_RE.test(mediaId)) throw new BadRequestException(msg("srv.v.mediaId"));
     await this.svc.restore(mediaId);
     return { success: true };
   }
@@ -89,7 +90,7 @@ export class MediaController {
   @Post(":mediaId/purge")
   @Roles("aiproot_admin")
   async purge(@Param("mediaId") mediaId: string) {
-    if (!UUID_RE.test(mediaId)) throw new BadRequestException("mediaId 格式不正確");
+    if (!UUID_RE.test(mediaId)) throw new BadRequestException(msg("srv.v.mediaId"));
     await this.svc.purge(mediaId);
     return { success: true };
   }

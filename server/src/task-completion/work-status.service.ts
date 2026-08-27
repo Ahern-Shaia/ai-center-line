@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from "@nes
 import { sql } from "drizzle-orm";
 import { currentTx } from "../db/client.js";
 import type { WorkOutcome } from "../warroom-task-board/ticket-lane.js";
+import { msg } from "../i18n/index.js";
 
 const OUTCOMES: readonly WorkOutcome[] = ["完成", "不用做了", "轉他人", "做不到"];
 
@@ -40,7 +41,7 @@ export class WorkStatusService {
       RETURNING ticket_id::text, work_status
     `);
     if (r.rows.length === 0) {
-      throw new NotFoundException("任務不存在，或已經結束（要改請先還原）");
+      throw new NotFoundException(msg("srv.work.closedAlready"));
     }
     this.logger.log(`work close · ticket=${ticketId} outcome=${outcome} by=${actorUserId}`);
     return { ticketId, workStatus: "closed", workOutcome: outcome };
@@ -67,7 +68,7 @@ export class WorkStatusService {
        WHERE ticket_id = ${ticketId}::uuid AND work_status = 'closed'
       RETURNING ticket_id::text
     `);
-    if (r.rows.length === 0) throw new NotFoundException("任務不存在，或原本就沒有結束");
+    if (r.rows.length === 0) throw new NotFoundException(msg("srv.work.notClosed"));
     this.logger.log(`work reopen · ticket=${ticketId} by=${actorUserId}`);
     return { ticketId, workStatus: "open" };
   }
@@ -75,7 +76,7 @@ export class WorkStatusService {
   /** 回報進度 · 低承諾動作（§2.1）· 任務留在進行中 */
   async report(ticketId: string, note: string, actorUserId: string) {
     const text = note.trim();
-    if (!text) throw new BadRequestException("請寫一句話說明進度");
+    if (!text) throw new BadRequestException(msg("srv.work.needNote"));
     const tx = currentTx();
     const r = await tx.execute<{ ticket_id: string }>(sql`
       UPDATE tickets
@@ -85,7 +86,7 @@ export class WorkStatusService {
        WHERE ticket_id = ${ticketId}::uuid AND work_status = 'open'
       RETURNING ticket_id::text
     `);
-    if (r.rows.length === 0) throw new NotFoundException("任務不存在，或已經結束");
+    if (r.rows.length === 0) throw new NotFoundException(msg("srv.work.gone"));
     this.logger.log(`work report · ticket=${ticketId} by=${actorUserId}`);
     return { ticketId };
   }

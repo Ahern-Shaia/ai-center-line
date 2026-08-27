@@ -3,6 +3,7 @@ import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { RequirePermission } from "./require-permission.decorator.js";
 import { TenantCustomRolesService } from "./tenant-custom-roles.service.js";
+import { msg } from "../i18n/index.js";
 
 // 租戶自建角色 · docs/modules/custom-roles.md v0.3
 //
@@ -18,7 +19,7 @@ export class TenantCustomRolesController {
 
   private tenantOf(user: JwtUser): string {
     if (!user.tenant_id) {
-      throw new BadRequestException("這個頁面只給租戶端使用 · AIPROOT 請走「平台 → 權限管理」");
+      throw new BadRequestException(msg("srv.perm.tenantPageOnly"));
     }
     return user.tenant_id;
   }

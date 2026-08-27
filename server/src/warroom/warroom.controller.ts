@@ -10,6 +10,7 @@ import { ArchivedTasksService } from "./archived-tasks.service.js";
 import { isDate } from "../common/query-date.js";
 import { normalizeQuery } from "../common/query-like.js";
 import { WorkStatusService } from "../task-completion/work-status.service.js";
+import { msg } from "../i18n/index.js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -53,11 +54,11 @@ export class WarroomController {
     @Query("q") q?: string,
   ) {
     const p = page ? Number(page) : 1;
-    if (!Number.isFinite(p) || p < 1) throw new BadRequestException("page 格式不正確");
-    if (from && !isDate(from)) throw new BadRequestException("開始日期格式不正確");
-    if (to && !isDate(to)) throw new BadRequestException("結束日期格式不正確");
-    if (from && to && from > to) throw new BadRequestException("開始日期不能晚於結束日期");
-    if (groupId && groupId.length > 128) throw new BadRequestException("群組代碼格式不正確");
+    if (!Number.isFinite(p) || p < 1) throw new BadRequestException(msg("srv.v.page"));
+    if (from && !isDate(from)) throw new BadRequestException(msg("srv.v.dateFrom"));
+    if (to && !isDate(to)) throw new BadRequestException(msg("srv.v.dateTo"));
+    if (from && to && from > to) throw new BadRequestException(msg("srv.v.dateOrder"));
+    if (groupId && groupId.length > 128) throw new BadRequestException(msg("srv.v.groupCode"));
     return this.archived.list({ page: p, from, to, groupId, q: normalizeQuery(q) });
   }
 
@@ -94,9 +95,9 @@ export class WarroomController {
     @Param("ticketId") ticketId: string,
     @Body() body: { assigneeUserId?: string | null },
   ) {
-    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException(msg("srv.v.ticketId"));
     const a = body?.assigneeUserId ?? null;
-    if (a !== null && !UUID_RE.test(a)) throw new BadRequestException("assigneeUserId 格式不正確");
+    if (a !== null && !UUID_RE.test(a)) throw new BadRequestException(msg("srv.v.assigneeUserId"));
     return this.tasksService.assignTicket(ticketId, a, user.user_id);
   }
 
@@ -116,7 +117,7 @@ export class WarroomController {
     @Param("ticketId") ticketId: string,
     @Body() body: { userIds?: string[] },
   ) {
-    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException(msg("srv.v.ticketId"));
     const ids = body?.userIds;
     if (!Array.isArray(ids) || ids.length === 0) {
       throw new BadRequestException({ status: "no_recipient", message: "請至少選一個人" });
@@ -124,7 +125,7 @@ export class WarroomController {
     if (ids.length > 5) {
       throw new BadRequestException({ status: "too_many", message: "一次最多知會 5 個人" });
     }
-    if (ids.some((id) => !UUID_RE.test(id))) throw new BadRequestException("userIds 格式不正確");
+    if (ids.some((id) => !UUID_RE.test(id))) throw new BadRequestException(msg("srv.v.userIds"));
     return this.tasksService.notifyOthers(ticketId, [...new Set(ids)], user.user_id);
   }
 
@@ -139,8 +140,8 @@ export class WarroomController {
     @Param("ticketId") ticketId: string,
     @Body() body: { accept?: boolean },
   ) {
-    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
-    if (typeof body?.accept !== "boolean") throw new BadRequestException("accept 必須是 true 或 false");
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException(msg("srv.v.ticketId"));
+    if (typeof body?.accept !== "boolean") throw new BadRequestException(msg("srv.v.accept"));
     return this.tasksService.decideTicket(ticketId, body.accept, user.user_id);
   }
 
@@ -157,8 +158,8 @@ export class WarroomController {
     @Param("ticketId") ticketId: string,
     @Body() body: { outcome?: string; note?: string },
   ) {
-    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
-    if (!body?.outcome) throw new BadRequestException("請選擇結束原因");
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException(msg("srv.v.ticketId"));
+    if (!body?.outcome) throw new BadRequestException(msg("srv.wr.needOutcome"));
     return this.workStatus.close(ticketId, body.outcome, body.note?.trim() || null, user.user_id);
   }
 
@@ -166,7 +167,7 @@ export class WarroomController {
   @Patch("tickets/:ticketId/work-reopen")
   @RequirePermission("warroom-tasks:view")
   async workReopen(@CurrentUser() user: JwtUser, @Param("ticketId") ticketId: string) {
-    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException(msg("srv.v.ticketId"));
     return this.workStatus.reopen(ticketId, user.user_id);
   }
 
@@ -178,7 +179,7 @@ export class WarroomController {
     @Param("ticketId") ticketId: string,
     @Body() body: { note?: string },
   ) {
-    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException(msg("srv.v.ticketId"));
     return this.workStatus.report(ticketId, body?.note ?? "", user.user_id);
   }
 
@@ -187,7 +188,7 @@ export class WarroomController {
   @Get("tickets/:ticketId/source")
   @RequirePermission("warroom-tasks:view")
   async ticketSource(@Param("ticketId") ticketId: string) {
-    if (!UUID_RE.test(ticketId)) throw new BadRequestException("ticketId 格式不正確");
+    if (!UUID_RE.test(ticketId)) throw new BadRequestException(msg("srv.v.ticketId"));
     return this.tasksService.ticketSource(ticketId);
   }
 
@@ -199,8 +200,8 @@ export class WarroomController {
     @Query("groupId") groupId?: string,
     @Query("date") date?: string,
   ) {
-    if (!groupId) throw new BadRequestException("groupId 必要");
-    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new BadRequestException("date 格式錯 · 應為 YYYY-MM-DD");
+    if (!groupId) throw new BadRequestException(msg("srv.v.needGroupId"));
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new BadRequestException(msg("srv.v.dateYmd"));
     return this.tasksService.listGroupMessages({ groupId, batchDate: date });
   }
 }

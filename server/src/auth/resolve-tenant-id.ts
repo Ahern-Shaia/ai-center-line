@@ -1,5 +1,6 @@
 import { ForbiddenException } from "@nestjs/common";
 import type { JwtUser } from "./jwt-user.js";
+import { msg } from "../i18n/index.js";
 
 /** 只有平台角色可以指定要看哪一家 */
 const PLATFORM_ROLES = new Set(["aiproot_admin", "consultant"]);
@@ -25,15 +26,15 @@ const PLATFORM_ROLES = new Set(["aiproot_admin", "consultant"]);
 export function resolveTenantId(user: JwtUser, requested?: string | null): string {
   if (PLATFORM_ROLES.has(user.role)) {
     const t = requested || user.tenant_id;
-    if (!t) throw new ForbiddenException("需指定 tenantId");
+    if (!t) throw new ForbiddenException(msg("srv.v.needTenantId"));
     return t;
   }
 
-  if (!user.tenant_id) throw new ForbiddenException("此帳號未歸屬租戶");
+  if (!user.tenant_id) throw new ForbiddenException(msg("srv.auth.noTenant"));
 
   // 傳了別家的 → 擋。不要靜默改成自己的，那會讓前端以為切換成功
   if (requested && requested !== user.tenant_id) {
-    throw new ForbiddenException("不可查詢其他租戶的資料");
+    throw new ForbiddenException(msg("srv.auth.crossTenant"));
   }
   return user.tenant_id;
 }

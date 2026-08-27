@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { currentTx, type Db } from "../db/client.js";
 import { TEMPLATE_REGISTRY, type ExtractionTemplate } from "../conversation-analysis/pipeline/templates.js";
 import type { JwtUser } from "../auth/jwt-user.js";
+import { msg } from "../i18n/index.js";
 
 export interface TaskConfig {
   /** 幾天沒簽核算逾時 */
@@ -134,11 +135,11 @@ function rowToConfig(row: {
 function validate(b: { graceDays: number; tierDays: [number, number] }): Omit<TaskConfig, "assignNotify"> {
   const nums = [b.graceDays, b.tierDays?.[0], b.tierDays?.[1]];
   if (nums.some((n) => !Number.isInteger(n) || n < RANGE.min || n > RANGE.max)) {
-    throw new BadRequestException(`天數需為 ${RANGE.min}–${RANGE.max} 的整數`);
+    throw new BadRequestException(msg("srv.tc.daysRange", { min: RANGE.min, max: RANGE.max }));
   }
   if (b.tierDays[0] >= b.tierDays[1]) {
     // 寫反了不會報錯但 tierFor 會永遠回同一級 —— 失敗跟成功長得一樣，所以擋在入口
-    throw new BadRequestException("提醒階梯的第一段要小於第二段");
+    throw new BadRequestException(msg("srv.tc.ladderOrder"));
   }
   return { graceDays: b.graceDays, tierDays: [b.tierDays[0], b.tierDays[1]] };
 }

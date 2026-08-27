@@ -7,6 +7,7 @@ import { auditLog, users } from "../db/schema.js";
 import type { JwtUser } from "./jwt-user.js";
 import { PASSWORD_POLICY, PasswordPolicyService } from "./password-policy.service.js";
 import { PasswordHistoryRepository } from "./password-history.repository.js";
+import { msg } from "../i18n/index.js";
 
 export interface LoginResult {
   access_token: string;
@@ -31,13 +32,13 @@ export class AuthService {
     const user = rows[0];
     if (!user?.passwordHash) {
       // 不透露「該 email 是否存在」· 一律回一樣的錯
-      throw new UnauthorizedException("帳號或密碼錯誤");
+      throw new UnauthorizedException(msg("srv.auth.badCredentials"));
     }
 
     // 1) 鎖定 check
     if (this.policy.isLocked(user.lockedUntil)) {
       const remain = Math.ceil((new Date(user.lockedUntil!).getTime() - Date.now()) / 60000);
-      throw new UnauthorizedException(`帳號已鎖定 · 請 ${remain} 分鐘後再試`);
+      throw new UnauthorizedException(msg("srv.auth.locked", { min: remain }));
     }
 
     // 2) 密碼比對
@@ -54,10 +55,10 @@ export class AuthService {
       await this.auditLogin(user, "denied");
       if (newLockedUntil) {
         throw new UnauthorizedException(
-          `帳號連續錯誤 ${PASSWORD_POLICY.MAX_FAILED_LOGINS} 次已鎖定 · 請 ${PASSWORD_POLICY.LOCK_DURATION_MIN} 分鐘後再試`,
+          msg("srv.auth.lockedNow", { n: PASSWORD_POLICY.MAX_FAILED_LOGINS, min: PASSWORD_POLICY.LOCK_DURATION_MIN }),
         );
       }
-      throw new UnauthorizedException("帳號或密碼錯誤");
+      throw new UnauthorizedException(msg("srv.auth.badCredentials"));
     }
 
     // 3) 密碼正確 · 過期 check（不擋登入 · 但 return must_change_password=true 讓前端強制改）
@@ -126,10 +127,10 @@ export class AuthService {
     const rows = await tx.select().from(users).where(eq(users.userId, userId)).limit(1);
     const user = rows[0];
     if (!user?.passwordHash) {
-      throw new UnauthorizedException("使用者不存在或未設密碼");
+      throw new UnauthorizedException(msg("srv.auth.noUserOrPw"));
     }
     if (!(await bcrypt.compare(oldPassword, user.passwordHash))) {
-      throw new UnauthorizedException("舊密碼錯誤");
+      throw new UnauthorizedException(msg("srv.auth.wrongOldPw"));
     }
     this.policy.validate(newPassword, { email: user.email, displayName: user.displayName });
     if (await this.historyRepo.isReused(tx, userId, newPassword)) {
@@ -159,7 +160,7 @@ export class AuthService {
       .set({ displayName })
       .where(eq(users.userId, userId))
       .returning({ displayName: users.displayName });
-    if (!rows[0]) throw new NotFoundException("使用者不存在");
+    if (!rows[0]) throw new NotFoundException(msg("srv.auth.noUser"));
     return rows[0].displayName ?? displayName;
   }
 
@@ -175,7 +176,7 @@ export class AuthService {
       .set({ locale })
       .where(eq(users.userId, userId))
       .returning({ locale: users.locale });
-    if (!rows[0]) throw new NotFoundException("使用者不存在");
+    if (!rows[0]) throw new NotFoundException(msg("srv.auth.noUser"));
     return rows[0].locale;
   }
 }

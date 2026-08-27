@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { withTenant } from "../db/client.js";
+import { msg } from "../i18n/index.js";
 
 // 組織關係圖資料（org-overview M1）· 彙整 departments / users / line_group，無新表。
 // 走 withSystemTx + 明確 tenant filter（不靠 RLS 靜默）· caller 已 resolveTenantId → 不可跨租戶。
@@ -37,7 +38,7 @@ export class OrgOverviewService {
     return withTenant({ tenantId, role: "aiproot_admin", departmentId: null, userId: null }, async (tx) => {
       const t = await tx.execute<{ tenant_name: string }>(sql`
         SELECT tenant_name FROM tenants WHERE tenant_id = ${tenantId}::uuid`);
-      if (!t.rows[0]) throw new NotFoundException("找不到公司");
+      if (!t.rows[0]) throw new NotFoundException(msg("srv.user.tenantNotFound"));
 
       const depts = await tx.execute<{ id: string; name: string }>(sql`
         SELECT department_id::text AS id, department_name AS name

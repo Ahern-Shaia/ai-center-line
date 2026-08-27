@@ -7,6 +7,7 @@ import { createLLMProvider } from "../llm/provider.factory.js";
 import { defaultAnthropicProvider } from "../conversation-analysis/pipeline/index.js";
 import type { LLMProvider } from "../llm/provider.interface.js";
 import { PersonalDailyReportRepository, type PersonalDailyReportItem } from "./personal-daily-report.repository.js";
+import { msg } from "../i18n/index.js";
 
 // 個人日報 pipeline schema · 精簡 · 只要 items array
 const PersonalReportSchema = z.object({
@@ -177,10 +178,10 @@ export class PersonalDailyReportService {
       FROM tickets WHERE ticket_id = ${ticketId}::uuid LIMIT 1
     `);
     const ticket = t.rows[0];
-    if (!ticket) throw new NotFoundException("找不到這張任務，或你沒有權限查看");
-    if (ticket.assignee_user_id !== userId) throw new ForbiddenException("這不是指派給你的任務");
+    if (!ticket) throw new NotFoundException(msg("srv.wr.ticketNotFoundView"));
+    if (ticket.assignee_user_id !== userId) throw new ForbiddenException(msg("srv.pdr.notYourTask"));
     if (!departmentId || ticket.department_id !== departmentId) {
-      throw new ForbiddenException("這項任務來自其他部門 · 為保護隱私不提供原始對話 · 需要時請洽主管");
+      throw new ForbiddenException(msg("srv.pdr.otherDept"));
     }
 
     const hasSourceLink = (ticket.source_message_ids?.length ?? 0) > 0;

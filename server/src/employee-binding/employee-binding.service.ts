@@ -5,6 +5,7 @@ import { withTenant } from "../db/client.js";
 import { PasswordPolicyService } from "../auth/password-policy.service.js";
 import { UserLineBindingRepository } from "./user-line-binding.repository.js";
 import { LiffPrefillService } from "./liff-prefill.service.js";
+import { msg } from "../i18n/index.js";
 
 /**
  * Employee Binding Service · 方向 8 LIFF Zero-Config
@@ -47,18 +48,18 @@ export class EmployeeBindingService {
     const binding = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) =>
       this.bindingRepo.getActiveByLineUserId(tx, args.botId, args.lineUserId),
     );
-    if (!binding) throw new NotFoundException("尚未綁定 · 請先完成 LINE 綁定");
+    if (!binding) throw new NotFoundException(msg("srv.bind.notBoundHint"));
 
     const userInfo = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{
       tenant_id: string; display_name: string;
     }>(sql`SELECT tenant_id::text, display_name FROM users WHERE user_id = ${binding.userId}::uuid`));
     const user = userInfo.rows[0];
-    if (!user) throw new NotFoundException("使用者記錄不存在");
+    if (!user) throw new NotFoundException(msg("srv.auth.noUserRecord"));
 
     // Step 2 · 密碼強度驗
     const emailTrimmed = args.email.trim().toLowerCase();
     if (!emailTrimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
-      throw new BadRequestException("email 格式錯");
+      throw new BadRequestException(msg("srv.v.email"));
     }
     this.passwordPolicy.validate(args.password, { email: emailTrimmed, displayName: user.display_name });
 
@@ -71,7 +72,7 @@ export class EmployeeBindingService {
           AND user_id != ${binding.userId}::uuid
       `);
       if (parseInt(collide.rows[0].n, 10) > 0) {
-        throw new ConflictException("此 email 已被同 tenant 其他使用者用");
+        throw new ConflictException(msg("srv.user.emailTaken"));
       }
 
       const hash = await bcrypt.hash(args.password, 10);
@@ -181,7 +182,7 @@ export class EmployeeBindingService {
     // 檢查是否已綁定（防重）· 跨租戶讀走 aiproot_admin (需通過 user_line_binding EXISTS→users 子查詢)
     const existing = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.bindingRepo.getActiveByLineUserId(tx, args.botId, args.lineUserId));
     if (existing) {
-      throw new BadRequestException("已綁定 · 若要更換請聯繫業助");
+      throw new BadRequestException(msg("srv.bind.already"));
     }
 
     // Step 1 · 跨租戶查 bot tenant (line_bot 允 aiproot_admin)
@@ -191,7 +192,7 @@ export class EmployeeBindingService {
       `);
       return r.rows[0];
     });
-    if (!bot) throw new NotFoundException("bot 不存在");
+    if (!bot) throw new NotFoundException(msg("srv.bind.noBot"));
 
     // Step 2 · 拿到 tenant 後 · 走 tenant_admin 讀 departments + INSERT users/binding
     return withTenant({ tenantId: bot.tenant_id, role: "tenant_admin" }, async (tx) => {
@@ -289,7 +290,7 @@ export class EmployeeBindingService {
       this.bindingRepo.revoke(tx, bindingId, { revokedBy, reason: "tenant_admin_revoke" }),
     );
     if (!revoked) {
-      throw new NotFoundException("找不到可撤銷的綁定 · 可能已撤銷或不屬於你的租戶");
+      throw new NotFoundException(msg("srv.bind.noRevocable"));
     }
     this.logger.log(`Binding revoked by tenant_admin · bindingId=${bindingId} · tenant=${tenantId}`);
   }
@@ -304,7 +305,7 @@ export class EmployeeBindingService {
       this.bindingRepo.deleteRevoked(tx, bindingId),
     );
     if (!deleted) {
-      throw new NotFoundException("找不到可刪除的紀錄 · 只有「已撤銷」的綁定可以刪除");
+      throw new NotFoundException(msg("srv.bind.noDeletable"));
     }
     this.logger.log(`Revoked binding deleted · bindingId=${bindingId} · tenant=${tenantId} · by=${actorId}`);
   }
@@ -315,7 +316,7 @@ export class EmployeeBindingService {
       this.bindingRepo.deleteRevoked(tx, bindingId),
     );
     if (!deleted) {
-      throw new NotFoundException("找不到可刪除的紀錄 · 只有「已撤銷」的綁定可以刪除");
+      throw new NotFoundException(msg("srv.bind.noDeletable"));
     }
     this.logger.log(`Revoked binding deleted by aiproot · bindingId=${bindingId} · by=${actorId}`);
   }

@@ -5,6 +5,7 @@ import { RequirePermission } from "../permission/require-permission.decorator.js
 import { resolveTenantFilter } from "../auth/resolve-tenant-id.js";
 import { SchedulerConfigService } from "./scheduler-config.service.js";
 import type { SchedulerId } from "./scheduler-config.repository.js";
+import { msg } from "../i18n/index.js";
 
 const VALID_SCHEDULER_IDS: SchedulerId[] = ["pdr", "group_batch"];
 
@@ -53,11 +54,11 @@ export class SchedulerConfigController {
     },
   ) {
     if (!body.schedulerId || !VALID_SCHEDULER_IDS.includes(body.schedulerId as SchedulerId)) {
-      throw new BadRequestException("schedulerId 必要 · 需為 pdr | group_batch");
+      throw new BadRequestException(msg("srv.v.schedulerId"));
     }
-    if (!body.cronExpr) throw new BadRequestException("cronExpr 必要");
-    if (!body.timeZone) throw new BadRequestException("timeZone 必要");
-    if (typeof body.enabled !== "boolean") throw new BadRequestException("enabled 必要 · boolean");
+    if (!body.cronExpr) throw new BadRequestException(msg("srv.v.needCronExpr"));
+    if (!body.timeZone) throw new BadRequestException(msg("srv.v.needTimeZone"));
+    if (typeof body.enabled !== "boolean") throw new BadRequestException(msg("srv.v.needEnabled"));
 
     // tenant_admin 提交 tenantId=null 或不填時 · 強制 fall 到自己的 tenant_id (不允改 platform default)
     let targetTenantId: string | null;

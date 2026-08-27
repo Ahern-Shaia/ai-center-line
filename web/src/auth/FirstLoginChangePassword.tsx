@@ -37,11 +37,16 @@ export default function FirstLoginChangePassword({ email, onDone }: Props) {
       onDone();
     } catch (err) {
       if (err instanceof ApiError) {
-        // 嘗試撈 failures list
-        const raw = (err as unknown as { message: string }).message;
-        toast.show(raw || tr("common.updateFailed"), "danger");
-        if (raw?.includes("密碼不符合安全政策")) {
-          setFailures([tr("flc.f1"), tr("flc.f2")]);
+        toast.show(err.message || tr("common.updateFailed"), "danger");
+        // ⚠️ 比**機器碼**不比訊息文字 —— 原本比對「密碼不符合安全政策」這句中文，
+        //    server 改吃 Accept-Language 之後（i18n.md M4b）英文使用者就永遠不會命中，
+        //    而且不會報錯，只是那張「哪裡不合格」的清單靜靜消失。
+        const body = err.body as { status?: string; failures?: unknown } | undefined;
+        if (body?.status === "password_policy_violation") {
+          // 用 server 回的實際違規項（已依語言翻好），不是寫死那兩條 ——
+          // 寫死的版本連「密碼含你的 email」這種真正的原因都講不出來。
+          const list = Array.isArray(body.failures) ? body.failures.filter((x): x is string => typeof x === "string") : [];
+          setFailures(list.length > 0 ? list : [tr("flc.f1"), tr("flc.f2")]);
         }
       } else {
         toast.show(tr("common.updateFailed"), "danger");

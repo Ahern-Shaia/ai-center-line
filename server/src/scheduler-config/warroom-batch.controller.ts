@@ -7,6 +7,7 @@ import { BatchSchedulerService } from "../convo-analysis-realtime/batch-schedule
 import { withSystemTx } from "../db/client.js";
 import { LineApiClient } from "../line-ingest/line-api.client.js";
 import { LineGroupRepository } from "../line-ingest/line-group.repository.js";
+import { msg } from "../i18n/index.js";
 
 // P1-fix M3 · in-memory rate limit
 // tenant_admin 每 5 分鐘只能觸發一次「立即分析」· 防止 self-DDoS
@@ -40,7 +41,7 @@ export class WarroomBatchController {
     @CurrentUser() user: JwtUser,
   ) {
     if (!user.tenant_id) {
-      throw new BadRequestException("tenant_admin 需綁定 tenant");
+      throw new BadRequestException(msg("srv.sched.adminNeedsTenant"));
     }
 
     // P1-fix M3 · rate limit (5 min per tenant)
@@ -49,7 +50,7 @@ export class WarroomBatchController {
     const elapsed = now - last;
     if (elapsed < RATE_LIMIT_MS) {
       const waitSec = Math.ceil((RATE_LIMIT_MS - elapsed) / 1000);
-      throw new HttpException(`操作太頻繁 · ${waitSec} 秒後再試（每 5 分鐘限一次）`, HttpStatus.TOO_MANY_REQUESTS);
+      throw new HttpException(msg("srv.sched.tooFrequent", { sec: waitSec }), HttpStatus.TOO_MANY_REQUESTS);
     }
     lastTriggered.set(user.tenant_id, now);
 

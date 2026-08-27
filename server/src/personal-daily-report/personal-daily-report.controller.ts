@@ -13,6 +13,7 @@ import { PersonalDailyReportRepository, type PersonalDailyReportItem } from "./p
 import { PersonalDailyReportService } from "./personal-daily-report.service.js";
 import { PersonalReportNotifyService } from "./personal-report-notify.service.js";
 import { PersonalReportSchedulerService } from "./personal-report-scheduler.service.js";
+import { msg } from "../i18n/index.js";
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -54,14 +55,14 @@ export class PersonalDailyReportController {
     @Query("lineUserId") lineUserId: string,
     @Query("date") dateStr?: string,
   ) {
-    if (!botId || !lineUserId) throw new BadRequestException("botId 和 lineUserId 必要");
-    if (!uuidRegex.test(botId)) throw new BadRequestException("botId 格式錯 · 需為 UUID");
+    if (!botId || !lineUserId) throw new BadRequestException(msg("srv.v.needBotAndUser"));
+    if (!uuidRegex.test(botId)) throw new BadRequestException(msg("srv.v.botId"));
     const date = dateStr ?? getTaipeiDate();
-    if (!isValidDate(date)) throw new BadRequestException("date 格式錯 · 應為 YYYY-MM-DD");
+    if (!isValidDate(date)) throw new BadRequestException(msg("srv.v.dateYmd"));
 
     // 認證 · 走綁定表對照
     const userId = await this.bindingService.resolveUserByLineUserId(botId, lineUserId);
-    if (!userId) throw new NotFoundException("未綁定 · 請先完成 LINE 綁定");
+    if (!userId) throw new NotFoundException(msg("srv.bind.notBoundHint"));
 
     // 撈日報 · aiproot_admin 上下文跨租戶讀 (personal_daily_report RLS 允)
     const row = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.repo.getByUserDate(tx, userId, date));
@@ -102,18 +103,18 @@ export class PersonalDailyReportController {
     items?: PersonalDailyReportItem[];
     action?: "save_draft" | "send";
   }) {
-    if (!body?.botId || !body?.lineUserId) throw new BadRequestException("botId 和 lineUserId 必要");
-    if (!uuidRegex.test(body.botId)) throw new BadRequestException("botId 格式錯 · 需為 UUID");
-    if (!Array.isArray(body.items)) throw new BadRequestException("items 必要");
+    if (!body?.botId || !body?.lineUserId) throw new BadRequestException(msg("srv.v.needBotAndUser"));
+    if (!uuidRegex.test(body.botId)) throw new BadRequestException(msg("srv.v.botId"));
+    if (!Array.isArray(body.items)) throw new BadRequestException(msg("srv.v.needItems"));
     const date = body.date ?? getTaipeiDate();
-    if (!isValidDate(date)) throw new BadRequestException("date 格式錯");
+    if (!isValidDate(date)) throw new BadRequestException(msg("srv.v.date"));
     const action = body.action ?? "save_draft";
 
     const userId = await this.bindingService.resolveUserByLineUserId(body.botId, body.lineUserId);
-    if (!userId) throw new NotFoundException("未綁定");
+    if (!userId) throw new NotFoundException(msg("srv.bind.notBound"));
 
     const row = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.repo.getByUserDate(tx, userId, date));
-    if (!row) throw new BadRequestException("尚無日報 · 需先讓 AI 生成 (私訊 bot 幾則後重打開)");
+    if (!row) throw new BadRequestException(msg("srv.pdr.noReportYet"));
 
     await withTenant({ tenantId: row.tenantId, role: "tenant_admin" }, (tx) => this.repo.saveFinal(tx, {
       reportId: row.reportId,
@@ -142,20 +143,20 @@ export class PersonalDailyReportController {
     lineUserId?: string;
     date?: string;
   }) {
-    if (!body?.botId || !body?.lineUserId) throw new BadRequestException("botId 和 lineUserId 必要");
-    if (!uuidRegex.test(body.botId)) throw new BadRequestException("botId 格式錯");
+    if (!body?.botId || !body?.lineUserId) throw new BadRequestException(msg("srv.v.needBotAndUser"));
+    if (!uuidRegex.test(body.botId)) throw new BadRequestException(msg("srv.v.botId"));
     const date = body.date ?? getTaipeiDate();
-    if (!isValidDate(date)) throw new BadRequestException("date 格式錯");
+    if (!isValidDate(date)) throw new BadRequestException(msg("srv.v.date"));
 
     const userId = await this.bindingService.resolveUserByLineUserId(body.botId, body.lineUserId);
-    if (!userId) throw new NotFoundException("未綁定");
+    if (!userId) throw new NotFoundException(msg("srv.bind.notBound"));
 
     // 需 tenantId · 從綁定間接查
     const info = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{ tenant_id: string }>(sql_import`
       SELECT tenant_id::text FROM users WHERE user_id = ${userId}::uuid
     `));
     const tenantId = info.rows[0]?.tenant_id;
-    if (!tenantId) throw new NotFoundException("user 無 tenant");
+    if (!tenantId) throw new NotFoundException(msg("srv.auth.noTenant"));
 
     return this.svc.generate({ tenantId, userId, reportDate: date });
   }
@@ -164,7 +165,7 @@ export class PersonalDailyReportController {
   @RequirePermission("personal-report:mine")
   async getMine(@CurrentUser() user: JwtUser, @Query("date") dateStr?: string) {
     const date = dateStr ?? getTaipeiDate();
-    if (!isValidDate(date)) throw new BadRequestException("date 格式錯 · 應為 YYYY-MM-DD");
+    if (!isValidDate(date)) throw new BadRequestException(msg("srv.v.dateYmd"));
     // currentTx() 已於 interceptor 設 tenant + user context · RLS 會擋別的
     const tx = currentTx();
     const row = await this.repo.getByUserDate(tx, user.user_id, date);
@@ -257,7 +258,7 @@ export class PersonalDailyReportController {
   @Get("assigned-tasks/:ticketId/source")
   @RequirePermission("personal-report:mine")
   async assignedTaskSource(@CurrentUser() user: JwtUser, @Param("ticketId") ticketId: string) {
-    if (!uuidRegex.test(ticketId)) throw new BadRequestException("ticketId 格式錯");
+    if (!uuidRegex.test(ticketId)) throw new BadRequestException(msg("srv.v.ticketId"));
     return this.svc.assignedTaskSource(user.user_id, user.department_id, ticketId);
   }
 
@@ -268,8 +269,8 @@ export class PersonalDailyReportController {
     @Body() body: { date?: string; items?: PersonalDailyReportItem[]; action?: "save_draft" | "send" },
   ) {
     const date = body.date ?? getTaipeiDate();
-    if (!isValidDate(date)) throw new BadRequestException("date 格式錯");
-    if (!Array.isArray(body.items)) throw new BadRequestException("items 必要");
+    if (!isValidDate(date)) throw new BadRequestException(msg("srv.v.date"));
+    if (!Array.isArray(body.items)) throw new BadRequestException(msg("srv.v.needItems"));
     const action = body.action ?? "save_draft";
 
     const tx = currentTx();
@@ -281,8 +282,8 @@ export class PersonalDailyReportController {
       await this.repo.ensureRow(tx, { tenantId: user.tenant_id, userId: user.user_id, reportDate: date });
       row = await this.repo.getByUserDate(tx, user.user_id, date);
     }
-    if (!row) throw new BadRequestException("尚未生成日報 · 請先傳訊息給 bot 或按重新生成");
-    if (row.userId !== user.user_id) throw new ForbiddenException("只能編輯自己的日報");
+    if (!row) throw new BadRequestException(msg("srv.pdr.notGenerated"));
+    if (row.userId !== user.user_id) throw new ForbiddenException(msg("srv.pdr.ownOnly"));
 
     await this.repo.saveFinal(tx, {
       reportId: row.reportId,
@@ -310,9 +311,9 @@ export class PersonalDailyReportController {
     @Body() body: { date?: string } = {},
   ) {
     const date = body.date ?? getTaipeiDate();
-    if (!isValidDate(date)) throw new BadRequestException("date 格式錯");
+    if (!isValidDate(date)) throw new BadRequestException(msg("srv.v.date"));
     // 需 tenantId · 從 JWT 拿
-    if (!user.tenant_id) throw new ForbiddenException("aiproot admin 沒 tenant · 需帶 tenantId 參數（未實作）");
+    if (!user.tenant_id) throw new ForbiddenException(msg("srv.auth.aiprootNeedsTenant"));
     const res = await this.svc.generate({
       tenantId: user.tenant_id,
       userId: user.user_id,
@@ -344,7 +345,7 @@ export class PersonalDailyReportController {
   ) {
     const to = toDate ?? getTaipeiDate();
     const from = fromDate ?? subtractDays(to, 7);
-    if (!isValidDate(from) || !isValidDate(to)) throw new BadRequestException("from/to 格式錯");
+    if (!isValidDate(from) || !isValidDate(to)) throw new BadRequestException(msg("srv.v.fromTo"));
     const scope = resolveTenantFilter(user, tenantId);
     if (!scope) {
       throw new BadRequestException({ status: "tenant_id_required", message: "請先選擇要查看的租戶" });
@@ -378,7 +379,7 @@ export class PersonalDailyReportController {
   @RequirePermission("personal-report:trigger")
   async runScheduler(@Body() body: { date?: string } = {}) {
     const date = body.date ?? getTaipeiDate();
-    if (!isValidDate(date)) throw new BadRequestException("date 格式錯");
+    if (!isValidDate(date)) throw new BadRequestException(msg("srv.v.date"));
     return this.scheduler.runForDate(date);
   }
 }

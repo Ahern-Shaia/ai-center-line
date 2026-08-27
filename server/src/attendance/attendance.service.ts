@@ -6,6 +6,7 @@ import { AttendanceRepository, type PunchLite } from "./attendance.repository.js
 import { MapRoutingConfigRepository } from "./map-routing-config.repository.js";
 import { NotificationBus } from "../notification-hub/notification.bus.js";
 import { buildRoutingProvider, getRoutingProvider, haversineMeters, type LatLng, type RoutingProvider } from "./routing-provider.js";
+import { msg } from "../i18n/index.js";
 
 export interface PunchInput {
   punchType: "clock_in" | "arrive_site" | "clock_out";
@@ -78,7 +79,7 @@ export class AttendanceService {
     suspicious: Record<string, number> | null;
     trip: { distanceM: number | null; routeProvider: string | null } | null;
   }> {
-    if (!user.tenant_id) throw new BadRequestException("此帳號無所屬租戶 · 無法打卡");
+    if (!user.tenant_id) throw new BadRequestException(msg("srv.auth.noTenantPunch"));
     const tx = currentTx();
 
     const prev = await this.repo.getLatestPunchToday(tx, user.user_id);
@@ -194,10 +195,10 @@ export class AttendanceService {
   // 因此這不是「補打卡」（design doc attendance-trip-state-machine §9 明確禁止），不構成造假空間。
   // 寫入 audit 由全域 TenantTxInterceptor 自動記錄（R5）。
   async relabelPunch(user: JwtUser, punchId: string, customerName: string | null): Promise<{ punchId: string; customerName: string | null }> {
-    if (!user.tenant_id) throw new BadRequestException("此帳號無所屬租戶");
+    if (!user.tenant_id) throw new BadRequestException(msg("srv.auth.noTenant"));
     const name = customerName?.trim() ? customerName.trim().slice(0, 200) : null;
     const ok = await this.repo.updatePunchLabel(currentTx(), punchId, user.user_id, name);
-    if (!ok) throw new BadRequestException("找不到這筆打卡紀錄 · 或不屬於你");
+    if (!ok) throw new BadRequestException(msg("srv.att.punchNotFound"));
     return { punchId, customerName: name };
   }
 
@@ -304,7 +305,7 @@ export class AttendanceService {
 
   async tripsByDate(user: JwtUser, dateStr: string | null) {
     if (dateStr !== null && !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      throw new BadRequestException("date 格式需為 YYYY-MM-DD");
+      throw new BadRequestException(msg("srv.v.dateYmd"));
     }
     const tx = currentTx();
     const [trips, punches] = await Promise.all([

@@ -1,7 +1,7 @@
 // 後端 API client。dev 走 Vite proxy（/api → :3000）。
 
 // i18n：登入時套用使用者存在伺服器的語言（見 getMyPermissions）
-import { setLocale, t } from "./i18n";
+import { getLocale, setLocale, t } from "./i18n";
 
 /**
  * 知會其他人（不改變當責人）· 只發個人私訊，不碰群組。
@@ -145,7 +145,14 @@ export function logout() {
 }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  /**
+   * server 回的原始 JSON body。
+   *
+   * ⚠️ 有機器碼可比對時**一律比機器碼，不要比訊息文字** ——
+   * 訊息現在會隨語言變（i18n.md M4b），比文字的判斷會在切英文時靜默失效。
+   * 例：密碼政策用 `body.status === "password_policy_violation"`。
+   */
+  constructor(public status: number, message: string, public body?: unknown) {
     super(message);
   }
 }
@@ -153,9 +160,9 @@ export class ApiError extends Error {
 // HTTP status → 使用者可讀訊息；避免把 Nest 預設英文（Internal server error / Unauthorized）
 // 直接秀給客戶。真正原因保留在 console（dev）供除錯。
 //
-// ⚠️ 這裡只管**通用 fallback**。server 特意寫的訊息（多為中文）會優先採用 ——
-//    見下方 GENERIC_SERVER_MSG。那些要英文化得讓後端吃 Accept-Language，
-//    是另一個範圍（i18n.md B 軸 · 尚未做）。
+// ⚠️ 這裡只管**通用 fallback**。server 特意寫的訊息會優先採用（見 GENERIC_SERVER_MSG）。
+//    2026-08-27 M4b 起 server 也吃 `Accept-Language`（每個請求都帶），
+//    所以那些訊息會依語言回中文或英文。
 function friendlyStatusMessage(status: number): string {
   if (status === 400) return t("err.400");
   if (status === 401) return t("err.401");
@@ -168,7 +175,11 @@ function friendlyStatusMessage(status: number): string {
   return t("err.unknown");
 }
 
-// 若 server 特意寫了中文訊息（非 Nest 預設英文），優先使用；否則走 mapping。
+// 若 server 特意寫了訊息（非 Nest 預設），優先使用；否則走 status mapping。
+//
+// ⚠️ 原本的判準是「訊息裡有沒有中文」—— M4b 之後 server 也會回英文，
+//    那個判準會把 server 特意寫的英文訊息當成 Nest 預設蓋掉。
+//    真正的判準從來都是「是不是 Nest 的預設字串」，就是下面這條。
 const GENERIC_SERVER_MSG = /^(internal server error|bad request|not found|forbidden|unauthorized|too many requests|unprocessable entity|conflict|payload too large)$/i;
 
 // 登入流程本身的端點：這裡回 401 = 這次登入嘗試失敗（帳密錯 / LINE 未綁定 /
@@ -193,6 +204,8 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
       ...opts,
       headers: {
         ...(hasBody ? { "content-type": "application/json" } : {}),
+        // 後端錯誤訊息的語言來源（i18n.md M4b）· 每個請求都帶，包含還沒登入的
+        "accept-language": getLocale(),
         ...(token ? { authorization: `Bearer ${token}` } : {}),
         ...opts.headers,
       },
@@ -210,18 +223,19 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     let serverMsg = "";
+    let body: unknown;
     try {
-      const body = await res.clone().json();
-      if (typeof body?.message === "string") serverMsg = body.message.trim();
-      else if (Array.isArray(body?.message)) serverMsg = body.message.join("; ");
+      body = await res.clone().json();
+      const m = (body as { message?: unknown } | null)?.message;
+      if (typeof m === "string") serverMsg = m.trim();
+      else if (Array.isArray(m)) serverMsg = m.join("; ");
     } catch {
       // not JSON
     }
     const isGeneric = !serverMsg || GENERIC_SERVER_MSG.test(serverMsg);
-    const hasChinese = /[一-龥]/.test(serverMsg);
-    const friendly = !isGeneric && hasChinese ? serverMsg : friendlyStatusMessage(res.status);
+    const friendly = isGeneric ? friendlyStatusMessage(res.status) : serverMsg;
     if (import.meta.env.DEV) console.error(`[api] ${path} → ${res.status}`, serverMsg || "(no body)");
-    throw new ApiError(res.status, friendly);
+    throw new ApiError(res.status, friendly, body);
   }
   // 2xx 但拿到非 JSON（常見於 Static Site 的 SPA fallback 抓到 API 路徑，回 index.html）
   const contentType = res.headers.get("content-type") ?? "";

@@ -3,6 +3,7 @@ import { CurrentUser } from "../auth/current-user.decorator.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { RequirePermission } from "./require-permission.decorator.js";
 import { TenantRolesService } from "./tenant-roles.service.js";
+import { msg } from "../i18n/index.js";
 
 // 租戶自管角色權限 · docs/modules/tenant-role-permissions.md
 //
@@ -25,7 +26,7 @@ export class TenantRolesController {
    */
   private tenantOf(user: JwtUser): string {
     if (!user.tenant_id) {
-      throw new BadRequestException("這個頁面只給租戶端使用 · AIPROOT 請走「平台 → 權限管理」");
+      throw new BadRequestException(msg("srv.perm.tenantPageOnly"));
     }
     return user.tenant_id;
   }
@@ -53,7 +54,7 @@ export class TenantRolesController {
     @CurrentUser() user: JwtUser,
   ) {
     if (!Array.isArray(body?.permissionIds)) {
-      throw new BadRequestException("permissionIds 需為陣列");
+      throw new BadRequestException(msg("srv.v.permIdsArray"));
     }
     return this.svc.updatePermissions({
       tenantId: this.tenantOf(user),

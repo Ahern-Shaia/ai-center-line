@@ -8,6 +8,7 @@ import { ChangePasswordSchema } from "./dto/change-password.dto.js";
 import { DisplayNameSchema } from "./dto/display-name.dto.js";
 import { LocaleSchema } from "./dto/locale.dto.js";
 import { AllowAnyUser } from "../auth/allow-any-user.decorator.js";
+import { msg } from "../i18n/index.js";
 
 @Controller("auth")
 export class AuthController {
@@ -20,7 +21,7 @@ export class AuthController {
   @Post("login")
   async login(@Body() body: { email?: string; password?: string }): Promise<LoginResult> {
     if (!body?.email || !body?.password) {
-      throw new BadRequestException("需要 email 與 password");
+      throw new BadRequestException(msg("srv.v.needEmailPw"));
     }
     return this.auth.login(body.email, body.password);
   }
@@ -81,10 +82,10 @@ export class AuthController {
   @Public()
   @Post("line/callback")
   async lineOauthCallback(@Body() body: { code?: string; state?: string }) {
-    if (!body?.code) throw new BadRequestException("缺 code");
+    if (!body?.code) throw new BadRequestException(msg("srv.v.needCode"));
     // CSRF 防護改由後端驗簽章 state · 前端 sessionStorage 在 LINE→系統瀏覽器交接時會遺失
     if (!this.lineOauth.verifyState(body.state)) {
-      throw new BadRequestException("登入連結已失效 · 請重新點「以 LINE 登入」");
+      throw new BadRequestException(msg("srv.auth.linkExpired"));
     }
     return this.lineOauth.handleCallback(body.code);
   }
@@ -95,7 +96,7 @@ export class AuthController {
   @Public()
   @Post("liff/token")
   async liffToken(@Body() body: { accessToken?: string; botId?: string }) {
-    if (!body?.accessToken) throw new BadRequestException("缺 accessToken");
+    if (!body?.accessToken) throw new BadRequestException(msg("srv.v.needAccessToken"));
     return this.lineOauth.handleLiffToken(body.accessToken, body.botId);
   }
 
@@ -103,7 +104,7 @@ export class AuthController {
   @Public()
   @Post("line/select-tenant")
   async lineSelectTenant(@Body() body: { selectionToken?: string; tenantId?: string }) {
-    if (!body?.selectionToken || !body?.tenantId) throw new BadRequestException("缺 selectionToken 或 tenantId");
+    if (!body?.selectionToken || !body?.tenantId) throw new BadRequestException(msg("srv.v.needSelectionToken"));
     return this.lineOauth.selectTenant(body.selectionToken, body.tenantId);
   }
 }

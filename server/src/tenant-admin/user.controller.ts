@@ -6,6 +6,7 @@ import { UserService } from "./user.service.js";
 import { MemberGroupActivityService } from "./member-group-activity.service.js";
 import { AssignDepartmentSchema, AssignRoleSchema, UserCreateSchema, UserDeleteSchema, UserUpdateSchema } from "./dto/user.dto.js";
 import { resolveTenantId } from "../auth/resolve-tenant-id.js";
+import { msg } from "../i18n/index.js";
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -67,11 +68,11 @@ export class UserController {
     if (caller.role !== "aiproot_admin") {
       // 限自 tenant
       if (caller.tenant_id && tenantId !== caller.tenant_id) {
-        throw new ForbiddenException("只能在自己 tenant 建帳號");
+        throw new ForbiddenException(msg("srv.user.ownTenantOnly"));
       }
       // 限 role='group_owner'
       if (rest.role !== "group_owner") {
-        throw new ForbiddenException("你只能建 group_owner 帳號 · 建高階帳號請聯繫 aiproot");
+        throw new ForbiddenException(msg("srv.user.createOwnerOnly"));
       }
     }
 
@@ -104,7 +105,7 @@ export class UserController {
     @Body() body: unknown,
     @CurrentUser() caller: JwtUser,
   ) {
-    if (!uuidRegex.test(id)) throw new BadRequestException("成員 id 格式不正確");
+    if (!uuidRegex.test(id)) throw new BadRequestException(msg("srv.v.memberId"));
     const parsed = AssignDepartmentSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException({
@@ -128,7 +129,7 @@ export class UserController {
     @Body() body: unknown,
     @CurrentUser() caller: JwtUser,
   ) {
-    if (!uuidRegex.test(id)) throw new BadRequestException("成員 id 格式不正確");
+    if (!uuidRegex.test(id)) throw new BadRequestException(msg("srv.v.memberId"));
     const parsed = AssignRoleSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException({

@@ -4,6 +4,7 @@ import { currentTx } from "../db/client.js";
 import type { JwtUser } from "../auth/jwt-user.js";
 import { SchedulerConfigRepository, type SchedulerConfigRow, type SchedulerId } from "./scheduler-config.repository.js";
 import type { SchedulerManager } from "./scheduler-manager.service.js";
+import { msg } from "../i18n/index.js";
 
 /**
  * SchedulerConfigService · scheduler-config M2
@@ -46,14 +47,14 @@ export class SchedulerConfigService {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const _testJob = CronJob.from({ cronTime: args.cronExpr, onTick: () => undefined, timeZone: args.timeZone, start: false });
     } catch (err) {
-      throw new BadRequestException(`cron 表達式格式錯 · ${(err as Error).message}`);
+      throw new BadRequestException(msg("srv.sched.badCron", { reason: (err as Error).message }));
     }
 
     // 2. Whitelist 欄位 · tenant_admin 不能改 concurrency / lookback_days
     const isPlatformScope = args.tenantId === null;
     const isAiproot = user.role === "aiproot_admin";
     if (isPlatformScope && !isAiproot) {
-      throw new ForbiddenException("只有 aiproot_admin 可改 platform default (tenant_id=NULL)");
+      throw new ForbiddenException(msg("srv.sched.platformDefault"));
     }
     if (!isAiproot) {
       // tenant_admin · 撈原 row · concurrency / lookback_days 強制沿用舊值 (若有) 或 platform default
@@ -65,9 +66,9 @@ export class SchedulerConfigService {
     }
 
     // 3. Validate range
-    if (args.minSourceCount < 0) throw new BadRequestException("min_source_count 不可 < 0");
-    if (args.lookbackDays < 0 || args.lookbackDays > 30) throw new BadRequestException("lookback_days 需 0-30");
-    if (args.concurrency < 1 || args.concurrency > 20) throw new BadRequestException("concurrency 需 1-20");
+    if (args.minSourceCount < 0) throw new BadRequestException(msg("srv.v.minSourceCount"));
+    if (args.lookbackDays < 0 || args.lookbackDays > 30) throw new BadRequestException(msg("srv.v.lookbackDays"));
+    if (args.concurrency < 1 || args.concurrency > 20) throw new BadRequestException(msg("srv.v.concurrency"));
 
     // 4. Upsert
     const row = await this.repo.upsert(currentTx(), {

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
+import { msg } from "../i18n/index.js";
 
 // Password policy · OQ-TP-2/3/4/5 全採建議
 // 12+ · 大小寫 + 數字 + 符號四選三 · 90 天過期 · 5 筆歷史 · 5 次錯鎖 10 min
@@ -31,37 +32,37 @@ export class PasswordPolicyService {
     const failures: string[] = [];
 
     if (password.length < PASSWORD_POLICY.MIN_LENGTH) {
-      failures.push(`長度需 ≥ ${PASSWORD_POLICY.MIN_LENGTH} 字元（目前 ${password.length}）`);
+      failures.push(msg("srv.pw.tooShort", { min: PASSWORD_POLICY.MIN_LENGTH, got: password.length }));
     }
 
     const categories = this.countCategories(password);
     if (categories < PASSWORD_POLICY.REQUIRED_CATEGORIES) {
-      failures.push(`需包含大寫、小寫、數字、符號 四選三（目前 ${categories} 類）`);
+      failures.push(msg("srv.pw.categories", { got: categories }));
     }
 
     const lower = password.toLowerCase();
     if (WEAK_PASSWORDS.has(lower)) {
-      failures.push("此密碼屬常見弱密碼 · 已被禁用");
+      failures.push(msg("srv.pw.weak"));
     }
 
     if (ctx.email) {
       const emailPrefix = ctx.email.split("@")[0]?.toLowerCase();
       if (emailPrefix && emailPrefix.length >= 4 && lower.includes(emailPrefix)) {
-        failures.push("密碼不可含 email 帳號部分");
+        failures.push(msg("srv.pw.containsEmail"));
       }
     }
 
     if (ctx.displayName) {
       const dn = ctx.displayName.toLowerCase();
       if (dn.length >= 4 && lower.includes(dn)) {
-        failures.push("密碼不可含使用者顯示名稱");
+        failures.push(msg("srv.pw.containsName"));
       }
     }
 
     if (failures.length > 0) {
       throw new BadRequestException({
         status: "password_policy_violation",
-        message: "密碼不符合安全政策",
+        message: msg("srv.pw.violation"),
         failures,
       });
     }
