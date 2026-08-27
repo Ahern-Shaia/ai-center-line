@@ -215,3 +215,63 @@ test("⭐⭐ M4b · 不可用中文字串比對來判斷後端錯誤類型（切
     }
   }
 });
+
+test("⭐⭐ M5 · 日期不可寫死 \"zh-TW\"（字典守門抓不到 —— 日期是 Intl 產的不是字典字串）", () => {
+  // 2026-08-27 M5 實機截圖才看到：介面全英文，日期卻是「2026年8月27日 星期四」。
+  // 平台側 aiproot 專用頁與 LIFF 不在甲案範圍，維持中文。
+  const OUT = /\/(aiproot-console|mockdata|notify-config|line-bots|convo-analysis|liff|i18n)\//;
+  const SKIP = /(LlmSettings|MasterData)\.tsx$/;
+  const bad: string[] = [];
+  for (const f of srcFiles("../../web/src")) {
+    if (OUT.test(f) || SKIP.test(f)) continue;
+    const src = readFileSync(f, "utf8");
+    for (const m of src.matchAll(/toLocale(?:Date|Time)?String\(\s*"zh-TW"/g)) {
+      bad.push(`${f.split("/web/src/")[1]}: ${m[0]}`);
+    }
+  }
+  assert.deepEqual(bad, [], `這些地方的日期永遠是中文格式，改用 bcp47()：\n${bad.join("\n")}`);
+});
+
+test("⭐⭐ 存 i18n key 的對照表，讀取端必須包 tr()/t()（否則畫面直接印出 key · tsc 擋不住）", () => {
+  // 一週內同一個錯犯了 6 次：SourceDrawer.FIELD_LABEL / Toast.KIND_LABEL /
+  // TeamDailyReport.STATUS / role-permissions.PERMISSION_GROUPS / ROLE_SOURCE /
+  // MediaLibrary.KIND_LABEL。改前改後型別都是 string，tsc 永遠是綠的，
+  // 而且**中英文都壞** —— 它不是 i18n bug，是渲染 bug。
+  //
+  // 這一支的做法：先找出「值是字典 key」的常數表，再找它們的 `XXX[...]` 讀取端，
+  // 檢查前面 14 個字元內有沒有 tr( / t( / msg(。
+  const OUT = /\/(aiproot-console|mockdata|notify-config|line-bots|convo-analysis|liff|i18n)\//;
+  const dictKeys = new Set(keysOf(read("../../web/src/i18n/zh-TW.ts")));
+  const files = srcFiles("../../web/src").filter((f) => !OUT.test(f));
+
+  // ⚠️ 常數名會撞：`kb/Rag.tsx` 也有一個 KIND_LABEL，但它的值是中文不是 key。
+  //    所以要記「哪個檔定義的」，只在該檔與 import 它的檔裡檢查。
+  const defs = new Map<string, string>();            // 常數名 → 定義它的檔
+  for (const f of files) {
+    for (const m of readFileSync(f, "utf8")
+      .matchAll(/^(?:export )?const\s+([A-Z][A-Z0-9_]*)\b[^=]*=\s*[[{]([\s\S]{0,3000}?)^\s*[\]}];/gm)) {
+      if ([...m[2]!.matchAll(/"([^"]+)"/g)].some((v) => dictKeys.has(v[1]!))) defs.set(m[1]!, f);
+    }
+  }
+  assert.ok(defs.size >= 5, `沒找到存 key 的對照表（${defs.size} 個）—— 這支測試可能失效了`);
+
+  const bad: string[] = [];
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    for (const [name, owner] of defs) {
+      // 只在定義檔、或明確 import 了這個名字的檔裡檢查
+      if (owner !== f && !new RegExp(`import\\s*{[^}]*\\b${name}\\b[^}]*}`).test(src)) continue;
+      for (const m of src.matchAll(new RegExp(`\\b${name}\\[[^\\]]+\\]`, "g"))) {
+        const before = src.slice(Math.max(0, m.index! - 14), m.index!);
+        if (/\b(tr?|t2|msg)\(\s*$/.test(before)) continue;
+        const line = src.slice(0, m.index!).split("\n").length;
+        const text = src.split("\n")[line - 1]!;
+        if (/\b(tr?|t2|msg)\(/.test(text)) continue;           // 同一行有包
+        if (/^\s*(const|let)\s+\w+\s*=/.test(text)) continue;  // 先取出來、稍後才 tr()
+        if (/\.filter\(|\.length|\?\?|&&\s*$/.test(text)) continue; // 只判斷有沒有，不是渲染
+        bad.push(`${f.split("/web/src/")[1]}:${line}  ${text.trim().slice(0, 80)}`);
+      }
+    }
+  }
+  assert.deepEqual(bad, [], `這些地方會把 i18n key 本身印到畫面上：\n${bad.join("\n")}`);
+});

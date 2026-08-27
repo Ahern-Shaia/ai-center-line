@@ -7,7 +7,7 @@ import { usePermissions } from "./permission/PermissionContext";
 import ChangePasswordDialog from "./auth/ChangePasswordDialog";
 import ChangeDisplayNameDialog from "./auth/ChangeDisplayNameDialog";
 import { roleLabel } from "./shared/roleLabel";
-import { LOCALES, LOCALE_NAME, t } from "./i18n";
+import { LOCALES, LOCALE_NAME, bcp47, t} from "./i18n";
 import { useLocale, useT } from "./i18n/useT";
 
 // 對照 docs/roles-permissions-matrix.md · 每個 item 綁 permission
@@ -337,7 +337,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
           {asOf && (
             <span className="as-of">
               <span className="dot" />
-              {tr("shell.asOf")} {new Date(asOf).toLocaleString(locale === "en" ? "en-US" : "zh-TW", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+              {tr("shell.asOf")} {new Date(asOf).toLocaleString(bcp47(), { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}
             </span>
           )}
           {onHelp && (

@@ -3,6 +3,7 @@ import { RequirePermission } from "../permission/require-permission.decorator.js
 import { sql } from "drizzle-orm";
 import { currentTx } from "../db/client.js";
 import { EXTRACTION_TEMPLATES, TEMPLATE_REGISTRY, type ExtractionTemplate } from "../conversation-analysis/pipeline/templates.js";
+import { msg } from "../i18n/index.js";
 
 /**
  * aiproot 通用：列 / 設定所有租戶
@@ -88,7 +89,7 @@ export class AiprootTenantsController {
     return {
       templates: EXTRACTION_TEMPLATES
         .filter((t) => TEMPLATE_REGISTRY[t].selectable)
-        .map((t) => ({ key: t, label: TEMPLATE_REGISTRY[t].label, description: TEMPLATE_REGISTRY[t].description })),
+        .map((t) => ({ key: t, label: msg(TEMPLATE_REGISTRY[t].label), description: msg(TEMPLATE_REGISTRY[t].description) })),
     };
   }
 
@@ -114,7 +115,7 @@ export class AiprootTenantsController {
       RETURNING tenant_id::text
     `);
     if (res.rows.length === 0) throw new BadRequestException("tenant 不存在");
-    return { tenantId, template: t, label: TEMPLATE_REGISTRY[t].label };
+    return { tenantId, template: t, label: msg(TEMPLATE_REGISTRY[t].label) };
   }
 
   // 切 batch_enabled · convo-analysis-realtime cron 是否掃該 tenant

@@ -11,6 +11,7 @@ import { getTaipeiDate } from "../shared/taipeiDate";
 import { useDebounced } from "../shared/useDebounced";
 import { useToast } from "../Toast";
 import { useT } from "../i18n/useT";
+import { t } from "../i18n";
 
 // 素材看板 · docs/modules/media-and-vision.md §2
 //
@@ -36,7 +37,8 @@ function fmtDate(iso: string): string {
 function displayName(f: MediaItem): string {
   if (f.filename) return f.filename;
   if (f.caption) return f.caption.length > 24 ? `${f.caption.slice(0, 24)}…` : f.caption;
-  return `${KIND_LABEL[f.kind]} ${fmtDate(f.sentAt)}`;
+  // ⚠️ KIND_LABEL 的值是 i18n key —— 這裡是非元件函式，用 t() 不是 tr()（Rules of Hooks）
+  return `${t(KIND_LABEL[f.kind])} ${fmtDate(f.sentAt)}`;
 }
 
 /** 帶授權的縮圖 · 捲到畫面上才去要檔案，離開畫面就把記憶體還回去 */

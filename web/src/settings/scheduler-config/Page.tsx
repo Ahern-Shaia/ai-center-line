@@ -10,7 +10,7 @@ import {
 } from "../../api";
 import { usePermissions } from "../../permission/PermissionContext";
 import { useToast } from "../../Toast";
-import { t } from "../../i18n";
+import { bcp47, t} from "../../i18n";
 import { useT } from "../../i18n/useT";
 import ConfirmDialog from "../../shared/ConfirmDialog";
 import { useTenantPicker } from "../../shared/TenantPicker";
@@ -332,7 +332,7 @@ function SchedulerCard({
           ) : nextRun ? (
             <span style={{ fontSize: 13 }}>
               {formatNextRun(nextRun)}
-              <span style={{ fontSize: 12, color: "var(--ink-3)" }}>（{nextRun.toLocaleString("zh-TW", { hour12: false })}）</span>
+              <span style={{ fontSize: 12, color: "var(--ink-3)" }}>（{nextRun.toLocaleString(bcp47(), { hour12: false })}）</span>
             </span>
           ) : (
             <span style={{ fontSize: 12.5, color: "var(--ink-3)" }}>{cfg.enabled ? "—" : tr("sc.disabledNote")}</span>
@@ -432,7 +432,7 @@ function SchedulerCard({
         <div className="sc-row-val">
           {lastRun ? (
             <div style={{ fontSize: 12, color: "var(--ink-3)" }}>
-              {lastRun.toLocaleString("zh-TW", { hour12: false })}
+              {lastRun.toLocaleString(bcp47(), { hour12: false })}
               {" · "}
               <span style={{ color: lastResult?.status === "completed" ? "var(--ok, #059669)" : "var(--warn)" }}>
                 {lastResult?.status ?? "unknown"}
@@ -480,13 +480,13 @@ function cronFromTime(t: string): string {
 
 /** 下次執行的口語說明（今天 / 明天 / 日期）*/
 function formatNextRun(d: Date): string {
-  const hhmm = d.toLocaleTimeString("zh-TW", { hour12: false, hour: "2-digit", minute: "2-digit" });
+  const hhmm = d.toLocaleTimeString(bcp47(), { hour12: false, hour: "2-digit", minute: "2-digit" });
   const day = (x: Date) => x.toLocaleDateString("en-CA");
   const now = new Date();
   const tomorrow = new Date(now.getTime() + 86400000);
   if (day(d) === day(now)) return `${t("sc.today")} ${hhmm} `;
   if (day(d) === day(tomorrow)) return `${t("sc.tomorrow")} ${hhmm} `;
-  return `${d.toLocaleDateString("zh-TW", { month: "numeric", day: "numeric" })} ${hhmm} `;
+  return `${d.toLocaleDateString(bcp47(), { month: "numeric", day: "numeric" })} ${hhmm} `;
 }
 
 function humanCron(expr: string): string {

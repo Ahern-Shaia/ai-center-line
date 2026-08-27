@@ -76,7 +76,7 @@ export class TaskConfigService {
     return {
       ...cfg,
       isDefault: same,
-      template: meta ? { key: key!, label: meta.label, description: meta.description } : null,
+      template: meta ? { key: key!, label: msg(meta.label), description: msg(meta.description) } : null,
     };
   }
 

@@ -9,7 +9,7 @@ import {
   type WarroomTaskBoard,
 } from "../api";
 import { useToast } from "../Toast";
-import { t } from "../i18n";
+import { bcp47, t} from "../i18n";
 import { useT } from "../i18n/useT";
 import { catLabel } from "../shared/categoryLabel";
 import { canOpenConvoDetail, navigateTo } from "../nav";
@@ -612,11 +612,11 @@ function TicketDrawer({
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("zh-TW", { month: "numeric", day: "numeric" });
+  return new Date(iso).toLocaleDateString(bcp47(), { month: "numeric", day: "numeric" });
 }
 
 function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("zh-TW", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString(bcp47(), { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 // 空看板上的「立即分析」· custom onboarding（空狀態當老師）

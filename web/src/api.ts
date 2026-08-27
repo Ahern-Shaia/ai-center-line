@@ -1304,6 +1304,15 @@ export interface RoleDto {
   permissions: string[];
 }
 
+/**
+ * 登入頁按過語言切換 → 這次登入不要被伺服器的偏好蓋掉（見 getMyPermissions）。
+ * 只在記憶體裡，不落 localStorage —— 它描述的是「這一次登入流程」，不是長期偏好。
+ */
+let localeChosenAtLogin = false;
+export function markLocaleChosenAtLogin(): void {
+  localeChosenAtLogin = true;
+}
+
 export const getMyPermissions = async () => {
   const res = await req<{ permissions: string[]; displayName?: string | null; locale?: string }>("/me/permissions");
   // 登入 / identity 變時會呼叫 → 順便把顯示名稱同步進 localStorage（topbar 用）· 變了才通知避免多餘 render
@@ -1311,7 +1320,17 @@ export const getMyPermissions = async () => {
     setLocalDisplayName(res.displayName || null);
   }
   // 0071 · 套用這個人存在伺服器的語言偏好 —— localStorage 只在本機，換裝置就沒了
-  if (res.locale === "zh-TW" || res.locale === "en") setLocale(res.locale);
+  //
+  // ⚠️ 但**登入頁明確按過切換的人例外**：他剛剛才選了英文，
+  //    這裡照伺服器值蓋回中文，那顆按鈕看起來就是壞的（2026-08-27 M5 實機截圖抓到）。
+  //    這種情況反過來把他的選擇寫回伺服器，兩邊才會一致。
+  if (localeChosenAtLogin) {
+    const chosen = getLocale();
+    localeChosenAtLogin = false;
+    if (res.locale !== chosen) void updateMyLocale(chosen).catch(() => undefined);
+  } else if (res.locale === "zh-TW" || res.locale === "en") {
+    setLocale(res.locale);
+  }
   return res;
 };
 

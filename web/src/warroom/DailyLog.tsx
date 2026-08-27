@@ -6,7 +6,7 @@ import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import GroupCard from "./GroupCard";
 import { usePageGuide } from "../shared/usePageGuide";
-import { t } from "../i18n";
+import { bcp47, t} from "../i18n";
 import { useT } from "../i18n/useT";
 
 // WTB-M4 · 日誌 view · 按天列 · 每 upload 一 card
@@ -244,7 +244,7 @@ function formatDay(iso: string): string {
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
   const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-  if (isSameDay(d, today)) return `${t("dl.today")} · ${d.toLocaleDateString("zh-TW", { month: "numeric", day: "numeric", weekday: "short" })}`;
-  if (isSameDay(d, yesterday)) return `${t("dl.yesterday")} · ${d.toLocaleDateString("zh-TW", { month: "numeric", day: "numeric", weekday: "short" })}`;
-  return d.toLocaleDateString("zh-TW", { month: "numeric", day: "numeric", weekday: "short" });
+  if (isSameDay(d, today)) return `${t("dl.today")} · ${d.toLocaleDateString(bcp47(), { month: "numeric", day: "numeric", weekday: "short" })}`;
+  if (isSameDay(d, yesterday)) return `${t("dl.yesterday")} · ${d.toLocaleDateString(bcp47(), { month: "numeric", day: "numeric", weekday: "short" })}`;
+  return d.toLocaleDateString(bcp47(), { month: "numeric", day: "numeric", weekday: "short" });
 }

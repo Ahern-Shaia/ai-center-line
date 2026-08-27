@@ -129,10 +129,12 @@ interface TemplateDef {
   };
 }
 
+// ⚠️ label / description 存的是 **i18n key**（M4b · 任務設定頁會顯示它們）。
+//    promptFragment / 規則文字**不進 i18n** —— 那是給模型看的抽取規則，翻了會改變抽取行為。
 export const TEMPLATE_REGISTRY: Record<ExtractionTemplate, TemplateDef> = {
   general: {
-    label: "通用（僅核心欄位）",
-    description: "只抽「誰、什麼事、當責人、狀態」。業種模板還沒建立、或該客戶的回報格式尚未確定時用。",
+    label: "srv.tpl.general.label",
+    description: "srv.tpl.general.desc",
     resultKey: null,
     schema: null,
     promptFragment: "",
@@ -140,8 +142,8 @@ export const TEMPLATE_REGISTRY: Record<ExtractionTemplate, TemplateDef> = {
     selectable: true,
   },
   factory_report: {
-    label: "產線報工型",
-    description: "工廠、產線。回報內容是機台、工單、產出數、不良數、工時。",
+    label: "srv.tpl.factory_report.label",
+    description: "srv.tpl.factory_report.desc",
     resultKey: "daily_reports",
     schema: factoryReportSchema,
     promptFragment: `
@@ -161,8 +163,8 @@ export const TEMPLATE_REGISTRY: Record<ExtractionTemplate, TemplateDef> = {
     selectable: true,
   },
   service_order: {
-    label: "服務工單型",
-    description: "維修、派工、到府服務。回報內容是客戶／案場、車輛、施作項目與金額。",
+    label: "srv.tpl.service_order.label",
+    description: "srv.tpl.service_order.desc",
     resultKey: "service_reports",
     schema: serviceOrderSchema,
     promptFragment: `

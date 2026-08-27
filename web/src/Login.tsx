@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ApiError, login, getLineOauthUrl, completeLineOauth, selectLineTenant, type TenantChoice } from "./api";
+import { ApiError, completeLineOauth, getLineOauthUrl, login, markLocaleChosenAtLogin, selectLineTenant, type TenantChoice } from "./api";
 import { roleLabel } from "./shared/roleLabel";
 import { useLocale, useT } from "./i18n/useT";
 
@@ -94,7 +94,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
               少了它，偵測猜錯語言的人（例如公司電腦是中文 locale 的外籍主管）
               會卡在一個他看不懂的畫面，而且完全沒有出口。 */}
           <button type="button" className="login-locale"
-            onClick={() => setLocale(locale === "en" ? "zh-TW" : "en")}>
+            onClick={() => { markLocaleChosenAtLogin(); setLocale(locale === "en" ? "zh-TW" : "en"); }}>
             {locale === "en" ? "繁體中文" : "English"}
           </button>
         </div>

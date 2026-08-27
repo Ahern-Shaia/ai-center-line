@@ -13,7 +13,15 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import pg from "pg";
-import { ROLE_LABEL } from "../src/auth/role-label.js";
+import { ROLE_LABEL as ROLE_KEY } from "../src/auth/role-label.js";
+import { msg } from "../src/i18n/index.js";
+
+// ⚠️ 2026-08-27 M4b：`role-label.ts` 的值從中文字面改成 **i18n key**
+//    （稽核記錄要依請求語言顯示角色名）。三方一致的保證沒變，
+//    只是伺服器這一方要先用 msg() 解出中文再比 —— 沒有請求上下文時它回中文。
+//    直接比 ROLE_KEY 會變成拿 `srv.role.tenant_admin` 去對 DB 的「總經理室」。
+const ROLE_LABEL: Record<string, string> =
+  Object.fromEntries(Object.entries(ROLE_KEY).map(([k, v]) => [k, msg(v)]));
 
 const admin = () => new pg.Client({ connectionString: process.env.MIGRATION_DATABASE_URL });
 let c: pg.Client;
@@ -58,5 +66,6 @@ test("每個角色都要有中文名 —— 漏一個就會在畫面上露出英
   for (const key of ["aiproot_admin", "consultant", "tenant_admin", "group_owner", "assistant", "employee"]) {
     assert.ok(ROLE_LABEL[key], `${key} 沒有中文名`);
     assert.ok(!/^[a-z_]+$/.test(ROLE_LABEL[key]!), `${key} 的「中文名」看起來還是 role key`);
+    assert.ok(!ROLE_LABEL[key]!.startsWith("srv."), `${key} 的 i18n key 在字典裡找不到 —— msg() fallback 回 key 本身了`);
   }
 });

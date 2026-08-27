@@ -17,6 +17,7 @@ import StyledSelect from "../../shared/StyledSelect";
 import { GROUP_TYPES, groupTypeHint, type LineGroupType } from "../../api";
 import { useTenantPicker } from "../../shared/TenantPicker";
 import { usePageGuide } from "../../shared/usePageGuide";
+import { bcp47 } from "../../i18n";
 
 // tenant_admin「LINE 群組」頁
 // 對照 docs/roles-permissions-matrix.md §3.4 · perm=line-groups:view / assign
@@ -324,7 +325,7 @@ export default function LineGroupsPage() {
 }
 
 function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("zh-TW", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString(bcp47(), { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 /** 表格裡的開關格 · 沒有編輯權限時只顯示狀態 */

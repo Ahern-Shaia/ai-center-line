@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { currentTx } from "../db/client.js";
 import { L1_TRACKED_FIELDS } from "../conversation-analysis/pipeline/schemas.js";
 import { TEMPLATE_REGISTRY, resolveTemplate } from "../conversation-analysis/pipeline/templates.js";
+import { msg } from "../i18n/index.js";
 
 // 抽取健康度 · 對照 docs/modules/ai-analysis-layering.md §5 + M2
 //
@@ -77,7 +78,7 @@ export class ExtractionHealthService {
         tenantId: r.tenant_id,
         tenantName: r.tenant_name,
         template,
-        templateLabel: def.label,
+        templateLabel: msg(def.label),
         messageCount: r.message_count,
         recordCount: r.record_count,
         templateReportCount,

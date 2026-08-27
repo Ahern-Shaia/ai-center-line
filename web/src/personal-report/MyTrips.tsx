@@ -4,7 +4,7 @@ import { ApiError, getMapTileConfig, getSession, getTrips, relabelPunch, type Pu
 import { useToast } from "../Toast";
 import { getTaipeiDate } from "../shared/taipeiDate";
 import { SAME_LOCATION_LABEL, SAME_LOCATION_NEXT, SAME_LOCATION_REASON, SAME_LOCATION_WHY } from "../shared/mileageCopy";
-import { t } from "../i18n";
+import { bcp47, t} from "../i18n";
 import { useT } from "../i18n/useT";
 
 const TripMap = lazy(() => import("./TripMap"));
@@ -243,9 +243,9 @@ function whoami(): string | null {
 
 function formatDay(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("zh-TW", { year: "numeric", month: "numeric", day: "numeric", weekday: "long" });
+  return d.toLocaleDateString(bcp47(), { year: "numeric", month: "numeric", day: "numeric", weekday: "long" });
 }
 
 function formatTimeHM(iso: string): string {
-  return new Date(iso).toLocaleTimeString("zh-TW", { hour12: false, hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString(bcp47(), { hour12: false, hour: "2-digit", minute: "2-digit" });
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, confirmSignoff, getWarroom, type Warroom, type WarroomGroup, type WarroomTicket } from "../api";
 import { useToast } from "../Toast";
-import { t } from "../i18n";
+import { bcp47, t} from "../i18n";
 import { useT } from "../i18n/useT";
 import SourceDrawer from "./SourceDrawer";
 import { InfoTip } from "../shared/InfoTip";
@@ -169,7 +169,7 @@ function DeptItem({
   const lowCount = pending.filter((t) => t.needs_review).length;
   const confirmable = pending.length - lowCount;
   const signedAt = g.signed_at
-    ? new Date(g.signed_at).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })
+    ? new Date(g.signed_at).toLocaleTimeString(bcp47(), { hour: "2-digit", minute: "2-digit", hour12: false })
     : null;
 
   // P2 · 有待辦的列要跳得出來 —— 原本它跟「今日無待簽」只差一個小數字，

@@ -15,7 +15,7 @@ import {
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import SourceMessageList from "../warroom/SourceMessageList";
-import { t } from "../i18n";
+import { bcp47, t} from "../i18n";
 import { useT } from "../i18n/useT";
 
 type AssignedTask = { ticketId: string; summary: string | null; canSeeSource?: boolean };
@@ -524,15 +524,15 @@ function hasNewerAi(r: PersonalDailyReportRow): boolean {
 
 function formatDay(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("zh-TW", { year: "numeric", month: "numeric", day: "numeric", weekday: "long" });
+  return d.toLocaleDateString(bcp47(), { year: "numeric", month: "numeric", day: "numeric", weekday: "long" });
 }
 
 function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("zh-TW", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString(bcp47(), { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function formatTimeHM(iso: string): string {
-  return new Date(iso).toLocaleTimeString("zh-TW", { hour12: false, hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString(bcp47(), { hour12: false, hour: "2-digit", minute: "2-digit" });
 }
 
 // 指派任務一列 · 可加入日報 + （部門制 gate 通過時）展開對照原始對話

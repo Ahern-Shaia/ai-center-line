@@ -13,6 +13,7 @@ import { PERMISSION_GROUPS, PERMISSION_HINT, CRITICAL_PERMISSION_IDS } from "./l
 import RoleList from "./RoleList";
 import CreateRoleDrawer from "./CreateRoleDrawer";
 import type { ViewRole } from "./types";
+import { hasKey } from "../../i18n";
 
 // 權限管理（租戶端）· docs/modules/tenant-role-permissions.md v0.2
 // 版面沿用 aiproot 側 RolesManagement 的 rm-* class —— 兩邊是同一個東西的兩種可見範圍，
@@ -71,9 +72,14 @@ export default function RolePermissionsPage() {
   // 內建與自建走兩支不同的 API，但畫面上是同一份清單、同一個編輯器 ——
   // 先攤平成統一視圖，下面的編輯器就不必到處分岔。
   const builtinView = useMemo<ViewRole[]>(() => roles.map((r) => ({
-    sel: `b:${r.roleKey}`, name: r.roleName, permissions: r.permissions,
+    // ⚠️ 系統角色的名字走 i18n（roleKey 是穩定識別字）· DB 的 roleName 只當 fallback。
+    //    自訂角色（下面那組）是租戶自己打的字，**不翻** —— 翻了等於改客戶取的名字。
+    sel: `b:${r.roleKey}`, name: hasKey(`role.${r.roleKey}`) ? tr(`role.${r.roleKey}`) : r.roleName, permissions: r.permissions,
     memberCount: r.memberCount, isCustom: false, isCustomized: r.isCustomized,
-    roleKey: r.roleKey, sourceHint: ROLE_SOURCE[r.roleKey] ?? "",
+    roleKey: r.roleKey,
+    // ⚠️ ROLE_SOURCE 的值是 i18n key，不是文字 —— 直接放會在畫面上印出
+    //    `baselineHint.employee`（2026-08-27 M5 截圖抓到，自動掃描的正則沒收這個前綴）。
+    sourceHint: ROLE_SOURCE[r.roleKey] ? tr(ROLE_SOURCE[r.roleKey]!) : "",
   })), [roles]);
 
   const customView = useMemo<ViewRole[]>(() => customRoles.map((r) => ({

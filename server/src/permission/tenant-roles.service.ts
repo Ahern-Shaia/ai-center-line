@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, Logger } from "@ne
 import { sql } from "drizzle-orm";
 import { currentTx } from "../db/client.js";
 import { PermissionService } from "./permission.service.js";
-import { msg } from "../i18n/index.js";
+import { hasKey, msg } from "../i18n/index.js";
 
 // 租戶自管角色權限 · docs/modules/tenant-role-permissions.md v0.2
 //
@@ -79,7 +79,10 @@ export class TenantRolesService {
       ORDER BY resource, action
     `);
     return res.rows.map((r) => ({
-      permissionId: r.permission_id, description: r.description, scope: r.scope,
+      permissionId: r.permission_id,
+      // 同 permission.service：字典優先、DB 原文兜底（M4b）
+      description: hasKey(`srv.permdesc.${r.permission_id}`) ? msg(`srv.permdesc.${r.permission_id}`) : r.description,
+      scope: r.scope,
     }));
   }
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { PunchRow, TripRow } from "../api";
-import { getLocale, t } from "../i18n";
+import { bcp47, getLocale, t} from "../i18n";
 
 // 外勤行程地圖 · React.lazy 載入（Leaflet 獨立 chunk）· 對齊 kb/CustomerMap 的 react-leaflet + CARTO light 慣例
 // 打卡點＝CircleMarker（免圖檔資產）· 逐段道路折線＝Polyline（route_geometry 解碼；無則直線虛線）
@@ -53,7 +53,7 @@ export default function TripMap({ punches, trips, tile }: { punches: PunchRow[];
       id: p.punchId,
       pos: [p.lat as number, p.lng as number] as LatLng,
       start: p.punchType === "clock_in",
-      label: `${new Date(p.punchedAt).toLocaleTimeString(getLocale() === "en" ? "en-US" : "zh-TW", { hour12: false, hour: "2-digit", minute: "2-digit" })} ${t(p.punchType === "clock_in" ? "tm.depart" : "tm.arrive")}${p.customerName ? " · " + p.customerName : ""}`,
+      label: `${new Date(p.punchedAt).toLocaleTimeString(bcp47(), { hour12: false, hour: "2-digit", minute: "2-digit" })} ${t(p.punchType === "clock_in" ? "tm.depart" : "tm.arrive")}${p.customerName ? " · " + p.customerName : ""}`,
     })), [punches]);
 
   const allPts = useMemo(() => [...segments.flatMap((s) => s.pts), ...markers.map((m) => m.pos)], [segments, markers]);

@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { AUDIT_ACTOR_LABEL as ROLE_LABEL } from "../auth/role-label.js";
 import { currentTx } from "../db/client.js";
+import { msg } from "../i18n/index.js";
 
 // 稽核記錄 · 讀 audit_log（TenantTxInterceptor 每個請求寫一筆 · CLAUDE.md R5）
 //
@@ -33,57 +34,57 @@ const PAGE_SIZE = 50;
 
 // 路徑前綴 → 中文。長的排前面，比對取第一個命中。
 const PATH_LABEL: [string, string][] = [
-  ["POST /auth/login", "登入"],
-  ["POST /auth/change-password", "變更密碼"],
-  ["GET /warroom/daily-reports", "查看今日日誌"],
-  ["GET /warroom/tickets/…/source", "查看任務來源"],
-  ["PATCH /warroom/tickets/…/assignee", "派發任務"],
-  ["GET /warroom/assignable-members", "查看可指派成員"],
-  ["GET /warroom/group-messages", "查看群組原始訊息"],
-  ["POST /warroom/batches", "手動觸發分析"],
-  ["GET /warroom/tasks", "查看任務看板"],
-  ["GET /warroom", "查看總覽儀表"],
-  ["POST /signoff", "每日核對"],
-  ["GET /signoff", "查看待核對"],
-  ["GET /media/…/content", "開啟檔案"],
-  ["GET /media", "查看素材看板"],
-  ["GET /me/permissions", "載入權限"],
-  ["POST /personal-daily-report", "送出個人日報"],
-  ["GET /personal-daily-report", "查看個人日報"],
-  ["POST /attendance", "外勤打卡"],
-  ["PATCH /attendance", "修改外勤紀錄"],
-  ["GET /attendance", "查看外勤紀錄"],
-  ["POST /conversation-analysis", "上傳對話分析"],
-  ["GET /conversation-analysis", "查看對話分析"],
-  ["GET /tenant-admin", "查看部門與成員"],
-  ["POST /tenant-admin", "變更部門或成員"],
-  ["PATCH /tenant-admin", "變更部門或成員"],
-  ["DELETE /tenant-admin", "刪除部門或成員"],
-  ["POST /tenant-provisioning/users/…/reset-password", "重設同仁密碼"],
-  ["POST /tenant-provisioning", "開通帳號"],
-  ["GET /permissions", "查看權限設定"],
-  ["PATCH /permissions", "變更權限設定"],
-  ["GET /roles", "查看角色設定"],
-  ["POST /roles", "變更角色設定"],
-  ["GET /audit", "查看稽核記錄"],
-  ["GET /line-groups", "查看 LINE 群組"],
-  ["PATCH /line-groups", "變更 LINE 群組設定"],
-  ["GET /line-bots", "查看 LINE 設定"],
-  ["GET /notify-config", "查看通知設定"],
-  ["POST /notify-config", "變更通知設定"],
-  ["PATCH /notify-config", "變更通知設定"],
-  ["GET /scheduler-config", "查看定時任務"],
-  ["PATCH /scheduler-config", "變更定時任務"],
-  ["GET /binding", "查看 LINE 綁定"],
-  ["GET /llm-config", "查看語言模型設定"],
-  ["PATCH /llm-config", "變更語言模型設定"],
-  ["PUT /llm-config", "變更語言模型設定"],
-  ["GET /aiproot-console", "查看平台管理"],
-  ["POST /aiproot-console", "變更平台設定"],
-  ["PATCH /aiproot-console", "變更平台設定"],
+  ["POST /auth/login", "srv.audit.act.post-auth-login"],
+  ["POST /auth/change-password", "srv.audit.act.post-auth-change-password"],
+  ["GET /warroom/daily-reports", "srv.audit.act.get-warroom-daily-reports"],
+  ["GET /warroom/tickets/…/source", "srv.audit.act.get-warroom-tickets-source"],
+  ["PATCH /warroom/tickets/…/assignee", "srv.audit.act.patch-warroom-tickets-assignee"],
+  ["GET /warroom/assignable-members", "srv.audit.act.get-warroom-assignable-members"],
+  ["GET /warroom/group-messages", "srv.audit.act.get-warroom-group-messages"],
+  ["POST /warroom/batches", "srv.audit.act.post-warroom-batches"],
+  ["GET /warroom/tasks", "srv.audit.act.get-warroom-tasks"],
+  ["GET /warroom", "srv.audit.act.get-warroom"],
+  ["POST /signoff", "srv.audit.act.post-signoff"],
+  ["GET /signoff", "srv.audit.act.get-signoff"],
+  ["GET /media/…/content", "srv.audit.act.get-media-content"],
+  ["GET /media", "srv.audit.act.get-media"],
+  ["GET /me/permissions", "srv.audit.act.get-me-permissions"],
+  ["POST /personal-daily-report", "srv.audit.act.post-personal-daily-report"],
+  ["GET /personal-daily-report", "srv.audit.act.get-personal-daily-report"],
+  ["POST /attendance", "srv.audit.act.post-attendance"],
+  ["PATCH /attendance", "srv.audit.act.patch-attendance"],
+  ["GET /attendance", "srv.audit.act.get-attendance"],
+  ["POST /conversation-analysis", "srv.audit.act.post-conversation-analysis"],
+  ["GET /conversation-analysis", "srv.audit.act.get-conversation-analysis"],
+  ["GET /tenant-admin", "srv.audit.act.get-tenant-admin"],
+  ["POST /tenant-admin", "srv.audit.act.post-tenant-admin"],
+  ["PATCH /tenant-admin", "srv.audit.act.patch-tenant-admin"],
+  ["DELETE /tenant-admin", "srv.audit.act.delete-tenant-admin"],
+  ["POST /tenant-provisioning/users/…/reset-password", "srv.audit.act.post-tenant-provisioning-users-reset-password"],
+  ["POST /tenant-provisioning", "srv.audit.act.post-tenant-provisioning"],
+  ["GET /permissions", "srv.audit.act.get-permissions"],
+  ["PATCH /permissions", "srv.audit.act.patch-permissions"],
+  ["GET /roles", "srv.audit.act.get-roles"],
+  ["POST /roles", "srv.audit.act.post-roles"],
+  ["GET /audit", "srv.audit.act.get-audit"],
+  ["GET /line-groups", "srv.audit.act.get-line-groups"],
+  ["PATCH /line-groups", "srv.audit.act.patch-line-groups"],
+  ["GET /line-bots", "srv.audit.act.get-line-bots"],
+  ["GET /notify-config", "srv.audit.act.get-notify-config"],
+  ["POST /notify-config", "srv.audit.act.post-notify-config"],
+  ["PATCH /notify-config", "srv.audit.act.patch-notify-config"],
+  ["GET /scheduler-config", "srv.audit.act.get-scheduler-config"],
+  ["PATCH /scheduler-config", "srv.audit.act.patch-scheduler-config"],
+  ["GET /binding", "srv.audit.act.get-binding"],
+  ["GET /llm-config", "srv.audit.act.get-llm-config"],
+  ["PATCH /llm-config", "srv.audit.act.patch-llm-config"],
+  ["PUT /llm-config", "srv.audit.act.put-llm-config"],
+  ["GET /aiproot-console", "srv.audit.act.get-aiproot-console"],
+  ["POST /aiproot-console", "srv.audit.act.post-aiproot-console"],
+  ["PATCH /aiproot-console", "srv.audit.act.patch-aiproot-console"],
 ];
 
-/** 「GET /line-bots/75c149e5-…?x=1」→「GET /line-bots/…」→ 中文 */
+/** 「GET /line-bots/75c149e5-…?x=1」→「GET /line-bots/…」→ 依請求語言的說明文字 */
 function describe(raw: string): string {
   const noQuery = raw.split("?")[0];
   const normalized = noQuery.replace(
@@ -91,7 +92,7 @@ function describe(raw: string): string {
     "/…",
   );
   for (const [prefix, label] of PATH_LABEL) {
-    if (normalized.startsWith(prefix)) return label;
+    if (normalized.startsWith(prefix)) return msg(label);
   }
   return normalized;
 }
@@ -129,10 +130,10 @@ export class AuditService {
       id: r.id,
       at: r.created_at,
       actorName: r.actor_name,
-      actorRole: r.actor_role ? ROLE_LABEL[r.actor_role] ?? r.actor_role : null,
+      actorRole: r.actor_role ? (ROLE_LABEL[r.actor_role] ? msg(ROLE_LABEL[r.actor_role]) : r.actor_role) : null,
       action: describe(r.action),
       isWrite: !r.action.startsWith("GET "),
-      result: r.result === "denied" ? "已擋下" : "成功",
+      result: r.result === "denied" ? "已擋下" : "成功",  // ⚠️ 前端 audit.res.* 對照表的 key · 這裡是識別字不是文案
     }));
 
     return { items, page, pageSize: PAGE_SIZE, hasNext };

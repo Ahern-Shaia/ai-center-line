@@ -4,7 +4,7 @@ import { useToast } from "../Toast";
 import { catLabel } from "../shared/categoryLabel";
 import { statusLabel } from "../shared/recordStatusLabel";
 import { canOpenConvoDetail, navigateTo } from "../nav";
-import { t } from "../i18n";
+import { bcp47, t} from "../i18n";
 import { useT } from "../i18n/useT";
 
 // 群組日誌的一群 = 一列 feed（V4 時間軸脊重構）。
@@ -220,7 +220,7 @@ export default function GroupCard(props: GroupRowProps) {
 }
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("zh-TW", { hour12: false, hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString(bcp47(), { hour12: false, hour: "2-digit", minute: "2-digit" });
 }
 
 function RecordItem({ r }: { r: Record<string, unknown> }) {

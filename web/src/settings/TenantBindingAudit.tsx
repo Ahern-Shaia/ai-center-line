@@ -12,7 +12,7 @@ import {
 import { useToast } from "../Toast";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import UnboundActiveAlert from "../shared/UnboundActiveAlert";
-import { t } from "../i18n";
+import { bcp47, t} from "../i18n";
 import { useT } from "../i18n/useT";
 
 // 設定 → 員工 LINE 綁定（tenant_admin 自租戶自治版）
@@ -127,7 +127,7 @@ export default function TenantBindingAudit() {
                   <td className="mono">{b.userEmail ?? "—"}</td>
                   <td className="mono" title={b.lineUserId}>{b.lineUserId.slice(0, 12)}…</td>
                   <td className="mono" style={{ fontSize: 11 }}>{b.bindingMethod}</td>
-                  <td className="mono">{new Date(b.boundAt).toLocaleString("zh-TW", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
+                  <td className="mono">{new Date(b.boundAt).toLocaleString(bcp47(), { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
                   <td>
                     {b.status === "active"
                       ? <span style={{ color: "var(--ok-600)", fontWeight: 500 }}>● {tr("tba.active")}</span>

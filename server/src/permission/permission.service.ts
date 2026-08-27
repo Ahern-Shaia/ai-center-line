@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { db, withAuthLookup } from "../db/client.js";
 import type { Role } from "../db/schema.js";
+import { hasKey, msg } from "../i18n/index.js";
 
 // Permission engine · in-memory cache 5 min TTL (OQ-PE-5)
 // 一個實例 · single-flight per user
@@ -74,7 +75,11 @@ export class PermissionService {
     }>(sql`SELECT permission_id, resource, action, description, scope FROM permissions ORDER BY resource, action`);
     return res.rows.map((r) => ({
       permissionId: r.permission_id, resource: r.resource, action: r.action,
-      description: r.description, scope: r.scope,
+      // ⚠️ DB 的 description 是**中文原文**（seed 寫進去的）。這裡優先用字典的
+      //    `srv.permdesc.<permission_id>`，查不到才回 DB 原文 —— 新增權限忘了補字典時
+      //    畫面上仍是看得懂的中文，而不是 `srv.permdesc.xxx:yyy`（M4b）。
+      description: hasKey(`srv.permdesc.${r.permission_id}`) ? msg(`srv.permdesc.${r.permission_id}`) : r.description,
+      scope: r.scope,
     }));
   }
 

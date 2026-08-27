@@ -79,6 +79,17 @@ export function t(key: string, vars?: Record<string, string | number>): string {
 }
 
 /**
+ * 給 `Intl` / `toLocaleDateString` 用的語言標籤。
+ *
+ * ⚠️ 這件事不會被字典守門測試抓到 —— 日期是 `Intl` 產生的，不是字典裡的字串。
+ *    2026-08-27 M5 實機截圖才看到：介面全英文，日期卻是「2026年8月27日 星期四」。
+ *    **任何 toLocale*(...) 都要吃這個函式，不可寫死 "zh-TW"。**
+ */
+export function bcp47(): string {
+  return current === "en" ? "en-US" : "zh-TW";
+}
+
+/**
  * 有沒有這個 key（給守門測試與 debug 用）。
  * t() 會 fallback，所以不能用 t(k) !== k 判斷。
  */
