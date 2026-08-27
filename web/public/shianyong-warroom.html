@@ -97,6 +97,56 @@ h1{font-size:17px;font-weight:500;display:flex;align-items:center;gap:8px;}
  font-size:11.5px;color:#7b7f87;line-height:1.85;}
 .bq-note b{color:#c8cad0;font-weight:500;}
 .bq-note .bq-h{color:#eda100;font-size:12px;font-weight:500;margin-bottom:6px;display:block;}
+/* ══════════════════════════════════════════════════════════════
+   以下為「巡檢」分頁 —— 一律 in- 前綴。
+   ⚠️ 同 bq-：不可複用平面圖的 .card / .kpi / .k / .pill / .d
+      —— 那些定義不同，共用會把已核准的平面圖版面改掉。
+   ══════════════════════════════════════════════════════════════ */
+.in-snap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+ background:#231d14;border:1px solid #4a3a1e;border-radius:10px;
+ padding:9px 13px;font-size:12.5px;color:#e0c48a;margin-bottom:13px;}
+.in-snap b{color:#f0dcae;font-weight:500;}
+.in-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+ gap:11px;margin-bottom:14px;}
+.in-kc{background:#181b1f;border:1px solid #2c2f36;border-radius:11px;padding:12px 14px;}
+.in-kl{font-size:11.5px;color:#9fa3ab;margin-bottom:5px;}
+.in-kv{font-size:23px;font-weight:500;line-height:1.1;}
+.in-kv small{font-size:13px;font-weight:400;color:#9fa3ab;}
+.in-kh{font-size:11px;color:#5f636b;margin-top:4px;}
+.in-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:11px;}
+.in-card{background:#181b1f;border:1px solid #2c2f36;border-left-width:3px;
+ border-radius:11px;padding:11px 13px;cursor:pointer;transition:border-color .12s;}
+.in-card:hover{border-color:#3b82f6;}
+.in-card.in-on{border-color:#3b82f6;background:#1b2028;}
+.in-ch{display:flex;align-items:center;gap:7px;margin-bottom:3px;}
+.in-cn{font-size:14px;color:#e6e7ea;font-weight:500;}
+.in-cip{font-size:11px;color:#7b7f87;font-family:var(--mono,ui-monospace,monospace);}
+.in-cs{font-size:12px;margin:6px 0 7px;}
+.in-cm{font-size:11px;color:#7b7f87;line-height:1.65;}
+.in-cm b{color:#9fa3ab;font-weight:500;}
+.in-legend{display:flex;gap:13px;font-size:12px;color:#9fa3ab;align-items:center;
+ flex-wrap:wrap;margin-bottom:12px;}
+.in-legend span{display:flex;align-items:center;gap:5px;}
+.in-dot{width:10px;height:10px;border-radius:50%;flex:none;}
+.in-dt{margin-top:13px;background:#181b1f;border:1px solid #2c2f36;
+ border-left-width:3px;border-radius:12px;padding:15px 17px;}
+.in-dh{display:flex;justify-content:space-between;align-items:center;
+ flex-wrap:wrap;gap:8px;margin-bottom:13px;}
+.in-dn{font-size:17px;font-weight:500;color:#e6e7ea;}
+.in-did{font-size:12px;color:#7b7f87;font-family:var(--mono,ui-monospace,monospace);}
+.in-pill{font-size:12px;padding:3px 11px;border-radius:8px;}
+.in-dk{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));
+ gap:10px;margin-bottom:13px;}
+.in-dkc{background:#141619;border-radius:8px;padding:9px 11px;}
+.in-dkl{font-size:11px;color:#9fa3ab;margin-bottom:3px;}
+.in-dkv{font-size:15.5px;font-weight:500;color:#e6e7ea;}
+.in-cw{position:relative;width:100%;height:190px;}
+.in-cap{font-size:11px;color:#5f636b;text-align:center;margin-top:7px;line-height:1.7;}
+.in-warn{margin-top:11px;background:#231416;border:1px solid #4a2226;border-radius:9px;
+ padding:10px 13px;font-size:12px;color:#e2a3a8;line-height:1.75;}
+.in-hint{text-align:center;padding:26px;font-size:13px;color:#5f636b;}
+@media(max-width:640px){.in-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
+
 </style></head><body>
 
 <div class="top">
@@ -107,6 +157,7 @@ h1{font-size:17px;font-weight:500;display:flex;align-items:center;gap:8px;}
 <div class="vtabs">
  <div class="vtab on" data-v="fp">平面圖監控</div>
  <div class="vtab" data-v="bq">批次品質</div>
+ <div class="vtab" data-v="insp">巡檢</div>
 </div>
 
 <!-- ══ 平面圖監控（原樣保留）══ -->
@@ -188,6 +239,39 @@ h1{font-size:17px;font-weight:500;display:flex;align-items:center;gap:8px;}
 
  <div class="ft">多利鑫科技　｜　批次品質看板　｜　資料來源：滷味二重鍋 40 批次資料集</div>
 </div>
+
+
+<!-- ══ 巡檢（smart-inspection.md M2 · 形狀 B）══ -->
+<div id="view-insp" class="hide">
+ <!-- ⚠️ FMEA F-7（P0）：死資料。這一條**不可以拿掉**，
+      也不可以在本分頁使用「即時 / 目前 / 現在」這類字眼。 -->
+ <div class="in-snap">
+  <span>資料快照 <b id="in-span"></b>　·　<b>非即時</b>，此頁不會自動更新</span>
+ </div>
+
+ <div class="in-kpi" id="in-kpi"></div>
+
+ <div class="in-legend">
+  <span><i class="in-dot" style="background:#0ca30c"></i>正常回報</span>
+  <span><i class="in-dot" style="background:#eda100"></i>讀數不可信</span>
+  <span><i class="in-dot" style="background:#d03b3b"></i>停止回報</span>
+  <span><i class="in-dot" style="background:#8b8f97"></i>待確認（取樣間隔過長，判準失效）</span>
+  <span style="color:#5f636b">·　判準：<b style="color:#9fa3ab">觀測值</b>（尚未取得儀表量程與設計取樣率）</span>
+ </div>
+
+ <div class="in-grid" id="in-grid"></div>
+ <div id="in-dt"></div>
+ <div class="ft">多利鑫科技　｜　智慧巡檢　｜　點擊相機檢視讀數曲線</div>
+</div>
+
+<script>
+/* ⚠️ 這個 script 必須在其他 script **之前** ——
+   `META` 與巡檢分頁都會讀 INSP，宣告在後面會 ReferenceError。*/
+/* ⚠️ 自動產生 —— 不要手改。
+   來源：scripts/inspection-probe.py --emit-js ~/Downloads/智慧巡檢
+   這是 2026-08-25~27 的**死資料快照**，不會更新（smart-inspection.md 檔頭①）。*/
+const INSP={"meta":{"from":"2026-08-25 14:42","to":"2026-08-27 13:57","total":24441,"csvAbnormal":24259,"bw":1418,"generatedFrom":"scripts/inspection-probe.py --emit-js"},"cam":[{"ip":"192.168.134.101","name":"camera_01","of":null,"x":null,"y":null,"s":"y","last":"08-27 13:56","iv":15,"sil":55,"n":1361,"v":6.6,"lo":-59.7,"hi":537.7,"tenx":76,"q02":-11.8,"q98":25.0,"bw":1418,"sr":[6.75,27.7,24.2,14.3,40.7,20.7,24.05,3.95,23.7,26.25,34.7,4.9,48.7,9.0,29.8,5.95,17.4,5.25,16.05,20.7,17.0,5.85,null,6.8,7.05,26.2,9.3,null,8.55,null,8.7,9.9,6.65,26.05,24.5,13.4,null,7.35,24.5,7.1,24.6,8.9,9.6,9.1,30.2,22.9,19.3,33.7,null,2.8,null,null,5.8,5.05,7.85,15.0,4.7,5.2,2.35,30.65,24.0,26.15,null,5.05,19.05,4.8,24.1,31.2,4.05,7.1,5.1,36.7,19.8,17.3,22.45,30.1,16.3,6.75,8.0,5.9,4.1,null,26.05,null,8.0,10.0,15.7,null,8.4,3.4,null,null,6.1,null,3.0,24.65,24.4,7.25,null,null,2.0,null,4.6,7.75,26.75,null,24.55,6.15,null,2.8,44.4,5.4,5.9,32.7,7.5,3.2,10.5,20.7,22.8,39.4]},{"ip":"192.168.134.103","name":"camera_03","of":null,"x":null,"y":null,"s":"y","last":"08-27 13:57","iv":9,"sil":19,"n":4530,"v":5.0,"lo":-11.0,"hi":10298.0,"tenx":26,"q02":-15.0,"q98":25.0,"bw":1418,"sr":[5.0,8.0,30.0,4.0,21.0,6.0,6.0,15.5,12.5,3.0,21.0,31.0,3.0,4.0,5.0,9.0,4.0,1.5,3.0,4.5,3.0,6.0,6.0,5.0,3.5,3.0,3.0,5.0,7.0,5.0,5.0,6.0,3.0,3.0,5.0,5.0,3.0,2.5,3.0,5.0,8.0,4.5,7.0,6.0,8.0,3.0,2.5,3.0,5.0,5.0,5.5,7.0,21.0,2.0,0.0,5.0,3.0,4.5,3.0,7.5,9.0,3.0,3.0,31.0,6.0,6.0,9.0,5.0,25.0,null,6.0,1.5,28.0,4.0,6.0,6.0,23.0,8.0,2.0,3.0,9.0,8.0,5.0,3.0,0.0,5.0,5.0,6.0,6.5,5.0,6.0,5.0,3.0,5.0,5.0,1.5,5.0,7.0,3.0,3.0,8.0,3.0,23.0,8.0,8.0,5.0,3.0,3.0,5.0,6.0,6.0,4.0,7.0,6.0,8.0,5.5,4.5,9.0,7.0,6.0]},{"ip":"192.168.134.104","name":"camera_04","of":null,"x":null,"y":null,"s":"y","last":"08-27 13:50","iv":21,"sil":453,"n":499,"v":4.7,"lo":-4.1,"hi":3704.4,"tenx":14,"q02":-10.1,"q98":19.5,"bw":1418,"sr":[37.9,39.6,41.25,39.2,39.45,36.3,35.9,4.7,41.6,null,2.9,null,null,1.6,6.8,1.0,null,2.9,null,39.4,null,null,6.4,3.0,8.0,6.45,4.8,5.1,4.7,null,4.85,null,5.25,6.4,5.75,7.0,null,2.5,39.0,4.0,null,null,14.5,4.9,3.3,7.45,9.45,4.1,4.0,35.8,5.1,45.1,2.25,null,5.4,6.2,3.8,0.9,null,389.45,74.1,134.4,null,41.15,null,1.2,null,6.0,null,null,4.25,null,null,3.4,4.1,null,2.5,null,2.7,5.6,6.15,6.55,null,5.6,8.9,3.5,5.15,null,null,6.4,6.5,5.3,8.8,4.5,6.0,null,5.75,null,null,7.95,null,4.4,6.35,null,null,4.2,null,null,2.0,4.0,6.2,5.0,null,41.1,null,5.05,4.85,6.6,2.25,11.5]},{"ip":"192.168.134.105","name":"camera_05","of":null,"x":null,"y":null,"s":"r","last":"08-27 13:40","iv":18,"sil":1055,"n":1548,"v":7.0,"lo":-88.8,"hi":880.8,"tenx":30,"q02":-14.2,"q98":28.2,"bw":1418,"sr":[1.0,2.75,3.7,3.4,8.4,8.0,8.0,12.4,6.9,24.55,13.55,7.7,4.0,8.7,6.6,8.95,6.35,4.95,3.3,3.1,21.8,11.8,1.2,5.1,8.0,8.0,4.95,8.0,8.8,3.3,4.2,8.8,8.0,3.8,6.05,4.85,8.2,3.7,8.8,8.7,4.0,8.05,3.3,8.7,5.2,4.95,null,8.35,null,3.0,8.7,4.4,11.5,10.0,6.45,8.2,8.0,null,0.3,null,9.35,3.6,11.3,5.25,4.75,9.8,0.3,10.85,7.0,4.75,8.7,4.7,34.0,14.7,8.7,7.4,4.2,17.95,8.0,8.2,8.2,4.0,8.8,8.1,8.8,8.0,6.0,6.4,80.8,6.1,6.9,5.4,6.1,5.95,2.0,8.0,8.0,3.55,4.6,5.6,4.4,19.7,5.7,3.2,null,null,4.8,11.05,8.1,8.0,8.05,45.2,5.2,7.9,6.35,4.2,5.45,null,null,0.5]},{"ip":"192.168.134.106","name":"camera_06","of":null,"x":null,"y":null,"s":"g","last":"08-27 13:42","iv":3601,"sil":898,"n":48,"v":-22.1,"lo":-521.7,"hi":-19.9,"tenx":4,"q02":-25.55,"q98":-18.75,"bw":1418,"sr":[-21.4,null,-21.6,null,null,-22.5,null,-21.5,null,null,-20.9,null,-20.9,null,null,-20.9,null,-20.9,null,null,-21.4,null,-21.4,null,null,-221.4,null,-22.2,null,null,-23.1,null,null,-22.7,null,-23.0,null,null,-22.7,null,-22.3,null,null,-23.0,null,-22.9,null,null,-20.9,null,-21.0,null,null,-21.6,null,-23.0,null,null,-21.6,null,-21.9,null,null,-20.9,null,null,-23.0,null,-22.3,null,null,-22.4,null,-22.8,null,null,-21.8,null,-23.0,null,null,-22.4,null,-521.7,null,null,-20.9,null,-23.0,null,null,-22.7,null,-21.2,null,null,-23.0,null,null,-22.6,null,-20.9,null,null,-20.8,null,-21.3,null,null,-23.0,null,-22.8,null,null,-19.9,null,-22.1,null,null,-21.3]},{"ip":"192.168.134.107","name":"camera_07","of":null,"x":null,"y":null,"s":"y","last":"08-27 13:56","iv":12,"sil":67,"n":2915,"v":-34.5,"lo":-52977.7,"hi":-0.0,"tenx":38,"q02":-128.1,"q98":59.1,"bw":1418,"sr":[-31.85,-27.9,-21.8,-11.1,-26.9,-325.4,-145.55,-21.8,-27.9,-38.2,-152.5,-140.7,-14.3,-17.7,-24.3,-21.3,-24.7,-123.3,-133.6,null,-1301.65,-267.7,-21.5,-16.6,-254.7,-57.35,null,-200.7,-82.0,-61.1,-88.8,-34.5,-61.45,-20.2,-60.2,-88.8,-88.8,-63.8,-63.8,-38.8,-38.4,-34.8,-30.6,-14.8,-34.4,-34.7,-38.0,-38.4,-313.6,-37.4,-36.0,-37.7,-38.7,-15.25,-284.7,-82.8,-38.4,-34.9,-38.8,-94.4,-34.2,-279.6,-38.2,-20.3,-28.9,-297.3,-28.8,-38.5,-268.7,-312.6,-34.0,-36.2,-63.45,-21.5,-22.8,-35.3,-38.2,-33.4,-66.2,-88.8,-302.6,-88.8,-84.8,-22.3,-18.15,-88.8,-38.8,-57.25,-88.8,-88.8,-88.6,-88.3,-59.45,-86.0,-86.8,-88.8,-88.0,-61.0,-385.7,-34.4,-282.7,-33.0,-38.3,-21.8,-19.75,-283.6,-238.35,-307.6,-307.6,-38.9,-34.5,-234.0,-33.7,-20.3,-20.7,-277.6,-34.6,-297.8,-38.3,-38.3]},{"ip":"192.168.134.108","name":"camera_08","of":null,"x":null,"y":null,"s":"r","last":"08-27 13:42","iv":15,"sil":905,"n":753,"v":-19.1,"lo":-719.7,"hi":20.9,"tenx":14,"q02":-57.1,"q98":18.9,"bw":1418,"sr":[-20.3,-14.7,-27.0,null,-20.5,null,null,-12.3,-118.0,-13.0,null,-19.3,null,null,-20.1,null,null,-11.3,-17.8,null,-14.1,-19.5,-9.3,-19.7,null,-20.1,-14.3,-10.8,-13.2,null,-14.9,null,-20.4,null,null,-20.6,-49.3,-15.6,-19.9,null,-22.5,null,null,-20.0,-220.7,null,-18.9,-12.3,-77.7,-19.55,-369.4,null,-19.6,null,-19.0,-14.6,-77.7,-12.1,-11.65,-77.3,-78.5,null,-49.4,null,-20.0,null,null,-17.9,-6.15,-77.5,-117.6,null,-18.5,null,null,-19.0,-10.5,-16.9,-17.7,-17.6,-13.65,-18.9,-19.2,-14.6,-19.7,-19.8,-19.7,-19.2,-10.55,-18.1,-19.7,-19.95,null,null,-20.7,null,-14.55,-19.4,-18.4,-14.45,null,-20.8,null,null,-220.9,null,-19.4,-49.5,-11.8,-117.75,null,-49.7,null,-20.3,-19.5,-19.9,-14.0,-14.0,null,-11.1]},{"ip":"192.168.134.109","name":"camera_09","of":null,"x":null,"y":null,"s":"y","last":"08-27 13:54","iv":15,"sil":196,"n":1706,"v":-17.4,"lo":-78460.7,"hi":-0.0,"tenx":8,"q02":-51.8,"q98":17.0,"bw":1418,"sr":[-20.7,-13.7,null,-19.0,null,-13.2,-15.45,null,-46.4,-17.5,-10.5,-49.7,null,-24.4,null,-11.6,-12.7,null,null,-20.4,-11.55,-21.5,-28.3,-28.8,null,-12.75,-10.6,-14.2,-24.7,-25.15,null,-25.3,-25.25,null,-25.15,-13.55,-15.4,-14.25,-28.0,-22.3,-23.6,-24.7,-24.85,-22.65,-21.3,-9.7,-12.7,-16.0,-4759.7,-246.0,-17.1,-32.15,null,-8.35,-14.2,-16.3,-25.3,-10.3,-14.9,-45.65,-16.4,-17.1,-46.3,null,-45.5,-8.3,-17.5,-11.2,-16.6,-44.55,null,null,-15.9,null,-16.6,null,-9.05,-21.8,null,-12.05,-8.9,-8.0,-17.1,-17.4,-8.3,-8.55,-14.8,-14.5,-11.4,-8.8,-8.8,-8.5,-18.7,-9.4,-14.5,-14.85,-14.3,-44.0,-16.5,-18.7,null,-50.15,-45.75,-47.0,-10.5,null,-8.75,-9.25,-73.5,-14.7,-45.6,null,null,-45.3,-44.4,-11.55,-9.55,-20.65,-7.5,-8.85]},{"ip":"192.168.134.110","name":"camera_10","of":null,"x":null,"y":null,"s":"y","last":"08-27 13:56","iv":12,"sil":93,"n":1416,"v":-24.3,"lo":-5201.7,"hi":-0.0,"tenx":16,"q02":-89.5,"q98":40.9,"bw":1418,"sr":[-23.3,-122.6,-22.4,null,-73.65,-73.6,-21.9,null,-2.9,-18.1,-21.9,-23.6,-24.8,-125.0,-20.6,null,-54.2,-72.95,-269.4,-54.0,-84.8,-52.05,-8.8,-9.8,-13.7,-19.7,-22.4,-24.0,-24.8,-19.2,-23.5,-24.8,-80.8,-20.7,null,-56.8,-80.8,-12.8,-6.75,null,-20.25,-127.4,-132.9,-123.6,-72.7,-270.35,-123.5,-123.5,-221.6,null,null,-122.65,-70.2,-2.8,-7.7,-220.5,null,-223.6,null,-24.0,null,null,-23.9,null,-71.55,null,null,-24.9,-11.0,-15.4,-30.5,-88.0,-88.8,-84.8,-21.0,-51.65,-26.4,-88.8,-19.3,-20.7,-24.75,-80.8,-88.8,-10.8,-12.9,null,-51.3,null,-55.5,-23.0,-19.7,-54.35,-56.6,-51.3,-51.5,-88.8,-24.6,-20.75,-9.55,-8.1,-19.7,-110.9,null,-124.5,-74.9,-70.6,null,null,-25.0,-70.7,-20.85,null,-73.55,-270.4,-5.1,-14.15,null,null,-23.5,-122.3]},{"ip":"192.168.134.141","name":"camera_15","of":null,"x":null,"y":null,"s":"y","last":"08-27 13:52","iv":18,"sil":346,"n":975,"v":-19.7,"lo":-5197.7,"hi":-1.5,"tenx":20,"q02":-52.9,"q98":13.5,"bw":1418,"sr":[-20.4,null,-20.3,-112.0,null,-14.55,-14.3,-11.6,null,-20.4,null,null,-20.1,null,-20.0,-12.2,-15.6,null,null,-20.4,null,-20.8,null,null,-20.0,-8.6,-15.7,-28.3,-24.5,null,-20.3,null,null,-20.1,null,-9.9,-15.1,-24.9,-40.85,null,-112.55,null,null,-20.2,null,-15.6,-44.4,null,-198.7,-21.15,-22.5,null,null,-20.3,null,-10.8,-14.8,-24.0,-24.0,null,-47.3,-77.3,null,null,-20.3,null,-12.2,-19.9,null,-25.4,-207.7,-19.9,-19.8,-19.8,-14.75,-19.7,-10.45,-14.35,-24.65,null,null,-14.9,-19.8,-19.7,-19.7,-19.7,-9.7,-18.2,-117.5,null,-20.0,-14.85,-19.7,-19.7,-19.6,-14.6,-10.85,-18.5,-24.6,null,null,-109.8,-197.7,-108.7,null,-108.15,-90.0,-48.1,-221.4,-21.2,null,-20.0,null,-49.9,-109.25,-108.7,-119.7,-18.7,-23.1,-21.0]},{"ip":"192.168.134.143","name":"camera_16","of":null,"x":null,"y":null,"s":"g","last":"08-27 13:57","iv":21,"sil":18,"n":2318,"v":-20.4,"lo":-688.0,"hi":-0.0,"tenx":5,"q02":-67.05,"q98":26.15,"bw":1418,"sr":[-23.2,-21.9,-23.55,-23.9,-19.7,-19.8,-18.4,-13.9,-24.1,-21.0,-21.1,-23.0,-23.65,-19.7,-19.7,-20.8,-21.3,-22.0,-19.7,-19.95,-13.5,-16.0,-55.0,-24.1,-19.8,-19.55,-56.15,-24.0,-20.1,-23.7,-23.3,-23.6,-21.4,-14.75,-22.9,-23.6,-8.8,-21.8,-19.4,-19.0,-23.1,-22.9,-19.2,-19.7,-19.05,-19.15,-23.1,-22.5,-8.8,-12.5,-16.9,-7.4,-19.0,-19.0,-23.0,-21.5,-20.9,null,-23.9,-23.9,-12.95,-17.9,-21.9,-18.4,-19.45,-20.4,-8.8,-14.4,-22.3,-21.15,-23.4,-22.7,-22.6,-23.2,-22.3,-19.85,-20.0,-21.2,-23.0,-23.25,-18.6,-18.1,-16.25,-23.0,-20.0,-21.7,-19.5,-21.9,-20.8,-19.7,-21.0,-20.3,-20.55,-21.5,-22.5,-23.0,-19.15,-8.8,-22.05,-22.7,-18.55,-20.9,-80.0,-18.8,-13.65,-18.75,-23.7,-18.9,-8.8,-8.8,-17.5,-8.8,-9.7,-18.1,-51.85,-20.5,-52.2,-19.45,-21.5,-23.4]},{"ip":"192.168.134.144","name":"camera_17","of":null,"x":null,"y":null,"s":"g","last":"08-27 13:43","iv":3600,"sil":847,"n":45,"v":-0.6,"lo":-88.8,"hi":-0.0,"tenx":2,"q02":-1.8,"q98":0.6,"bw":1418,"sr":[null,null,null,null,null,-0.6,null,-0.7,null,null,-0.3,null,-0.2,null,null,-0.3,null,-0.3,null,null,-0.4,null,-0.4,null,null,-0.1,null,-0.3,null,null,-1.2,null,null,-1.0,null,-88.8,null,null,-88.8,null,-0.9,null,null,-0.6,null,-0.1,null,null,-0.2,null,-8.8,null,null,-0.9,null,-0.6,null,null,-0.1,null,-0.4,null,null,-1.7,null,null,-1.0,null,-1.1,null,null,-0.8,null,-0.2,null,null,-0.2,null,-0.3,null,null,-1.2,null,null,null,null,-1.1,null,-0.8,null,null,-0.5,null,null,-0.5,null,-88.8,null,null,-0.8,null,-0.8,null,null,-0.3,null,-0.0,null,null,-0.6,null,-1.6,null,null,-1.4,null,-1.7,null,null,-0.7]},{"ip":"192.168.134.146","name":"八色","of":null,"x":null,"y":null,"s":"y","last":"08-27 13:57","iv":77,"sil":0,"n":1517,"v":88.8,"lo":3.0,"hi":8842.0,"tenx":39,"q02":-230.88,"q98":408.48,"bw":1418,"sr":[888.0,88.8,488.4,888.0,48.84,88.8,882.0,828.0,458.4,828.0,458.4,488.4,888.0,48.84,822.0,458.4,88.8,488.4,826.0,88.8,88.8,88.8,886.0,88.8,863.0,88.8,458.4,828.0,488.4,828.0,88.8,488.4,88.8,860.0,838.0,88.8,888.0,885.0,88.8,88.8,886.0,488.4,458.4,88.8,88.8,8.88,88.8,48.84,48.84,448.44,88.8,88.0,88.8,88.8,88.8,484.4,88.8,88.8,88.8,88.8,488.4,48.84,88.8,88.0,444.44,488.4,88.8,88.8,444.44,488.4,88.8,88.8,88.8,880.0,886.0,880.0,88.8,488.4,null,null,886.0,88.8,886.0,887.0,88.8,888.0,887.0,88.8,88.8,1357.0,888.0,888.0,88.8,88.8,88.8,886.0,886.0,886.0,88.8,882.0,88.8,886.0,487.4,458.4,88.8,484.4,487.4,88.8,88.8,484.4,88.8,484.4,88.8,88.8,88.8,88.8,488.4,88.8,88.8,88.8]},{"ip":"192.168.134.147","name":"camera_20","of":null,"x":null,"y":null,"s":"r","last":"08-27 13:17","iv":9,"sil":2429,"n":1067,"v":-36.7,"lo":-629.7,"hi":-3.1,"tenx":6,"q02":-62.3,"q98":-11.1,"bw":1418,"sr":[-30.4,-36.75,null,null,-34.5,-35.7,-37.95,null,-28.6,-38.8,-55.7,-30.9,-34.3,-36.45,null,-38.8,-34.3,null,-56.1,-38.8,-34.7,null,-30.2,-35.3,-38.3,-55.85,-38.0,-34.2,null,-30.1,-35.25,-38.8,null,-30.1,-34.95,-58.5,null,-30.2,-56.5,-60.7,-56.6,-55.65,-36.8,-36.9,null,-80.5,-38.8,null,null,-30.4,-35.5,null,-31.3,-55.5,-58.55,null,-28.8,-36.65,null,null,-30.2,-80.2,null,-36.75,null,-36.85,null,null,-29.8,-36.7,null,-27.8,-80.8,null,null,-30.7,-36.7,null,-88.8,-31.3,-58.0,-357.7,-35.7,-55.7,-57.65,-58.7,-26.5,-31.4,-197.35,-191.2,-56.35,-57.75,-63.25,-191.2,null,-38.0,null,null,-30.9,-56.35,-61.85,-56.5,-56.5,-197.35,-100.9,null,-80.2,-59.55,null,-30.4,-32.8,-59.9,null,-57.45,-38.8,-35.4,null,-28.8,-58.95,null]},{"ip":"192.168.134.149","name":"camera_22","of":null,"x":null,"y":null,"s":"r","last":"08-27 08:29","iv":9,"sil":19731,"n":2365,"v":88.0,"lo":-988.0,"hi":133130.0,"tenx":9,"q02":-616.0,"q98":792.0,"bw":1418,"sr":[388.0,0.0,0.0,0.0,0.0,88.0,0.0,0.0,-88.0,88.0,-88.0,88.0,-88.0,88.0,88.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,88.0,-88.0,88.0,-88.0,88.0,-88.0,0.0,0.0,-88.0,0.0,0.0,0.0,88.0,-88.0,0.0,0.0,0.0,0.0,-88.0,88.0,88.0,84.5,538.0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,-88.0,0.0,0.0,0.0,88.0,-88.0,0.0,0.0,0.0,88.0,-88.0,0.0,88.0,-88.0,-88.0,0.0,0.0,0.0,0.0,338.0,98.0,88.0,null,null,null,null,null,null,null,null,null,null,null,null,null]},{"ip":"192.168.134.150","name":"camera_23","of":null,"x":null,"y":null,"s":"r","last":"08-26 17:56","iv":6,"sil":72112,"n":1378,"v":-21.3,"lo":-76199.1,"hi":-0.0,"tenx":26,"q02":-50.9,"q98":8.3,"bw":1418,"sr":[-21.7,-19.65,-18.5,-19.9,-21.75,-121.85,-120.45,-50.45,-18.85,-21.1,-270.95,-321.6,-21.95,-121.9,-21.65,-21.4,-28.7,-22.0,-21.4,-22.0,-19.35,-21.45,-19.3,-21.9,-21.5,-21.4,-23.35,-21.85,-21.35,-19.7,-21.55,-21.9,-19.6,-21.5,-421.4,-21.85,-21.5,null,-270.7,-21.8,-21.6,-18.1,null,-7.1,-9.4,-18.6,-19.7,-13.6,-18.45,-103.7,-20.4,-14.05,-19.6,-18.65,-13.0,-21.6,-21.7,-105.7,-21.1,-21.0,-21.2,-18.05,-20.5,null,-8.8,-7.2,-14.45,-19.7,-21.3,-204.7,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]}]};
+</script>
 
 <script>
 /* ════ 平面圖監控 —— 原樣未動 ════ */
@@ -377,16 +461,146 @@ scatter(); ngTable(); series();
 
 /* ── 分頁切換 ── */
 const META={fp:["平面圖監控","機聯設備 28 台　｜　2F 15 台　3F 13 台"],
-            bq:["批次品質",`${D.kpi.n} 批　｜　${D.kpi.d0} ~ ${D.kpi.d1}　｜　3F 二重鍋 13 台`]};
+            bq:["批次品質",`${D.kpi.n} 批　｜　${D.kpi.d0} ~ ${D.kpi.d1}　｜　3F 二重鍋 13 台`],
+            /* ⚠️ 這行寫「快照」不寫「即時」—— FMEA F-7（P0），死資料不可讓人以為是現況 */
+            insp:["巡檢",`相機 ${INSP.cam.length} 台　｜　快照 ${INSP.meta.from} ~ ${INSP.meta.to}　｜　${INSP.meta.total.toLocaleString()} 筆讀數`]};
 document.querySelectorAll(".vtab").forEach(t=>t.onclick=()=>{
  document.querySelectorAll(".vtab").forEach(x=>x.classList.remove("on"));
  t.classList.add("on");
  const v=t.dataset.v;
  document.getElementById("view-fp").classList.toggle("hide",v!=="fp");
  document.getElementById("view-bq").classList.toggle("hide",v!=="bq");
+ document.getElementById("view-insp").classList.toggle("hide",v!=="insp");
  q("#vsub").textContent=META[v][0];
  q("#vmeta").textContent=META[v][1];
  scrollTo(0,0);
 });
 })();
-</script></body></html>
+</script>
+<script>
+/* ════ 巡檢（smart-inspection.md M2/M3 · 形狀 B）════
+   ⚠️ 自成一個 IIFE：本頁已經有兩個 `const S=`（平面圖一個、批次品質一個），
+      不包起來會撞名。所有識別字用 in / I 前綴。                              */
+(function(){
+const IS={g:"#0ca30c",y:"#eda100",r:"#d03b3b",q:"#8b8f97"};
+const IT={g:"正常回報",y:"讀數不可信",r:"停止回報",q:"待確認"};
+/* 每一種燈號都要能回答「所以我該做什麼」—— 只給顏色等於沒說 */
+const IA={g:"—",y:"重新框 ROI／調焦",r:"檢查相機或網路",q:"向現場確認取樣設定"};
+
+/* ⚠️⚠️ 「待確認」這一格是刻意的，不是多餘的。
+   `.106` / `.144` 一小時才回報一次。我的「停止回報」判準拿的是**該台自己的
+   中位間隔**，於是它們的中位數就是 3600s、於是「準時」、於是綠燈 ——
+   **綠燈的原因是我判斷不出來，不是現場真的沒事。**
+   在客戶回答 C2（刻意降頻還是壞了？）之前，這種台不可以畫成綠燈。
+   見 smart-inspection.md §2.4 / FMEA F-10 / OQ-SI-4。 */
+const ISLOW=1800;                       // 半小時以上一筆 = 判準失效區
+const ist=c=>(c.s==="g"&&c.iv>=ISLOW)?"q":c.s;
+const idur=x=>x<90?`${x} 秒`:x<5400?`${Math.round(x/60)} 分`:`${(x/3600).toFixed(1)} 小時`;
+const iq=x=>document.querySelector(x);
+/* 排序：要處理的排前面。**不按 IP 排** —— 按 IP 排等於把最該看的藏在中間 */
+const IORD={r:0,y:1,q:2,g:3};
+const cams=INSP.cam.slice().sort((a,b)=>IORD[ist(a)]-IORD[ist(b)]||a.ip.localeCompare(b.ip));
+let isel=null;
+
+function ikpi(){
+ const online=cams.filter(c=>ist(c)!=="r").length;
+ const ok=cams.filter(c=>ist(c)==="g").length;
+ const unsure=cams.filter(c=>ist(c)==="q").length;
+ const todo=cams.length-ok;
+ const ks=[
+  ["回報中相機",`${online}<small> / ${cams.length}</small>`,`${cams.length-online} 台停止回報`,online===cams.length?IS.g:IS.r],
+  ["讀數可信",`${ok}<small> / ${cams.length}</small>`,`${cams.length-ok-(cams.length-online)-unsure} 台判讀跳動`,ok===cams.length?IS.g:IS.y],
+  ["需處理",`${todo}<small> 台</small>`,unsure?`含 ${unsure} 台待確認`:"紅燈優先",todo?IS.y:IS.g],
+  ["快照讀數",`${INSP.meta.total.toLocaleString()}<small> 筆</small>`,"16 台 · 約 2 天",'#9fa3ab']];
+ iq("#in-kpi").innerHTML=ks.map(k=>
+  `<div class="in-kc"><div class="in-kl">${k[0]}</div>`
+  +`<div class="in-kv" style="color:${k[3]}">${k[1]}</div>`
+  +`<div class="in-kh">${k[2]}</div></div>`).join("");
+}
+
+function icards(){
+ iq("#in-grid").innerHTML=cams.map(c=>{
+  const st=ist(c),col=IS[st];
+  return `<div class="in-card${isel===c.ip?" in-on":""}" data-ip="${c.ip}" style="border-left-color:${col}">`
+   +`<div class="in-ch"><i class="in-dot" style="background:${col}"></i>`
+   +`<span class="in-cn">${c.name}</span></div>`
+   +`<div class="in-cip">${c.ip}</div>`
+   +`<div class="in-cs" style="color:${col}">${IT[st]}</div>`
+   +`<div class="in-cm">最後回報 <b>${c.last}</b>`
+   +(st==="r"?`　<b style="color:${col}">（靜默 ${idur(c.sil)}）</b>`:"")+`<br>`
+   +`每 <b>${c.iv}s</b> 一筆　·　<b>${c.n.toLocaleString()}</b> 筆</div></div>`;}).join("");
+ iq("#in-grid").querySelectorAll(".in-card").forEach(el=>
+  el.onclick=()=>{isel=(isel===el.dataset.ip?null:el.dataset.ip);icards();idetail();});
+}
+
+/* 讀數曲線。
+   ⚠️ 三個刻意的設計，都是為了不說謊：
+   ① 空桶（該時段沒回報）**斷線不內插** —— 那個洞就是「停止回報」本身，
+      內插會把它畫成一條平順的線，正好抹掉最該看到的事。
+   ② y 軸用 **中位數 ± 4×MAD**（emitter 算好的 q02/q98）—— 有相機讀到 ±13 萬，
+      照實畫整條線會被壓成一條水平線。夾了就**必須標出夾掉幾筆**，不可默默截掉。
+   ③ 取樣間隔 > 圖表桶寬的相機（例 camera_06 一小時一筆、桶寬 23 分），
+      **線段本來就會斷** —— 那不是「沒回報」。caption 要分辨這兩件事，
+      不然會把正常降頻講成故障。                                        */
+function ichart(c){
+ const W=900,H=190,ml=52,mr=12,mt=14,mb=26;
+ const pts=c.sr, val=pts.filter(v=>v!==null);
+ if(!val.length){iq("#in-cv").innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="13" fill="#7b7f87">此區間沒有讀數</text>`;return 0;}
+ let lo=c.q02,hi=c.q98;
+ if(hi-lo<1e-6){hi=lo+1;}
+ const clipped=val.filter(v=>v>hi||v<lo).length;
+ const pad=(hi-lo)*0.12; lo-=pad; hi+=pad;
+ const px=i=>ml+i*(W-ml-mr)/(pts.length-1);
+ const py=v=>mt+(hi-Math.max(lo,Math.min(hi,v)))*(H-mt-mb)/(hi-lo);
+ let g="";
+ for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4,y=py(v);
+  g+=`<line x1="${ml}" y1="${y}" x2="${W-mr}" y2="${y}" stroke="rgba(137,135,129,.18)" stroke-width="1"/>`
+   +`<text x="${ml-7}" y="${y+4}" text-anchor="end" font-size="11" fill="#7b7f87">${v.toFixed(Math.abs(hi-lo)<10?1:0)}</text>`;}
+ /* 斷線：null 就結束當前 path，下一段重新 M */
+ let d="",open=false;
+ pts.forEach((v,i)=>{ if(v===null){open=false;return;}
+  d+=(open?"L":"M")+px(i).toFixed(1)+" "+py(v).toFixed(1)+" "; open=true; });
+ g+=`<path d="${d}" fill="none" stroke="${IS[ist(c)]}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+ g+=`<text x="${ml}" y="${H-6}" font-size="11" fill="#7b7f87">${INSP.meta.from.slice(5)}</text>`;
+ g+=`<text x="${W-mr}" y="${H-6}" text-anchor="end" font-size="11" fill="#7b7f87">${INSP.meta.to.slice(5)}</text>`;
+ iq("#in-cv").innerHTML=g;
+ return clipped;
+}
+
+function idetail(){
+ const el=iq("#in-dt");
+ if(!isel){el.innerHTML='<div class="in-hint">點擊相機卡片，檢視該台的讀數曲線</div>';return;}
+ const c=cams.find(x=>x.ip===isel),st=ist(c),col=IS[st];
+ const gaps=c.sr.filter(v=>v===null).length;
+ const ks=[["最後回報",c.last],["取樣間隔",c.iv+"s"],["快照筆數",c.n.toLocaleString()],
+  ["讀數中位",c.v===null?"—":c.v],["讀數範圍",c.lo===null?"—":`${c.lo} ~ ${c.hi}`],
+  ["判讀跳動",c.tenx+"%"],["該做什麼",IA[st]]];
+ el.innerHTML=`<div class="in-dt" style="border-left-color:${col}">`
+  +`<div class="in-dh"><div style="display:flex;align-items:center;gap:9px">`
+  +`<i class="in-dot" style="background:${col}"></i><span class="in-dn">${c.name}</span>`
+  +`<span class="in-did">${c.ip}</span></div>`
+  +`<span class="in-pill" style="background:${col}26;color:${col}">${IT[st]}</span></div>`
+  +`<div class="in-dk">`+ks.map(k=>`<div class="in-dkc"><div class="in-dkl">${k[0]}</div><div class="in-dkv">${k[1]}</div></div>`).join("")+`</div>`
+  +`<div class="in-cw"><svg id="in-cv" viewBox="0 0 900 190" width="100%" height="100%" preserveAspectRatio="none"></svg></div>`
+  +`<div class="in-cap" id="in-cap"></div>`
+  +(st==="q"?`<div class="in-warn" style="background:#1c1e22;border-color:#3a3d44;color:#b9bdc4">這台<b>每 ${c.iv}s 才回報一次</b>，別台是 6~21s。<br>⚠️ 我們的「停止回報」判準用的是<b>該台自己的中位間隔</b> —— 對這台來說 ${c.iv}s 就是「準時」，所以它<b>不會亮紅燈</b>。<br><b>綠燈的原因是判斷不出來，不是現場沒事。</b>需要向現場確認：這是刻意降頻，還是故障？</div>`:"")
+  +(st==="y"?`<div class="in-warn">這台的判讀有 <b>${c.tenx}%</b> 的相鄰兩筆相差約 10 倍（例 5.9 → 59.7）—— 那是<b>小數點位數判讀不穩</b>，不是現場數值在震盪。<br>在取得儀表量程之前，<b>這台的讀數不可作為判斷依據</b>。</div>`:"")
+  +(st==="r"?`<div class="in-warn">這台最後一次回報是 <b>${c.last}</b>，已靜默 <b>${idur(c.sil)}</b> —— 它正常每 ${c.iv}s 一筆，等於<b>連續漏了約 ${Math.round(c.sil/Math.max(c.iv,1))} 個回報週期</b>。<br>⚠️ 現行系統<b>只在數值變動時告警，沒回報就不會叫</b> —— 這台在原始 CSV 裡的「異常」數是 0。</div>`:"")
+  +`</div>`;
+ const clipped=ichart(c);
+ const bw=Math.round(INSP.meta.bw/60);
+ /* ⚠️ 取樣間隔比桶寬還疏的相機，線段斷是**數學上的必然**，不是故障。
+    這兩句不可以講成同一句話。 */
+ const sparse=c.iv>INSP.meta.bw;
+ iq("#in-cap").innerHTML=`讀數曲線　·　${INSP.meta.from} ~ ${INSP.meta.to}（${c.sr.length} 個時間點，每點約 ${bw} 分）`
+  +(gaps?(sparse
+    ? `<br><span style="color:#8b8f97">線段中斷 ${gaps} 處 —— 這台每 ${c.iv}s 才一筆，比每點 ${bw} 分還疏，<b>斷是正常的</b>，不代表沒回報</span>`
+    : `<br><b style="color:#eda100">線段中斷 ${gaps} 處＝該時段沒有回報</b>`):"")
+  +(clipped?`<br><b style="color:#d03b3b">${clipped} 點超出圖表範圍（y 軸取中位數 ±4×MAD），未省略、僅未畫出</b>`:"");
+}
+
+iq("#in-span").textContent=`${INSP.meta.from} ~ ${INSP.meta.to}`;
+ikpi();icards();idetail();
+})();
+</script>
+</body></html>

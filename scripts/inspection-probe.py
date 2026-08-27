@@ -74,13 +74,129 @@ def load(root: str) -> tuple[list[dict], list[tuple[str, str]]]:
     return rows, unparsed
 
 
+
+# ══════════════════════════════════════════════════════════════════
+# --emit-js · 產出 shianyong-warroom.html 要用的 INSP 靜態資料
+#   docs/modules/smart-inspection.md M1 / A1
+# ══════════════════════════════════════════════════════════════════
+
+BUCKETS = 120   # 讀數曲線的取樣點數
+
+
+def classify(rs: list, span_end, med_gap: float, tenx_ratio: float, vals: list) -> str:
+    """燈號。⚠️ 判準是**觀測值**不是工程量程（OQ-SI-2/3 未到）—— 畫面上必須標明。"""
+    silent = (span_end - rs[-1]["_t"]).total_seconds()
+    if silent > med_gap * 20 and silent > 600:
+        return "r"
+    if tenx_ratio > 10 or (vals and max(map(abs, vals)) > 1000):
+        return "y"
+    return "g"
+
+
+def series(rs: list, t0, t1) -> list:
+    """把整個觀測窗切成 BUCKETS 個時間桶，各取中位數。
+
+    ⚠️ **空桶留 None 不要內插** —— 那個洞就是「這段時間沒回報」，
+       內插會把停止回報畫成一條平順的線，正好抹掉我們最想讓人看到的事。
+    """
+    total = (t1 - t0).total_seconds() or 1
+    buckets: list[list[float]] = [[] for _ in range(BUCKETS)]
+    for r in rs:
+        if r["_v"] is None:
+            continue
+        i = min(BUCKETS - 1, int((r["_t"] - t0).total_seconds() / total * BUCKETS))
+        buckets[i].append(r["_v"])
+    return [round(statistics.median(b), 2) if b else None for b in buckets]
+
+
+def emit_js(rows: list) -> str:
+    import json
+    by: dict[str, list] = collections.defaultdict(list)
+    for r in rows:
+        by[r["_ip"]].append(r)
+    t0 = min(r["_t"] for r in rows)
+    t1 = max(r["_t"] for r in rows)
+
+    cams = []
+    for ip in sorted(by, key=lambda x: [int(o) for o in x.split(".")]):
+        rs = by[ip]
+        vals = [r["_v"] for r in rs if r["_v"] is not None]
+        gaps = [(rs[i + 1]["_t"] - rs[i]["_t"]).total_seconds() for i in range(len(rs) - 1)]
+        med_gap = statistics.median(gaps) if gaps else 0.0
+
+        t10 = t_tot = 0
+        pv = None
+        for v in vals:
+            if pv is not None and abs(pv) > 0.05 and abs(v) > 0.05:
+                t_tot += 1
+                lo, hi = sorted((abs(pv), abs(v)))
+                if TENX_LO <= hi / lo <= TENX_HI:
+                    t10 += 1
+            pv = v
+        ratio = round(t10 / t_tot * 100) if t_tot else 0
+
+        # 圖表 y 軸範圍：**中位數 ± 4×MAD**。
+        #
+        # ⚠️ 走過兩版都不對，記在這裡：
+        #  v1 取 |v| 的 P99 做 ±cap 對稱夾 → 單邊分佈（camera_06 全負、中位 −22
+        #     但有幾筆 −521）被拉成 −500 ~ −20，整條線貼在頂端變成一條直線。
+        #  v2 改成帶正負號的 P2/P98 → **小樣本失效**：camera_06 只有 48 筆，
+        #     2% 就是索引 0，等於沒夾。
+        #  MAD 對樣本數與單邊分佈都不敏感，而且離群值多寡不影響它。
+        med_v = statistics.median(vals) if vals else 0.0
+        mad = statistics.median([abs(v - med_v) for v in vals]) if vals else 0.0
+        halfspan = max(mad * 4, abs(med_v) * 0.08, 0.5)
+        q02, q98 = med_v - halfspan, med_v + halfspan
+        cams.append({
+            "ip": ip,
+            "name": rs[0]["相機名稱"],
+            # ⚠️ of/x/y 是形狀 A（平面圖圖層）用的，要客戶給對應表才填（OQ-SI-2 / §5）
+            "of": None, "x": None, "y": None,
+            "s": classify(rs, t1, med_gap, ratio, vals),
+            "last": rs[-1]["_t"].strftime("%m-%d %H:%M"),
+            "iv": round(med_gap),
+            # 距離快照結束多久沒回報。⚠️ 卡片上只寫「最後回報 13:40」看不出嚴不嚴重 ——
+            # 別台是 13:56，差 16 分；但這台正常每 18s 一筆，16 分就是斷了 53 個週期。
+            "sil": round((t1 - rs[-1]["_t"]).total_seconds()),
+            "n": len(rs),
+            "v": round(statistics.median(vals), 1) if vals else None,
+            "lo": round(min(vals), 1) if vals else None,
+            "hi": round(max(vals), 1) if vals else None,
+            "tenx": ratio,
+            "q02": round(q02, 2), "q98": round(q98, 2),
+            # 圖表桶寬（秒）· 取樣間隔 > 桶寬的相機，線段本來就會斷，
+            # 那不是「沒回報」—— 前端要靠這個值分辨（不然會把正常降頻講成故障）
+            "bw": round((t1 - t0).total_seconds() / BUCKETS),
+            "sr": series(rs, t0, t1),
+        })
+
+    meta = {
+        "from": t0.strftime("%Y-%m-%d %H:%M"),
+        "to": t1.strftime("%Y-%m-%d %H:%M"),
+        "total": len(rows),
+        # 現行 CSV 那個 99.3% 的「異常」數 —— **只放在資料裡供對照，不上畫面**（OQ-SI-6）
+        "csvAbnormal": sum(1 for r in rows if r["狀態"].startswith("[異常]")),
+        "bw": round((t1 - t0).total_seconds() / BUCKETS),
+        "generatedFrom": "scripts/inspection-probe.py --emit-js",
+    }
+    return ("/* ⚠️ 自動產生 —— 不要手改。\n"
+            "   來源：scripts/inspection-probe.py --emit-js ~/Downloads/智慧巡檢\n"
+            "   這是 2026-08-25~27 的**死資料快照**，不會更新（smart-inspection.md 檔頭①）。*/\n"
+            "const INSP=" + json.dumps({"meta": meta, "cam": cams}, ensure_ascii=False, separators=(",", ":")) + ";")
+
+
 def main() -> int:
-    root = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/Downloads/智慧巡檢")
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    root = args[0] if args else os.path.expanduser("~/Downloads/智慧巡檢")
     rows, unparsed = load(root)
     if not rows:
         print(f"❌ {root} 沒有讀到任何資料", file=sys.stderr)
         return 1
     rows.sort(key=lambda r: (r["_ip"], r["_t"]))
+
+    if "--emit-js" in sys.argv:
+        print(emit_js(rows))
+        return 0
 
     span = (min(r["_t"] for r in rows), max(r["_t"] for r in rows))
     days = max((span[1] - span[0]).total_seconds() / 86400, 1e-9)
