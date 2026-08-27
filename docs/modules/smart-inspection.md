@@ -31,6 +31,8 @@
 >
 > 落點：[`web/public/shianyong-warroom.html`](../../web/public/shianyong-warroom.html)
 > 體檢腳本：`scripts/inspection-probe.py`
+> ⏸ **視覺改版**：[`shianyong-warroom-redesign.md`](shianyong-warroom-redesign.md)（方向已裁定 · 未排期）
+>   —— 本模組交付的是**資料與判準**；整頁的視覺水準另案處理，兩件事不要混在一起改
 >
 > 作者：Claude Code（草擬）
 > 版本：v1.1-shipped（2026-08-27）
