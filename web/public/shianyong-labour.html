@@ -85,7 +85,6 @@ const LABOUR={"meta":{"period":"2026/07/16 ～ 2026/08/26（不含週末）","ca
   <div class="sub" id="sub"></div>
  </header>
 
- <div class="sim" id="sim"></div>
  <div class="kpi" id="kpi"></div>
 
  <div class="card">
@@ -115,6 +114,8 @@ const LABOUR={"meta":{"period":"2026/07/16 ～ 2026/08/26（不含週末）","ca
   <div id="daybody"></div>
  </div>
 
+ <div class="note" id="datanote" style="background:var(--card);border-color:var(--line);color:var(--ink2);margin-top:0"></div>
+
  <footer>
   多利鑫科技　｜　人時分析 Labour Hours<br>
   資料來源：人員在工位影像判讀 / Vision-based station presence
@@ -131,12 +132,16 @@ let sel=M.realDay;
 
 q("#sub").textContent=`${M.period}　·　${M.days} 個工作日　·　4 工位　·　${M.totalEvents.toLocaleString()} 筆判讀事件`;
 
-/* ⚠️ 這一段是這頁的前提不是裝飾 —— 30 天裡只有 1 天對應原始報表。
-   拿掉就等於把模擬數字當實測給客戶看。 */
-q("#sim").innerHTML=
- `⚠️ <b>模擬資料 / Simulated data</b>　·　${M.days} 個工作日中<b>僅 ${M.realDay} 對應原始報表</b>，`
- +`其餘 ${M.days-1} 日為產生資料。<br>`
- +`Only ${M.realDay} maps to the original report; the other ${M.days-1} days are generated.`;
+/* 資料性質註腳（頁尾，非開場橫幅）。
+   ⚠️ 2026-08-28 用戶裁定拿掉頂部紅色警示 —— 但**不可刪內容**：
+      客戶當場問「這 30 天是實際量的嗎」時，這裡要答得出來。 */
+q("#datanote").innerHTML=
+ `<b style="color:var(--ink)">資料說明 / About this data</b><br>`
+ +`${M.days} 個工作日（${M.period}）　·　4 工位 S01~S04　·　每工位每日可用 ${hm(M.capPerStation)}。<br>`
+ +`本頁為<b>示範資料集</b>：${M.realDay} 對應原始報表，其餘 ${M.days-1} 日依工位特性與星期效應產生。`
+ +`逐事件明細以 ${M.realDay} 一日作為代表（${LABOUR.realEvents.length} 筆）。<br>`
+ +`<span style="color:var(--ink3)">Sample dataset · ${M.realDay} maps to the original report; `
+ +`event-level detail is shown for that day as a representative sample.</span>`;
 
 const rates=D.map(d=>d.rate),lo=Math.min(...rates),hi=Math.max(...rates);
 const loD=D.find(d=>d.rate===lo),hiD=D.find(d=>d.rate===hi);
@@ -211,8 +216,7 @@ function daybody(){
  let h=`<div class="s" style="margin:12px 0 9px">`
   +`<b style="color:var(--ink);font-size:13px">${d.d}（${d.dow}）</b>　稼動率 ${(d.rate*100).toFixed(1)}%　·　合計 ${hm(d.total)}　·　${d.nEvents} 筆事件`
   +(d.note?`<br><b style="color:${C.warn}">${d.note}</b>`:"")
-  +`<br>${real?`<b style="color:${C.ok}">此日對應原始報表 / matches original report</b>`
-              :`<b style="color:#e8a9ae">此日為產生資料，逐事件明細不列出</b>`}</div>`;
+  +(real?`<br><b style="color:${C.ok}">對應原始報表 / matches original report</b>`:"")+`</div>`;
  h+=`<div style="overflow-x:auto"><table><thead><tr><th>工位</th><th class="n">上午</th><th class="n">下午</th>`
   +`<th class="n">晚上</th><th class="n">合計</th><th class="n">佔可用</th></tr></thead><tbody>`;
  M.stations.forEach((n,i)=>{const p=d.s[i]/CAP,c=p>=.55?C.ok:p>=.3?C.warn:C.low;

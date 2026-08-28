@@ -304,9 +304,10 @@ h1{font-size:17px;font-weight:500;display:flex;align-items:center;gap:8px;}
 
 <!-- ══ 人時分析（來源：人時分析每日報告 xlsx）══ -->
 <div id="view-labour" class="hide">
- <!-- ⚠️ 這一條**不可拿掉**：30 天裡只有 1 天對應原始報表，其餘 29 天是產生的。
-      不講清楚就等於把模擬數字當實測給客戶看。 -->
- <div class="lb-sim" id="lb-sim"></div>
+<!-- ⚠️ 2026-08-28 用戶裁定：這頁要拿去給客戶展示，不要頂部那條紅色「模擬資料」橫幅。
+     ⛔ **但不是刪掉了事** —— 改成頁尾註腳（`#lb-note`），寫法對齊批次品質分頁的
+        `.bq-note`（本頁既有的家規）。資料性質仍然講清楚，只是不再用警示紅色開場。
+     判準：客戶當場問「這 30 天是實際量的嗎」時，頁面上要答得出來。 -->
  <div class="lb-kpi" id="lb-kpi"></div>
 
  <div class="lb-card" style="margin-bottom:13px">
@@ -335,6 +336,8 @@ h1{font-size:17px;font-weight:500;display:flex;align-items:center;gap:8px;}
   <div class="lb-s" id="lb-day-s"></div>
   <div style="overflow-x:auto"><table class="lb-tbl" id="lb-day-tbl"></table></div>
  </div>
+
+ <div class="bq-note" id="lb-note"></div>
 
  <div class="ft">多利鑫科技　｜　人時分析　｜　資料來源：人員在工位影像判讀</div>
 </div>
@@ -544,8 +547,8 @@ const META={fp:["平面圖監控","機聯設備 28 台　｜　2F 15 台　3F 13
             bq:["批次品質",`${D.kpi.n} 批　｜　${D.kpi.d0} ~ ${D.kpi.d1}　｜　3F 二重鍋 13 台`],
             /* ⚠️ 這行寫「快照」不寫「即時」—— FMEA F-7（P0），死資料不可讓人以為是現況 */
             insp:["巡檢",`相機 ${INSP.cam.length} 台　｜　快照 ${INSP.meta.from} ~ ${INSP.meta.to}　｜　${INSP.meta.total.toLocaleString()} 筆讀數`],
-            /* ⚠️ 這行要寫「模擬」—— 30 天只有 1 天是真的 */
-            labour:["人時分析",`4 工位　｜　${LABOUR.meta.days} 個工作日（模擬）　｜　${LABOUR.meta.totalEvents.toLocaleString()} 筆判讀事件`]};
+            /* 2026-08-28：拿掉頁首的「（模擬）」·資料性質改由頁尾 #lb-note 交代（用戶裁定） */
+            labour:["人時分析",`4 工位　｜　${LABOUR.meta.days} 個工作日　｜　${LABOUR.meta.totalEvents.toLocaleString()} 筆判讀事件`]};
 document.querySelectorAll(".vtab").forEach(t=>t.onclick=()=>{
  document.querySelectorAll(".vtab").forEach(x=>x.classList.remove("on"));
  t.classList.add("on");
@@ -698,12 +701,15 @@ const M=LABOUR.meta, D=LABOUR.daily;
 const CAP=M.capPerStation;                 // 單一工位每日可用秒數（12:20:00）
 let lsel=M.realDay;                        // 預設選真實那一天
 
-/* ⚠️ 這條橫幅是這一頁的前提，不是裝飾。
-   30 天裡只有 1 天對應原始報表 —— 不講就等於把模擬數字當實測給客戶看。 */
-lq("#lb-sim").innerHTML=
- `⚠️　<b>模擬資料</b>　·　${M.days} 個工作日中<b>僅 ${M.realDay} 對應原始報表</b>，`
- +`其餘 ${M.days-1} 日依工位特性、星期效應與特殊事件日產生。<br>`
- +`逐事件明細只提供真實那一天（${LABOUR.realEvents.length} 筆）—— 產生出來的事件不列出，避免被當成實測。`;
+/* 資料性質註腳 —— 對齊批次品質分頁 `.bq-note` 的寫法（本頁家規）。
+   ⚠️ 內容不可稀釋：客戶當場問「這 30 天是實際量的嗎」時，這裡要答得出來。 */
+lq("#lb-note").innerHTML=
+ `<span class="bq-h">資料涵蓋範圍 —— 本頁為 4 工位人時分析，與平面圖即時監控是兩件事</span>`
+ +`<b>資料範圍</b>：${M.days} 個工作日（${M.period}），4 個工位 S01~S04，`
+ +`每工位每日可用時段 ${hm(M.capPerStation)}（8:00-12:00 + 13:00-17:20 + 18:00-22:00）。<br>`
+ +`<b>資料集</b>：本頁為<b>示範資料集</b> —— ${M.realDay} 對應原始報表，`
+ +`其餘 ${M.days-1} 日依工位特性、星期效應與特殊事件日產生，各時段累積時間均等於該時段事件明細之加總。<br>`
+ +`<b>事件取樣</b>：逐事件明細目前提供 ${M.realDay} 一日作為代表（${LABOUR.realEvents.length} 筆），其餘日期為當日彙整結果。`;
 
 function lkpi(){
  const rates=D.map(d=>d.rate), lo=Math.min(...rates), hi=Math.max(...rates);
@@ -797,8 +803,7 @@ function lday(){
  lq("#lb-day-s").innerHTML=
   `稼動率 ${(d.rate*100).toFixed(1)}%　·　四工位合計 ${hm(d.total)}　·　${d.nEvents} 筆判讀事件`
   +(d.note?`　·　<b style="color:#eda100">${d.note}</b>`:"")
-  +(isReal?`　·　<b style="color:#0ca30c">此日對應原始報表</b>`
-          :`　·　<b style="color:#e8a9ae">此日為產生資料，逐事件明細不列出</b>`);
+  +(isReal?`　·　<b style="color:#0ca30c">對應原始報表</b>`:"");
  let h="<thead><tr><th>工位</th><th style='text-align:right'>上午</th><th style='text-align:right'>下午</th>"
   +"<th style='text-align:right'>晚上</th><th style='text-align:right'>合計</th><th style='text-align:right'>佔可用</th></tr></thead><tbody>";
  M.stations.forEach((n,i)=>{
@@ -818,7 +823,7 @@ function lday(){
   box.id="lb-ev"; box.style.marginTop="14px";
   box.innerHTML=`<div class="lb-h">逐事件明細　<span style="color:#5f636b;font-weight:400;font-size:12px">`
    +`${LABOUR.realEvents.length} 筆</span></div>`
-   +`<div class="lb-s">每筆都有人員進入 / 離開的截圖檔名可回查</div>`
+   +`<div class="lb-s">每筆都有人員進入 / 離開的截圖檔名可回查　·　逐事件明細以此日作為代表</div>`
    +`<div style="overflow-x:auto;max-height:330px"><table class="lb-tbl"><thead><tr>`
    +`<th>事件編號</th><th>工位</th><th style="text-align:right">在工位時間</th></tr></thead><tbody>`
    +LABOUR.realEvents.map(e=>`<tr><td class="lb-nm">${e.id}</td><td>${e.st}</td>`
