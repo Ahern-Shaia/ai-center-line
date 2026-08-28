@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8" />
-<title>鮮湧 · 圖文選單背景圖（4 宮格 · 2500×1686）</title>
+<title>鮮湧 · 圖文選單背景圖（4 宮格 · 中英雙語 · 2500×1686）</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { background: #fff; }
@@ -39,12 +39,30 @@
   /* 第 4 格是預寫的 —— 灰階＋「尚未開放」，避免有人照著去接動作 */
   .c-bot    { background: #F1F3F6; } .c-bot    .accent { background: #94A3B8; } .c-bot    svg { stroke: #94A3B8; }
   .c-bot .label { color: #94A3B8; }
+  .c-bot .en    { color: #A0AAB8; }
   .c-bot .cap   { color: #A8B2C1; }
 
   .icon { display: flex; align-items: center; justify-content: center; }
-  .icon svg { width: 210px; height: 210px; fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
-  .label { color: var(--ink); font-weight: 700; letter-spacing: 3px; font-size: 96px; margin-top: 34px; white-space: nowrap; }
-  .cap { color: var(--muted); letter-spacing: 5px; font-size: 44px; margin-top: 20px; white-space: nowrap; }
+  .icon svg { width: 186px; height: 186px; fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+  .label { color: var(--ink); font-weight: 700; letter-spacing: 3px; font-size: 84px; margin-top: 30px; white-space: nowrap; }
+
+  /* 英文獨立一行。
+     ⚠️ 字體堆疊把拉丁字型排在 CJK **之前** —— 只寫 PingFang/Noto Sans TC 的話，
+        英文會用它們的拉丁字符，字重與字距都偏弱，在 2500px 的圖上一眼看得出來。
+     ⚠️ 字級刻意比中文小一階（84 → 50）：這是給台灣工廠現場看的選單，
+        中文是主、英文是輔。兩行等大會讓中文使用者多花時間找自己要的那行。 */
+  .en {
+    font-family: -apple-system, "Helvetica Neue", Inter, "Segoe UI", Arial,
+                 "PingFang TC", "Noto Sans TC", sans-serif;
+    font-weight: 600; letter-spacing: 0.5px; font-size: 50px;
+    margin-top: 14px; white-space: nowrap; color: #334155;
+  }
+  .cap {
+    font-family: -apple-system, "Helvetica Neue", Inter, "Segoe UI", Arial,
+                 "PingFang TC", "Noto Sans TC", sans-serif;
+    color: var(--muted); letter-spacing: 2px; font-size: 40px;
+    margin-top: 22px; white-space: nowrap;
+  }
 </style>
 </head>
 <body>
@@ -57,7 +75,8 @@
         <svg viewBox="0 0 24 24"><path d="M14.6 4H6.5A1.5 1.5 0 0 0 5 5.5v13A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-7.9"/><line x1="8.7" y1="9.6" x2="13.4" y2="9.6"/><line x1="8.7" y1="13.2" x2="12" y2="13.2"/><path d="M17.1 3.1l3.3 3.3-5.4 5.4h-3.3V8.5z"/></svg>
       </div>
       <div class="label">報工單</div>
-      <div class="cap">填寫回報</div>
+      <div class="en">Work Log</div>
+      <div class="cap">填寫回報・Submit</div>
     </div>
 
     <!-- 2 · 我的日報 -->
@@ -67,7 +86,8 @@
         <svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.2"/><path d="M9 3.5h6v3.2H9z"/><line x1="8.6" y1="11" x2="15.4" y2="11"/><line x1="8.6" y1="14.4" x2="15.4" y2="14.4"/><line x1="8.6" y1="17.8" x2="12.8" y2="17.8"/></svg>
       </div>
       <div class="label">我的日報</div>
-      <div class="cap">編輯今日</div>
+      <div class="en">My Daily Report</div>
+      <div class="cap">編輯今日・Edit Today</div>
     </div>
 
     <!-- 3 · 智慧聯網戰情室 -->
@@ -77,7 +97,8 @@
         <svg viewBox="0 0 24 24"><path d="M3.6 17.4a8.8 8.8 0 1 1 16.8 0"/><path d="M12 17.4l4.2-5.2"/><circle cx="12" cy="17.4" r="1.4"/><line x1="12" y1="5.4" x2="12" y2="7"/><line x1="4.9" y1="10.4" x2="6.4" y2="11"/><line x1="19.1" y1="10.4" x2="17.6" y2="11"/></svg>
       </div>
       <div class="label">智慧聯網戰情室</div>
-      <div class="cap">營運總覽</div>
+      <div class="en">Ops Command Center</div>
+      <div class="cap">營運總覽・Live Overview</div>
     </div>
 
     <!-- 4 · 內部客服機器人（預寫 · 尚未開放）-->
@@ -87,7 +108,8 @@
         <svg viewBox="0 0 24 24"><rect x="4.4" y="8.2" width="15.2" height="11.2" rx="3.2"/><line x1="12" y1="8.2" x2="12" y2="5.6"/><circle cx="12" cy="4.3" r="1.4"/><circle cx="9.1" cy="13.2" r="1.1"/><circle cx="14.9" cy="13.2" r="1.1"/><line x1="10.2" y1="16.6" x2="13.8" y2="16.6"/></svg>
       </div>
       <div class="label">內部客服機器人</div>
-      <div class="cap">尚未開放</div>
+      <div class="en">Internal Support Bot</div>
+      <div class="cap">尚未開放・Coming Soon</div>
     </div>
 
   </div>
