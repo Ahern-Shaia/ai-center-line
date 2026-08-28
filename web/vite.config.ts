@@ -31,7 +31,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": {
-        target: "http://localhost:3000",
+        // 本機常同時跑別的專案（weyver 也吃 3000）——換 port 不用改檔
+        target: process.env.API_TARGET ?? "http://localhost:3000",
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/api/, ""),
       },

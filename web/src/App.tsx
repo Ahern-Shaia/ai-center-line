@@ -187,7 +187,13 @@ export default function App() {
 
   useEffect(() => {
     document.title = `${t(PAGE_TITLE[route.page])} · ${t("app.name")}`;
-  }, [route.page]);
+    // ⚠️ 依賴要有 `tr` —— 它是 useT() 回傳的，換語言時才會變。
+    //    只放 [route.page] 的話：切了語言，分頁標題**留在舊語言**，
+    //    直到使用者剛好換一頁才跟上（2026-08-28 實測：中文介面標題是
+    //    "Overview · aiproot War Room"）。
+    //    ⭐ 這種 bug 只有**停在原地切語言**才看得到 —— 一換頁 effect 就重跑，
+    //       自己把證據蓋掉了。
+  }, [route.page, tr]);
 
   if (!session) return <Login onLogin={() => setSession(getSession())} />;
 

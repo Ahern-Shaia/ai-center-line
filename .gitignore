@@ -18,3 +18,6 @@ dist/
 
 # SOP 靜態站的建置產物（Render build command 產生 · 不進版控）
 sop-site/
+
+# i18n 掃描產物
+web/output/

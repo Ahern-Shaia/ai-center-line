@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --port 5173"
+    "preview": "vite preview --port 5173",
+    "i18n:sweep": "node scripts/i18n-sweep.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
