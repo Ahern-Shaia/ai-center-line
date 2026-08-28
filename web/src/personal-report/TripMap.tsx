@@ -58,6 +58,11 @@ export default function TripMap({ punches, trips, tile }: { punches: PunchRow[];
 
   const allPts = useMemo(() => [...segments.flatMap((s) => s.pts), ...markers.map((m) => m.pos)], [segments, markers]);
 
+  // ⚠️ 2026-08-28：預設圖磚由 CARTO 換成 OSM 標準圖磚。
+  //    CARTO 的免費 basemap 改政策了 —— 現在**回 HTTP 200，但把
+  //    「API KEY REQUIRED / carto.com/basemaps/apikey」印在圖上**。
+  //    不報錯、不是 4xx、圖也載得出來 —— 前端完全察覺不到，實機截圖才看得見。
+  //    OSM 標準圖磚免金鑰。租戶若設了 MapTiler key 仍走那條。
   const useMaptiler = tile.tileProvider === "maptiler" && !!tile.tileApiKey;
 
   return (
@@ -70,9 +75,8 @@ export default function TripMap({ punches, trips, tile }: { punches: PunchRow[];
           />
         ) : (
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &middot; &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            subdomains={["a", "b", "c", "d"]}
+            url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
         )}
         {segments.map((s, i) => s.pts.length ? (
