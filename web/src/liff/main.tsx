@@ -99,6 +99,7 @@ function LiffLocaleToggle({ persist }: { persist: boolean }) {
 
 function LiffApp() {
   const tr = useT();
+  const [locale] = useLocale();   // 只給 document.title 的 effect 當依賴用（見下）
   const [phase, setPhase] = useState<Phase>("init");
   const [ctx, setCtx] = useState<LiffCtx | null>(null);
   const [msg, setMsg] = useState("");
@@ -110,7 +111,10 @@ function LiffApp() {
     //    tsc 擋不住（兩邊都是 string），而且**中英文都壞**。
     //    這是 `document.title` 版本的同一個坑（memory: text-to-key-render-not-updated）。
     if (k) document.title = tr(k);
-  }, [phase, tr]);
+      // ⚠️⚠️ 依賴放 `locale` 不能放 `tr` —— `useT()` 回傳的是同一個 module-level
+    //    `t` 函式，參考永遠不變，React 看不出差別，切語言時這個 effect 不會重跑。
+    //    （2026-08-28 在 App.tsx 踩到，這裡是同一個形狀。守門測試會擋。）
+  }, [phase, locale]);
 
   useEffect(() => {
     (async () => {

@@ -5,7 +5,7 @@ import Login from "./Login";
 import Shell, { canOpenPage, firstAllowedPage, NAV_TITLE, PAGE_GROUP } from "./Shell";
 // document.title 在 effect 裡設，不是 render —— 用純函式 t() 而非 useT()
 import { t } from "./i18n";
-import { useT } from "./i18n/useT";
+import { useT, useLocale } from "./i18n/useT";
 import WarRoom from "./warroom/WarRoom";
 import TaskBoard from "./warroom/TaskBoard";
 import DailyLog from "./warroom/DailyLog";
@@ -109,6 +109,7 @@ function defaultRouteFor(session: Session | null): Route {
 
 export default function App() {
   const tr = useT();          // 側欄／麵包屑要跟著語言重繪
+  const [locale] = useLocale();   // effect 依賴要用**語言值**，不能用 tr（見下方 document.title）
   const [session, setSession] = useState<Session | null>(() => getSession());
   const [route, setRoute] = useState<Route>(() => defaultRouteFor(getSession()));
   const [refreshing, setRefreshing] = useState(false);
@@ -187,13 +188,19 @@ export default function App() {
 
   useEffect(() => {
     document.title = `${t(PAGE_TITLE[route.page])} · ${t("app.name")}`;
-    // ⚠️ 依賴要有 `tr` —— 它是 useT() 回傳的，換語言時才會變。
-    //    只放 [route.page] 的話：切了語言，分頁標題**留在舊語言**，
-    //    直到使用者剛好換一頁才跟上（2026-08-28 實測：中文介面標題是
-    //    "Overview · aiproot War Room"）。
-    //    ⭐ 這種 bug 只有**停在原地切語言**才看得到 —— 一換頁 effect 就重跑，
-    //       自己把證據蓋掉了。
-  }, [route.page, tr]);
+    // ⚠️ 依賴要放**語言值** `locale`。
+    //    只放 [route.page]：切了語言，分頁標題留在舊語言，直到剛好換一頁才跟上
+    //    （2026-08-28 實測：中文介面上標題是 "Overview · aiproot War Room"）。
+    //
+    // ⚠️⚠️ 放 `tr` 沒有用 —— `useT()` 回傳的是**同一個 module-level `t` 函式**，
+    //    參考永遠不變，React 比對依賴時看不出差別。
+    //    我第一次就是這樣修的，而且「掃描沒再報」讓我以為修好了（假陰性）。
+    //    ⭐ 任何 useEffect / useMemo / useCallback 要跟著語言重跑，
+    //       依賴一律放 useLocale() 的值，不要放 useT() 的回傳。
+    //
+    // ⭐ 這種 bug 只有**停在原地切語言**才看得到 —— 一換頁 effect 就重跑，
+    //    自己把證據蓋掉了。
+  }, [route.page, locale]);
 
   if (!session) return <Login onLogin={() => setSession(getSession())} />;
 

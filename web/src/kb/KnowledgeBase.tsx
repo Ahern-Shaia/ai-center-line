@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useT } from "../i18n/useT";
 import DemoDataBanner from "../shared/DemoDataBanner";
 import { KM_CARDS, type KnowledgeCard } from "../mockdata/knowledgeCards";
 
@@ -8,6 +9,7 @@ function fmtDate(iso: string): string {
 }
 
 export default function KnowledgeBase() {
+  const tr = useT();
   const [q, setQ] = useState("");
   const [dept, setDept] = useState<string | "all">("all");
 
@@ -25,11 +27,11 @@ export default function KnowledgeBase() {
 
   return (
     <>
-      <DemoDataBanner doc="docs/modules/rag-conversations.md（知識卡抽取尚未實作）" />
+      <DemoDataBanner doc={tr("km.demoDoc")} />
       <div className="pane-hdr">
         <div>
-          <h1>知識庫</h1>
-          <div className="sub">AI 從 LINE 對話中抽取的可重用知識卡 · 共 {KM_CARDS.length} 張 · 已同步 RAG 索引 {KM_CARDS.filter((c) => c.indexedRag).length} 張</div>
+          <h1>{tr("nav.km")}</h1>
+          <div className="sub">{tr("km.sub", { total: KM_CARDS.length, indexed: KM_CARDS.filter((c) => c.indexedRag).length })}</div>
         </div>
       </div>
 
@@ -38,11 +40,11 @@ export default function KnowledgeBase() {
           className="kb-search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="搜尋標題、內文或標籤，例如：升降機 / 消防"
-          aria-label="搜尋知識卡"
+          placeholder={tr("km.searchPh")}
+          aria-label={tr("km.searchAria")}
         />
         <div className="kb-dept-filters">
-          <button className={`kb-dept${dept === "all" ? " active" : ""}`} onClick={() => setDept("all")}>全部</button>
+          <button className={`kb-dept${dept === "all" ? " active" : ""}`} onClick={() => setDept("all")}>{tr("km.all")}</button>
           {depts.map((d) => (
             <button key={d} className={`kb-dept${dept === d ? " active" : ""}`} onClick={() => setDept(d)}>{d}</button>
           ))}
@@ -51,8 +53,8 @@ export default function KnowledgeBase() {
 
       {list.length === 0 && (
         <div className="state">
-          <h3>找不到符合的知識卡</h3>
-          <p>試試調整關鍵字或切換部門</p>
+          <h3>{tr("km.noneTitle")}</h3>
+          <p>{tr("km.noneHint")}</p>
         </div>
       )}
 
@@ -64,11 +66,12 @@ export default function KnowledgeBase() {
 }
 
 function KmCard({ c }: { c: KnowledgeCard }) {
+  const tr = useT();
   return (
     <article className="kb-card">
       <header className="kb-card-hdr">
         <span className="kb-card-id mono">{c.id}</span>
-        {c.indexedRag && <span className="kb-card-badge">已入庫</span>}
+        {c.indexedRag && <span className="kb-card-badge">{tr("km.indexed")}</span>}
       </header>
       <h3 className="kb-card-title">{c.title}</h3>
       <p className="kb-card-body">{c.body}</p>
@@ -80,7 +83,7 @@ function KmCard({ c }: { c: KnowledgeCard }) {
         <span className="kb-card-dot">·</span>
         <span className="mono">{fmtDate(c.updatedAt)}</span>
         <span className="kb-card-dot">·</span>
-        <span>來源 {c.sourceCount} 則訊息</span>
+        <span>{tr("km.sourceCount", { n: c.sourceCount })}</span>
       </footer>
     </article>
   );

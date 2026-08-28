@@ -87,9 +87,15 @@ function classify(text) {
   for (const raw of text.split("\n")) {
     const line = raw.trim();
     if (!line || !CJK.test(line) || INTENTIONAL.has(line)) continue;
+    /**
+     * ⚠️ 用「包含」比對會誤判。示範知識卡的內文裡有「低信心」三個字，
+     *    就被歸成「wr.conf.low 漏翻」—— 那是資料不是介面。
+     *    要求**整行相符，或字典值涵蓋這行大半**，A 桶才站得住。
+     *    比不上的照樣進 B 桶，一行都不會被吃掉。
+     */
     let key = null;
     for (const [val, k] of ZH) {
-      if (line.includes(val)) { key = k; break; }
+      if (line === val || (line.includes(val) && val.length >= line.length * 0.6)) { key = k; break; }
     }
     if (key) sure.push({ line: line.slice(0, 80), key });
     else maybe.push({ line: line.slice(0, 80) });

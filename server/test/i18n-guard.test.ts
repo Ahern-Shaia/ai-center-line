@@ -6,6 +6,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 // ⚠️ 不用 .pathname —— 本專案路徑含中文（創業）會被 URL-encode
 const read = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
@@ -327,4 +328,47 @@ test("⭐ 已登入的 LIFF 頁切語言要寫回 users.locale（不然換裝置
     assert.match(main, new RegExp(`phase === "${p}"[\\s\\S]{0,160}?withToggle\\([\\s\\S]{0,120}?, false\\)`),
       `${p} phase 的 persist 應為 false（那時還沒有 JWT）`);
   }
+});
+
+test("⭐⭐ 依賴陣列不可以放 tr —— useT() 回傳的參考永遠不變，effect 不會重跑", () => {
+  // 2026-08-28：App.tsx 的 document.title effect 依賴寫 [route.page, tr]，
+  // 切語言後標題留在舊語言。我改成加 `tr` 以為修好了 —— 但 useT() 回傳的是
+  // **同一個 module-level `t` 函式**，React 比對依賴時看不出差別，等於沒改。
+  //
+  // ⚠️ 這條特別要用測試擋：eslint 的 exhaustive-deps 反而會**建議你加 tr**，
+  //    把錯的寫法變成「照建議做」的寫法。tsc 也完全看不出問題。
+  //    要跟著語言重跑，依賴一律放 useLocale() 的**值**。
+  const root = fileURLToPath(new URL("../../web/src", import.meta.url));
+  const bad: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, e.name);
+      if (e.isDirectory()) { walk(full); continue; }
+      if (!/\.tsx?$/.test(e.name)) continue;
+      readFileSync(full, "utf8").split("\n").forEach((line, i) => {
+        for (const m of line.matchAll(/\}\s*,\s*\[([^\]]*)\]\s*\)/g)) {
+          if (m[1].split(",").map((d) => d.trim()).includes("tr")) {
+            bad.push(`${e.name}:${i + 1}  ${line.trim().slice(0, 70)}`);
+          }
+        }
+      });
+    }
+  };
+  walk(root);
+  assert.deepEqual(bad, [], `這些依賴陣列放了 tr（改放 useLocale() 的值）：\n${bad.join("\n")}`);
+});
+
+test("⭐ 英文版不可以叫使用者傳中文關鍵字（教錯了他就打不出來）", () => {
+  // 2026-08-28 實機截圖：英文的綁定成功頁寫
+  //   From now on, send "日報" to the bot…
+  // 但那天稍早才剛加了英文關鍵字 `report`。
+  // 一個看不懂中文的人**打不出「日報」兩個字** —— 我們自己做了功能，
+  // 然後在唯一會告訴他的地方叫他用另一種他辦不到的方式。
+  const en = readFileSync(fileURLToPath(new URL("../../web/src/i18n/en.ts", import.meta.url)), "utf8");
+  const bad: string[] = [];
+  for (const m of en.matchAll(/^\s*"([\w.\-]+)":\s*"((?:[^"\\]|\\.)*)"/gm)) {
+    // 英文字典裡出現中文＝要嘛漏翻，要嘛就是這種「叫人打中文」
+    if (/[㐀-䶿一-鿿]/.test(m[2])) bad.push(`${m[1]} = ${m[2].slice(0, 60)}`);
+  }
+  assert.deepEqual(bad, [], `en.ts 裡還有中文：\n${bad.join("\n")}`);
 });
