@@ -29,6 +29,14 @@ export class LiffPrefillService {
       departmentName: string | null;
       messageCount: number;
       lastActiveAt: string;
+      /**
+       * 這個群「選得了部門」嗎。
+       * ⚠️ 清單裡會有選不了的群（未分派部門、或被標成公告／測試群）——
+       *    那些照樣顯示（員工要看得到自己的全貌），但不可以拿來當部門依據，
+       *    否則產出會歸到一個不存在或不對的組織單位（0068 那條註解講的就是這件事）。
+       */
+      selectable: boolean;
+      groupType: string | null;
     }>;
   }> {
     return withSystemTx(async (tx) => {
@@ -51,6 +59,7 @@ export class LiffPrefillService {
         display_name: string | null;
         department_id: string | null;
         department_name: string | null;
+        group_type: string | null;
         message_count: string;
         last_active_at: string;
       }>(sql`
@@ -58,6 +67,7 @@ export class LiffPrefillService {
                lg.display_name,
                lg.department_id::text,
                d.department_name,
+               lg.group_type,
                count(*)::text AS message_count,
                max(lm.sent_at)::text AS last_active_at
         FROM line_message lm
@@ -67,7 +77,7 @@ export class LiffPrefillService {
           AND lm.sender_line_id = ${lineUserId}
           AND lm.chat_context = 'group'
           AND lm.sent_at > (now() - interval '30 days')
-        GROUP BY lm.group_id, lg.display_name, lg.department_id, d.department_name
+        GROUP BY lm.group_id, lg.display_name, lg.department_id, d.department_name, lg.group_type
         ORDER BY count(*) DESC
         LIMIT 10
       `);
@@ -82,6 +92,10 @@ export class LiffPrefillService {
           departmentName: r.department_name,
           messageCount: parseInt(r.message_count, 10),
           lastActiveAt: r.last_active_at,
+          groupType: r.group_type,
+          // 與 completeLiffBinding 的推斷條件**必須一致** —— 兩邊不同的話，
+          // 畫面上可選的群會推不出部門（或反過來），使用者選了卻沒效果。
+          selectable: !!r.department_id && r.group_type === "department",
         })),
       };
     });

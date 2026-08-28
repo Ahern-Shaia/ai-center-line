@@ -249,4 +249,5 @@ export default {
   "srv.tpl.general.label": "通用（僅核心欄位）",
   "srv.tpl.service_order.desc": "維修、派工、到府服務。回報內容是客戶／案場、車輛、施作項目與金額。",
   "srv.tpl.service_order.label": "服務工單型",
+  "srv.bind.badGroupChoice": "選的群組不在你的可選清單裡 · 請重新開啟頁面再試",
 } satisfies Record<string, string>;

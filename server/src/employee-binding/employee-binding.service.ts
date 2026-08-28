@@ -157,27 +157,40 @@ export class EmployeeBindingService {
    *   - INSERT user_line_binding · method='liff_self_service'
    */
   /**
-   * v2 · 部門完全由 server derive · 不接受 body 傳來的 primaryGroupId
-   * 邏輯：從 line_message 撈 Alice 過去 30 天發言最多的群 → 該群 department_id
-   * 若無活動 / 信心度低 · 落 department_id=null · 需 tenant_admin 於「部門/成員」頁手動指派
+   * v3（2026-08-28）· **員工可以自己選群組**；不選則沿用 server 推斷。
    *
-   * 為什麼不讓員工選：
-   *   1. 藍領員工可能選錯（閒聊群 / 部門名不對應）
-   *   2. UserId 是 LINE 保證的技術認證 · 群組活動也是 · 系統推斷比人工可靠
-   *   3. 若選錯 · 產出全歸錯 · 主管看不到員工貢獻
-   *   4. 只有 tenant_admin 可改（責任明確 · 有 audit）
+   * ## 為什麼推翻 v2
+   *
+   * v2 寫著「系統推斷比人工可靠」，理由是群組活動是 LINE 保證的技術事實。
+   * **實例推翻了它**：有員工發言最多的部門群，並不是他真正歸屬的部門
+   * （行銷的人在別的群話比較多）。「發言最多」量到的是**社交活躍度**，
+   * 不是**組織歸屬**——這兩件事本來就不保證一致，而我們一直當它們是。
+   *
+   * v2 的其餘三條理由仍然成立，所以**不是全開，是有邊界地開**：
+   *   · 只能從**他自己近 30 天發過言的群**裡選（下方 SQL 就是這道邊界）
+   *     —— 這個端點是 `@Public()`，不擋的話任何人都能把自己塞進任一部門
+   *   · 只能選**已分派部門且 group_type='department'** 的群
+   *     —— 否則產出會歸到不存在的組織單位（0068 那條註解）
+   *   · 自選會寫 `department_source='manual'`（migration 0052：手動優先，
+   *     **永不被自動推導覆寫**）—— 主管改過的與員工選過的一樣受保護
+   *   · 選錯仍然只有 tenant_admin 能改，責任與 audit 不變
+   *
+   * ⚠️ 驗證失敗要**丟錯不要靜默退回自動推斷** —— 靜默退回的話，
+   *    使用者以為自己選好了，實際上系統用的是別的答案。
    */
   async completeLiffBinding(args: {
     botId: string;
     lineUserId: string;
     displayName: string;
+    /** 員工自選的主要群（LINE groupId）· 不給就沿用 server 推斷 */
+    primaryGroupId?: string;
     metadata: Record<string, unknown>;
   }): Promise<{
     userId: string;
     bindingId: string;
     displayName: string;
     departmentName: string | null;
-    departmentSource: "auto_from_group_activity" | "unassigned_needs_manager";
+    departmentSource: "auto_from_group_activity" | "self_selected" | "unassigned_needs_manager";
   }> {
     // 檢查是否已綁定（防重）· 跨租戶讀走 aiproot_admin (需通過 user_line_binding EXISTS→users 子查詢)
     const existing = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => this.bindingRepo.getActiveByLineUserId(tx, args.botId, args.lineUserId));
@@ -217,22 +230,49 @@ export class EmployeeBindingService {
         ORDER BY count(*) DESC
         LIMIT 1
       `);
+      // 員工自選 → 驗證那個群真的是「他自己發過言、已分派部門、且是部門群」。
+      // ⚠️ 這是 @Public() 端點的安全邊界：少了它，任何人都能把自己塞進任一部門。
+      let chosen: { department_id: string | null; department_name: string | null } | undefined;
+      if (args.primaryGroupId) {
+        const ok = await tx.execute<{ department_id: string | null; department_name: string | null }>(sql`
+          SELECT lg.department_id::text, d.department_name
+          FROM line_message lm
+          JOIN line_group lg ON lg.bot_id = lm.bot_id AND lg.group_id = lm.group_id
+          LEFT JOIN departments d ON d.department_id = lg.department_id
+          WHERE lm.bot_id = ${args.botId}::uuid
+            AND lm.sender_line_id = ${args.lineUserId}
+            AND lm.group_id = ${args.primaryGroupId}
+            AND lm.chat_context = 'group'
+            AND lm.sent_at > now() - interval '30 days'
+            AND lg.department_id IS NOT NULL
+            AND lg.group_type = 'department'
+          GROUP BY lg.department_id, d.department_name
+          LIMIT 1
+        `);
+        chosen = ok.rows[0];
+        // 丟錯不要靜默退回自動推斷 —— 那會讓使用者以為選好了，系統卻用別的答案
+        if (!chosen) throw new BadRequestException(msg("srv.bind.badGroupChoice"));
+      }
+
       const primaryDept = inferred.rows[0];
-      const departmentId: string | null = primaryDept?.department_id ?? null;
-      const departmentName: string | null = primaryDept?.department_name ?? null;
-      const source: "auto_from_group_activity" | "unassigned_needs_manager" =
-        departmentId ? "auto_from_group_activity" : "unassigned_needs_manager";
+      const departmentId: string | null = chosen ? chosen.department_id : (primaryDept?.department_id ?? null);
+      const departmentName: string | null = chosen ? chosen.department_name : (primaryDept?.department_name ?? null);
+      const source: "auto_from_group_activity" | "self_selected" | "unassigned_needs_manager" =
+        chosen ? "self_selected" : departmentId ? "auto_from_group_activity" : "unassigned_needs_manager";
 
       const tenantId = bot.tenant_id;
       // INSERT users · role='employee' (v2 · 對照 migration 0020 加的 role)
       const userRes = await tx.execute<{ user_id: string }>(sql`
         INSERT INTO users
-          (tenant_id, email, display_name, department_id, role, must_change_password)
+          (tenant_id, email, display_name, department_id, department_source, role, must_change_password)
         VALUES
           (${tenantId}::uuid,
            ${args.lineUserId + "@line.local"},
            ${args.displayName},
            ${departmentId}::uuid,
+           -- ⚠️ 自選寫 'manual'（migration 0052：手動優先、**永不被自動推導覆寫**）。
+           --    寫成 'auto' 的話，下一次自動推導會把員工自己選的答案蓋掉。
+           ${chosen ? "manual" : "auto"},
            'employee',
            false)
         RETURNING user_id::text
@@ -245,7 +285,7 @@ export class EmployeeBindingService {
         lineUserId: args.lineUserId,
         boundBy: newUserId,
         bindingMethod: "liff_self_service",
-        metadata: { ...args.metadata, dept_source: source, dept_inferred_from_messages: primaryDept?.message_count ?? 0 },
+        metadata: { ...args.metadata, dept_source: source, dept_chosen_group: args.primaryGroupId ?? null, dept_inferred_from_messages: primaryDept?.message_count ?? 0 },
       });
 
       this.logger.log(`LIFF binding complete · user=${args.displayName} · dept=${departmentName ?? "(未分派)"} · source=${source}`);

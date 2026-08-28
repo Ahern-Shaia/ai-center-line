@@ -1184,4 +1184,6 @@ export default {
   "pv.noLogHintOngoing": "Field work started — tap \"Log this stop\" when you reach the next place to see the distance",
   "pv.calculating": "calculating",
   "pv.dayTotal": "Day total",
+  "liff.groupNotUsable": "no department",
+  "liff.pickHint": "Not the right group? Tap to pick the one you actually belong to",
 } satisfies Record<string, string>;

@@ -248,4 +248,5 @@ export default {
   "srv.tpl.general.label": "General (core fields only)",
   "srv.tpl.service_order.desc": "Repairs, dispatch and on-site service. Reports cover customer/site, vehicle, work items and amounts.",
   "srv.tpl.service_order.label": "Service orders",
+  "srv.bind.badGroupChoice": "That group isn't in your list of options · please reopen this page and try again",
 } satisfies Record<string, string>;

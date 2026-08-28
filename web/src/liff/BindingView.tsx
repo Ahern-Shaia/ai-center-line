@@ -11,6 +11,8 @@ export default function BindingView({ ctx }: { ctx: LiffCtx }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  /** 員工自選的主要群。null = 沿用系統推斷（預設） */
+  const [pick, setPick] = useState<string | null>(null);
   const [done, setDone] = useState<{ displayName: string; departmentName: string | null; departmentSource: string } | null>(null);
 
   useEffect(() => {
@@ -30,6 +32,7 @@ export default function BindingView({ ctx }: { ctx: LiffCtx }) {
         botId: ctx.botId,
         accessToken: ctx.accessToken,
         displayName,
+        primaryGroupId: pick ?? undefined,
         metadata: { lineDisplayName: ctx.displayName, candidateGroupsCount: data?.prefill?.candidateGroups.length ?? 0 },
       });
       setDone(res);
@@ -67,7 +70,11 @@ export default function BindingView({ ctx }: { ctx: LiffCtx }) {
 
   const groups = data?.prefill?.candidateGroups ?? [];
   const total = groups.reduce((s, g) => s + g.messageCount, 0) || 1;
-  const primaryDept = groups[0]?.departmentName;
+  // ⚠️ 預設不是「第 0 個」，是「第一個**選得了部門**的」。
+  //    groups[0] 可能是未分派部門或公告群 —— 那種預設會讓提示寫出一個空部門。
+  const firstSelectable = groups.findIndex((g) => g.selectable !== false);
+  const chosenIdx = pick ? groups.findIndex((g) => g.groupId === pick) : firstSelectable;
+  const chosenDept = chosenIdx >= 0 ? groups[chosenIdx]?.departmentName : null;
   const name = data?.prefill?.displayName || ctx.displayName || tr("common.unknown");
 
   return (
@@ -87,15 +94,38 @@ export default function BindingView({ ctx }: { ctx: LiffCtx }) {
         {groups.length > 0 ? (
           <>
             <div className="liff-groups-hd">{tr("liff.yourGroups")}</div>
-            {groups.map((g, i) => (
-              <div key={g.groupId} className={`liff-group${i === 0 ? " primary" : ""}`}>
-                <span>{g.displayName || g.groupId.slice(0, 12)}</span>
-                <span className="liff-pct">{Math.round((g.messageCount / total) * 100)}%</span>
-              </div>
-            ))}
+            {/* ⚠️ 2026-08-28 v3：從「唯讀清單」改成「可選」。
+                系統推斷的第一名仍是預設（多數人直接按確認，判斷次數維持 0）——
+                只有推斷錯的人才需要動作。實例：有員工發言最多的群不是他的部門，
+                「發言最多」量到的是社交活躍度，不是組織歸屬。 */}
+            {groups.map((g, i) => {
+              const can = g.selectable !== false;
+              const on = pick ? pick === g.groupId : i === firstSelectable;
+              return (
+                <button
+                  key={g.groupId} type="button" disabled={!can}
+                  className={`liff-group${on && can ? " primary" : ""}${can ? " liff-group-pick" : " liff-group-off"}`}
+                  onClick={() => can && setPick(g.groupId)}
+                >
+                  <span>
+                    {can && <span className="liff-radio" aria-hidden>{on ? "◉" : "○"}</span>}
+                    {g.displayName || g.groupId.slice(0, 12)}
+                    {g.departmentName && <span className="liff-group-dept">{g.departmentName}</span>}
+                  </span>
+                  <span className="liff-pct">
+                    {can ? `${Math.round((g.messageCount / total) * 100)}%` : tr("liff.groupNotUsable")}
+                  </span>
+                </button>
+              );
+            })}
             <div className="liff-hint" style={{ marginTop: 10 }}>
-              {primaryDept ? <>{tr("liff.willJoinA")}<b>{primaryDept}</b>{tr("liff.willJoinB")}</> : tr("liff.groupNoDept")}
+              {chosenDept
+                ? <>{tr("liff.willJoinA")}<b>{chosenDept}</b>{tr("liff.willJoinB")}</>
+                : tr("liff.groupNoDept")}
             </div>
+            {firstSelectable >= 0 && (
+              <div className="liff-hint" style={{ marginTop: 6, fontSize: 12 }}>{tr("liff.pickHint")}</div>
+            )}
           </>
         ) : (
           <div className="liff-hint" style={{ textAlign: "center", padding: "8px 0" }}>

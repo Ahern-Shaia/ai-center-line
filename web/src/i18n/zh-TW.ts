@@ -1184,4 +1184,6 @@ export default {
   "pv.noLogHintOngoing": "已開始外勤 · 到下一個地方時按「記錄這一站」，就會出現路程",
   "pv.calculating": "里程計算中",
   "pv.dayTotal": "今日合計",
+  "liff.groupNotUsable": "未分派部門",
+  "liff.pickHint": "不是這個群？點一下改選你實際歸屬的工作群",
 } satisfies Record<string, string>;

@@ -88,9 +88,12 @@ export class EmployeeBindingController {
     lineUserId?: string;
     accessToken?: string;
     displayName?: string;
+    /** v3（2026-08-28）· 員工自選的主要群 · 不給就沿用 server 推斷 */
+    primaryGroupId?: string;
     metadata?: Record<string, unknown>;
   }) {
-    // v2 · 只需 botId + lineUserId + displayName · 部門由後端 derive (不接受 primaryGroupId)
+    // v3 · 接受 primaryGroupId，但**由 service 驗證那個群真的是他自己發過言的**
+    //      —— 這是 @Public() 端點，不驗的話任何人都能把自己塞進任一部門
     if (!body?.botId || !body?.displayName) {
       throw new BadRequestException(msg("srv.v.needBotDisplayName"));
     }
@@ -102,6 +105,7 @@ export class EmployeeBindingController {
       botId: body.botId,
       lineUserId,
       displayName: body.displayName,
+      primaryGroupId: body.primaryGroupId,
       metadata: body.metadata ?? {},
     });
   }

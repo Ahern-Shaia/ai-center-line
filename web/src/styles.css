@@ -2772,3 +2772,11 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
   .og-edges{ display:none; }   /* 單欄時連線沒有意義，畫了只會亂 */
   .og-orphan{ margin-left:0; }
 }
+
+/* 綁定頁的群組列 · 2026-08-28 從唯讀改成可選（員工自選主要群） */
+.liff-group-pick{width:100%;text-align:left;cursor:pointer;font:inherit;
+  background:transparent;border:1px solid transparent;}
+.liff-group-pick:hover{border-color:var(--primary,#4338CA);}
+.liff-group-off{opacity:.5;cursor:default;}
+.liff-radio{display:inline-block;width:16px;margin-right:6px;}
+.liff-group-dept{margin-left:8px;font-size:11.5px;opacity:.7;}

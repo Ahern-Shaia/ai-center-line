@@ -333,14 +333,20 @@ export interface LiffPrefill {
   prefill?: {
     displayName: string | null;
     pictureUrl: string | null;
-    candidateGroups: Array<{ groupId: string; displayName: string | null; departmentName: string | null; messageCount: number }>;
+    candidateGroups: Array<{ groupId: string; displayName: string | null; departmentName: string | null;
+      messageCount: number;
+      /** 這個群選得了部門嗎（已分派部門 + group_type=department）· 選不了的照樣顯示但不可選 */
+      selectable?: boolean; groupType?: string | null }>;
   };
 }
 export const liffGetPrefill = (botId: string, lineUserId: string) =>
   req<LiffPrefill>(`/binding/liff/prefill?botId=${botId}&lineUserId=${encodeURIComponent(lineUserId)}`);
 
 // complete / set-password 走 accessToken（後端驗證取可信 userId · 修 IDOR）
-export const liffCompleteBinding = (args: { botId: string; accessToken: string; displayName: string; metadata?: Record<string, unknown> }) =>
+export const liffCompleteBinding = (args: { botId: string; accessToken: string; displayName: string;
+  /** 員工自選的主要群 · 不給就沿用 server 推斷（v3 · 2026-08-28）*/
+  primaryGroupId?: string;
+  metadata?: Record<string, unknown> }) =>
   req<{ displayName: string; departmentName: string | null; departmentSource: string }>(
     "/binding/liff/complete",
     { method: "POST", body: JSON.stringify(args) },
