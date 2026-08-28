@@ -200,10 +200,12 @@ export class LineOauthService {
   private async resolveBindings(lineUserId: string) {
     const res = await withTenant({ tenantId: null, role: "aiproot_admin" }, (tx) => tx.execute<{
       user_id: string; role: string; tenant_id: string | null; department_id: string | null;
-      tenant_name: string | null; bot_id: string;
+      tenant_name: string | null; bot_id: string; locale: string | null;
     }>(sql`
       SELECT b.user_id::text, u.role, u.tenant_id::text, u.department_id::text,
-             t.tenant_name, b.bot_id::text
+             t.tenant_name, b.bot_id::text,
+             -- ⚠️ LIFF 的語言必須從**這個人**來，不能靠裝置猜（見 signJwtForBinding）
+             u.locale
       FROM user_line_binding b
       JOIN users u ON u.user_id = b.user_id
       LEFT JOIN tenants t ON t.tenant_id = u.tenant_id
@@ -235,8 +237,21 @@ export class LineOauthService {
     };
   }
 
+  /**
+   * ⚠️⚠️ 回傳一定要帶 `locale`。
+   *
+   * LIFF 頁（打卡 / 我的日報 / 綁定）以前完全沒有語言來源，只靠前端 `detect()`：
+   * `localStorage` → `navigator.language`。兩個都是**裝置狀態**，跟這個人是誰無關。
+   * 2026-08-28 實機踩到：**台灣福祉的員工打開打卡頁，整頁是英文的。**
+   * （同一支手機先前在 LINE 內建瀏覽器把 demo 站切成英文，`aiproot.locale=en`
+   *   留在 localStorage；LIFF 同 origin 就吃到了。）
+   *
+   * 工廠員工看不懂的打卡頁 = 那個功能等於沒有。
+   * 這裡是「我們第一次知道這個 LINE 帳號是誰」的時刻，locale 要在這裡定案。
+   */
   private async signJwtForBinding(b: {
     user_id: string; role: string; tenant_id: string | null; department_id: string | null;
+    locale?: string | null;
   }): Promise<LineLoginResult> {
     const payload: JwtUser = {
       user_id: b.user_id,
@@ -246,11 +261,14 @@ export class LineOauthService {
     };
     const token = await this.jwt.signAsync(payload);
     this.logger.log(`LINE JWT issued · userId=${b.user_id.slice(-6)} · role=${b.role} · tenant=${b.tenant_id?.slice(0, 8) ?? "—"}`);
-    return { access_token: token, role: b.role, tenant_id: b.tenant_id };
+    // locale 沒設或值不認得 → zh-TW（migration 0071 的 DEFAULT）。
+    // ⚠️ 不可以在這裡 fallback 到「前端自己猜」—— 那正是這個 bug 的成因。
+    const locale = b.locale === "en" || b.locale === "zh-TW" ? b.locale : "zh-TW";
+    return { access_token: token, role: b.role, tenant_id: b.tenant_id, locale };
   }
 }
 
-export interface LineLoginResult { access_token: string; role: string; tenant_id: string | null }
+export interface LineLoginResult { access_token: string; role: string; tenant_id: string | null; locale: "zh-TW" | "en" }
 export interface TenantChoiceResult {
   needsTenantChoice: true;
   selectionToken: string;

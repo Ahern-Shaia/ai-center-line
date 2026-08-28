@@ -309,11 +309,17 @@ export async function selectLineTenant(selectionToken: string, tenantId: string)
 // 401 未綁定會以 ApiError 拋出真實訊息（/auth/liff/token 在 PRE_AUTH_PATHS · 不被蓋成「工作階段過期」）
 // botId：LIFF 從特定租戶的 bot 開 → 傳給後端綁死租戶（一人多租戶時才不會登入到別家）
 export async function applyLiffToken(accessToken: string, botId?: string): Promise<{ role: string; tenant_id: string | null }> {
-  const d = await req<{ access_token: string; role: string; tenant_id: string | null }>("/auth/liff/token", {
+  const d = await req<{ access_token: string; role: string; tenant_id: string | null; locale?: string }>("/auth/liff/token", {
     method: "POST",
     body: JSON.stringify({ accessToken, botId }),
   });
   setToken(d.access_token);
+  // ⚠️⚠️ LIFF 的語言以**這個人存在伺服器的偏好**為準，不是裝置猜的。
+  //    在此之前 LIFF 只靠 `detect()`（localStorage → navigator.language），
+  //    2026-08-28 實機踩到：台灣福祉員工打開打卡頁整頁英文
+  //    （同一支手機先前把 demo 站切成英文，aiproot.locale=en 留在 localStorage，
+  //     LIFF 同 origin 就吃到了）。工廠員工看不懂的打卡頁＝那個功能等於沒有。
+  if (d.locale === "zh-TW" || d.locale === "en") setLocale(d.locale);
   localStorage.setItem(EMAIL_KEY, `line-user@${d.tenant_id ?? "aiproot"}`);
   localStorage.removeItem(MUST_CHANGE_KEY);
   localStorage.removeItem(EXPIRES_AT_KEY);
