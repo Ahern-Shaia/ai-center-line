@@ -24,8 +24,20 @@ const CALLER = "c1da0000-0000-4000-8000-00000000da01";   // tenant_admin · 建�
 const NO_DEPT = "c1da0000-0000-4000-8000-00000000da02";  // 員工 · 沒有部門（V-7 的樣本）
 const HAS_DEPT = "c1da0000-0000-4000-8000-00000000da03"; // 員工 · 有部門
 
-// tenant_admin 唯一沒有的租戶級權限 —— 拿它當「提權樣本」
-const NOT_MINE = "rag:view";
+/**
+ * 提權樣本 —— 一個**租戶級、但沒有人有**的權限。
+ *
+ * ⚠️ 原本用 `rag:view`（註解寫「tenant_admin 唯一沒有的租戶級權限」）。
+ *    2026-08-29 的 migration 0072 把三個示範頁的權限改成 platform scope，
+ *    於是它先被「不開放調整」的 scope 檢查擋下來，根本走不到提權判斷 ——
+ *    **測試還是紅的，但紅的原因跟它要驗的事情無關。**
+ *
+ * ⭐ 更關鍵的是：0072 之後 tenant_admin 已經**持有全部租戶級權限**，
+ *    現實裡再也找不到一個天然的樣本。所以這裡自己造一個 fixture 權限，
+ *    在 before 建、after 刪。它沒有掛給任何角色，
+ *    對 listPermissions 的兩支斷言無害（那兩支不比數量）。
+ */
+const NOT_MINE = "__tcrfixture:view";
 const MINE = "warroom:view";
 
 const perms = new PermissionService();
@@ -38,6 +50,8 @@ const asTenant = <R>(tenantId: string, fn: () => Promise<R>): Promise<R> =>
     (tx: Db) => txStore.run(tx, fn));
 
 const cleanup = async (c: pg.Client) => {
+  await c.query(`DELETE FROM role_permissions WHERE permission_id=$1`, [NOT_MINE]);
+  await c.query(`DELETE FROM permissions WHERE permission_id=$1`, [NOT_MINE]);
   for (const t of [T, OTHER]) {
     await c.query(`UPDATE users SET role_id=NULL WHERE tenant_id=$1`, [t]);
     await c.query(`DELETE FROM roles WHERE tenant_id=$1`, [t]);
@@ -49,6 +63,11 @@ before(async () => {
   const c = admin();
   await c.connect();
   await cleanup(c);
+  // 提權樣本 · 租戶級但不掛給任何角色（見 NOT_MINE 的說明）
+  await c.query(
+    `INSERT INTO permissions (permission_id, resource, action, description, scope)
+     VALUES ($1, '__tcrfixture', 'view', '測試用 · 不掛給任何角色', 'tenant')
+     ON CONFLICT (permission_id) DO NOTHING`, [NOT_MINE]);
   await c.query(`INSERT INTO tenants (tenant_id, tenant_name) VALUES ($1,'TCR甲'),($2,'TCR乙')`, [T, OTHER]);
   await c.query(`INSERT INTO departments (department_id, tenant_id, department_name, line_group_id, extraction_schema, ragic_table)
                  VALUES ($1,$2,'品保部','-tcr1','-','-')`, [DEPT, T]);

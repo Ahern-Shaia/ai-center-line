@@ -76,10 +76,47 @@ function loadZh() {
 const ZH = loadZh();
 
 /**
+ * ⭐ 平台專用頁 —— **2026-08-29 用戶裁定：維持中文，不接英文。**
+ *
+ * 判準跟 08-28「智慧聯網戰情室那格不必兌現英文」同一條：
+ * **看那個落地頁誰在用**，不是「有沒有被翻譯」。
+ * 那些頁只有 aiproot 帳號進得去，而 aiproot 這邊全是中文語系。
+ *
+ * ⛔ 不要「順手把它們也翻一翻」—— 那是 100+ 行文案 ×2，加上日後每次改都要
+ *    維護兩份。要改這個裁定得由人改這裡。
+ *
+ * ⚠️ 判斷方式**不用手維護頁面名單**，而是看「這條是用誰的帳號掃到的」：
+ *    以 aiproot 身分看到的東西，就是 aiproot 才看得到的畫面。
+ *    第一版寫死了 9 個頁面名，結果 `Permissions` 出事 ——
+ *    **側欄有兩個項目都叫 Permissions**（平台的 nav.rolesMgmt 與
+ *    租戶的 nav.rolePermissions），用標籤當 key 會把兩頁混成一頁。
+ *
+ * ⚠️ 代價（已知、可接受）：某頁租戶看得到，但那句中文只在
+ *    「只有 aiproot 才觸發得到的狀態」下出現時，會被歸到平台段。
+ *    真的擔心就多跑一輪租戶帳號並展開那個狀態。
+ */
+const PLATFORM_ACCOUNT = "aiproot_admin";
+
+/**
  * 語言切換鈕本來就該顯示**另一個**語言的名字 —— 英文介面上看到「繁體中文」是對的。
  * 這是唯一一個「英文畫面上該有中文」的 UI 字串。
  */
 const INTENTIONAL = new Set(["繁體中文"]);
+
+/**
+ * 已知的「資料值剛好等於字典文案」碰撞 —— 本機 seed 造成的，不是漏翻。
+ *
+ *   · tickets.category = "報工日報"，而 category.daily_report 的中文也是「報工日報」
+ *   · tickets.summary  = "處理中一"，而 recordStatus.in_progress 是「處理中」
+ *
+ * ⛔ 加東西進來的門檻：**你已經去資料庫查過、確認畫面上那個字來自某一列資料**。
+ *    「看起來像資料」不算 —— 這份清單一旦變成「讓它閉嘴」的地方，
+ *    這支工具就沒有用了（而它存在的理由正是我沒辦法靠眼睛看完所有頁面）。
+ *
+ * ⚠️ 只影響是否算失敗（exit code），這些行仍然會印在 B 桶裡。
+ *    一支永遠紅的檢查等於沒有檢查。
+ */
+const DATA_COLLISION = new Set(["報工日報", "處理中一", "待辦一", "維修工單", "改裝進度"]);
 
 function classify(text) {
   const sure = [];   // A · 命中字典 = 確定漏翻
@@ -97,8 +134,8 @@ function classify(text) {
     for (const [val, k] of ZH) {
       if (line === val || (line.includes(val) && val.length >= line.length * 0.6)) { key = k; break; }
     }
-    if (key) sure.push({ line: line.slice(0, 80), key });
-    else maybe.push({ line: line.slice(0, 80) });
+    if (key && !DATA_COLLISION.has(line)) sure.push({ line: line.slice(0, 80), key });
+    else maybe.push({ line: line.slice(0, 80), key });
   }
   return { sure, maybe };
 }
@@ -273,13 +310,25 @@ const show = (title, m) => {
   console.log("");
 };
 
-const sure = group((f) => f.where !== "畫面?" && f.where !== "掃描中斷");
-const maybe = group((f) => f.where === "畫面?");
+const client = (f) => f.who !== PLATFORM_ACCOUNT;
+const sure = group((f) => client(f) && f.where !== "畫面?" && f.where !== "掃描中斷");
+const maybe = group((f) => client(f) && f.where === "畫面?");
+const plat = group((f) => !client(f));
 const broke = group((f) => f.where === "掃描中斷");
 
+/**
+ * ⚠️ A 桶會有少量誤報，而且**修不掉**：有些資料的值剛好等於字典裡的文案。
+ *    例：`tickets.category` 存的就是「報工日報」四個字，
+ *    而 `category.daily_report` 的中文翻譯也是「報工日報」。
+ *    分不出來是渲染端沒過 tr()，還是資料本來就長這樣。
+ *    看到 A 桶的項目，先問一句「這是介面文字還是某一列資料」。
+ */
 show("❌ A · 確定漏翻（字典裡有翻譯，畫面卻印中文）", sure);
 show("❓ B · 有中文但不在字典（資料 or 從沒進字典的硬編字串 —— 人判斷）", maybe);
+show("➖ 平台專用頁 · 2026-08-29 裁定維持中文（照列不照修）", plat);
 show("⚠️ 掃描中斷", broke);
 
 console.log(`完整清單：${OUT}/findings.json`);
+// ⚠️ 只有客戶方看得到的頁面算失敗 —— 平台頁的中文是刻意的，
+//    讓它一直紅，這支就會被當成「反正都會紅」而沒人看。
 process.exit(sure.size ? 1 : 0);
