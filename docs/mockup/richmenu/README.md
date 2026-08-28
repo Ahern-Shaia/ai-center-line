@@ -42,9 +42,9 @@ richmenu/
 
 | # | 標籤 | 現況 | 要接什麼 |
 |--:|---|---|---|
-| 1 | 報工單 / Work Log | ⚠️ **沒有對應頁面** | LIFF 只認得 `mine` / `punch` / `trips`（`web/src/liff/main.tsx:100`）· 要嘛新增一個 page、要嘛先指到 Ragic 表單網址 |
+| 1 | 報工單 / Work Log | ⚠️ **待確認目的地** | 2026-08-28 用戶說「要人時分析那份文件的 url」→ 應該是指戰情室的**人時分析**分頁：<br>`https://ai-center-line-demo.onrender.com/shianyong-warroom.html`（開啟後點「人時分析」）<br>⛔ **這是我的推測，貼上去之前請確認**：`報工單`（填寫回報）與「人時分析」（看結果）語意上是兩件事。若要的是「填」，那還沒有頁面 |
 | 2 | 我的日報 / My Daily Report | ✅ 頁面已上線 | `?page=mine` |
-| 3 | 智慧聯網戰情室 / Ops Command Center | ✅ 已上線 | 一般網頁，非 LIFF：`https://ai-center-line-demo.onrender.com/shianyong-warroom.html`（平面圖監控＋批次品質＋巡檢三個分頁）· 用 URI 動作直接貼，不帶 `botId`／`liffId` |
+| 3 | 智慧聯網戰情室 / Ops Command Center | ✅ 已上線 | 一般網頁，非 LIFF：`https://ai-center-line-demo.onrender.com/shianyong-warroom.html`（平面圖監控／批次品質／巡檢／人時分析 **四個分頁**）· 用 URI 動作直接貼，不帶 `botId`／`liffId` |
 | 4 | 內部客服機器人 / Internal Support Bot | 🔒 **預寫、尚未開放** | 背景圖上刻意畫成**灰階＋「尚未開放・Coming Soon」**，避免有人照著去接動作。要上線時先改圖再設區塊 |
 
 ### ⚠️⚠️ 選單有英文，不代表點進去有英文

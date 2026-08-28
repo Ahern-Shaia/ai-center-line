@@ -11,6 +11,7 @@ import { CompletionSignalService } from "../task-completion/completion-signal.se
 import { PrivateCompletionService } from "../task-completion/private-completion.service.js";
 import { LineApiClient } from "./line-api.client.js";
 import { EmployeeBindingService } from "../employee-binding/employee-binding.service.js";
+import { BOT_MSG } from "./bot-messages.js";
 
 interface BotWithSecret {
   botId: string;
@@ -56,6 +57,9 @@ interface LineWebhookPayload {
 
 const MEDIA_MESSAGE_TYPES = new Set(["image", "video", "audio", "file"]);
 const ALLOWED_MESSAGE_TYPES = new Set(["text", "sticker", "image", "video", "audio", "file", "location"]);
+
+
+
 
 @Injectable()
 export class LineWebhookService {
@@ -337,14 +341,14 @@ export class LineWebhookService {
         try {
           const url = this.liffUrlFor(bot, "binding");
           await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
-            { type: "text", text: "歡迎加入！請點下方按鈕完成綁定 · 綁定後即可使用個人日報功能" },
+            { type: "text", text: BOT_MSG.welcome },
             {
               type: "template",
-              altText: "完成綁定",
+              altText: BOT_MSG.bindAlt,
               template: {
                 type: "buttons",
-                text: "點按鈕開始綁定",
-                actions: [{ type: "uri", label: "開始綁定", uri: url }],
+                text: BOT_MSG.bindText,
+                actions: [{ type: "uri", label: BOT_MSG.bindLabel, uri: url }],
               },
             },
           ]);
@@ -386,20 +390,20 @@ export class LineWebhookService {
           try {
             if (hasLiff) {
               await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
-                { type: "text", text: "看起來還沒完成綁定 · 點下方按鈕即可（綁定後才能記錄日報）" },
+                { type: "text", text: BOT_MSG.notBound },
                 {
                   type: "template",
-                  altText: "完成綁定",
+                  altText: BOT_MSG.bindAlt,
                   template: {
                     type: "buttons",
-                    text: "點按鈕開始綁定",
-                    actions: [{ type: "uri", label: "開始綁定", uri: this.liffUrlFor(bot, "binding") }],
+                    text: BOT_MSG.bindText,
+                    actions: [{ type: "uri", label: BOT_MSG.bindLabel, uri: this.liffUrlFor(bot, "binding") }],
                   },
                 },
               ]);
             } else {
               await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
-                { type: "text", text: "請先完成綁定才能記錄個人日報 · 聯繫公司資訊窗口" },
+                { type: "text", text: BOT_MSG.bindFirst },
               ]);
             }
           } catch (err) {
@@ -423,11 +427,11 @@ export class LineWebhookService {
             await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
               {
                 type: "template",
-                altText: "設定登入密碼",
+                altText: BOT_MSG.pwAlt,
                 template: {
                   type: "buttons",
-                  text: "設密碼後 · 可用 email 登入 aiproot 網頁\n(選配 · 不設也可用「以 LINE 登入」)",
-                  actions: [{ type: "uri", label: "設定密碼", uri: url }],
+                  text: BOT_MSG.pwText,
+                  actions: [{ type: "uri", label: BOT_MSG.pwLabel, uri: url }],
                 },
               },
             ]);
@@ -449,11 +453,11 @@ export class LineWebhookService {
             await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
               {
                 type: "template",
-                altText: "查看我的日報",
+                altText: BOT_MSG.reportAlt,
                 template: {
                   type: "buttons",
-                  text: "點按鈕看今日 AI 整理的日報 · 可編輯後送出主管",
-                  actions: [{ type: "uri", label: "查看我的日報", uri: url }],
+                  text: BOT_MSG.reportText,
+                  actions: [{ type: "uri", label: BOT_MSG.reportLabel, uri: url }],
                 },
               },
             ]);
@@ -514,13 +518,12 @@ export class LineWebhookService {
         if (event.replyToken) {
           try {
             const isFirstToday = await this.messageRepo.isFirstPersonalMessageToday(tx, bot.botId, userId);
-            let text = "✓ 已記錄";
+            let text: string = BOT_MSG.ack;   // 明寫 string —— BOT_MSG 是 as const，推導出的是字面型別
             if (isFirstToday) {
               // ⚠️ 時間不可寫死 · 每家自己設（prod 實例：台灣福祉把批次改成 18:00）
               const at = await schedulerTimeLabel(tx, bot.tenantId, "pdr");
-              const tail = at ? `${at} 由 AI 整理成日報` : "AI 會整理成日報";
               // 文案要誠實：訊息是「立刻記錄、立刻看得到」；AI 整理是另一件事
-              text = `✓ 已記錄\n\n傳「日報」可隨時查看今日記錄 · ${tail}`;
+              text = BOT_MSG.ackFirst(at);
             }
             await this.lineApi.replyMessage(bot.channelAccessToken, event.replyToken, [
               { type: "text", text },
