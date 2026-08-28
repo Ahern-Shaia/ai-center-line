@@ -54,5 +54,8 @@ export const BOT_MSG = {
   ackFirst: (at: string | null): string =>
     "✓ 已記錄 / Logged\n\n" +
     `傳「日報」可隨時查看今日記錄 · ${at ? `${at} 由 AI 整理成日報` : "AI 會整理成日報"}\n` +
-    `Send \u300c日報\u300d any time to see today's log · ${at ? `AI drafts your report at ${at}` : "AI will draft your report"}`,
+    // ⚠️ 英文那句要講**英文使用者打得出來的字**。
+    //    原本寫 Send「日報」—— 那是叫不會打中文的人去打中文。
+    //    `report` 已加進 isDailyReportKeyword（line-webhook.service.ts）。
+    `Send "report" any time to see today's log · ${at ? `AI drafts your report at ${at}` : "AI will draft your report"}`,
 } as const;

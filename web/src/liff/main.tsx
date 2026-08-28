@@ -51,6 +51,7 @@ const CENTER: React.CSSProperties = { minHeight: "70vh", display: "flex", flexDi
 
 // 三個 LIFF 頁共用 liff.html，其 <title> 只是預設值 → 依實際頁面切換，
 // 否則使用者從「我的行程」開啟卻看到標題寫「我的日報」。
+// ⚠️ 值是 **i18n key**，渲染處（下方 useEffect）必須包 tr()。
 const PHASE_TITLE: Partial<Record<Phase, string>> = {
   mine: "nav.myDailyReport",
   trips: "nav.myTrips",
@@ -66,9 +67,13 @@ function LiffApp() {
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    const t = PHASE_TITLE[phase];
-    if (t) document.title = t;
-  }, [phase]);
+    const k = PHASE_TITLE[phase];
+    // ⚠️ 一定要過 tr() —— PHASE_TITLE 的值是 **i18n key** 不是文字。
+    //    2026-08-28 實機踩到：LINE 的標題列直接顯示「liff.punch」給員工看。
+    //    tsc 擋不住（兩邊都是 string），而且**中英文都壞**。
+    //    這是 `document.title` 版本的同一個坑（memory: text-to-key-render-not-updated）。
+    if (k) document.title = tr(k);
+  }, [phase, tr]);
 
   useEffect(() => {
     (async () => {

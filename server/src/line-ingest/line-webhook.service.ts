@@ -594,10 +594,23 @@ function buildLiffUrl(bot: { botId: string; liffId: string | null }, page: "bind
 }
 
 // 判斷是否為「查日報」關鍵字 · 支援中英 · 前後空白容錯
-function isDailyReportKeyword(text: string): boolean {
+/**
+ * 「給我看今日日報」的關鍵字。
+ *
+ * ⚠️ 2026-08-28 實機回報：外籍員工傳 `report` **沒有反應**，被當成一般工作訊息記錄。
+ *    當時只認 `daily` / `daily report` —— 而 bot 自己的提示寫的是
+ *    「傳『日報』可隨時查看」，等於**叫一個不會打中文的人去打中文**。
+ *    加上 `report` / `my report`（後者對齊按鈕上的 `My Report`）。
+ *
+ * ⚠️ 比對是**整則訊息相等**（不是 includes）—— 這很重要：
+ *    `report` 是很常見的字，用 includes 會把
+ *    「今天去 A 廠 report 已交」這種真的工作訊息吃掉，那則就不會被記錄。
+ */
+export function isDailyReportKeyword(text: string): boolean {
   const t = text.trim().toLowerCase();
   return t === "日報" || t === "我的日報" || t === "看日報" || t === "查日報"
-    || t === "daily" || t === "daily report" || t === "報告" || t === "查看";
+    || t === "報告" || t === "查看"
+    || t === "daily" || t === "daily report" || t === "report" || t === "my report";
 }
 
 // 「設密碼」關鍵字 · Option C · 觸發設密碼 LIFF 頁

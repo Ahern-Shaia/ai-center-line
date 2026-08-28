@@ -5,6 +5,8 @@
 //    2026-08-28 文案改中英雙語，長度直接翻倍 —— 這支就是那次補的。
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { BOT_MSG } from "../src/line-ingest/bot-messages.js";
 
 // https://developers.line.biz/en/reference/messaging-api/
@@ -81,4 +83,52 @@ test("盤點：現在各則的長度（改文案時看一眼還剩多少餘裕�
     console.log(`    ${k.padEnd(13)} ${String(len(v)).padStart(3)} / ${lim}   餘裕 ${lim - len(v)}`);
   }
   assert.ok(true);
+});
+
+// ─────────────────────────────────────────────────────────────
+// 2026-08-28 實機回報的兩個問題
+// ─────────────────────────────────────────────────────────────
+
+test("⭐⭐ 外籍員工打得出來的關鍵字要能觸發日報（實機：傳 report 沒反應）", async () => {
+  const { isDailyReportKeyword } = await import("../src/line-ingest/line-webhook.service.js");
+  // 中文
+  for (const k of ["日報", "我的日報", "看日報", "查日報", "報告", "查看"]) {
+    assert.ok(isDailyReportKeyword(k), `「${k}」應該要觸發`);
+  }
+  // 英文 —— report / my report 是 2026-08-28 補的
+  for (const k of ["report", "Report", "REPORT", " report ", "my report", "My Report", "daily", "daily report"]) {
+    assert.ok(isDailyReportKeyword(k), `"${k}" 應該要觸發（外籍員工打不出中文）`);
+  }
+});
+
+test("⭐⭐ 但不可以把真的工作訊息吃掉 —— 比對是整則相等，不是 includes", () => {
+  return import("../src/line-ingest/line-webhook.service.js").then(({ isDailyReportKeyword }) => {
+    // 這些是**真的工作回報**，被當成關鍵字的話那則訊息就不會被記錄下來
+    for (const k of ["今天去 A 廠 report 已交", "report 給客戶了", "日報寫好了", "已經看日報了", "daily meeting 10:00"]) {
+      assert.ok(!isDailyReportKeyword(k), `「${k}」是工作訊息，不該被當成關鍵字`);
+    }
+  });
+});
+
+test("⭐⭐ bot 的英文提示不可以叫人打中文關鍵字", async () => {
+  const { isDailyReportKeyword } = await import("../src/line-ingest/line-webhook.service.js");
+  const en = BOT_MSG.ackFirst("17:30").split("\n").filter((l) => /[A-Za-z]{4,}/.test(l)).join(" ");
+  // 從英文句子裡把引號包住的關鍵字抓出來，確認它真的觸發得了
+  const quoted = [...en.matchAll(/["「]([^"」]{2,20})["」]/g)].map((m) => m[1]);
+  assert.ok(quoted.length > 0, `英文提示裡沒有指出關鍵字：\n${en}`);
+  for (const q of quoted) {
+    assert.ok(isDailyReportKeyword(q),
+      `英文提示叫使用者傳「${q}」，但 isDailyReportKeyword 不認它 —— 叫人做一件做不到的事`);
+    assert.ok(!/[一-鿿]/.test(q),
+      `英文提示叫使用者傳中文「${q}」—— 那是叫不會打中文的人去打中文`);
+  }
+});
+
+test("⭐⭐ LIFF 的 PHASE_TITLE 是 i18n key，document.title 必須包 tr()", () => {
+  // 2026-08-28 實機踩到：LINE 的標題列直接顯示「liff.punch」給員工看。
+  // tsc 擋不住（兩邊都是 string），而且中英文都壞。
+  const src = readFileSync(fileURLToPath(new URL("../../web/src/liff/main.tsx", import.meta.url)), "utf8");
+  assert.ok(!/document\.title\s*=\s*[a-z]\w*\s*;/.test(src),
+    "document.title 直接吃 PHASE_TITLE 的值 —— 那是 key 不是文字，會把 liff.punch 印在標題列");
+  assert.ok(/document\.title\s*=\s*tr\(/.test(src), "document.title 要走 tr()");
 });
