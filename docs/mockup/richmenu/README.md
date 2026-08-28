@@ -42,10 +42,26 @@ richmenu/
 
 | # | 標籤 | 現況 | 要接什麼 |
 |--:|---|---|---|
-| 1 | 報工單 / Work Log | ⚠️ **待確認目的地** | 2026-08-28 用戶說「要人時分析那份文件的 url」→ 應該是指戰情室的**人時分析**分頁：<br>`https://ai-center-line-demo.onrender.com/shianyong-warroom.html`（開啟後點「人時分析」）<br>⛔ **這是我的推測，貼上去之前請確認**：`報工單`（填寫回報）與「人時分析」（看結果）語意上是兩件事。若要的是「填」，那還沒有頁面 |
+| 1 | 報工單 / Work Log | ✅ **已上線**（2026-08-28）| 一般網頁，非 LIFF：<br>`https://ai-center-line-demo.onrender.com/shianyong-labour.html`<br>人時分析報告（4 工位 × 30 個工作日）· **手機優先**，因為它是在 LINE 內建瀏覽器開的 |
 | 2 | 我的日報 / My Daily Report | ✅ 頁面已上線 | `?page=mine` |
 | 3 | 智慧聯網戰情室 / Ops Command Center | ✅ 已上線 | 一般網頁，非 LIFF：`https://ai-center-line-demo.onrender.com/shianyong-warroom.html`（平面圖監控／批次品質／巡檢／人時分析 **四個分頁**）· 用 URI 動作直接貼，不帶 `botId`／`liffId` |
 | 4 | 內部客服機器人 / Internal Support Bot | 🔒 **預寫、尚未開放** | 背景圖上刻意畫成**灰階＋「尚未開放・Coming Soon」**，避免有人照著去接動作。要上線時先改圖再設區塊 |
+
+### ⚠️ 為什麼「報工單」是獨立一頁，不是戰情室的分頁
+
+同一份人時分析資料**同時存在兩個地方**，這是刻意的：
+
+| | 給誰看 | 版面 |
+|---|---|---|
+| `shianyong-labour.html` | 圖文選單「報工單」→ **LINE 內建瀏覽器 · 手機** | 單欄、大字、可點區 ≥44px、日期用左右滑 |
+| `shianyong-warroom.html` 的「人時分析」分頁 | 桌面戰情室 | 1440px 雙欄儀表 |
+
+把 1440px 的戰情室塞進手機不能看，所以拆兩份。
+
+⚠️ **兩邊吃同一份產生資料**（`scripts/labour-hours-probe.py --emit-js`）——
+重跑 probe 之後**兩個檔都要更新**，只更新一邊會讓同一份報告在手機與桌面顯示不同數字。
+
+---
 
 ### ⚠️⚠️ 選單有英文，不代表點進去有英文
 
@@ -57,7 +73,7 @@ richmenu/
 
 | # | 目的地 | 英文？ | 說明 |
 |--:|---|:-:|---|
-| 1 | 報工單 | — | 還沒有頁面 |
+| 1 | 報工單（人時分析）| ✅ **有** | `shianyong-labour.html` 標題／KPI／區塊名／關鍵警語皆中英並列 |
 | 2 | 我的日報（LIFF `?page=mine`）| ✅ **有** | 複用 `personal-report/MyDailyReport`，已在 i18n 甲案內翻好；LINE webview 會依手機語言自動判斷 |
 | 2b | └ LIFF 外殼（`liff/`）| ✅ **有**（2026-08-28 補做）| 外殼 + 綁定 + 設定密碼 + 外勤打卡四支全數接上 i18n（70 條 ×2）· 守門測試已拿掉 `liff/` 豁免 |
 | 3 | 智慧聯網戰情室 | ❌ **沒有** | `shianyong-warroom.html` 全中文（112 行）· 靜態頁，不吃 web app 的 i18n |

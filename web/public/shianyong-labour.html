@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>鮮湧 人時分析 · Labour Hours</title>
+<!--
+  ⚠️ 這一頁是**給手機看的**：它掛在 LINE 圖文選單「報工單」上，
+     使用者是在 LINE 內建瀏覽器開啟。所以：
+     · mobile-first（單欄、大字、可點區 ≥44px）
+     · 不依賴任何外部資源（CDN / 字型 / 圖表套件都沒有）—— LINE webview 可能沒網路
+     · 資料內嵌，由 scripts/labour-hours-probe.py --emit-js 產生
+
+  ⚠️ 戰情室（shianyong-warroom.html）的「人時分析」分頁**吃同一份產生資料**。
+     重跑 probe 後**兩個檔都要更新**，不然數字會對不上。
+-->
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-text-size-adjust:100%}
+:root{
+  --bg:#101216; --card:#181b1f; --card2:#141619; --line:#2c2f36;
+  --ink:#e6e7ea; --ink2:#9fa3ab; --ink3:#5f636b;
+  --ok:#0ca30c; --warn:#eda100; --low:#d03b3b; --bar:#4338CA;
+}
+body{background:var(--bg);color:var(--ink);
+  font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",-apple-system,sans-serif;
+  font-size:15px;line-height:1.65;padding:0 0 34px;}
+.wrap{max-width:760px;margin:0 auto;padding:0 14px;}
+header{padding:16px 0 12px;border-bottom:1px solid var(--line);margin-bottom:14px;}
+h1{font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px;}
+h1 i{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none;}
+.sub{font-size:12.5px;color:var(--ink2);margin-top:4px;}
+.sim{background:#2a1a1c;border:1px solid #5a2a2e;border-radius:10px;padding:11px 13px;
+  font-size:12.5px;color:#e8a9ae;line-height:1.8;margin-bottom:14px;}
+.sim b{color:#f5c6ca;font-weight:600;}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.kc{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px 13px;}
+.kl{font-size:11.5px;color:var(--ink2);margin-bottom:4px;}
+.kv{font-size:22px;font-weight:500;line-height:1.15;}
+.kv small{font-size:12.5px;font-weight:400;color:var(--ink2);}
+.kh{font-size:11px;color:var(--ink3);margin-top:3px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:13px 15px;margin-bottom:13px;}
+.h{font-size:14.5px;font-weight:500;margin-bottom:3px;}
+.s{font-size:11.5px;color:var(--ink3);margin-bottom:11px;line-height:1.7;}
+.bars{display:flex;flex-direction:column;gap:9px;}
+.row{display:grid;grid-template-columns:44px 1fr 78px;align-items:center;gap:9px;font-size:12.5px;}
+.nm{color:var(--ink2);font-family:ui-monospace,monospace;}
+.track{display:block;height:15px;background:var(--card2);border-radius:4px;overflow:hidden;}
+.fill{display:block;height:100%;border-radius:4px;min-width:2px;}
+.val{text-align:right;font-family:ui-monospace,monospace;}
+.cw{width:100%;height:190px;}
+.cap{font-size:11px;color:var(--ink3);text-align:center;margin-top:7px;line-height:1.8;}
+.note{background:#231d14;border:1px solid #4a3a1e;border-radius:9px;padding:10px 12px;
+  font-size:12px;color:#e0c48a;line-height:1.85;margin-top:11px;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+th{text-align:left;color:var(--ink2);font-weight:500;padding:7px 6px;
+  border-bottom:1px solid var(--line);font-size:11.5px;}
+td{padding:8px 6px;border-bottom:1px solid #22252b;color:#c9ccd2;}
+td.n,th.n{text-align:right;font-family:ui-monospace,monospace;}
+.pill{font-size:11px;padding:2px 7px;border-radius:7px;}
+/* 日期選擇：可點區 ≥44px（手指不是滑鼠） */
+.days{display:flex;gap:7px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch;}
+.day{flex:none;min-height:44px;padding:7px 11px;background:var(--card2);
+  border:1px solid var(--line);border-radius:9px;font-size:12px;color:var(--ink2);
+  display:flex;flex-direction:column;justify-content:center;cursor:pointer;}
+.day.on{border-color:#3b82f6;background:#1b2028;color:var(--ink);}
+.day b{font-size:13px;font-weight:500;}
+.day span{font-size:10.5px;color:var(--ink3);}
+.day.real b{color:var(--ok);}
+footer{text-align:center;font-size:11px;color:var(--ink3);margin-top:18px;
+  padding-top:12px;border-top:1px solid var(--line);line-height:1.9;}
+@media(max-width:420px){.kpi{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<script>
+/* ⚠️ 自動產生 —— 不要手改。
+   來源：scripts/labour-hours-probe.py --emit-js <xlsx>
+   ⚠️ **模擬資料**：30 天裡只有 2026-08-26 對應原始報表。*/
+const LABOUR={"meta":{"period":"2026/07/16 ～ 2026/08/26（不含週末）","capPerStation":44400,"disclaimer":"本檔為模擬資料，僅日期 20260826 對應原始報表；其餘 29 日依工位特性、星期效應與設定之特殊事件日隨機產生，各時段累積時間均等於該時段事件明細之加總。","days":30,"realDay":"2026-08-26","stations":["S01","S02","S03","S04"],"avgRate":0.4419,"stationAvg":[18656,23775,26192,9856],"slotAvg":{"am":[8100,9810,10607,4298],"pm":[8241,10168,11282,4521],"night":[2315,3797,4303,1037]},"totalEvents":938,"generatedFrom":"scripts/labour-hours-probe.py --emit-js"},"daily":[{"d":"2026-07-16","dow":"四","s":[19127,27887,31043,10457],"total":88514,"rate":0.4984,"note":"","slots":{"am":[7368,12070,12961,5244],"pm":[8822,12197,13164,3944],"night":[2937,3620,4918,1269]},"nEvents":27},{"d":"2026-07-17","dow":"五","s":[14297,20777,24889,8170],"total":68133,"rate":0.3836,"note":"","slots":{"am":[8767,9501,11050,4191],"pm":[4294,9130,12008,3417],"night":[1236,2146,1831,562]},"nEvents":30},{"d":"2026-07-20","dow":"一","s":[18986,23527,23716,9841],"total":76070,"rate":0.4283,"note":"","slots":{"am":[9201,11138,9578,4544],"pm":[7749,8831,10125,4445],"night":[2036,3558,4013,852]},"nEvents":33},{"d":"2026-07-21","dow":"二","s":[23162,28014,26035,10844],"total":88055,"rate":0.4958,"note":"","slots":{"am":[10592,11199,9662,4552],"pm":[9907,12012,11676,4978],"night":[2663,4803,4697,1314]},"nEvents":26},{"d":"2026-07-22","dow":"三","s":[11453,11707,13331,5750],"total":42241,"rate":0.2378,"note":"設備保養停機（上午）","slots":{"am":[1168,1198,1406,599],"pm":[9201,9322,10099,4668],"night":[1084,1187,1826,483]},"nEvents":35},{"d":"2026-07-23","dow":"四","s":[18784,27249,28806,12238],"total":87077,"rate":0.4903,"note":"","slots":{"am":[7597,10470,12240,6185],"pm":[8775,11703,10628,4561],"night":[2412,5076,5938,1492]},"nEvents":37},{"d":"2026-07-24","dow":"五","s":[15849,20450,24455,9616],"total":70370,"rate":0.3962,"note":"","slots":{"am":[8071,10255,9936,4827],"pm":[6557,8451,12254,4389],"night":[1221,1744,2265,400]},"nEvents":31},{"d":"2026-07-27","dow":"一","s":[17285,23087,24612,9962],"total":74946,"rate":0.422,"note":"","slots":{"am":[8218,11444,10828,4587],"pm":[7411,8228,10299,4679],"night":[1656,3415,3485,696]},"nEvents":29},{"d":"2026-07-28","dow":"二","s":[21285,26545,31317,10374],"total":89521,"rate":0.5041,"note":"","slots":{"am":[9345,11021,12210,3992],"pm":[9265,11336,14112,5198],"night":[2675,4188,4995,1184]},"nEvents":32},{"d":"2026-07-29","dow":"三","s":[24132,28259,30623,10150],"total":93164,"rate":0.5246,"note":"","slots":{"am":[10597,10222,13392,3554],"pm":[10824,12777,11731,4949],"night":[2711,5260,5500,1647]},"nEvents":27},{"d":"2026-07-30","dow":"四","s":[22337,24580,28094,11292],"total":86303,"rate":0.4859,"note":"","slots":{"am":[9405,9487,12012,4553],"pm":[10001,10433,10718,5120],"night":[2931,4660,5364,1619]},"nEvents":35},{"d":"2026-07-31","dow":"五","s":[23296,27647,27777,11676],"total":90396,"rate":0.509,"note":"月底趕工，全時段加班","slots":{"am":[11143,11874,10276,4941],"pm":[9993,11888,13192,5836],"night":[2160,3885,4309,899]},"nEvents":27},{"d":"2026-08-03","dow":"一","s":[18309,19933,23190,9615],"total":71047,"rate":0.4,"note":"","slots":{"am":[8686,8869,9764,4091],"pm":[8170,8087,10108,4547],"night":[1453,2977,3318,977]},"nEvents":36},{"d":"2026-08-04","dow":"二","s":[17931,27905,24802,10559],"total":81197,"rate":0.4572,"note":"","slots":{"am":[7952,11174,9737,4427],"pm":[7479,11908,10547,4888],"night":[2500,4823,4518,1244]},"nEvents":33},{"d":"2026-08-05","dow":"三","s":[17926,27680,27245,11226],"total":84077,"rate":0.4734,"note":"","slots":{"am":[6712,9829,10408,5547],"pm":[8430,12597,11470,4146],"night":[2784,5254,5367,1533]},"nEvents":33},{"d":"2026-08-06","dow":"四","s":[19213,24488,28683,10878],"total":83262,"rate":0.4688,"note":"","slots":{"am":[7546,10041,11329,3873],"pm":[9013,9678,11580,6023],"night":[2654,4769,5774,982]},"nEvents":28},{"d":"2026-08-07","dow":"五","s":[17375,19028,23955,8634],"total":68992,"rate":0.3885,"note":"","slots":{"am":[8404,7701,12101,3774],"pm":[7970,9755,9576,4479],"night":[1001,1572,2278,381]},"nEvents":32},{"d":"2026-08-10","dow":"一","s":[17863,21602,27231,9033],"total":75729,"rate":0.4264,"note":"","slots":{"am":[7138,7720,11395,3985],"pm":[8779,10132,12149,4104],"night":[1946,3750,3687,944]},"nEvents":31},{"d":"2026-08-11","dow":"二","s":[20849,27205,31828,9626],"total":89508,"rate":0.504,"note":"","slots":{"am":[8208,10639,11404,4686],"pm":[9996,12418,14347,3655],"night":[2645,4148,6077,1285]},"nEvents":35},{"d":"2026-08-12","dow":"三","s":[10133,12033,13692,5482],"total":41340,"rate":0.2328,"note":"原料延遲到料，稼動偏低","slots":{"am":[4401,5522,5323,2319],"pm":[5094,5569,7371,2845],"night":[638,942,998,318]},"nEvents":28},{"d":"2026-08-13","dow":"四","s":[19050,23898,28356,10594],"total":81898,"rate":0.4611,"note":"","slots":{"am":[7970,9896,11272,5174],"pm":[7911,9613,10918,4378],"night":[3169,4389,6166,1042]},"nEvents":32},{"d":"2026-08-14","dow":"五","s":[17846,19597,23890,8386],"total":69719,"rate":0.3926,"note":"","slots":{"am":[9336,10403,12005,3812],"pm":[7434,7260,9853,4221],"night":[1076,1934,2032,353]},"nEvents":29},{"d":"2026-08-17","dow":"一","s":[14471,20627,27395,8325],"total":70818,"rate":0.3987,"note":"","slots":{"am":[5271,8614,11385,3873],"pm":[7429,9092,12522,3792],"night":[1771,2921,3488,660]},"nEvents":31},{"d":"2026-08-18","dow":"二","s":[19199,24523,26774,9467],"total":79963,"rate":0.4502,"note":"","slots":{"am":[6602,11502,11920,4305],"pm":[9589,8861,10167,4384],"night":[3008,4160,4687,778]},"nEvents":28},{"d":"2026-08-19","dow":"三","s":[21218,25704,29336,13283],"total":89541,"rate":0.5042,"note":"","slots":{"am":[9664,9810,11804,6521],"pm":[8668,10557,12249,5458],"night":[2886,5337,5283,1304]},"nEvents":30},{"d":"2026-08-20","dow":"四","s":[24330,32951,33475,12658],"total":103414,"rate":0.5823,"note":"急單插單，晚班拉高","slots":{"am":[8180,12255,11446,3947],"pm":[9272,12079,12062,6050],"night":[6878,8617,9967,2661]},"nEvents":36},{"d":"2026-08-21","dow":"五","s":[15771,19273,17780,8251],"total":61075,"rate":0.3439,"note":"","slots":{"am":[7210,8912,7927,3807],"pm":[7538,8479,7911,4011],"night":[1023,1882,1942,433]},"nEvents":32},{"d":"2026-08-24","dow":"一","s":[16030,22563,23201,7305],"total":69099,"rate":0.3891,"note":"","slots":{"am":[7856,8860,8751,3149],"pm":[6206,10539,10720,3252],"night":[1968,3164,3730,904]},"nEvents":30},{"d":"2026-08-25","dow":"二","s":[21921,27659,31720,11639],"total":92939,"rate":0.5233,"note":"","slots":{"am":[10843,11467,13392,5248],"pm":[8001,11452,13174,5018],"night":[3077,4740,5154,1373]},"nEvents":32},{"d":"2026-08-26","dow":"三","s":[20247,26842,28520,10347],"total":85956,"rate":0.484,"note":"常態生產日（原始檔日期）","slots":{"am":[9559,11210,11308,4636],"pm":[7448,10649,11717,4192],"night":[3240,4983,5495,1519]},"nEvents":33}],"realEvents":[{"id":"2026082601","st":"S01","sec":2753},{"id":"2026082602","st":"S01","sec":1644},{"id":"2026082603","st":"S01","sec":3330},{"id":"2026082604","st":"S01","sec":1832},{"id":"2026082605","st":"S01","sec":3019},{"id":"2026082606","st":"S01","sec":2362},{"id":"2026082607","st":"S01","sec":2067},{"id":"2026082608","st":"S01","sec":1787},{"id":"2026082609","st":"S01","sec":1453},{"id":"2026082601","st":"S02","sec":3188},{"id":"2026082602","st":"S02","sec":4030},{"id":"2026082603","st":"S02","sec":3992},{"id":"2026082604","st":"S02","sec":1547},{"id":"2026082605","st":"S02","sec":1319},{"id":"2026082606","st":"S02","sec":2567},{"id":"2026082607","st":"S02","sec":2341},{"id":"2026082608","st":"S02","sec":2875},{"id":"2026082609","st":"S02","sec":1814},{"id":"2026082610","st":"S02","sec":1718},{"id":"2026082611","st":"S02","sec":1451},{"id":"2026082601","st":"S03","sec":2635},{"id":"2026082602","st":"S03","sec":4320},{"id":"2026082603","st":"S03","sec":4353},{"id":"2026082604","st":"S03","sec":8174},{"id":"2026082605","st":"S03","sec":3543},{"id":"2026082606","st":"S03","sec":2855},{"id":"2026082607","st":"S03","sec":2640},{"id":"2026082601","st":"S04","sec":2273},{"id":"2026082602","st":"S04","sec":2363},{"id":"2026082603","st":"S04","sec":1577},{"id":"2026082604","st":"S04","sec":1085},{"id":"2026082605","st":"S04","sec":1530},{"id":"2026082606","st":"S04","sec":1519}]};
+</script>
+<div class="wrap">
+ <header>
+  <h1><i></i>鮮湧 人時分析<span style="font-size:13px;color:var(--ink2);font-weight:400">Labour Hours</span></h1>
+  <div class="sub" id="sub"></div>
+ </header>
+
+ <div class="sim" id="sim"></div>
+ <div class="kpi" id="kpi"></div>
+
+ <div class="card">
+  <div class="h">每日稼動率 / Daily utilisation</div>
+  <div class="s">四工位合計 ÷ 四工位可用時數　·　虛線＝期間平均</div>
+  <svg class="cw" id="trend" viewBox="0 0 700 190" preserveAspectRatio="none"></svg>
+  <div class="cap" id="tcap"></div>
+ </div>
+
+ <div class="card">
+  <div class="h">各工位平均在崗時數 / By station</div>
+  <div class="s">每工位每日可用 12:20　·　條長＝佔可用時數的比例</div>
+  <div class="bars" id="station"></div>
+  <div class="note" id="gap"></div>
+ </div>
+
+ <div class="card">
+  <div class="h">時段分布 / By time slot</div>
+  <div class="s">上午 8:00–12:00　·　下午 13:00–17:20　·　晚上 18:00–22:00</div>
+  <div class="bars" id="slot"></div>
+ </div>
+
+ <div class="card">
+  <div class="h">選一天看明細 / Pick a day</div>
+  <div class="s" id="dayhint"></div>
+  <div class="days" id="days"></div>
+  <div id="daybody"></div>
+ </div>
+
+ <footer>
+  多利鑫科技　｜　人時分析 Labour Hours<br>
+  資料來源：人員在工位影像判讀 / Vision-based station presence
+ </footer>
+</div>
+
+<script>
+(function(){
+const M=LABOUR.meta,D=LABOUR.daily,CAP=M.capPerStation;
+const C={ok:"#0ca30c",warn:"#eda100",low:"#d03b3b",bar:"#4338CA",mut:"#5f636b"};
+const q=x=>document.querySelector(x);
+const hm=s=>`${Math.floor(s/3600)}:${String(Math.round(s%3600/60)).padStart(2,"0")}`;
+let sel=M.realDay;
+
+q("#sub").textContent=`${M.period}　·　${M.days} 個工作日　·　4 工位　·　${M.totalEvents.toLocaleString()} 筆判讀事件`;
+
+/* ⚠️ 這一段是這頁的前提不是裝飾 —— 30 天裡只有 1 天對應原始報表。
+   拿掉就等於把模擬數字當實測給客戶看。 */
+q("#sim").innerHTML=
+ `⚠️ <b>模擬資料 / Simulated data</b>　·　${M.days} 個工作日中<b>僅 ${M.realDay} 對應原始報表</b>，`
+ +`其餘 ${M.days-1} 日為產生資料。<br>`
+ +`Only ${M.realDay} maps to the original report; the other ${M.days-1} days are generated.`;
+
+const rates=D.map(d=>d.rate),lo=Math.min(...rates),hi=Math.max(...rates);
+const loD=D.find(d=>d.rate===lo),hiD=D.find(d=>d.rate===hi);
+const best=M.stationAvg.indexOf(Math.max(...M.stationAvg)),worst=M.stationAvg.indexOf(Math.min(...M.stationAvg));
+q("#kpi").innerHTML=[
+ ["期間平均稼動率<br><span style='font-size:10.5px;color:var(--ink3)'>Avg utilisation</span>",
+  `${(M.avgRate*100).toFixed(1)}<small>%</small>`,`${M.days} 個工作日`,M.avgRate<0.5?C.warn:C.ok],
+ ["最高 / 最低<br><span style='font-size:10.5px;color:var(--ink3)'>High / Low</span>",
+  `${(hi*100).toFixed(0)}<small>%</small> / ${(lo*100).toFixed(0)}<small>%</small>`,
+  `${hiD.d.slice(5)} / ${loD.d.slice(5)}`,"#9fa3ab"],
+ ["工位落差<br><span style='font-size:10.5px;color:var(--ink3)'>Station gap</span>",
+  `${(M.stationAvg[best]/M.stationAvg[worst]).toFixed(1)}<small> 倍</small>`,
+  `${M.stations[best]} vs ${M.stations[worst]}`,C.warn],
+ ["判讀事件<br><span style='font-size:10.5px;color:var(--ink3)'>Vision events</span>",
+  `${M.totalEvents.toLocaleString()}<small> 筆</small>`,"每筆有進出截圖","#9fa3ab"],
+].map(k=>`<div class="kc"><div class="kl">${k[0]}</div><div class="kv" style="color:${k[3]}">${k[1]}</div><div class="kh">${k[2]}</div></div>`).join("");
+
+function trend(){
+ const W=700,H=190,ml=36,mr=8,mt=12,mb=26;
+ const top=Math.max(...rates)*1.12,bw=(W-ml-mr)/D.length;
+ const py=v=>mt+(top-v)*(H-mt-mb)/top;
+ let g="";
+ for(let k=0;k<=3;k++){const v=top*k/3,y=py(v);
+  g+=`<line x1="${ml}" y1="${y}" x2="${W-mr}" y2="${y}" stroke="rgba(137,135,129,.16)"/>`
+   +`<text x="${ml-5}" y="${y+4}" text-anchor="end" font-size="10" fill="#7b7f87">${(v*100).toFixed(0)}%</text>`;}
+ D.forEach((d,i)=>{
+  const x=ml+i*bw;
+  /* 真實那天優先綠 —— 圖例說綠是它，顏色就不能被「有備註」蓋掉 */
+  const col=d.d===M.realDay?C.ok:(d.note?C.warn:C.bar);
+  g+=`<g data-d="${d.d}" style="cursor:pointer"><rect x="${x+1}" y="${py(d.rate)}" width="${bw-2}" `
+   +`height="${py(0)-py(d.rate)}" fill="${col}" opacity="${sel===d.d?1:.7}" rx="2"/>`
+   +`<rect x="${x}" y="${mt}" width="${bw}" height="${H-mt-mb}" fill="transparent"/></g>`;
+  if(i===0||i===D.length-1)
+   g+=`<text x="${x+bw/2}" y="${H-10}" text-anchor="middle" font-size="9.5" fill="#7b7f87">${d.d.slice(5)}</text>`;});
+ const ay=py(M.avgRate);
+ g+=`<line x1="${ml}" y1="${ay}" x2="${W-mr}" y2="${ay}" stroke="#8b8f97" stroke-dasharray="5 3"/>`
+  +`<text x="${ml+4}" y="${ay-5}" font-size="10" fill="#9fa3ab">平均 ${(M.avgRate*100).toFixed(1)}%</text>`;
+ q("#trend").innerHTML=g;
+ q("#trend").querySelectorAll("g[data-d]").forEach(el=>el.onclick=()=>{sel=el.dataset.d;render();});
+ q("#tcap").innerHTML=`綠＝${M.realDay}（唯一對應原始報表）　·　黃＝有特殊事件　·　點長條看當日`;
+}
+
+const bars=(el,rows)=>q(el).innerHTML=rows.map(r=>
+ `<div class="row"><span class="nm">${r[0]}</span>`
+ +`<span class="track"><span class="fill" style="width:${(r[1]*100).toFixed(1)}%;background:${r[3]}"></span></span>`
+ +`<span class="val">${r[2]}</span></div>`).join("");
+
+bars("#station",M.stations.map((n,i)=>{const p=M.stationAvg[i]/CAP;
+ return [n,p,`${hm(M.stationAvg[i])} ${(p*100).toFixed(0)}%`,p>=.55?C.ok:p>=.3?C.warn:C.low];}));
+q("#gap").innerHTML=
+ `<b>${M.stations[worst]}</b> 平均每日 ${hm(M.stationAvg[worst])}，是 <b>${M.stations[best]}</b>（${hm(M.stationAvg[best])}）的 `
+ +`<b>${(M.stationAvg[worst]/M.stationAvg[best]*100).toFixed(0)}%</b>。<br>`
+ +`⚠️ 這是「人在工位的時間」不是「產出」—— 落差大不一定代表閒置，也可能是該工位工序本來就短。要判斷得對照工單。<br>`
+ +`<span style="color:#b9a77e">This measures presence, not output.</span>`;
+
+const NM={am:"上午",pm:"下午",night:"晚上"};
+const tot=["am","pm","night"].reduce((a,k)=>a+M.slotAvg[k].reduce((p,q2)=>p+q2,0),0);
+bars("#slot",["am","pm","night"].map(k=>{const v=M.slotAvg[k].reduce((a,b)=>a+b,0);
+ return [NM[k],v/tot,`${hm(v)} ${(v/tot*100).toFixed(0)}%`,k==="night"?C.mut:C.bar];}));
+
+function days(){
+ q("#dayhint").innerHTML=`左右滑動選日期　·　<b style="color:${C.ok}">${M.realDay}</b> 是唯一對應原始報表的一天`;
+ q("#days").innerHTML=D.map(d=>
+  `<div class="day${sel===d.d?" on":""}${d.d===M.realDay?" real":""}" data-d="${d.d}">`
+  +`<b>${d.d.slice(5)}</b><span>${(d.rate*100).toFixed(0)}%${d.note?" ●":""}</span></div>`).join("");
+ q("#days").querySelectorAll(".day").forEach(el=>el.onclick=()=>{sel=el.dataset.d;render();});
+ const on=q("#days .day.on"); if(on) on.scrollIntoView({block:"nearest",inline:"center"});
+}
+
+function daybody(){
+ const d=D.find(x=>x.d===sel),real=d.d===M.realDay;
+ let h=`<div class="s" style="margin:12px 0 9px">`
+  +`<b style="color:var(--ink);font-size:13px">${d.d}（${d.dow}）</b>　稼動率 ${(d.rate*100).toFixed(1)}%　·　合計 ${hm(d.total)}　·　${d.nEvents} 筆事件`
+  +(d.note?`<br><b style="color:${C.warn}">${d.note}</b>`:"")
+  +`<br>${real?`<b style="color:${C.ok}">此日對應原始報表 / matches original report</b>`
+              :`<b style="color:#e8a9ae">此日為產生資料，逐事件明細不列出</b>`}</div>`;
+ h+=`<div style="overflow-x:auto"><table><thead><tr><th>工位</th><th class="n">上午</th><th class="n">下午</th>`
+  +`<th class="n">晚上</th><th class="n">合計</th><th class="n">佔可用</th></tr></thead><tbody>`;
+ M.stations.forEach((n,i)=>{const p=d.s[i]/CAP,c=p>=.55?C.ok:p>=.3?C.warn:C.low;
+  h+=`<tr><td class="nm">${n}</td><td class="n">${hm(d.slots.am?.[i]??0)}</td>`
+   +`<td class="n">${hm(d.slots.pm?.[i]??0)}</td><td class="n">${hm(d.slots.night?.[i]??0)}</td>`
+   +`<td class="n">${hm(d.s[i])}</td><td class="n"><span class="pill" style="background:${c}26;color:${c}">${(p*100).toFixed(0)}%</span></td></tr>`;});
+ h+=`</tbody></table></div>`;
+ /* 逐事件只在真實那天列 —— 產生的事件列成表格會被當成實測（R11） */
+ if(real&&LABOUR.realEvents.length){
+  h+=`<div class="h" style="margin:16px 0 2px">逐事件明細 / Events　<span style="color:var(--ink3);font-weight:400;font-size:12px">${LABOUR.realEvents.length} 筆</span></div>`
+   +`<div class="s">每筆都有人員進入 / 離開的截圖檔名可回查</div>`
+   +`<div style="overflow-x:auto;max-height:300px"><table><thead><tr><th>事件編號</th><th>工位</th><th class="n">在工位時間</th></tr></thead><tbody>`
+   +LABOUR.realEvents.map(e=>`<tr><td class="nm">${e.id}</td><td>${e.st}</td><td class="n">${hm(e.sec)}</td></tr>`).join("")
+   +`</tbody></table></div>`;}
+ q("#daybody").innerHTML=h;
+}
+function render(){trend();days();daybody();}
+render();
+})();
+</script>
+</body>
+</html>

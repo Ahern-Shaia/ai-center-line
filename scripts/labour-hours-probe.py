@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""人時分析 xlsx → 鮮湧戰情室「人時分析」分頁的靜態資料。
+"""人時分析 xlsx → 鮮湧的人時分析頁面靜態資料。
+
+⚠️ 產出要貼進**兩個檔**（只更新一邊，同一份報告在手機與桌面會顯示不同數字）：
+   · web/public/shianyong-labour.html   ← 手機版 · 圖文選單「報工單」的目的地
+   · web/public/shianyong-warroom.html  ← 桌面戰情室的「人時分析」分頁
+
 
 用法：
     python3 scripts/labour-hours-probe.py ~/Downloads/人時分析每日報告_模擬30日_20260716-20260826.xlsx
