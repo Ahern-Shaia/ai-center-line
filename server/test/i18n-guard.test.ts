@@ -219,7 +219,7 @@ test("⭐⭐ M4b · 不可用中文字串比對來判斷後端錯誤類型（切
 test("⭐⭐ M5 · 日期不可寫死 \"zh-TW\"（字典守門抓不到 —— 日期是 Intl 產的不是字典字串）", () => {
   // 2026-08-27 M5 實機截圖才看到：介面全英文，日期卻是「2026年8月27日 星期四」。
   // 平台側 aiproot 專用頁與 LIFF 不在甲案範圍，維持中文。
-  const OUT = /\/(aiproot-console|mockdata|notify-config|line-bots|convo-analysis|liff|i18n)\//;
+  const OUT = /\/(aiproot-console|mockdata|notify-config|line-bots|convo-analysis|i18n)\//;
   const SKIP = /(LlmSettings|MasterData)\.tsx$/;
   const bad: string[] = [];
   for (const f of srcFiles("../../web/src")) {
@@ -240,7 +240,7 @@ test("⭐⭐ 存 i18n key 的對照表，讀取端必須包 tr()/t()（否則畫
   //
   // 這一支的做法：先找出「值是字典 key」的常數表，再找它們的 `XXX[...]` 讀取端，
   // 檢查前面 14 個字元內有沒有 tr( / t( / msg(。
-  const OUT = /\/(aiproot-console|mockdata|notify-config|line-bots|convo-analysis|liff|i18n)\//;
+  const OUT = /\/(aiproot-console|mockdata|notify-config|line-bots|convo-analysis|i18n)\//;
   const dictKeys = new Set(keysOf(read("../../web/src/i18n/zh-TW.ts")));
   const files = srcFiles("../../web/src").filter((f) => !OUT.test(f));
 
@@ -275,3 +275,24 @@ test("⭐⭐ 存 i18n key 的對照表，讀取端必須包 tr()/t()（否則畫
   }
   assert.deepEqual(bad, [], `這些地方會把 i18n key 本身印到畫面上：\n${bad.join("\n")}`);
 });
+
+test("⭐ liff/ 已納入 i18n 範圍 —— 不可再冒出硬編中文（2026-08-28 圖文選單改雙語後補做）", () => {
+  // 圖文選單寫了「My Daily Report」，點進去卻是中文頁 = 我們主動承諾了做不到的事。
+  // 所以 liff/ 從 i18n 甲案的範圍外移進範圍內，並拿掉守門測試的豁免。
+  // ⚠️ 只吃整行 `//` 不夠 —— 本專案大量用**行尾註解**（`const x = 1;   // 中文說明`），
+  //    漏掉的話這支會把註解當成硬編中文報上來（第一版就是這樣，4 筆全是誤報）。
+  //    `(?<![:"'\`])` 是為了不誤砍 URL 的 `https://` 與字串裡的 `//`。
+  const strip = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, "")
+     .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+     .replace(/^\s*\/\/.*$/gm, "")
+     .replace(/(?<![:"'`])\/\/[^\n"'`]*$/gm, "");
+  const bad: string[] = [];
+  for (const f of srcFiles("../../web/src/liff")) {
+    strip(readFileSync(f, "utf8")).split("\n").forEach((line, i) => {
+      if (/[一-鿿]/.test(line)) bad.push(`${f.split("/liff/")[1]}:${i + 1}  ${line.trim().slice(0, 70)}`);
+    });
+  }
+  assert.deepEqual(bad, [], `liff/ 出現硬編中文：\n${bad.join("\n")}`);
+});
+

@@ -9,6 +9,8 @@ import SetPasswordView from "./SetPasswordView";
 import PunchView from "./PunchView";
 import MyTrips from "../personal-report/MyTrips";
 import type { LiffCtx } from "./types";
+import { t } from "../i18n";
+import { useT } from "../i18n/useT";
 import "../styles.css";
 
 // LIFF 統一入口（M2 · 收斂方案 B）· 取代 binding.html 三視圖
@@ -50,14 +52,15 @@ const CENTER: React.CSSProperties = { minHeight: "70vh", display: "flex", flexDi
 // 三個 LIFF 頁共用 liff.html，其 <title> 只是預設值 → 依實際頁面切換，
 // 否則使用者從「我的行程」開啟卻看到標題寫「我的日報」。
 const PHASE_TITLE: Partial<Record<Phase, string>> = {
-  mine: "我的日報",
-  trips: "我的行程",
-  punch: "外勤打卡",
-  binding: "員工綁定",
-  "set-password": "設定密碼",
+  mine: "nav.myDailyReport",
+  trips: "nav.myTrips",
+  punch: "liff.punch",
+  binding: "liff.binding",
+  "set-password": "liff.setPassword",
 };
 
 function LiffApp() {
+  const tr = useT();
   const [phase, setPhase] = useState<Phase>("init");
   const [ctx, setCtx] = useState<LiffCtx | null>(null);
   const [msg, setMsg] = useState("");
@@ -71,7 +74,7 @@ function LiffApp() {
     (async () => {
       try {
         const liff = window.liff;
-        if (!liff) { setPhase("error"); setMsg("LIFF SDK 未載入 · 請重開頁面"); return; }
+        if (!liff) { setPhase("error"); setMsg(t("liff.noSdk")); return; }
 
         // 登入前先解析並持久化 botId/page/liffId（liff.login 導向來回會把 query 剝掉）
         const botId = resolveQuery("botId") || sessionStorage.getItem("liff_bot_id") || "";
@@ -93,7 +96,7 @@ function LiffApp() {
 
         if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
         const accessToken = liff.getAccessToken();
-        if (!accessToken) { setPhase("error"); setMsg("拿不到 LINE 憑證 · 請重開頁面"); return; }
+        if (!accessToken) { setPhase("error"); setMsg(t("liff.noToken")); return; }
         const profile = await liff.getProfile();
 
         // JWT 流程（需已綁定）：我的日報、外勤打卡、我的行程
@@ -109,21 +112,21 @@ function LiffApp() {
         }
 
         // 綁定 / 設密碼需要 botId
-        if (!botId) { setPhase("error"); setMsg("缺 botId · 請透過 bot 私訊的按鈕開啟"); return; }
+        if (!botId) { setPhase("error"); setMsg(t("liff.noBotId")); return; }
         setCtx({ botId, lineUserId: profile.userId, displayName: profile.displayName, pictureUrl: profile.pictureUrl ?? null, accessToken });
         setPhase(page === "set-password" ? "set-password" : "binding");
       } catch (e) {
-        setPhase("error"); setMsg(e instanceof Error ? e.message : "初始化失敗");
+        setPhase("error"); setMsg(e instanceof Error ? e.message : t("liff.initFailed"));
       }
     })();
   }, []);
 
   if (phase === "init") return <div style={CENTER}><Spinner block /></div>;
   if (phase === "error") {
-    return <div style={CENTER} className="dm-empty"><div style={{ fontWeight: 600, marginBottom: 6 }}>無法開啟</div><div className="dm-empty-hint">{msg}</div></div>;
+    return <div style={CENTER} className="dm-empty"><div style={{ fontWeight: 600, marginBottom: 6 }}>{tr("liff.cantOpen")}</div><div className="dm-empty-hint">{msg}</div></div>;
   }
   if (phase === "unbound") {
-    return <div style={CENTER} className="dm-empty"><div style={{ fontWeight: 600, marginBottom: 6 }}>尚未完成綁定</div><div className="dm-empty-hint">請先私訊公司 LINE 官方帳號、點「開始綁定」完成後再開啟本頁。</div></div>;
+    return <div style={CENTER} className="dm-empty"><div style={{ fontWeight: 600, marginBottom: 6 }}>{tr("liff.notBound")}</div><div className="dm-empty-hint">{tr("liff.notBoundHint")}</div></div>;
   }
   if (phase === "mine") return <MyDailyReport />;
   if (phase === "punch") return <PunchView />;

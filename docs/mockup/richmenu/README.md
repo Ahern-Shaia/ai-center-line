@@ -59,20 +59,21 @@ richmenu/
 |--:|---|:-:|---|
 | 1 | 報工單 | — | 還沒有頁面 |
 | 2 | 我的日報（LIFF `?page=mine`）| ✅ **有** | 複用 `personal-report/MyDailyReport`，已在 i18n 甲案內翻好；LINE webview 會依手機語言自動判斷 |
-| 2b | └ LIFF 外殼（`liff/main.tsx`）| ❌ **沒有** | 頁首標題與 5 個錯誤訊息仍是中文（「LIFF SDK 未載入」「缺 botId」「尚未綁定」…）· `liff/` 整個目錄在 i18n 甲案範圍外 |
+| 2b | └ LIFF 外殼（`liff/`）| ✅ **有**（2026-08-28 補做）| 外殼 + 綁定 + 設定密碼 + 外勤打卡四支全數接上 i18n（70 條 ×2）· 守門測試已拿掉 `liff/` 豁免 |
 | 3 | 智慧聯網戰情室 | ❌ **沒有** | `shianyong-warroom.html` 全中文（112 行）· 靜態頁，不吃 web app 的 i18n |
 | 4 | 內部客服機器人 | — | 未開放 |
 
-> **要補的話是兩件獨立的事**：
-> ① `liff/` 接 i18n（12 條字串，小）
-> ② `shianyong-warroom.html` 雙語化 —— 那頁**同時排在視覺改版**
+> **兩件獨立的事**：
+> ① ✅ `liff/` 接 i18n —— **2026-08-28 完成**（實際是 70 條不是 12 條：
+>    除了外殼，綁定 / 設定密碼 / 外勤打卡三頁也一起做完，
+>    否則同一個目錄一半英文一半中文）
+> ② ⏳ `shianyong-warroom.html` 雙語化 —— 那頁**同時排在視覺改版**
 >    （[`smart-inspection`](../../modules/smart-inspection.md) →
 >    [`shianyong-warroom-redesign`](../../modules/shianyong-warroom-redesign.md)），
 >    **建議跟改版一起做，不要分兩次動同一個檔案。**
 
 **已隱藏（頁面仍在，只是選單不放）**：打卡 `?page=punch`、我的行程 `?page=trips`。
-⚠️ 這兩頁**沒有英文**（`liff/PunchView.tsx`、`personal-report/MyTrips` 的 LIFF 用法）——
-之後若要恢復進選單，雙語標籤要連同頁面一起評估。
+✅ 這兩頁 2026-08-28 起**已有英文** —— 之後要恢復進選單，直接加雙語標籤即可。
 要恢復的話 `menu.html` 改回 3×2、重產圖、版型換回 6 區塊即可，後端不必動。
 
 > ⚠️ **4／5／6 貼上去之前要先確認網址真的開得起來。**
