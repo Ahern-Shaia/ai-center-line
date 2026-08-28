@@ -296,3 +296,35 @@ test("⭐ liff/ 已納入 i18n 範圍 —— 不可再冒出硬編中文（2026-
   assert.deepEqual(bad, [], `liff/ 出現硬編中文：\n${bad.join("\n")}`);
 });
 
+
+test("⭐⭐ LIFF 必須有自己的語言切換入口 —— 只用 LINE 的人沒有別的路", () => {
+  // 網頁的切換在 Login 頁與右上角 user menu。
+  // 一個外籍現場員工要走到那裡，得先找到網址、再用 email + 密碼登入
+  // （而他可能從沒設過密碼）—— 那條路對他等於不存在。
+  // 而他正是整個 i18n 甲案要服務的人。
+  const main = readFileSync(fileURLToPath(new URL("../../web/src/liff/main.tsx", import.meta.url)), "utf8");
+  assert.match(main, /function LiffLocaleToggle/, "LIFF 沒有語言切換元件");
+  assert.match(main, /useLocale\(\)/, "切換元件沒有訂閱 locale");
+
+  // ⚠️ 錯誤 / 未綁定這兩個 phase 也要有 —— 那是「卡住」的狀態，
+  //    看不懂那句話的人就真的出不去了。
+  for (const phase of ["error", "unbound"]) {
+    const i = main.indexOf(`phase === "${phase}"`);
+    assert.ok(i > 0, `找不到 ${phase} phase`);
+    const block = main.slice(i, i + 400);
+    assert.match(block, /withToggle\(/, `${phase} phase 沒掛切換鈕 —— 卡在這裡的人出不去`);
+  }
+});
+
+test("⭐ 已登入的 LIFF 頁切語言要寫回 users.locale（不然換裝置又變回去）", () => {
+  const main = readFileSync(fileURLToPath(new URL("../../web/src/liff/main.tsx", import.meta.url)), "utf8");
+  for (const p of ["mine", "punch", "trips"]) {
+    assert.match(main, new RegExp(`phase === "${p}"\\) return withToggle\\([^)]*, true\\)`),
+      `${p} phase 的 persist 不是 true —— 切了不會寫回伺服器`);
+  }
+  // 綁定 / 設密碼還沒有 JWT，寫不了
+  for (const p of ["binding", "set-password"]) {
+    assert.match(main, new RegExp(`phase === "${p}"[\\s\\S]{0,160}?withToggle\\([\\s\\S]{0,120}?, false\\)`),
+      `${p} phase 的 persist 應為 false（那時還沒有 JWT）`);
+  }
+});

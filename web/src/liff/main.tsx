@@ -3,14 +3,15 @@ import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import MyDailyReport from "../personal-report/MyDailyReport";
 import { ToastProvider } from "../Toast";
-import { applyLiffToken, ApiError } from "../api";
+import { applyLiffToken, ApiError, updateMyLocale } from "../api";
 import BindingView from "./BindingView";
 import SetPasswordView from "./SetPasswordView";
 import PunchView from "./PunchView";
 import MyTrips from "../personal-report/MyTrips";
 import type { LiffCtx } from "./types";
 import { t } from "../i18n";
-import { useT } from "../i18n/useT";
+import { useLocale, useT } from "../i18n/useT";
+import { LOCALE_NAME } from "../i18n";
 import "../styles.css";
 
 // LIFF 統一入口（M2 · 收斂方案 B）· 取代 binding.html 三視圖
@@ -59,6 +60,42 @@ const PHASE_TITLE: Partial<Record<Phase, string>> = {
   binding: "liff.binding",
   "set-password": "liff.setPassword",
 };
+
+
+/**
+ * LIFF 專用的語言切換。
+ *
+ * ⚠️⚠️ 為什麼非有不可：**只用 LINE、從不登入網頁的人，這是他唯一的入口。**
+ *    網頁的切換在 Login 頁與右上角 user menu —— 一個外籍現場員工要走到那裡，
+ *    得先找到網址、再用 email + 密碼登入（而他可能從沒設過密碼）。
+ *    那條路對他等於不存在。他也正是整個 i18n 要服務的人。
+ *
+ * ⚠️ 顯示的是**另一個語言的名字**（現在是中文就顯示 English），
+ *    跟 Login.tsx 同一個形狀 —— 使用者看到的是「按下去會變成什麼」。
+ *
+ * ⚠️ 已登入（mine / punch / trips）才寫回 `users.locale`：
+ *    綁定 / 設密碼那兩個 phase 還沒有 JWT，寫不了，只在本機生效。
+ *    寫回失敗**不可以讓畫面切不動** —— 語言是即時的本機狀態（同 api.ts 那條註解）。
+ */
+function LiffLocaleToggle({ persist }: { persist: boolean }) {
+  const [locale, setLocale] = useLocale();
+  return (
+    <button
+      type="button"
+      className="liff-locale"
+      onClick={() => {
+        const next = locale === "en" ? "zh-TW" : "en";
+        setLocale(next);
+        if (persist) void updateMyLocale(next).catch(() => undefined);
+      }}
+    >
+      {/* ⚠️ 語言名稱走 LOCALE_NAME，不要在這裡硬寫 ——
+          i18n/index.ts 早就有那張表，硬寫會變成第二份（而且守門測試會擋）。
+          顯示的是**另一個**語言的名字：使用者看到的是「按下去會變成什麼」。 */}
+      {LOCALE_NAME[locale === "en" ? "zh-TW" : "en"]}
+    </button>
+  );
+}
 
 function LiffApp() {
   const tr = useT();
@@ -126,19 +163,28 @@ function LiffApp() {
     })();
   }, []);
 
+  // 已登入的三頁才寫得回 users.locale（綁定 / 設密碼 / 錯誤 phase 還沒有 JWT）
+  const withToggle = (el: React.ReactNode, persist: boolean) => (
+    <>
+      <div className="liff-locale-bar"><LiffLocaleToggle persist={persist} /></div>
+      {el}
+    </>
+  );
+
+  // init 只有一個轉圈圈，不掛切換鈕（它馬上會被下一個 phase 取代）
   if (phase === "init") return <div style={CENTER}><Spinner block /></div>;
   if (phase === "error") {
-    return <div style={CENTER} className="dm-empty"><div style={{ fontWeight: 600, marginBottom: 6 }}>{tr("liff.cantOpen")}</div><div className="dm-empty-hint">{msg}</div></div>;
+    return withToggle(<div style={CENTER} className="dm-empty"><div style={{ fontWeight: 600, marginBottom: 6 }}>{tr("liff.cantOpen")}</div><div className="dm-empty-hint">{msg}</div></div>, false);
   }
   if (phase === "unbound") {
-    return <div style={CENTER} className="dm-empty"><div style={{ fontWeight: 600, marginBottom: 6 }}>{tr("liff.notBound")}</div><div className="dm-empty-hint">{tr("liff.notBoundHint")}</div></div>;
+    return withToggle(<div style={CENTER} className="dm-empty"><div style={{ fontWeight: 600, marginBottom: 6 }}>{tr("liff.notBound")}</div><div className="dm-empty-hint">{tr("liff.notBoundHint")}</div></div>, false);
   }
-  if (phase === "mine") return <MyDailyReport />;
-  if (phase === "punch") return <PunchView />;
-  if (phase === "trips") return <MyTrips />;
+  if (phase === "mine") return withToggle(<MyDailyReport />, true);
+  if (phase === "punch") return withToggle(<PunchView />, true);
+  if (phase === "trips") return withToggle(<MyTrips />, true);
   // 註：分頁標題由下方 useEffect 依 phase 切換（liff.html 的 <title> 是三頁共用的預設值）
-  if (phase === "binding" && ctx) return <BindingView ctx={ctx} />;
-  if (phase === "set-password" && ctx) return <SetPasswordView ctx={ctx} liff={window.liff} />;
+  if (phase === "binding" && ctx) return withToggle(<BindingView ctx={ctx} />, false);
+  if (phase === "set-password" && ctx) return withToggle(<SetPasswordView ctx={ctx} liff={window.liff} />, false);
   return null;
 }
 
