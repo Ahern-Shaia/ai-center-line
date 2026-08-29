@@ -248,7 +248,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
 <nav class="toc" aria-label="目錄">
   <div class="toc-mark">
     <b>AI</b>
-    <span>LINE AI 戰情室<br>全員使用手冊 v1.0</span>
+    <span>LINE AI 戰情室<br>全員使用手冊 v1.1</span>
   </div>
 
   <div class="rolebar">
@@ -276,7 +276,8 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
     <h4>查詢用</h4>
     <a href="#c6" data-w="both" data-roles="emp mgr gm asst it"><i></i>6 · 名詞對照表</a>
     <a href="#c7" data-w="both" data-roles="emp mgr gm asst it"><i></i>7 · 疑難排解</a>
-    <a href="#c8" data-w="both" data-roles="mgr gm it"><i></i>8 · 誰看得到什麼</a>
+    <a href="#c8" data-w="both" data-roles="mgr gm it"><i></i>8 · 三個層級差在哪</a>
+    <a href="#c9" data-w="both" data-roles="mgr gm it"><i></i>9 · 誰看得到什麼</a>
   </div>
 </nav>
 
@@ -306,7 +307,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
   </div>
 
   <div class="meta">
-    <span>版本 <b>v1.0</b></span>
+    <span>版本 <b>v1.1</b></span>
     <span>適用系統 <b>LINE AI 戰情室</b></span>
     <span>維護 <b>aiproot 交付團隊</b></span>
     <span>看不懂就問 <b>公司資訊窗口</b></span>
@@ -1902,15 +1903,166 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
 
 <!-- ═══════════════ 第 8 章 · 權限 ═══════════════ -->
 <section id="c8" data-roles="mgr gm it">
-  <div class="ch-head">
+  <div class="ch-head" data-w="both">
     <div class="ch-num">8</div>
+    <div>
+      <h2>三個層級差在哪</h2>
+      <div class="who">
+        給誰看：總經理室與部門主管 · 約 5 分鐘 ·
+        同仁問「為什麼他看得到我看不到」時，可以直接翻這一章
+      </div>
+    </div>
+  </div>
+
+  <div class="note n-info">
+    <b class="t">先分清楚兩件常被混在一起講的事</b>
+    <p>
+      <b>① 有沒有這個功能</b> —— 側欄上看不看得到這一項。<br>
+      <b>② 同一個功能看得到多少</b> —— <b>同一顆按鈕</b>，部門主管看到的是自己部門，
+      總經理室看到的是全公司。<br><br>
+      日常在用的那幾頁（總覽儀表、任務看板、群組日誌、部門日報），
+      主管與總經理室<b>用的是同一頁</b>，差別在第②件事。
+      真正「有跟沒有」的差別集中在管理類功能。
+    </p>
+  </div>
+
+  <h3>8.1　LINE 那邊：三個層級用起來一模一樣</h3>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:34%">在 LINE 裡</th><th style="width:22%">員工</th><th style="width:22%">部門主管</th><th>總經理室</th></tr></thead>
+    <tbody>
+      <tr><td>要先加好友並綁定</td><td class="yes">要</td><td class="yes">要</td><td class="yes">要</td></tr>
+      <tr><td>私訊回報工作</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      <tr><td>傳「<b>日報</b>」看今天的整理</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      <tr><td>圖文選單：打卡／我的行程／我的日報</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      <tr><td>需要帳號密碼嗎</td><td>不需要</td><td>不需要</td><td>不需要</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note n-ok">
+    <b class="t">LINE 那邊沒有階級</b>
+    <p>
+      主管與總經理在 LINE 裡跟同仁<b>完全一樣</b> —— 一樣要綁定、一樣私訊回報、
+      一樣傳「日報」。<b>層級的差別要打開電腦後台才開始。</b>
+    </p>
+  </div>
+
+  <div class="note n-warn">
+    <b class="t">關於群組，三件事先講清楚</b>
+    <p>
+      <b>①　系統不會在群組裡發言。</b>
+      它只讀，不回話。同仁在工作群裡<b>不會</b>看到機器人插嘴或跳出提醒。
+      機器人只在<b>一對一私訊</b>裡回覆你本人。<br><br>
+      <b>②　沒綁定就對不上人。</b>
+      系統看得到 LINE 帳號，但不知道那是公司裡的哪一位。
+      導入初期有人的訊息整理不出來，多半是<b>他還沒綁定</b>，不是系統壞了。<br><br>
+      <b>③　機器人看不到它加入之前的訊息。</b>
+      這是 LINE 平台的規定，不是設定問題 —— 所以<b>導入前的歷史對話帶不進來</b>，
+      系統是從機器人進群那天開始累積的。
+    </p>
+  </div>
+
+  <h3>8.2　後台那邊：同一顆按鈕，看得到多少</h3>
+
+  <p>格子裡寫的是<b>看得到的範圍</b>，「—」表示側欄上根本沒有這一項。</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:26%">後台功能</th><th style="width:22%">員工</th><th style="width:24%">部門主管</th><th>總經理室</th></tr></thead>
+    <tbody>
+      <tr><td><b>總覽儀表</b></td><td>—</td><td>自己部門</td><td class="yes">全公司</td></tr>
+      <tr><td><b>任務看板</b>（含簽核）</td><td>—</td><td>自己部門</td><td class="yes">全公司</td></tr>
+      <tr><td><b>群組日誌</b></td><td>—</td><td>自己部門</td><td class="yes">全公司</td></tr>
+      <tr><td><b>部門日報</b></td><td>—</td><td>自己部門同仁</td><td class="yes">全公司</td></tr>
+      <tr><td><b>素材</b></td><td>—</td><td>自己部門</td><td class="yes">全公司</td></tr>
+      <tr><td><b>我的日報</b>／<b>我的行程</b></td><td>只有自己<br><span class="t sm">在 LINE 裡就有，不用登入</span></td><td>只有自己</td><td>只有自己</td></tr>
+      <tr><td><b>LINE 群組</b></td><td>—</td><td><b>全公司</b>的群組清單<br><span class="t sm">只有群名與分派狀態，不含對話內容</span></td><td class="yes">同左，另可<b>分派部門</b>與同步群名</td></tr>
+      <tr><td><b>部門 / 成員</b></td><td>—</td><td>—</td><td class="yes">全公司</td></tr>
+      <tr><td><b>權限管理</b></td><td>—</td><td>—</td><td class="yes">全公司</td></tr>
+      <tr><td><b>分析排程</b></td><td>—</td><td>—</td><td class="yes">全公司</td></tr>
+      <tr><td><b>任務設定</b></td><td>—</td><td>—</td><td class="yes">全公司</td></tr>
+      <tr><td><b>稽核記錄</b></td><td>—</td><td>—</td><td class="yes">全公司</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note n-warn">
+    <b class="t">唯一的例外：LINE 群組清單是全公司的</b>
+    <p>
+      表格裡只有這一列，部門主管看到的是<b>全公司</b>而不是自己部門 ——
+      他看得到公司有哪些工作群、各自分派給哪個部門、有沒有啟用分析。<br><br>
+      <b>但那只是清單。</b>別部門群組裡的<b>對話內容、任務、日誌他一樣看不到</b>。
+      這是刻意的：主管要能確認「我部門的群有沒有被漏掉」，
+      而那件事必須看得到完整清單才判斷得出來。
+    </p>
+  </div>
+
+  <div class="note n-info">
+    <b class="t">「自己部門」是寫在資料庫裡的，不是介面藏起來</b>
+    <p>
+      部門主管就算知道網址、直接輸入，也<b>調不出</b>別部門的資料 ——
+      限制在資料層，不是靠畫面隱藏。這一點可以直接回答同仁的疑問（見第 9 章）。
+    </p>
+  </div>
+
+  <h3>8.3　只有總經理室做得到的六件事</h3>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th style="width:24%">在哪裡</th><th style="width:34%">可以做什麼</th><th>為什麼只給總經理室</th></tr></thead>
+    <tbody>
+      <tr><td><b>部門 / 成員</b></td><td>新增／修改／刪除部門；建立部門主管帳號；調整同仁的部門與角色</td><td>會改變別人看得到什麼</td></tr>
+      <tr><td><b>權限管理</b></td><td>調整每個角色可以做哪些事；新增自訂角色</td><td>同上，而且影響全公司</td></tr>
+      <tr><td><b>LINE 群組</b></td><td><b>把群組分派給部門</b>；同步群組名稱</td><td>決定「哪些對話屬於哪個部門」＝決定誰看得到</td></tr>
+      <tr><td><b>分析排程</b></td><td>調整每天自動整理的時間</td><td>全公司共用一份排程</td></tr>
+      <tr><td><b>任務設定</b></td><td>分類詞庫、任務的時間規則</td><td>影響所有部門的整理結果</td></tr>
+      <tr><td><b>稽核記錄</b></td><td>查「誰、什麼時候、做了什麼」</td><td>稽核本身要能追查所有人</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>8.4　層級不是固定的 —— 總經理室可以自己調</h3>
+
+  <p>
+    到 <b>設定 → 權限管理</b>，可以逐項調整每個角色能做哪些事，
+    <b>改完立即生效</b>，套用到所有使用該角色的成員。
+    也可以新增<b>自訂角色</b>（例如「品保組長」），從既有角色挑一個當基準再加減。
+  </p>
+
+  <div class="note n-warn">
+    <b class="t">兩件做不到的事</b>
+    <p>
+      <b>①　給不出自己沒有的權限。</b>
+      建角色時只能挑總經理室本身有的項目 —— 這是防止有人替自己開後門的標準做法。<br><br>
+      <b>②　「助理」與「總經理室」層級的帳號要我們開通。</b>
+      系統裡的原話是：<br>
+      <span class="t sm">「員工」不必在這裡建 —— 同仁用 LINE 綁定後會自動成為員工。
+      「助理」與「總經理室」請聯繫 AIPROOT 開通。</span><br>
+      <b>部門主管</b>帳號則是總經理室自己就能建。
+    </p>
+  </div>
+
+  <div class="note n-info">
+    <b class="t">還有一個旁支角色：助理</b>
+    <p>
+      職責單純，只碰<b>通知設定</b>（Ragic 表單異動要通知誰），
+      碰不到戰情室、部門、成員。細節見第 4 章。
+    </p>
+  </div>
+</section>
+
+<section id="c9" data-roles="mgr gm it">
+  <div class="ch-head">
+    <div class="ch-num">9</div>
     <div>
       <h2>誰看得到什麼</h2>
       <div class="who">資料範圍與權限說明 · 同仁問起隱私問題時可以直接引用這一章</div>
     </div>
   </div>
 
-  <h3>8.1　五種角色</h3>
+  <h3>9.1　五種角色</h3>
   <div class="tw">
   <table>
     <thead><tr><th style="width:16%">角色</th><th style="width:16%">誰在用</th><th style="width:20%">看得到哪些資料</th><th>一句話</th></tr></thead>
@@ -1924,7 +2076,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
   </table>
   </div>
 
-  <h3>8.2　常見隱私問題的標準回答</h3>
+  <h3>9.2　常見隱私問題的標準回答</h3>
   <div class="tw">
   <table>
     <thead><tr><th style="width:32%">同仁會問</th><th>可以這樣回答</th></tr></thead>
@@ -1951,7 +2103,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
 
 <footer>
   <p style="max-width:none">
-    <b style="color:var(--ink)">LINE AI 戰情室 · 全員使用手冊 v1.0</b><br>
+    <b style="color:var(--ink)">LINE AI 戰情室 · 全員使用手冊 v1.1</b><br>
     本手冊依系統實際程式碼與畫面撰寫。系統持續更新，若畫面與本手冊不符，以實際畫面為準，並請告知資訊窗口更新本文件。<br>
     技術支援：aiproot 交付團隊　·　公司內部窗口：請填寫 ______________
   </p>

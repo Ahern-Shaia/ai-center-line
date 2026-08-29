@@ -133,6 +133,20 @@
 | G | **自己部門** | `app.current_department`（`tickets`/`personal_daily_report` 的部門子句）|
 | E | 只有自己 | `app.current_user_id` |
 
+> ⚠️ **「G＝自己部門」有例外，寫客戶文件前先確認是哪張表。**
+> 部門子句只掛在 `tickets` / `personal_daily_report`（RLS）與
+> `media` / `warroom-daily`（service 層明確過濾）。
+>
+> `line_group` 與 `line_message` 的 policy **只有租戶層、沒有部門條件**
+> —— 所以**部門主管看得到全公司的 LINE 群組清單**
+> （群名、分派到哪個部門、有沒有啟用分析），這是刻意的：
+> 他要能確認「我部門的群有沒有被漏掉」。
+> 但別部門群組的**對話內容、任務、日誌他一樣看不到**（那些走上面那幾張表）。
+>
+> 2026-08-29 寫 handbook 第 8 章時差點照「G＝自己部門」直接寫成
+> 「主管只看得到自己部門的群組」—— 去讀 `pg_policies` 才發現不是。
+
+
 ### 4.1 ⭐ 自訂角色的資料範圍（2026-08-21 · custom-roles v0.3 方案 A）
 
 租戶現在可以自己建角色（設定 → 權限管理 → ＋ 建立角色）。自訂角色**只宣告「能做什麼」**，
