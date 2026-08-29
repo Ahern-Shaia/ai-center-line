@@ -506,8 +506,14 @@ function MemberDrawer({
             ariaLabel={tr("mb.colRole")}
           />
           {/* ⚠️ 舊文案寫「可新增部門主管與助理」，但 0049 之後租戶就不能建助理了（見
-              assignableRolesFor 的註解）。選項只有一個時更要說明另外兩個去哪了 ——
-              不然在「權限管理」看到三個角色的人，會以為這裡壞掉。 */}
+              assignableRolesFor 的註解）。選項只有一個時更要說明另外一個去哪了 ——
+              不然在「權限管理」看到角色數量對不上的人，會以為這裡壞掉。
+
+              ⚠️⚠️ 2026-08-29：租戶版的提示**不可以提到「助理」**。
+              那是 aiproot 的內部角色（兩個權限都是 platform scope，
+              通知設定只發給 aiproot_admin / assistant / consultant）——
+              客戶端沒有任何人打得開那一頁，講了只會讓他們以為自己該指派一個人。
+              平台版（mb.roleHintPlatform）照舊列出它，那是我們自己在看的。 */}
           <div className="llm-hint">
             {session?.role === "tenant_admin"
               ? tr("mb.roleHintTenant")

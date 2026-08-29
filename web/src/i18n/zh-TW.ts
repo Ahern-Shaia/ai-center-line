@@ -521,7 +521,7 @@ export default {
   "mb.created": "成員已新增",
   "mb.emailLocked": "email 為登入識別 · 不可修改",
   "mb.emailHint": "登入用 · 需唯一",
-  "mb.roleHintTenant": "「員工」不必在這裡建 —— 同仁用 LINE 綁定後會自動成為員工。「助理」與「總經理室」請聯繫 AIPROOT 開通。",
+  "mb.roleHintTenant": "「員工」不必在這裡建 —— 同仁用 LINE 綁定後會自動成為員工。要新增「總經理室」層級的帳號請聯繫 AIPROOT。",
   "mb.roleHintPlatform": "此頁可新增「總經理室」「部門主管」「助理」·「員工」由 LINE 綁定自動建立 · 平台管理帳號由 AIPROOT 另行建立",
   "mb.initialPw": "初始密碼",
   "mb.pwHint": "加密儲存 · 建議首次登入請成員自行改密碼",

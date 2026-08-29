@@ -7,20 +7,24 @@
      所以不能放登入後；而 docs/sop/ 不會被 build 出去，搬過去網址就死。
      刻意**不**在 docs/sop/ 放第二份 —— 兩份會漂移。
 
-  定位：這份是**總入口**（概念 + 五種角色的日常操作）。
+  定位：這份是**總入口**（概念 + 四種角色的日常操作）。
         一次性的深度建置步驟不重述，指向既有的專門手冊：
-          docs/sop/ragic-line-通知設定-手冊.html   （§4.1 已指過去）
-          docs/sop/群組ID小幫手-手冊.html          （§4.1 已指過去）
+          docs/sop/ragic-line-通知設定-手冊.html   （原 §4.1 指過去 · 該章已刪，見下方 ⚠️）
+          docs/sop/群組ID小幫手-手冊.html          （同上）
           docs/sop/權限設定-手冊.html
           docs/sop/導入-checklist.html
         那 4 份合併版＝docs/sop/戰情室操作手冊.html（由 build-手冊.py 生成）。
-        它們讀者是資訊窗口／助理（少數人、可用檔案交付），刻意**不公開**。
+        它們讀者是資訊窗口與 aiproot 交付團隊（少數人、可用檔案交付），刻意**不公開**。
 
   已做的去識別化（2026-08-21）：真實部門／群組名 → ○○集團-業務部 / ○○—品保部。
   **機器人名「台灣福祉 AI 助手」刻意保留** —— 拿掉的話 §1.1 就失效了
   （員工照著找不到要加的官方帳號）。移除的是內部組織結構，那才是敏感的部分。
 
-  用詞對齊 UI（migration 0069）：角色一律「員工／部門主管／總經理室／助理／AIPROOT 管理員」。
+  用詞對齊 UI（migration 0069）：角色一律「員工／部門主管／總經理室／AIPROOT 管理員」。
+
+  ⚠️ 這份是**公開**檔案（含本註解，看原始碼就看得到）——
+     平台側的內部角色不列入，理由與完整對照見
+     docs/roles-permissions-matrix.md §4.2（那份不公開）。
 -->
 <!DOCTYPE html>
 <html lang="zh-Hant-TW">
@@ -256,28 +260,26 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
     <button data-role="emp" type="button">員工<small>用手機記工作、送日報、打卡</small></button>
     <button data-role="mgr" type="button">部門主管<small>看任務、核對、看部門日報</small></button>
     <button data-role="gm"  type="button">總經理室<small>看全公司、管部門與成員</small></button>
-    <button data-role="asst" type="button">助理<small>設定 Ragic 表單異動通知</small></button>
     <button data-role="it"  type="button">資訊窗口<small>導入、健康度、排錯</small></button>
   </div>
 
   <div class="toc-links">
     <h4>先讀這個</h4>
-    <a href="#c0" data-w="both" data-roles="emp mgr gm asst it"><i></i>0 · 這套系統在做什麼</a>
-    <a href="#c0-day" data-w="both" data-roles="emp mgr gm asst it"><i></i>0.3 一天的節奏</a>
-    <a href="#c0-limit" data-w="both" data-roles="emp mgr gm asst it"><i></i>0.5 它不會做的事</a>
+    <a href="#c0" data-w="both" data-roles="emp mgr gm it"><i></i>0 · 這套系統在做什麼</a>
+    <a href="#c0-day" data-w="both" data-roles="emp mgr gm it"><i></i>0.3 一天的節奏</a>
+    <a href="#c0-limit" data-w="both" data-roles="emp mgr gm it"><i></i>0.5 它不會做的事</a>
 
     <h4>各自的操作</h4>
     <a href="#c1" data-w="phone" data-roles="emp mgr it"><i></i>1 · 員工（全在 LINE）</a>
     <a href="#c2" data-w="desk" data-roles="mgr gm it"><i></i>2 · 部門主管</a>
     <a href="#c3" data-w="desk" data-roles="gm it"><i></i>3 · 總經理室</a>
-    <a href="#c4" data-w="desk" data-roles="asst it"><i></i>4 · 助理：通知設定</a>
-    <a href="#c5" data-w="desk" data-roles="it"><i></i>5 · 資訊窗口與導入</a>
+    <a href="#c4" data-w="desk" data-roles="it"><i></i>4 · 資訊窗口與導入</a>
 
     <h4>查詢用</h4>
-    <a href="#c6" data-w="both" data-roles="emp mgr gm asst it"><i></i>6 · 名詞對照表</a>
-    <a href="#c7" data-w="both" data-roles="emp mgr gm asst it"><i></i>7 · 疑難排解</a>
-    <a href="#c8" data-w="both" data-roles="mgr gm it"><i></i>8 · 三個層級差在哪</a>
-    <a href="#c9" data-w="both" data-roles="mgr gm it"><i></i>9 · 誰看得到什麼</a>
+    <a href="#c5" data-w="both" data-roles="emp mgr gm it"><i></i>5 · 名詞對照表</a>
+    <a href="#c6" data-w="both" data-roles="emp mgr gm it"><i></i>6 · 疑難排解</a>
+    <a href="#c7" data-w="both" data-roles="mgr gm it"><i></i>7 · 三個層級差在哪</a>
+    <a href="#c8" data-w="both" data-roles="mgr gm it"><i></i>8 · 誰看得到什麼</a>
   </div>
 </nav>
 
@@ -302,7 +304,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
     </div>
     <div class="lg-d">
       <h5>靛色 ＝ 在電腦的後台網頁做</h5>
-      <p>要登入。主管核對、總經理室管理部門與成員、助理設定通知，都在這裡。</p>
+      <p>要登入。主管核對、總經理室管理部門與成員，都在這裡。</p>
     </div>
   </div>
 
@@ -315,7 +317,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
 </header>
 
 <!-- ═══════════════ 第 0 章 ═══════════════ -->
-<section id="c0" data-roles="emp mgr gm asst it">
+<section id="c0" data-roles="emp mgr gm it">
   <div class="ch-head">
     <div class="ch-num">0</div>
     <div>
@@ -1576,98 +1578,10 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
   </div>
 </section>
 
-<!-- ═══════════════ 第 4 章 · 助理 ═══════════════ -->
-<section id="c4" data-roles="asst it">
+<!-- ═══════════════ 第 4 章 · 資訊窗口 ═══════════════ -->
+<section id="c4" data-roles="it">
   <div class="ch-head">
     <div class="ch-num">4</div>
-    <div>
-      <h2>助理：設定 Ragic 表單異動通知</h2>
-      <div class="who">
-        給誰看：負責通知設定的助理 · 約 8 分鐘 ·
-        <span class="where w-desk">電腦 · 後台網頁</span>
-        這是一個獨立的功能，跟前面的 AI 分析沒有關係
-      </div>
-    </div>
-  </div>
-
-  <h3 data-w="desk">4.1　一條規則在做什麼</h3>
-  <p>用一句話說：<b>「Ragic 上的某張表單有人改了 → 就發一則訊息到某個 LINE 群組」。</b></p>
-
-  <figure>
-  <svg viewBox="0 0 1000 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="通知規則的四個組成：來源表單、觸發條件、要顯示的欄位、通知對象">
-    <defs><marker id="ar2" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto"><path d="M0 1 L8 4.5 L0 8 z" fill="#4F46E5"/></marker></defs>
-    <style>
-      .t{font-family:'Noto Sans TC',sans-serif}
-      .h{font-size:13px;font-weight:900;fill:#16202B}
-      .s{font-size:11.5px;fill:#6B7C8C}
-      .p{font-size:10.5px;font-weight:700;fill:#3730A3;letter-spacing:.1em}
-    </style>
-    <rect width="1000" height="240" fill="#fff"/>
-
-    <rect x="30" y="60" width="200" height="112" rx="10" fill="#fff" stroke="#DCE3E9"/>
-    <text class="t p" x="46" y="84">來源</text>
-    <text class="t h" x="46" y="108">哪張 Ragic 表單</text>
-    <text class="t s" x="46" y="130">例：中部維修保養單</text>
-    <text class="t s" x="46" y="150">要先有 Ragic 帳號的 API 金鑰</text>
-
-    <rect x="266" y="60" width="200" height="112" rx="10" fill="#fff" stroke="#DCE3E9"/>
-    <text class="t p" x="282" y="84">條件</text>
-    <text class="t h" x="282" y="108">什麼樣的異動要通知</text>
-    <text class="t s" x="282" y="130">新增一筆 / 修改 / 特定欄位變動</text>
-    <text class="t s" x="282" y="150">勾選即可，不用寫程式</text>
-
-    <rect x="502" y="60" width="200" height="112" rx="10" fill="#fff" stroke="#DCE3E9"/>
-    <text class="t p" x="518" y="84">內容</text>
-    <text class="t h" x="518" y="108">訊息裡要放哪些欄位</text>
-    <text class="t s" x="518" y="130">系統自動列出該表單的欄位</text>
-    <text class="t s" x="518" y="150">勾要顯示的，順序可調</text>
-
-    <rect x="738" y="60" width="200" height="112" rx="10" fill="#E7FAEF" stroke="#A9E8C4"/>
-    <text class="t p" x="754" y="84" fill="#04913E">對象</text>
-    <text class="t h" x="754" y="108">通知誰</text>
-    <text class="t s" x="754" y="130">某個 LINE 群組，或某個人</text>
-    <text class="t s" x="754" y="150">群組 ID 要由技術端提供</text>
-
-    <line x1="234" y1="116" x2="262" y2="116" stroke="#4F46E5" stroke-width="2" marker-end="url(#ar2)"/>
-    <line x1="470" y1="116" x2="498" y2="116" stroke="#4F46E5" stroke-width="2" marker-end="url(#ar2)"/>
-    <line x1="706" y1="116" x2="734" y2="116" stroke="#4F46E5" stroke-width="2" marker-end="url(#ar2)"/>
-
-    <text class="t" x="30" y="36" font-size="13" font-weight="900" fill="#16202B">設定精靈就是照這四步走，一步一張卡</text>
-    <rect x="30" y="192" width="908" height="34" rx="8" fill="#FFF7EA" stroke="#F0D9AE"/>
-    <text class="t" x="48" y="214" font-size="12" fill="#8A5E14"><tspan font-weight="900">最容易卡住的一步：</tspan>LINE 群組 ID 沒辦法自己在 LINE 裡查到，必須請技術端提供（或用「群組 ID 小幫手」機器人取得）。設定前先把它要到手。</text>
-  </svg>
-  <figcaption>設定完成後，系統會給你一段網址，要回到 Ragic 那邊貼上去，兩邊才接得起來。這一步請照 aiproot 提供的〈Ragic → LINE 通知設定手冊〉操作。</figcaption>
-  </figure>
-
-  <h3 data-w="desk">4.2　設定完之後怎麼驗證</h3>
-  <div class="steps" data-w="desk">
-    <div class="step">
-      <h5>到 Ragic 上真的改一筆資料</h5>
-      <p>改一筆你剛剛設定的那張表單的紀錄，隨便改一個欄位存檔。</p>
-      <div class="expect"><b>應該看到</b>幾秒內，指定的 LINE 群組收到一則格式化訊息，最下面附 Ragic 該筆紀錄的連結，點得進去。</div>
-    </div>
-    <div class="step">
-      <h5>沒收到？照這個順序查</h5>
-      <p>① 後台「通知設定 → 紀錄」有沒有這一筆？<br>
-         　<b>有紀錄但沒收到</b> → 群組 ID 錯了，或機器人不在那個群裡。<br>
-         　<b>連紀錄都沒有</b> → Ragic 那邊的網址沒貼好，或表單設定沒生效。<br>
-         ② Ragic 的設定<b>存檔後不會立刻生效，要登出再重新登入</b>一次。這是 Ragic 本身的行為。</p>
-    </div>
-    <div class="step">
-      <h5>之後要修改規則</h5>
-      <p>回到同一頁編輯即可。改欄位、改對象都不用重貼網址；<b>只有換表單才要重來一次</b>。</p>
-    </div>
-  </div>
-  <div class="note n-info">
-    <b class="t">你的權限範圍</b>
-    <p>助理這個角色<b>只有通知設定</b>這一項功能，看不到任務看板、部門日報、成員管理。這是刻意設計的——職責單純，也不會誤動到別的設定。</p>
-  </div>
-</section>
-
-<!-- ═══════════════ 第 5 章 · 資訊窗口 ═══════════════ -->
-<section id="c5" data-roles="it">
-  <div class="ch-head">
-    <div class="ch-num">5</div>
     <div>
       <h2>資訊窗口：導入與日常巡檢</h2>
       <div class="who">
@@ -1678,7 +1592,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
     </div>
   </div>
 
-  <h3 data-w="desk">5.1　導入節奏建議</h3>
+  <h3 data-w="desk">4.1　導入節奏建議</h3>
   <div class="tw">
   <table>
     <thead><tr><th style="width:16%">階段</th><th style="width:22%">範圍</th><th>做什麼</th></tr></thead>
@@ -1708,7 +1622,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
     </p>
   </div>
 
-  <h3 data-w="desk">5.2　系統健康：四個分頁</h3>
+  <h3 data-w="desk">4.2　系統健康：四個分頁</h3>
   <p>側邊欄「平台 → 系統健康」（需要相對應權限，通常由 aiproot 或顧問查看）。這四頁互相解釋，所以放在同一個地方。</p>
   <div class="tw">
   <table>
@@ -1722,7 +1636,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
   </table>
   </div>
 
-  <h3 data-w="desk">5.3　你的月度自檢清單</h3>
+  <h3 data-w="desk">4.3　你的月度自檢清單</h3>
   <ul>
     <li>☐ 通訊管道 → LINE 群組：<b>有沒有新的群沒分派部門</b>（頁面上方會直接顯示未分派數）</li>
     <li>☐ 通訊管道 → 員工綁定：<b>新報到的同仁綁定了嗎</b></li>
@@ -1732,7 +1646,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
     <li>☐ LINE 機器人的憑證是否即將到期（此項請 aiproot 協助確認）</li>
   </ul>
 
-  <h3 data-w="desk">5.4　什麼時候該找 aiproot</h3>
+  <h3 data-w="desk">4.4　什麼時候該找 aiproot</h3>
   <div class="two">
     <div class="card">
       <h4 style="margin-top:0;color:var(--ok)">你自己就能處理</h4>
@@ -1755,6 +1669,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
         <li>機器人要加入新的 LINE 群組</li>
         <li>要補跑過去某幾天的分析</li>
         <li>要調整 AI 抽取的欄位（例如改成貴公司的服務工單格式）</li>
+        <li>要新增或修改 <b>Ragic 表單異動的 LINE 通知</b>（哪張表變更要通知誰）</li>
       </ul>
     </div>
   </div>
@@ -1764,10 +1679,10 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
   </p>
 </section>
 
-<!-- ═══════════════ 第 6 章 · 名詞表 ═══════════════ -->
-<section id="c6" data-roles="emp mgr gm asst it">
+<!-- ═══════════════ 第 5 章 · 名詞表 ═══════════════ -->
+<section id="c5" data-roles="emp mgr gm it">
   <div class="ch-head">
-    <div class="ch-num">6</div>
+    <div class="ch-num">5</div>
     <div>
       <h2>名詞對照表</h2>
       <div class="who">開會時大家講的是不是同一件事，看這裡</div>
@@ -1795,10 +1710,10 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
   </div>
 </section>
 
-<!-- ═══════════════ 第 7 章 · 疑難排解 ═══════════════ -->
-<section id="c7" data-roles="emp mgr gm asst it">
+<!-- ═══════════════ 第 6 章 · 疑難排解 ═══════════════ -->
+<section id="c6" data-roles="emp mgr gm it">
   <div class="ch-head">
-    <div class="ch-num">7</div>
+    <div class="ch-num">6</div>
     <div>
       <h2>疑難排解</h2>
       <div class="who">先照這張圖判斷，再看下面的對照表</div>
@@ -1901,10 +1816,10 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
   </div>
 </section>
 
-<!-- ═══════════════ 第 8 章 · 權限 ═══════════════ -->
-<section id="c8" data-roles="mgr gm it">
+<!-- ═══════════════ 第 7 章 · 三個層級差在哪 ═══════════════ -->
+<section id="c7" data-roles="mgr gm it">
   <div class="ch-head" data-w="both">
-    <div class="ch-num">8</div>
+    <div class="ch-num">7</div>
     <div>
       <h2>三個層級差在哪</h2>
       <div class="who">
@@ -1926,7 +1841,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
     </p>
   </div>
 
-  <h3>8.1　LINE 那邊：三個層級用起來一模一樣</h3>
+  <h3>7.1　LINE 那邊：三個層級用起來一模一樣</h3>
 
   <div class="tw">
   <table>
@@ -1964,7 +1879,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
     </p>
   </div>
 
-  <h3>8.2　後台那邊：同一顆按鈕，看得到多少</h3>
+  <h3>7.2　後台那邊：同一顆按鈕，看得到多少</h3>
 
   <p>格子裡寫的是<b>看得到的範圍</b>，「—」表示側欄上根本沒有這一項。</p>
 
@@ -2003,11 +1918,11 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
     <b class="t">「自己部門」是寫在資料庫裡的，不是介面藏起來</b>
     <p>
       部門主管就算知道網址、直接輸入，也<b>調不出</b>別部門的資料 ——
-      限制在資料層，不是靠畫面隱藏。這一點可以直接回答同仁的疑問（見第 9 章）。
+      限制在資料層，不是靠畫面隱藏。這一點可以直接回答同仁的疑問（見第 8 章）。
     </p>
   </div>
 
-  <h3>8.3　只有總經理室做得到的六件事</h3>
+  <h3>7.3　只有總經理室做得到的六件事</h3>
 
   <div class="tw">
   <table>
@@ -2023,7 +1938,7 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
   </table>
   </div>
 
-  <h3>8.4　層級不是固定的 —— 總經理室可以自己調</h3>
+  <h3>7.4　層級不是固定的 —— 總經理室可以自己調</h3>
 
   <p>
     到 <b>設定 → 權限管理</b>，可以逐項調整每個角色能做哪些事，
@@ -2036,47 +1951,40 @@ footer{margin-top:80px;padding-top:26px;border-top:2px solid var(--ink);font-siz
     <p>
       <b>①　給不出自己沒有的權限。</b>
       建角色時只能挑總經理室本身有的項目 —— 這是防止有人替自己開後門的標準做法。<br><br>
-      <b>②　「助理」與「總經理室」層級的帳號要我們開通。</b>
+      <b>②　「總經理室」層級的帳號要我們開通。</b>
       系統裡的原話是：<br>
       <span class="t sm">「員工」不必在這裡建 —— 同仁用 LINE 綁定後會自動成為員工。
-      「助理」與「總經理室」請聯繫 AIPROOT 開通。</span><br>
+      要新增「總經理室」層級的帳號請聯繫 AIPROOT。</span><br>
       <b>部門主管</b>帳號則是總經理室自己就能建。
     </p>
   </div>
 
-  <div class="note n-info">
-    <b class="t">還有一個旁支角色：助理</b>
-    <p>
-      職責單純，只碰<b>通知設定</b>（Ragic 表單異動要通知誰），
-      碰不到戰情室、部門、成員。細節見第 4 章。
-    </p>
-  </div>
 </section>
 
-<section id="c9" data-roles="mgr gm it">
+<!-- ═══════════════ 第 8 章 · 權限 ═══════════════ -->
+<section id="c8" data-roles="mgr gm it">
   <div class="ch-head">
-    <div class="ch-num">9</div>
+    <div class="ch-num">8</div>
     <div>
       <h2>誰看得到什麼</h2>
       <div class="who">資料範圍與權限說明 · 同仁問起隱私問題時可以直接引用這一章</div>
     </div>
   </div>
 
-  <h3>9.1　五種角色</h3>
+  <h3>8.1　四種角色</h3>
   <div class="tw">
   <table>
     <thead><tr><th style="width:16%">角色</th><th style="width:16%">誰在用</th><th style="width:20%">看得到哪些資料</th><th>一句話</th></tr></thead>
     <tbody>
       <tr><td><b>總經理室</b></td><td>公司高層</td><td><b>整間公司</b></td><td>管自己公司的部門、成員、看全公司戰情室</td></tr>
       <tr><td><b>部門主管</b></td><td>各部門主管</td><td><b>只有自己部門</b></td><td>看／簽自己部門的任務，看部門日報</td></tr>
-      <tr><td><b>助理</b></td><td>負責通知設定的助理</td><td>只有通知設定</td><td>職責單純，碰不到其他功能</td></tr>
       <tr><td><b>員工</b></td><td>全體同仁</td><td><b>只有自己</b></td><td>看／送自己的日報與行程</td></tr>
       <tr><td><b>AIPROOT 管理員<br>／顧問</b></td><td>系統供應商</td><td>依合約範圍</td><td>開通、維運、技術支援；所有存取都留稽核紀錄</td></tr>
     </tbody>
   </table>
   </div>
 
-  <h3>9.2　常見隱私問題的標準回答</h3>
+  <h3>8.2　常見隱私問題的標準回答</h3>
   <div class="tw">
   <table>
     <thead><tr><th style="width:32%">同仁會問</th><th>可以這樣回答</th></tr></thead>

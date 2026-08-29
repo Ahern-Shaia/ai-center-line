@@ -523,7 +523,7 @@ export default {
   "mb.created": "Person created",
   "mb.emailLocked": "Email is the login identity \u00b7 it cannot be changed",
   "mb.emailHint": "Used to sign in \u00b7 must be unique",
-  "mb.roleHintTenant": "You do not create Employees here \u2014 linking LINE does that. For Assistant or Executive office, contact AIPROOT.",
+  "mb.roleHintTenant": "You do not create Employees here — linking LINE does that. For an Executive office account, contact AIPROOT.",
   "mb.roleHintPlatform": "You can add Executive office, Department manager and Assistant here \u00b7 Employees come from LINE linking \u00b7 platform accounts are created separately",
   "mb.initialPw": "Initial password",
   "mb.pwHint": "Stored hashed \u00b7 ask them to change it after the first sign-in",

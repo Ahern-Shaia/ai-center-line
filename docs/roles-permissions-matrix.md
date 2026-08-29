@@ -147,6 +147,37 @@
 > 「主管只看得到自己部門的群組」—— 去讀 `pg_policies` 才發現不是。
 
 
+### 4.2 ⭐⭐ 哪些角色**不可以**出現在客戶文件裡（2026-08-29 用戶裁定）
+
+> **「助理」（`assistant`）是 aiproot 的內部角色，不是客戶方的職位。**
+
+證據（查 prod 同一份 seed 邏輯）：
+
+| | |
+|---|---|
+| 助理的全部權限 | `notify-config:view`、`notify-config:manage` —— **兩個都是 `platform` scope** |
+| 通知設定發給誰 | 只有 `aiproot_admin` / `assistant` / `consultant` |
+| 客戶方能不能打開那一頁 | **不能**。租戶端沒有任何角色拿得到 `notify-config:*` |
+
+所以把它寫進客戶文件會造成兩個實際問題：
+① 洩漏我們的內部角色編制；
+② 讓客戶以為自己該指派一個人去做那件事 —— 而那個人打不開那一頁。
+
+**已修的地方：**
+
+| 位置 | 處置 |
+|---|---|
+| `web/public/handbook.html` 原第 4 章「助理：設定 Ragic 表單異動通知」 | 整章刪除，5–9 章順移為 4–8 |
+| 同檔角色篩選鈕、目錄、第 8 章角色表（原「五種角色」）| 一併移除，改為「四種角色」 |
+| `mb.roleHintTenant`（**租戶看得到的字串**）| 原文寫「『助理』與『總經理室』請聯繫 AIPROOT 開通」→ 拿掉「助理」 |
+
+`mb.roleHintPlatform`（平台端）照舊列出它 —— 那是我們自己在看的。
+通知設定的操作說明在 `docs/sop/notify-selfserve-使用指南.md`，
+該份開頭已明寫「適用：具 `notify-config:manage` 權限的 aiproot 員工」。
+
+⚠️ 下次新增角色或寫客戶文件前，先問一句：**這個角色的權限是 `platform` scope 嗎？**
+是的話它就不屬於客戶的世界。相關：memory `pitfall_platform_role_in_tenant_list`。
+
 ### 4.1 ⭐ 自訂角色的資料範圍（2026-08-21 · custom-roles v0.3 方案 A）
 
 租戶現在可以自己建角色（設定 → 權限管理 → ＋ 建立角色）。自訂角色**只宣告「能做什麼」**，
