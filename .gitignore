@@ -21,3 +21,6 @@ sop-site/
 
 # i18n 掃描產物
 web/output/
+
+# 拋棄式量測腳本
+web/scripts/_*.tmp.mjs

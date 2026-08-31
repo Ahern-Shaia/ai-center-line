@@ -135,7 +135,7 @@ export default function MyDailyReport() {
   }, [date]);
 
   return (
-    <div className="pane">
+    <div className="pane pdr-pane">
       <div className="pane-hdr">
         <div>
           <h1>{tr("nav.myDailyReport")} · {displayDate}</h1>
