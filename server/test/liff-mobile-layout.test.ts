@@ -17,8 +17,10 @@ const read = (p: string) => readFileSync(fileURLToPath(new URL(p, import.meta.ur
 
 test("⭐⭐ viewport-fit=cover 的頁面，貼底元件必須補 safe-area-inset-bottom", () => {
   // liff.html 宣告 viewport-fit=cover ＝ 內容延伸到螢幕最邊緣（含 home indicator 那一條）。
-  // 貼在 bottom:0 的送出條若不補 inset，在 iPhone 上會壓在 home indicator 上：
-  // 看起來被切掉，而且按下去常常變成系統的返回主畫面手勢。
+  // 貼在 bottom:0 的送出條若不補 inset，會壓在螢幕底部的系統手勢區上 ——
+  // iPhone 是 home indicator，**Android 是手勢導覽列**（2026-08-31 回報的機型
+  // 三星 A55 正是 Android）。條子被蓋住＝按不到，而且從那一區往上滑
+  // 會被系統判定成返回/主畫面手勢＝「螢幕沒辦法下滑」。
   const html = read("../../web/liff.html");
   const css = read("../../web/src/styles.css");
 
@@ -39,16 +41,15 @@ test("⭐⭐ 送出條要 fixed 不要 sticky —— sticky 得先捲得動才�
   // sticky 依賴捲動；fixed 不依賴 —— 就算捲動因為某個原因壞掉，鈕仍然在畫面上。
   // 兩件事刻意拆開：捲不動的根因還沒找到（Chromium／WebKit 桌機引擎都重現不了），
   // 但「送不出去」不該等那個結論。
-  const css = read("../../web/src/styles.css");
-  const i = css.indexOf("/* LIFF 底部送出條");
-  assert.ok(i > 0, "找不到 LIFF 送出條那段 CSS");
-  const block = css.slice(i, i + 1400);
-  assert.match(block, /\.pdr-foot \{ position:fixed/, "送出條被改回 sticky 了");
-  assert.doesNotMatch(
-    block.split(".pdr-pane")[0],
-    /position:sticky/,
-    "送出條不可以是 sticky",
-  );
+  // ⚠️ 要比對的是**宣告**，不是散文。第一版直接掃整段原文，結果被自己的
+  //    註解絆倒 —— 註解裡寫著「修正前 position:sticky」當紀錄，測試就紅了。
+  //    先把 /* ... *\/ 註解拿掉再檢查。
+  const css = read("../../web/src/styles.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const i = css.indexOf(".pdr-foot { position:");
+  assert.ok(i > 0, "找不到 .pdr-foot 的定位宣告");
+  const block = css.slice(i, i + 600);
+  assert.match(block, /^\.pdr-foot \{ position:fixed/, "送出條被改回 sticky 了");
+  assert.doesNotMatch(block.split(".pdr-pane")[0], /position:sticky/, "送出條不可以是 sticky");
 });
 
 test("⭐ 送出條改 fixed 之後，內容尾端要留出它的高度", () => {
