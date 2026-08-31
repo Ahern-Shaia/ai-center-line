@@ -24,3 +24,12 @@ web/output/
 
 # 拋棄式量測腳本
 web/scripts/_*.tmp.mjs
+
+# ── 文件不進 GitHub（2026-08-31 裁定）────────────────────────
+# ⚠️ 這個 repo 是 **public**。設計文件、市場研究、客戶 SOP 都不該公開。
+#    例外只留 CLAUDE.md / AGENTS.md —— 那兩份是給 AI 助理讀的專案規則，
+#    不是文件；少了它們，換一台機器 clone 下來就沒有任何開發紀律可循。
+# ⚠️⚠️ 這只擋「以後」。已經 push 過的仍然留在 git 歷史裡，公開可讀。
+*.md
+!CLAUDE.md
+!AGENTS.md
