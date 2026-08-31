@@ -16,6 +16,15 @@ const PersonalReportSchema = z.object({
     title: z.string(),
     detail: z.string().nullable(),
     followup: z.string().nullable(),
+    /**
+     * 這一項是從第幾則訊息來的（1 起算，對應 userMessage 裡的 `#N`）。
+     *
+     * ⚠️ R11 可溯源。任務卡的 `records` 一直有 `source_ids`，個人日報漏了。
+     * ⚠️ **`z.array` 不計入 Anthropic 的 16 union 上限**（2026-08-31 實測，
+     *    見 scripts/probe-union-limit.ts）—— 所以這個欄位是零成本。
+     *    但**不要**寫成 `.nullable()`，那會吃掉一格。抽不到就給 `[]`。
+     */
+    source_ids: z.array(z.number()),
   })),
 });
 
@@ -24,6 +33,9 @@ const PERSONAL_SYSTEM_PROMPT = `你是專業日報整理助手。
 你會收到某員工「當日私訊工作 bot 的所有訊息」·這些訊息內容散亂 (吃飯前打幾則 · 開會後補一則 · 事情做完想到什麼就發)。
 
 請將它們整理成一份**結構化的個人工作日報**。
+
+每則訊息前面都有編號「#N」。**每一項都必須填 source_ids**，
+列出這一項用到的所有訊息編號（至少一個）。這是給人回頭對照原文用的，不可省略。
 
 整理原則：
 1. 依訊息時間排序，最早的在前
@@ -38,8 +50,8 @@ const PERSONAL_SYSTEM_PROMPT = `你是專業日報整理助手。
 輸出 JSON:
 {
   "items": [
-    { "time": "08:30-10:00", "title": "A 客戶 Q3 交期討論", "detail": "客戶要求提早 15 天...", "followup": "明日 09:00 跟人資申請 2 名檢驗" },
-    { "time": "12:30", "title": "內部品保確認", "detail": "...", "followup": null }
+    { "time": "08:30-10:00", "title": "A 客戶 Q3 交期討論", "detail": "客戶要求提早 15 天...", "followup": "明日 09:00 跟人資申請 2 名檢驗", "source_ids": [1, 2] },
+    { "time": "12:30", "title": "內部品保確認", "detail": "...", "followup": null, "source_ids": [4] }
   ]
 }
 `;
@@ -109,8 +121,10 @@ export class PersonalDailyReportService {
 
       // Step 3 · LLM 生成
       const provider = await this.resolveProvider(args.tenantId);
+      // ⚠️ 每則加 `#N`（1 起算）· 模型靠這個編號回填 source_ids。
+      //    沒有編號的話它無從指認，R11 的可溯源就落不了地。
       const blob = rows
-        .map((m) => `[${formatTaipeiTime(m.sent_at)}] ${m.text_content?.replace(/\n/g, " ⏎ ") ?? ""}`)
+        .map((m, i) => `#${i + 1} [${formatTaipeiTime(m.sent_at)}] ${m.text_content?.replace(/\n/g, " ⏎ ") ?? ""}`)
         .join("\n");
       const output = await provider.chat({
         systemPrompt: PERSONAL_SYSTEM_PROMPT,
@@ -118,7 +132,10 @@ export class PersonalDailyReportService {
         userMessage: `員工姓名：${userDisplayName}\n日期：${args.reportDate}\n\n以下是 ${rows.length} 則訊息：\n${blob}`,
         outputSchema: PersonalReportSchema,
       });
-      const items = (output.parsed as { items: PersonalDailyReportItem[] }).items;
+      // ⚠️ 型別要用 **LLM 的 schema**，不是儲存用的 PersonalDailyReportItem ——
+      //    兩者已經不一樣了（LLM 回 source_ids 序號，我們存 sourceMessageIds）。
+      //    原本硬轉成 PersonalDailyReportItem，讀 i.source_ids 會變成 unknown。
+      const items = (output.parsed as z.infer<typeof PersonalReportSchema>).items;
 
       // Step 4 · UPSERT draft
       const { reportId } = await withTenant({ tenantId: args.tenantId, role: "tenant_admin" }, (tx) => this.repo.upsertDraft(tx, {
@@ -126,11 +143,18 @@ export class PersonalDailyReportService {
         userId: args.userId,
         reportDate: args.reportDate,
         uploadId: null,   // 未走 analysis_upload · 直接 personal pipeline
+        // ⚠️ 序號只在這一次呼叫裡有意義 → 存 message_id。
+        //    另外模型可能回超出範圍或重複的序號，先過濾再去重。
         aiItems: items.map((i) => ({
           time: i.time ?? undefined,
           title: i.title,
           detail: i.detail ?? undefined,
           followup: i.followup ?? undefined,
+          sourceMessageIds: [...new Set(
+            (i.source_ids ?? [])
+              .filter((n) => Number.isInteger(n) && n >= 1 && n <= rows.length)
+              .map((n) => rows[n - 1].message_id),
+          )],
         })),
         messageCount: rows.length,
       }));

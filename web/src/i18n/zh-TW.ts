@@ -1250,4 +1250,10 @@ export default {
   "km.indexed": "已入庫",
   "km.sourceCount": "來源 {n} 則訊息",
   "km.demoDoc": "docs/modules/rag-conversations.md（知識卡抽取尚未實作）",
+
+  // 個人日報 · 來源訊息對照（2026-08-31 · R11 可溯源）
+  "pdr.fromN": "由 {n} 則訊息整理 ▼",
+  "pdr.fromNMerged": "由 {n} 則訊息合併而成 ▼",
+  "pdr.hideFrom": "收合 ▲",
+  "pdr.splitHint": "若這其實是兩件事，請按「編輯」改標題，再用下方「手動加一項」補另一筆。",
 } satisfies Record<string, string>;

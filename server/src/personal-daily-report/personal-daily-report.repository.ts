@@ -7,6 +7,20 @@ export interface PersonalDailyReportItem {
   title: string;         // 事項標題
   detail?: string;       // 內容摘要
   followup?: string;     // 追蹤事項
+  /**
+   * 這一項是從哪幾則私訊整理出來的（`line_message.message_id`）。
+   *
+   * ⚠️ R11：AI 抽取結果必須可回溯到原始訊息。任務卡（`records.source_ids`）
+   *    一直有做，個人日報漏了 —— 2026-08-31 客戶回報「兩趟被併成一筆」時，
+   *    **我們沒有任何辦法查出某一項到底併了哪幾則**，只能請客戶截圖。
+   *
+   * ⚠️ 存的是 message_id 不是「第幾則」—— 序號只在那一次 LLM 呼叫裡有意義，
+   *    存下來事後對不回去。
+   *
+   * 舊資料沒有這個欄位（`ai_items` 是 jsonb · 不用 migration），
+   * 所以是選填；前端要能接受 undefined。
+   */
+  sourceMessageIds?: string[];
 }
 
 export interface PersonalDailyReportRow {

@@ -745,6 +745,13 @@ export interface PersonalDailyReportItem {
   title: string;
   detail?: string;
   followup?: string;
+  /**
+   * 這一項是從哪幾則私訊整理出來的（`line_message.message_id`）。
+   *
+   * ⚠️ 舊的日報沒有這個欄位（2026-08-31 才加）→ **一定要能接受 undefined**。
+   *    客戶回報「兩趟被併成一筆」時，我們沒有任何辦法查出哪幾則被併了。
+   */
+  sourceMessageIds?: string[];
 }
 
 export interface PersonalDailyReportRow {

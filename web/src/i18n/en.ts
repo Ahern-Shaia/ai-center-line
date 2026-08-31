@@ -1250,4 +1250,10 @@ export default {
   "km.indexed": "Indexed",
   "km.sourceCount": "From {n} messages",
   "km.demoDoc": "docs/modules/rag-conversations.md (card extraction not built yet)",
+
+  // 個人日報 · 來源訊息對照（2026-08-31 · R11 可溯源）
+  "pdr.fromN": "From {n} messages ▼",
+  "pdr.fromNMerged": "Merged from {n} messages ▼",
+  "pdr.hideFrom": "Hide ▲",
+  "pdr.splitHint": "If these were actually two separate jobs, edit this one and use “Add an item” below for the other.",
 } satisfies Record<string, string>;

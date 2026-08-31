@@ -287,6 +287,7 @@ export default function MyDailyReport() {
                 }}
                 onDelete={() => { if (canEdit) { setEditingIdx(null); setItems((s) => s.filter((_, i) => i !== idx)); } }}
                 readonly={!canEdit}
+                dayMessages={pendingMessages}
               />
             ))}
 
@@ -396,7 +397,7 @@ function normalizeTimeOnBlur(s: string): string {
 }
 
 function ItemCard({
-  item, idx, editing, onChange, onDelete, onStartEdit, onStopEdit, readonly,
+  item, idx, editing, onChange, onDelete, onStartEdit, onStopEdit, readonly, dayMessages,
 }: {
   item: PersonalDailyReportItem;
   idx: number;
@@ -406,9 +407,18 @@ function ItemCard({
   onStartEdit: () => void;
   onStopEdit: () => void;
   readonly: boolean;
+  /** 當天全部私訊 · 用來把 sourceMessageIds 換回看得懂的原文 */
+  dayMessages: PendingRawMessage[];
 }) {
   const tr = useT();
   const [timeErr, setTimeErr] = useState("");
+  const [showSrc, setShowSrc] = useState(false);
+
+  // ⚠️ 舊日報沒有 sourceMessageIds → undefined。對不到訊息也可能是
+  //    那則超過 50 則上限沒帶回來 —— 兩種都當「沒有來源可對照」，不要畫空殼。
+  const srcMsgs = (item.sourceMessageIds ?? [])
+    .map((id) => dayMessages.find((m) => m.messageId === id))
+    .filter((m): m is PendingRawMessage => !!m);
 
   function finishEdit() {
     const t = (item.time ?? "").trim();
@@ -477,6 +487,33 @@ function ItemCard({
         <div className="pdr-item-followup">
           <b>{tr("pdr.followup")}</b> · {item.followup}
         </div>
+      )}
+      {/* ⚠️ R11 可溯源。**只有多於一則時才強調「合併」** ——
+          客戶問的正是「兩趟為什麼被併成一筆」，一則的情況講合併只是雜訊。 */}
+      {srcMsgs.length > 0 && (
+        <>
+          <button className="dl-card-toggle" style={{ alignSelf: "flex-start", marginTop: 6 }}
+            onClick={() => setShowSrc((v) => !v)}>
+            {showSrc ? tr("pdr.hideFrom")
+              : srcMsgs.length > 1 ? tr("pdr.fromNMerged", { n: srcMsgs.length })
+                : tr("pdr.fromN", { n: srcMsgs.length })}
+          </button>
+          {showSrc && (
+            <div className="dl-raw" style={{ marginTop: 6 }}>
+              {srcMsgs.map((m) => (
+                <div key={m.messageId} className="pdr-raw-item">
+                  <div className="pdr-raw-time">{formatTimeHM(m.sentAt)}</div>
+                  <div className="pdr-raw-text">{m.textContent ?? ""}</div>
+                </div>
+              ))}
+              {srcMsgs.length > 1 && !readonly && (
+                <div className="pdr-raw-item" style={{ color: "var(--ink-3)", fontSize: 12 }}>
+                  {tr("pdr.splitHint")}
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
