@@ -76,3 +76,43 @@ test("⭐ LIFF 頁不可以被 body 的 height:100% 鎖住", () => {
   assert.match(css, /html\.liff-page, html\.liff-page body \{ height:auto/,
     "styles.css 少了 LIFF 頁的 body 高度解鎖");
 });
+
+test("⭐⭐ 對話框要有高度上限 + 內部捲動 —— 否則長內容會把按鈕擠出畫面", () => {
+  // 2026-08-31 客戶（三星 A55）：「送出日報要按兩次，
+  // 第二次的預覽要轉用電腦才看得到按鈕」。
+  // 送出確認框裡塞的是**完整的日報預覽**（那天 6 項），對話框高 822px、
+  // 視窗只有 780px，而 scrim 是 align-items:center → 上下都溢出，
+  // 底部的「確定送出」被切掉；scrim 又是 position:fixed 把背景鎖住，捲也捲不到。
+  //
+  // 實測：修正前 確定鈕距畫面底 **-1px**（在視窗外）→ 修正後 +36px。
+  //
+  // ⭐ 只要對話框內容是「不定長度」（列表、預覽、長文），
+  //    就一定要 max-height + 內部捲動。桌機視窗高，永遠測不出來。
+  const css = read("../../web/src/styles.css").replace(/\/\*[\s\S]*?\*\//g, "");
+
+  const modal = css.slice(css.indexOf(".cd-modal {"), css.indexOf(".cd-modal[data-exiting]"));
+  assert.match(modal, /max-height:\s*calc\(100dvh/,
+    ".cd-modal 沒有 max-height —— 長內容會把按鈕推出畫面。⚠️ 要用 dvh，"
+    + "手機瀏覽器的 vh 不扣瀏覽器列，會算得比實際可視區高");
+  assert.match(modal, /display:flex;\s*flex-direction:column/,
+    ".cd-modal 不是 flex column —— 內部捲動撐不起來");
+
+  const body = css.slice(css.indexOf(".cd-body {"), css.indexOf(".cd-body {") + 260);
+  assert.match(body, /overflow-y:\s*auto/, ".cd-body 沒有捲動");
+  assert.match(body, /min-height:\s*0/,
+    ".cd-body 少了 min-height:0 —— flex 子項預設 min-height:auto，"
+    + "不加就縮不下去，overflow 也不會生效（捲軸出不來，內容照樣溢出）");
+
+  const actions = css.slice(css.indexOf(".cd-actions {"), css.indexOf(".cd-actions {") + 200);
+  assert.match(actions, /flex:\s*none/,
+    ".cd-actions 沒有 flex:none —— 內容再長也不可以把按鈕擠掉");
+});
+
+test("⭐ 對話框的 scrim 也要閃開系統手勢區", () => {
+  // 同 .pdr-foot 那個坑：liff.html 是 viewport-fit=cover，
+  // 不補 inset 的話對話框底部會壓在手機的手勢列上。桌機 env() 回 0，看不出來。
+  const css = read("../../web/src/styles.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const scrim = css.slice(css.indexOf(".cd-scrim {"), css.indexOf(".cd-scrim[data-exiting]"));
+  assert.match(scrim, /padding-bottom:\s*max\([^)]*env\(safe-area-inset-bottom\)/,
+    ".cd-scrim 沒有補 safe-area-inset-bottom");
+});

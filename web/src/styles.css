@@ -1805,21 +1805,45 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
   /* ⚠️ 必須高於 drawer（201）· ConfirmDialog 常從 drawer 內觸發（例：任務詳情裡「補登結束」），
      z-index 低於 drawer 的話對話框會被 drawer 蓋住右半、看起來「被遮住」（2026-07-30 修）。 */
   position:fixed; inset:0; background:rgba(17,24,39,.35); z-index:300;
-  display:flex; align-items:center; justify-content:center; padding:16px;
+  display:flex; align-items:center; justify-content:center;
+  /* ⚠️ liff.html 是 viewport-fit=cover → 不補 inset 的話對話框底部會壓在
+     手機的系統手勢區上（同 .pdr-foot 那個坑）。桌機 env() 回 0，看不出來。*/
+  padding:16px;
+  padding-bottom:max(16px, env(safe-area-inset-bottom));
+  padding-top:max(16px, env(safe-area-inset-top));
   animation:scrim-in .12s var(--ease);
 }
 .cd-scrim[data-exiting] { animation:scrim-out .1s var(--ease-in) forwards; }
 .cd-modal {
   background:var(--surface); border-radius:var(--r-lg); box-shadow:0 10px 40px rgba(17,24,39,.16);
   max-width:440px; width:100%; outline:none; animation:cd-in .18s var(--ease);
+  /* ⚠️⚠️ 2026-08-31 客戶回報（三星 A55）：「送出日報要按兩次，
+     第二次的預覽要轉用電腦才看得到按鈕」。
+     送出確認框裡塞的是**完整的日報預覽**（那天 6 項），內容一高就超出視窗；
+     scrim 是 align-items:center → 上下**都**溢出，而且 position:fixed 把
+     背景鎖住了 → 底部的「確定送出」既看不到也捲不到。
+     實測 412×780：修正前對話框 822px、確定鈕距畫面底 **-1px**（在視窗外）
+          → 修正後 748px、可捲、距底 +36px。
+     ⭐ 只要對話框內容是「不定長度」（列表、預覽、長文），
+        就一定要給高度上限 + 內部捲動 —— 桌機視窗高，永遠測不出來。
+     ⚠️ 用 dvh：手機瀏覽器的 vh 不扣瀏覽器列，會算得比實際可視區高。*/
+  max-height:calc(100vh - 32px);
+  max-height:calc(100dvh - 32px);
+  display:flex; flex-direction:column;
 }
 .cd-modal[data-exiting] { animation:cd-out .14s var(--ease-in) forwards; }
 @keyframes cd-in { from { transform:scale(calc(1 - 0.04 * var(--m-shift))); opacity:0; } to { transform:none; opacity:1; } }
 @keyframes cd-out { to { transform:scale(calc(1 - 0.04 * var(--m-shift))); opacity:0; } }
-.cd-dialog { padding:20px 22px; outline:none; display:flex; flex-direction:column; gap:12px; }
+/* min-height:0 是關鍵 —— flex 子項預設 min-height:auto，不加就縮不下去、
+   內部的 overflow 也就不會生效（捲軸出不來，內容照樣溢出）。 */
+.cd-dialog { padding:20px 22px; outline:none; display:flex; flex-direction:column; gap:12px;
+  min-height:0; flex:1 1 auto; }
 .cd-title { font-size:15px; font-weight:700; letter-spacing:-.01em; margin:0; color:var(--ink); }
-.cd-body { font-size:13px; color:var(--ink-2); line-height:1.6; }
-.cd-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:4px; }
+/* 只有這一段捲 —— 標題與按鈕永遠留在框內看得到 */
+.cd-body { font-size:13px; color:var(--ink-2); line-height:1.6;
+  overflow-y:auto; min-height:0; flex:1 1 auto; overscroll-behavior:contain; }
+/* flex:none —— 內容再長也不可以把按鈕擠出去 */
+.cd-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:4px; flex:none; }
 
 /* ==============================================
    WTB-M4 · warroom-task-board · Kanban + tabs + drawer + daily log
