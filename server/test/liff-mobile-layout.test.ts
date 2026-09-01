@@ -243,6 +243,30 @@ test("⭐⭐ due_at / due_text 不可以寫成 nullable —— 會撞 Anthropic 
   // prompt 也要交代 —— schema 有欄位但沒說怎麼填，模型會亂填或全空
   const prompt = read("../src/conversation-analysis/pipeline/tenant-twh.ts");
   assert.match(prompt, /due_at/, "system prompt 沒交代 due_at 怎麼填");
-  assert.ok(prompt.includes("絕對不可以自己換算或臆測"),
-    "prompt 少了「不可換算」那條 —— 算錯日期會讓人在錯的日子赴約（FMEA F-1 · P0）");
+  // ⚠️ 這條原本斷言字面的「絕對不可以自己換算或臆測」。2026-09-01 改了措辭，
+  //    因為那個寫法比實際嚴：模型一直在換算「今天」而且換得對（prod 實測），
+  //    規則寫得比行為嚴，只會讓後來的人以為那是 bug 去「修」掉一個好行為。
+  //    現在的分界是「算得出唯一答案」vs「要用猜的」，**兩半都要斷言** ——
+  //    只驗一半的話，哪天有人把「可以換算今天」擴大成「都可以換算」，這裡照樣綠。
+  assert.ok(prompt.includes("不可以臆測"),
+    "prompt 少了「不可以臆測」—— 算錯日期會讓人在錯的日子赴約（FMEA F-1 · P0）");
+  assert.ok(prompt.includes("算得出唯一答案"),
+    "prompt 少了換算的分界說明 —— 沒有分界，模型要嘛全不換算（今天/明天也留空）"
+    + "要嘛全換算（下週三也猜一個）");
+  assert.ok(/「下週三」[\s\S]{0,80}不可以/.test(prompt) || prompt.includes("「下週三」「月底前」"),
+    "prompt 少了「模糊詞不可換算」的例子 —— 只講原則不給例子，模型會自己放寬");
+  // 模型行為本身用 scripts/probe-due-split.ts 驗（10/10，含「明天」該換算、
+  // 「下週三」「月底前」不該換算的對照組）—— 這裡只釘住 prompt 沒被改掉。
+
+  // ⚠️⚠️ 一則訊息排好幾天要拆成好幾筆。
+  //    2026-09-01 對 prod 真實資料量測時發現的：7 筆抽到 due_at 的裡面有 2 筆是排程訊息，
+  //    各含 7 個和 4 個日期，而 due_at 只放得下第一個 ——
+  //    模型明明把整串都寫進 due_text 了，是我們的欄位放不下。
+  //    沒有這條規則，9/4、9/7、9/10 那幾天的「今日預定」會是空的，
+  //    而使用者會相信它（比沒有這個功能更糟 · F-1）。
+  assert.ok(prompt.includes("一筆記錄只能有一個日期"),
+    "prompt 少了「多日期要拆成多筆」那條 —— 排程類訊息只會留下第一個日期，"
+    + "後面幾天的「今日預定」會是空的");
+  assert.ok(prompt.includes("都填一樣的 source_ids"),
+    "拆出來的每一筆要指得回同一則原訊息（R11 可溯源）—— prompt 沒交代就會漏");
 });
