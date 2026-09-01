@@ -201,3 +201,18 @@ test("⭐ i18n 中英都要有（漏翻會直接把 key 印在畫面上）", () 
     }
   }
 });
+
+test("⭐ LINE 登入不可以造假 email（@ 後面那串其實是租戶 ID，會把排查帶去錯方向）", () => {
+  const api = code("api.ts");
+  assert.doesNotMatch(api, /EMAIL_KEY,\s*`line-user@/,
+    "又在造假 email —— 畫面上長得像 email，但 @ 後面是租戶 ID，拿去查 users 一列都查不到");
+  const shell = code("Shell.tsx");
+  // ⚠️ 沒有 email 時三個顯示點都要有 fallback，不然畫面會出現空白或 "?"
+  assert.match(shell, /session\.email \|\| session\.displayName/, "頭像字母沒有 fallback");
+  assert.match(shell, /session\.email \|\| tr\("menu\.lineLogin"\)/, "email 那一行沒有 fallback");
+  for (const lang of ["i18n/zh-TW.ts", "i18n/en.ts"]) {
+    for (const k of ["menu.lineLogin", "menu.lineUser"]) {
+      assert.ok(web(lang).includes(`"${k}"`), `${lang} 缺 ${k}`);
+    }
+  }
+});
