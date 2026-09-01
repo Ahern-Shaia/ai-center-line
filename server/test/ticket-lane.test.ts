@@ -96,7 +96,8 @@ import { sql } from "drizzle-orm";
 import { withTenant, txStore, type Db } from "../src/db/client.js";
 import { WarroomTasksService } from "../src/warroom/warroom-tasks.service.js";
 
-const tasksSvc = new WarroomTasksService(new TaskConfigService());
+import { notTestingNotify } from "./warroom-tasks-fixture.js";
+const tasksSvc = notTestingNotify();
 
 async function seedTicket(lane: string): Promise<{ tenantId: string; ticketId: string } | null> {
   return withTenant({ tenantId: null, role: "aiproot_admin", departmentId: null, userId: null }, async (tx) => {

@@ -13,11 +13,12 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { sql } from "drizzle-orm";
-import { withTenant, txStore, currentTx, closeDb } from "../src/db/client.js";
+import { withTenant, withSystemTx, txStore, currentTx, closeDb } from "../src/db/client.js";
 import { WarroomTasksService } from "../src/warroom/warroom-tasks.service.js";
 import { TaskConfigService } from "../src/task-config/task-config.service.js";
 
-const svc = new WarroomTasksService(new TaskConfigService());
+import { notTestingNotify } from "./warroom-tasks-fixture.js";
+const svc = notTestingNotify();
 
 /** 專用租戶 —— 這支會塞 analysis_upload，共用現成的會污染別的測試 */
 const T = "d1d1d1d1-0000-4000-8000-00000000d10g".replace("g", "0");
@@ -66,14 +67,12 @@ after(async () => {
 
 /** 建一次分析紀錄。同一組 (group, date) 呼叫兩次＝排程跑完又有人手動重跑 */
 async function addAnalysis(groupId: string, note: string, status = "done") {
-  const r = await withTenant({ tenantId: null, role: "system", departmentId: null, userId: null },
-    (tx) => tx.execute<{ id: number }>(sql`
+  const r = await withSystemTx((tx) => tx.execute<{ id: number }>(sql`
       INSERT INTO analysis_upload (tenant_id, tenant_slug, filename, raw_content, status, source, group_id, batch_date)
       VALUES (${T}::uuid, 'batch', ${note}, '', ${status}, 'webhook', ${groupId}, ${TODAY}::date)
       RETURNING id`));
   const id = r.rows[0].id;
-  await withTenant({ tenantId: null, role: "system", departmentId: null, userId: null },
-    (tx) => tx.execute(sql`
+  await withSystemTx((tx) => tx.execute(sql`
       INSERT INTO analysis_result (upload_id, messages, records, daily_reports)
       VALUES (${id}, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb)`));
   return id;
@@ -117,8 +116,7 @@ test("⭐⭐ 照片要掛在它自己那一則訊息上（索引對齊）", asyn
   const ids = [`dl-a-${tag}`, `dl-b-${tag}`, `dl-c-${tag}`];
   const mediaId = randomUUID();
 
-  const uploadId = await withTenant({ tenantId: null, role: "system", departmentId: null, userId: null },
-    async (tx) => {
+  const uploadId = await withSystemTx(async (tx) => {
       for (const [i, mid] of ids.entries()) {
         await tx.execute(sql`
           INSERT INTO line_message

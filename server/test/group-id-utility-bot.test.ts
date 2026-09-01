@@ -56,7 +56,8 @@ function buildService(replies: Array<{ replyToken: string; text: string }>) {
     new LineGroupRepository(),
     stub, stub, stub, stub,
     lineApi,
-    stub, stub, stub,
+    // ⚠️ 這裡本來多傳了一個 stub（10 個參數對 9 個）· lineApi 的位置是對的，多的在尾巴
+    stub, stub,
   );
 }
 

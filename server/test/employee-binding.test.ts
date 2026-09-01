@@ -30,6 +30,7 @@ import { LiffPrefillService } from "../src/employee-binding/liff-prefill.service
 import { NudgeService } from "../src/employee-binding/nudge.service.js";
 import { BadRequestException } from "@nestjs/common";
 
+import { PasswordPolicyService } from "../src/auth/password-policy.service.js";
 const T_ELB_A = "66666666-aaaa-aaaa-aaaa-666666666601";
 const T_ELB_B = "66666666-bbbb-bbbb-bbbb-666666666602";
 const BOT_ELB_A = "bb111111-0000-0000-0000-000000000a01";
@@ -45,7 +46,7 @@ const LINE_USER_UNBOUND_2 = "Utestelbuser000000000000unbound2";
 
 const bindingRepo = new UserLineBindingRepository();
 const prefillService = new LiffPrefillService();
-const bindingService = new EmployeeBindingService(bindingRepo, prefillService);
+const bindingService = new EmployeeBindingService(bindingRepo, prefillService, new PasswordPolicyService());
 const nudgeService = new NudgeService();
 
 before(async () => {

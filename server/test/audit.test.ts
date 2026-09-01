@@ -29,7 +29,11 @@ test("三種 scope 的 SQL 都跑得起來", async () => {
   const tenantId = await anyTenant();
   if (!tenantId) return;
   for (const scope of ["all", "write", "login"] as const) {
-    const res = await asRole({ tenantId, role: "tenant_admin" }, () => svc.list({ scope }));
+    // ⚠️ 這裡要標型別：scope 是迴圈變數（聯合型別），配上泛型的 asRole
+    //    會讓 tsc 推不出來、報 TS7022 implicit any。
+    //    其他幾處傳字面值的同樣寫法不會踩到，所以只有這一行需要。
+    const res: Awaited<ReturnType<AuditService["list"]>> =
+      await asRole({ tenantId, role: "tenant_admin" }, () => svc.list({ scope }));
     assert.ok(Array.isArray(res.items), `${scope} 應回陣列`);
     assert.equal(res.page, 1);
     assert.equal(typeof res.hasNext, "boolean");

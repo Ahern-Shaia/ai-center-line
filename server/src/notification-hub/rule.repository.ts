@@ -73,7 +73,9 @@ export class RuleRepository {
     tenantId: string | null; name: string; sourceType: RuleRow["sourceType"];
     sourceConfig: Record<string, unknown>; webhookToken: string | null;
     template: NotificationTemplate; channelType: RuleRow["channelType"];
-    channelTarget: string | null; createdBy: string;
+    // ⚠️ createdBy 可為 null —— DB 的 created_by 是 nullable（系統/webhook 建的規則沒有建立者）。
+    //    原本寫死 string，讓測試的 createdBy: null 變成型別錯誤，但那才是對的用法。
+    channelTarget: string | null; createdBy: string | null;
     botId?: string | null;
   }): Promise<{ ruleId: string }> {
     const res = await tx.execute<{ rule_id: string }>(sql`

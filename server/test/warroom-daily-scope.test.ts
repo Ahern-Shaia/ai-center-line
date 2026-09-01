@@ -7,7 +7,8 @@ import pg from "pg";
 import { withTenant, txStore, closeDb } from "../src/db/client.js";
 import { WarroomTasksService } from "../src/warroom/warroom-tasks.service.js";
 
-const svc = new WarroomTasksService({} as never, {} as never);
+import { notTestingNotify } from "./warroom-tasks-fixture.js";
+const svc = notTestingNotify();
 const T1 = "b0da0000-0000-4000-8000-00000000d201";
 const T2 = "b0da0000-0000-4000-8000-00000000d202";
 const BOT = "b0da0000-0000-4000-8000-00000000d2b0";

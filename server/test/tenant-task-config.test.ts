@@ -16,8 +16,9 @@ import { WarroomTasksService } from "../src/warroom/warroom-tasks.service.js";
 import { TaskConfigService, DEFAULT_TASK_CONFIG } from "../src/task-config/task-config.service.js";
 import { rejectsWithConstraint } from "./pg-constraint.js";
 
+import { notTestingNotify } from "./warroom-tasks-fixture.js";
 const cfgSvc = new TaskConfigService();
-const svc = new WarroomTasksService(cfgSvc);
+const svc = notTestingNotify(cfgSvc);
 
 const asTenant = <T>(tenantId: string, fn: () => Promise<T>) =>
   withTenant({ tenantId, role: "tenant_admin", departmentId: null, userId: null },

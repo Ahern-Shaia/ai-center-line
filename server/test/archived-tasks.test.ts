@@ -20,6 +20,7 @@ import { ArchivedTasksService } from "../src/warroom/archived-tasks.service.js";
 import { WarroomTasksService } from "../src/warroom/warroom-tasks.service.js";
 import { TaskConfigService } from "../src/task-config/task-config.service.js";
 
+import { notTestingNotify } from "./warroom-tasks-fixture.js";
 const svc = new ArchivedTasksService(new TaskConfigService());
 
 const T = "a4c40000-0000-4000-8000-00000000c001";
@@ -211,7 +212,7 @@ test("⭐ 總經理室看得到全公司（含另一部門），但仍不含別�
 // 新後端上線那段時間，還開著舊分頁的人會拿到新回應。
 
 test("⭐⭐ /warroom/tasks 仍要回 kanban.archived（空陣列）· 拿掉 key 會讓舊前端白畫面", async () => {
-  const board = await asTenant(() => new WarroomTasksService(new TaskConfigService()).listTasks({}));
+  const board = await asTenant(() => notTestingNotify().listTasks({}));
   assert.ok(Array.isArray(board.kanban.archived),
     "舊前端會做 kanban.archived.map(...) —— key 不見就是 undefined.map，整頁掛掉");
   assert.equal(board.kanban.archived.length, 0, "卡片走分頁端點，這裡不再塞 50 筆");

@@ -46,6 +46,9 @@ const XIANYONG: TenantConfig = {
 const basePayload: RagicMaintenanceReportPayload = {
   trigger: "save",
   sheetPath: "/service-tickets/10",
+  // ⚠️ 這個型別是 z.infer（schema 的 **輸出**）· sheetName 有 .default("")，
+  //    所以 parse 完一定有值 —— 手工建的 payload 少了它就不是 prod 會看到的形狀。
+  sheetName: "",
   recordId: 42,
   record: {
     單據編號: "202607188-003",

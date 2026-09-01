@@ -13,7 +13,8 @@ import { sql } from "drizzle-orm";
 import { withTenant, txStore } from "../src/db/client.js";
 import { WarroomTasksService } from "../src/warroom/warroom-tasks.service.js";
 
-const svc = new WarroomTasksService(new TaskConfigService());
+import { notTestingNotify } from "./warroom-tasks-fixture.js";
+const svc = notTestingNotify();
 
 async function seed() {
   return withTenant({ tenantId: null, role: "aiproot_admin", departmentId: null, userId: null },
