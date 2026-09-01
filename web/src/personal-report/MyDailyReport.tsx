@@ -244,7 +244,7 @@ export default function MyDailyReport() {
               {tr("pdr.visitsA")}<b>{todayVisits.length}</b>{tr("pdr.visitsB")}
             </div>
             {todayVisits.map((v) => (
-              <div key={v.punchId} className="pdr-raw-item"
+              <div key={v.punchId ?? `${v.place}-${v.at}`} className="pdr-raw-item"
                    style={{ flexDirection: "column", alignItems: "stretch" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div className="pdr-raw-time" style={{ paddingTop: 0 }}>{v.at}</div>
@@ -256,7 +256,13 @@ export default function MyDailyReport() {
                       //    （punch-note-to-report §1.3）。
                       setItems((s) => [...s, {
                         title: v.place, detail: v.note ?? "", time: v.at, followup: "",
-                        source: "attendance", plannedKey: `punch:${v.punchId}`,
+                        source: "attendance",
+                        // ⚠️ 只在真的有 punchId 時才帶。前後端是兩個 Render 服務、
+                        //    同一次 push 各自部署，順序控制不了 —— 那個空窗期裡
+                        //    新前端會打到舊後端（舊的 todayVisits 沒有 punchId），
+                        //    沒有這道防護就會存成 `punch:undefined`，
+                        //    那筆的去重從此永遠對不上。
+                        ...(v.punchId ? { plannedKey: `punch:${v.punchId}` } : {}),
                       } as PersonalDailyReportItem]);
                       // 立刻從上方拿掉，不等重新載入 —— 否則他會以為沒按到而按第二次
                       setTodayVisits((s) => s.filter((x) => x.punchId !== v.punchId));
