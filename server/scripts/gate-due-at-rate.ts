@@ -102,6 +102,11 @@ const main = async () => {
   console.log(`模型：${platformDefaultModel()} · 取樣 ${rows.length} 批\n`);
 
   let recTotal = 0, withDue = 0, parsedOk = 0, datedMsgs = 0, msgTotal = 0;
+  // ⚠️ M3.5（一則訊息排多天就拆成多筆）之後，「抽到的 ÷ 看起來有日期的訊息數」
+  //    會超過 100% —— 一則訊息可以生 7 筆記錄，分母裡卻只算 1 則。
+  //    所以另外算**逐訊息覆蓋率**：粗篩認為在講日期的訊息，有幾則至少產出一筆 due_at。
+  //    這個數字有上限、看得懂，才是能拿來判斷的那個。
+  let datedCovered = 0;
   const detail: string[] = [];
 
   for (const r of rows) {
@@ -141,9 +146,11 @@ const main = async () => {
     await pool.end();
     process.exit(4);
   }
-  const rate = withDue / datedMsgs;
-  console.log(`抽到的 ÷ 粗篩看起來有日期的 ＝ ${withDue}/${datedMsgs} ＝ ${(rate * 100).toFixed(0)}%`);
-  console.log("（粗篩會多抓「8/24 已完成」這種過去式，所以這個比例天生偏低，不必追到 100%）");
+  console.log(`⭐ **逐訊息覆蓋率**：粗篩認為在講日期的 ${datedMsgs} 則裡，`
+    + `有 ${datedCovered} 則至少產出一筆 due_at ＝ ${((datedCovered / datedMsgs) * 100).toFixed(0)}%`);
+  console.log("（粗篩會多抓「8/24 已完成」這種過去式，所以不必追到 100%）");
+  console.log(`   參考：due_at 總筆數 ${withDue} 筆。⚠️ **這個數字不要拿來除**——`);
+  console.log("   M3.5 之後一則訊息會拆成多筆，除出來會超過 100%，沒有意義。");
   if (parsedOk < withDue) {
     console.log(`❌ 有 ${withDue - parsedOk} 筆模型填了但解析不出來 —— 先修 prompt 的格式要求，這是白丟的`);
   }
