@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { db, withAuthLookup } from "../db/client.js";
 import type { Role } from "../db/schema.js";
 import { hasKey, msg } from "../i18n/index.js";
+import { currentTx } from "../db/client.js";
 
 // Permission engine · in-memory cache 5 min TTL (OQ-PE-5)
 // 一個實例 · single-flight per user
@@ -75,6 +76,40 @@ export class PermissionService {
     const res = await withAuthLookup((tx) =>
       tx.execute<{ display_name: string | null }>(sql`SELECT display_name FROM users WHERE user_id = ${userId} LIMIT 1`));
     return res.rows[0]?.display_name ?? null;
+  }
+
+  /**
+   * 這個人所屬公司的名稱（左上角品牌用）。
+   *
+   * ⚠️⚠️ 2026-09-01 之前，前端是**硬編一張 tenant_id → 名稱的對照表**
+   *    （Shell.tsx 的 TENANT_NAME，只有 aiproot 與台灣福祉兩筆），
+   *    對不到就顯示佔位字「客戶方」。
+   *    結果排查「權限沒生效」時，我把那個佔位字當成真的租戶名，
+   *    據此判斷「這是另一家客戶」——**判斷錯誤，浪費了一輪**。
+   *
+   * ⭐ 放在這個端點而不是 JWT：
+   *    · 不用重新登入就生效（JWT 要等舊 token 過期）
+   *    · 租戶改名會即時反映（JWT 裡的名字會過時）
+   *
+   * ⚠️⚠️ 這支**不可以**用 withAuthLookup（我第一版就寫錯了）。
+   *    withAuthLookup 只設 `app.auth_lookup='1'`，而那是給 `users` 的
+   *    `p_users_auth` policy 用的 —— **`tenants` 沒有對應的 policy**
+   *    （它要 app.current_tenant 或 app.actor_role 或 app_is_platform_ops）。
+   *    所以 LEFT JOIN 到 tenants 會靜默拿不到列 → tenant_name 永遠 null，
+   *    而且**不會報錯**（memory: rls-silent-zero）。
+   *
+   *    改用 currentTx()：這支只從 controller 呼叫，而 controller 跑在
+   *    TenantTxInterceptor 之後，租戶上下文已經設好了
+   *    （memory: currenttx-vs-systemtx —— 「90% controller 內用 currentTx()」）。
+   *    平台帳號 tenant_id 是 NULL，走 policy 的 actor_role 那一支，照樣讀得到。
+   */
+  async getTenantName(): Promise<string | null> {
+    const res = await currentTx().execute<{ tenant_name: string | null }>(sql`
+      SELECT tenant_name FROM tenants
+      WHERE tenant_id = NULLIF(current_setting('app.current_tenant', true), '')::uuid
+      LIMIT 1
+    `);
+    return res.rows[0]?.tenant_name ?? null;
   }
 
   /** 0071 · 介面語言 · 讀不到一律回 zh-TW（新帳號/舊資料都有 DEFAULT，這只是保險） */

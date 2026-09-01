@@ -64,6 +64,11 @@ export type Role = "aiproot_admin" | "consultant" | "tenant_admin" | "group_owne
 export interface Session {
   email: string;
   displayName: string | null;          // 顯示名稱（topbar 用）· 來自 /me/permissions 或自服務改名
+  /**
+   * 公司名稱（左上角品牌）· 來自 /me/permissions。
+   * ⚠️ 尚未取回時是 null —— 呼叫端要有 fallback，不可以直接畫成空白。
+   */
+  tenantName: string | null;
   role: Role;
   tenantId: string;
   departmentId: string | null;
@@ -77,6 +82,7 @@ const EMAIL_KEY = "acl.email";
 const MUST_CHANGE_KEY = "acl.must_change";
 const EXPIRES_AT_KEY = "acl.password_expires";
 const DISPLAY_KEY = "acl.display_name";
+const TENANT_NAME_KEY = "acl.tenant_name";
 
 let token: string | null = localStorage.getItem(TOKEN_KEY);
 export const getToken = () => token;
@@ -113,6 +119,7 @@ export function getSession(): Session | null {
   return {
     email,
     displayName: localStorage.getItem(DISPLAY_KEY) || null,
+    tenantName: localStorage.getItem(TENANT_NAME_KEY) || null,
     role: (p.role as Role) ?? "group_owner",
     tenantId: (p.tenant_id as string) ?? "",
     departmentId: (p.department_id as string | null) ?? null,
@@ -129,6 +136,13 @@ export function setLocalDisplayName(name: string | null) {
   tokenListeners.forEach((fn) => fn());
 }
 
+/** 公司名稱 · 跟 setLocalDisplayName 同一個形狀（含通知重繪），不另外發明機制 */
+export function setLocalTenantName(name: string | null) {
+  if (name) localStorage.setItem(TENANT_NAME_KEY, name);
+  else localStorage.removeItem(TENANT_NAME_KEY);
+  tokenListeners.forEach((fn) => fn());
+}
+
 export function clearMustChange() {
   localStorage.removeItem(MUST_CHANGE_KEY);
 }
@@ -142,6 +156,7 @@ export function logout() {
   localStorage.removeItem("acl.perms_ts");
   localStorage.removeItem("acl.perms_id");
   localStorage.removeItem(DISPLAY_KEY);
+  localStorage.removeItem(TENANT_NAME_KEY);
 }
 
 export class ApiError extends Error {
@@ -1333,10 +1348,18 @@ export function markLocaleChosenAtLogin(): void {
 }
 
 export const getMyPermissions = async () => {
-  const res = await req<{ permissions: string[]; displayName?: string | null; locale?: string }>("/me/permissions");
+  const res = await req<{
+    permissions: string[]; displayName?: string | null; locale?: string;
+    /** 2026-09-01 · 左上角品牌 · 取代前端硬編的 tenant_id → 名稱對照表 */
+    tenantName?: string | null;
+  }>("/me/permissions");
   // 登入 / identity 變時會呼叫 → 順便把顯示名稱同步進 localStorage（topbar 用）· 變了才通知避免多餘 render
   if ((res.displayName || null) !== (localStorage.getItem(DISPLAY_KEY) || null)) {
     setLocalDisplayName(res.displayName || null);
+  }
+  // 公司名稱同上 —— 跟 displayName 走同一條路，不另外發明機制
+  if ((res.tenantName || null) !== (localStorage.getItem(TENANT_NAME_KEY) || null)) {
+    setLocalTenantName(res.tenantName || null);
   }
   // 0071 · 套用這個人存在伺服器的語言偏好 —— localStorage 只在本機，換裝置就沒了
   //

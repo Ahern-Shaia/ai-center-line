@@ -179,3 +179,43 @@ test("⭐⭐ 權限快取必須 stale-while-revalidate —— 不可以「有快
   assert.match(src, /30_000|30000/,
     "focus 重驗沒有節流 —— 頻繁切分頁會打爆 API");
 });
+
+test("⭐⭐ 公司名稱要由伺服器給 —— 不可以在前端硬編 tenant_id 對照表", () => {
+  // 2026-09-01：Shell.tsx 原本硬編兩筆 tenant_id → 名稱，對不到就顯示佔位字
+  // 「客戶方」。第三個租戶開始一律顯示「客戶方」。
+  //
+  // ⚠️⚠️ 那個佔位字造成過**實際的誤判**：排查「權限沒生效」時，
+  //    我看到員工端寫「客戶方」、管理端寫「aiproot」，就據此判斷
+  //    「這是兩家不同的客戶」—— 用一個 fallback 文字當證據，判斷錯誤。
+  const shell = read("../../web/src/Shell.tsx").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(shell, /const TENANT_NAME\s*:\s*Record/,
+    "又出現硬編的 tenant_id → 名稱對照表");
+  assert.doesNotMatch(shell, /"77777777-0000-0000-0000-000000000001"/,
+    "Shell.tsx 裡不該有寫死的 tenant_id");
+  assert.match(shell, /session\.tenantName \?\?/,
+    "沒有用伺服器給的 tenantName（要保留 ?? 保底，首次載入前是 null）");
+});
+
+test("⭐⭐ getTenantName 不可以用 withAuthLookup —— tenants 沒有那條 policy", () => {
+  // ⚠️ 我第一版就是寫成 withAuthLookup，結果 tenantName **永遠是 null 而且不報錯**。
+  //    withAuthLookup 只設 app.auth_lookup='1'，那是給 users 的 p_users_auth 用的；
+  //    tenants 的 policy 要 app.current_tenant / app.actor_role / app_is_platform_ops。
+  //    典型的 RLS 靜默回 0（memory: rls-silent-zero）——
+  //    是因為測試**斷言了實際值**才抓到，只驗「沒報錯」的話會過。
+  // ⚠️ 先去註解，而且只切到**這個函式的結尾** ——
+  //    固定長度的 slice 會跨到下一個函式的說明（getLocale 的註解就提到 withAuthLookup），
+  //    測試就紅得莫名其妙。本 session 第三次踩到「守門比對到散文」。
+  const svc = read("../src/permission/permission.service.ts")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const i = svc.indexOf("async getTenantName(");
+  assert.ok(i > 0, "找不到 getTenantName");
+  const end = svc.indexOf("\n  }", i);
+  const body = svc.slice(i, end > 0 ? end : i + 400);
+  assert.match(body, /currentTx\(\)/, "getTenantName 要用 currentTx（controller 內有租戶上下文）");
+  assert.doesNotMatch(body, /withAuthLookup/, "withAuthLookup 讀不到 tenants，會靜默回 null");
+
+  const ctrl = read("../src/permission/permission.controller.ts");
+  assert.match(ctrl, /tenantName/, "/me/permissions 沒有回傳 tenantName");
+  const api = read("../../web/src/api.ts");
+  assert.match(api, /tenantName: string \| null;/, "前端 Session 少了 tenantName");
+});

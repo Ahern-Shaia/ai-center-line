@@ -15,13 +15,15 @@ export class PermissionController {
   @Get("me/permissions")
   @AllowAnyUser()
   async myPermissions(@CurrentUser() user: JwtUser) {
-    const [perms, displayName, locale] = await Promise.all([
+    const [perms, displayName, locale, tenantName] = await Promise.all([
       this.svc.getUserPermissions(user.user_id),
       this.svc.getDisplayName(user.user_id),
       // 0071 · 讓使用者換裝置也維持自己的語言（localStorage 只在本機）
       this.svc.getLocale(user.user_id),
+      // 2026-09-01 · 左上角品牌 · 取代前端硬編的 TENANT_NAME 對照表
+      this.svc.getTenantName(),
     ]);
-    return { permissions: Array.from(perms), displayName, locale };
+    return { permissions: Array.from(perms), displayName, locale, tenantName };
   }
 
   // GET /permissions · 全部 64 項（含 platform）· aiproot 側建 role 用

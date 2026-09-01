@@ -174,12 +174,24 @@ export function canOpenPage(page: string, hasAny: (...p: string[]) => boolean, r
 const COLLAPSED_KEY = "sb_collapsed_groups";
 const SEEN_RENAMES_KEY = "sb_seen_renames";
 
-// TODO(iam-followup): JWT 應內含 tenant_name · 目前 hard-code 補
-// 現在有 2 個 tenant · 未來 wizard 加更多會沒 match → fallback 顯 tenant slug
-const TENANT_NAME: Record<string, string> = {
-  "77777777-0000-0000-0000-000000000001": "aiproot",
-  "4d97eced-64c5-4a38-952b-dfce9588ab7c": "台灣福祉",
-};
+/**
+ * 公司名稱 —— 2026-09-01 起由伺服器提供（`/me/permissions` 的 `tenantName`）。
+ *
+ * ⚠️⚠️ 這裡原本是**硬編兩筆 tenant_id → 名稱的對照表**，對不到就顯示佔位字
+ *    「客戶方」。所以第三個租戶開始，左上角一律寫「客戶方」。
+ *
+ *    而那個佔位字真的造成過事故：2026-09-01 排查「權限沒生效」時，
+ *    我看到員工那邊寫「客戶方」、管理端寫「aiproot」，就判斷
+ *    「這是兩家不同的客戶」——**用一個佔位字當證據下結論，判斷錯誤，浪費一輪**。
+ *
+ * ⭐ 為什麼放 `/me/permissions` 而不是 JWT：
+ *    · 不用等舊 token 過期／重新登入就生效
+ *    · 租戶改名會即時反映（JWT 裡的名字只會愈來愈舊）
+ *
+ * ⚠️ 還沒取回時（首次載入的那一瞬間、或 API 失敗）是 null → 用既有的
+ *    「客戶方」當保底，不要畫成空白。
+ */
+const tenantNameOf = (session: Session): string => session.tenantName ?? t("brand.tenant");
 
 // 方向 A · role-aware sidebar brand
 function brandFor(session: Session): { mark: string; name: string; sub: string } {
@@ -190,7 +202,7 @@ function brandFor(session: Session): { mark: string; name: string; sub: string }
     return { mark: "A", name: "AIPROOT", sub: t("brand.consultant") };
   }
   // 客戶方左上角只放公司名（不加「戰情室」副標）· 用戶裁定 2026-08-01
-  const tenantName = TENANT_NAME[session.tenantId] ?? t("brand.tenant");
+  const tenantName = tenantNameOf(session);
   return { mark: tenantName.slice(0, 1), name: tenantName, sub: "" };
 }
 
@@ -209,7 +221,7 @@ interface Props {
 }
 
 export default function Shell({ session, active, pageTitle, onNav, onLogout, onRefresh, onHelp, refreshing, asOf, crumb, children }: Props) {
-  const tenantName = TENANT_NAME[session.tenantId] ?? t("brand.tenant");
+  const tenantName = tenantNameOf(session);
   const brand = brandFor(session);
   const toast = useToast();
   const [locale, setLocale] = useLocale();
