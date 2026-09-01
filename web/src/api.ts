@@ -794,6 +794,19 @@ export interface PendingRawMessage {
   sentAt: string;
 }
 
+export interface PlannedTodayItem {
+  /** 唯一鍵（`ticket:<id>` 或 `pdr:<reportId>#<idx>`）· 加入日報時原樣帶回去，用來避免重複出現 */
+  key: string;
+  title: string;
+  /** HH:mm · null ＝ 整天事件（只有日期沒時間） */
+  time: string | null;
+  /** 這是哪一天記下的（先前日報來的才有）· 讓人知道是什麼時候講的 */
+  noteDate: string | null;
+  /** 原文的日期寫法 · 給人核對 */
+  dueText: string | null;
+  ticketId: string | null;
+}
+
 export const getMyPersonalReport = (date?: string) => {
   const q = date ? `?date=${date}` : "";
   return req<{
@@ -805,6 +818,12 @@ export const getMyPersonalReport = (date?: string) => {
   assignedTasks?: Array<{ ticketId: string; summary: string | null; category: string | null; createdAt: string; canSeeSource?: boolean }>;
   /** 今天打卡去過的地方 · 由本人決定要不要納入日報（4FR §5） */
   todayVisits?: Array<{ place: string; at: string }>;
+  /**
+   * 今日預定 · 先前記下、預定在這一天要做的事（calendar-sync M4）。
+   * 兩個來源合成一份：群組任務卡的 due_at、以及先前私訊日報裡記下的 dueAt。
+   * ⚠️ `time` 為 null ＝ 整天事件（只有日期沒時間），要顯示「—」不是 00:00。
+   */
+  plannedToday?: PlannedTodayItem[];
     pendingMessages: PendingRawMessage[];
     userDisplayName: string;
     tenantName: string;

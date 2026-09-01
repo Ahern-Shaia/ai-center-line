@@ -9,6 +9,7 @@ import {
   savePersonalReport,
   type PendingRawMessage,
   type PersonalDailyReportItem,
+  type PlannedTodayItem,
   type PersonalDailyReportRow,
   type TicketSource,
 } from "../api";
@@ -18,6 +19,7 @@ import SourceMessageList from "../warroom/SourceMessageList";
 import { bcp47, t} from "../i18n";
 import { useT } from "../i18n/useT";
 
+import { PlannedToday } from "./PlannedToday";
 type AssignedTask = { ticketId: string; summary: string | null; canSeeSource?: boolean };
 
 // PDR-M4 · 我的日報頁
@@ -30,6 +32,7 @@ export default function MyDailyReport() {
   const [pendingMessageCount, setPendingMessageCount] = useState(0);
   const [pendingMessages, setPendingMessages] = useState<PendingRawMessage[]>([]);
   const [assignedTasks, setAssignedTasks] = useState<AssignedTask[]>([]);
+  const [plannedToday, setPlannedToday] = useState<PlannedTodayItem[]>([]);
   // 今天去過哪 · 系統本來就知道，只是這一頁看不到（4FR §5）
   const [todayVisits, setTodayVisits] = useState<Array<{ place: string; at: string }>>([]);
   // AI 幾點自動整理 · 每家自己設（原本前端寫死 17:30，客戶改了時間畫面就在說謊）
@@ -53,6 +56,7 @@ export default function MyDailyReport() {
       setPendingMessageCount(res.pendingMessageCount ?? 0);
       setPendingMessages(res.pendingMessages ?? []);
       setAssignedTasks(res.assignedTasks ?? []);
+      setPlannedToday(res.plannedToday ?? []);
       setTodayVisits(res.todayVisits ?? []);
       setUserDisplayName(res.userDisplayName ?? "");
       // 已送出後若又重新整理過（ai_generated_at 晚於 sent_at）→ 顯示新的 AI 結果，
@@ -247,6 +251,27 @@ export default function MyDailyReport() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* 今日預定 · 最上方（mockup §3）· 先前記下、預定在今天的事
+            ⚠️ 跟「指派給我的任務」一樣不自動寫進去 —— 事情可能沒去成、可能改期。*/}
+        {isToday && (
+          <PlannedToday
+            items={plannedToday}
+            canEdit={canEdit}
+            onAdd={(p) => {
+              // 加進來的是**骨架**（時間＋標題），實際做了什麼由本人補 ——
+              // 系統不會替他寫「已完成」（mockup §4）。
+              setItems((s) => [...s, {
+                title: p.title, detail: "", time: p.time ?? "",
+                followup: "", plannedKey: p.key,
+                ...(p.ticketId ? { source: "assigned_task", ticketId: p.ticketId } : {}),
+              } as PersonalDailyReportItem]);
+              // ⚠️ 立刻從上方拿掉。等重新載入才消失的話，他會以為沒按到而按第二次
+              //    （後端也會用 plannedKey 排除，這裡只是不讓他等）。
+              setPlannedToday((s) => s.filter((x) => x.key !== p.key));
+            }}
+          />
         )}
 
         {/* 指派給我的任務 · 由本人決定要不要納入日報（task-to-personal-report §5）
