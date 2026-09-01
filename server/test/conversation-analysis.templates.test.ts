@@ -19,7 +19,13 @@ const L1_FIXTURE = {
   records: [{
     category: "maintenance", title: "鋼索更換", detail: "已換標準件",
     status: "resolved" as const, person: "P-02", machine_code: "ST-01",
-    work_order: null, source_ids: [1], confidence: "high" as const,
+    work_order: null,
+    // 2026-09-01 · calendar-sync 階段 A 加的 L1 欄位。
+    // ⚠️ 刻意**不可空**（省 Anthropic 的 union 額度）→ 是必填，
+    //    fixture 少了它們整包 parse 就不過 —— 這幾支測試正是這樣紅給我看的。
+    //    這一筆在講「已經換好了」，所以兩欄都是空字串。
+    due_at: "", due_text: "",
+    source_ids: [1], confidence: "high" as const,
   }],
 };
 

@@ -88,6 +88,24 @@ const recordSchema = z.object({
   person: z.string().nullable(),
   machine_code: z.string().nullable(),
   work_order: z.string().nullable(),
+  /**
+   * 這件事**什麼時候要做**（calendar-sync 階段 A · 2026-09-01）。
+   *   due_at   ISO 日期或日期時間；沒有講到未來日期就給 ""
+   *   due_text 原文寫法（「8/24 14:00」「下週三」「月底前」）；沒有就給 ""
+   *
+   * ⚠️⚠️ **刻意不用 `.nullable()`** —— Anthropic 結構化輸出的 16 union 上限
+   *    數的是產生出來的 JSON Schema 裡的 anyOf/enum，
+   *    **不可空欄位是 0 成本**（實測：scripts/probe-union-limit.ts）。
+   *    預設模板 factory_report 現況 15/16，只剩 1 格；
+   *    寫成 nullable 會白白吃掉它，之後任何人加欄位就會讓**整條分析 400**。
+   *
+   * ⚠️ R11 的紀律沒有放寬：抽不到給 `""`，**絕不換算或臆測**。
+   *    「下週三」不知道是幾號 → due_at="" · due_text="下週三"。
+   *    已實測 5/5（scripts/probe-due-nonnullable.ts），含最容易誤填的
+   *    「今天做完的事」與「模糊時間詞」兩題。
+   */
+  due_at: z.string(),
+  due_text: z.string(),
   source_ids: z.array(z.number()),
   confidence: Confidence,
 });

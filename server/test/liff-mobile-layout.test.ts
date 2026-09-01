@@ -219,3 +219,30 @@ test("⭐⭐ getTenantName 不可以用 withAuthLookup —— tenants 沒有那�
   const api = read("../../web/src/api.ts");
   assert.match(api, /tenantName: string \| null;/, "前端 Session 少了 tenantName");
 });
+
+test("⭐⭐ due_at / due_text 不可以寫成 nullable —— 會撞 Anthropic 的 16 union 上限", () => {
+  // 2026-09-01 實測（scripts/probe-union-limit.ts · 打真實 API）：
+  //   現況（兩欄不可空）    15  ✅
+  //   把那兩欄改成可空      17  ❌ 400 too many parameters with union types
+  // 預設模板 factory_report 只剩 1 格，改成 nullable 直接超過。
+  //
+  // ⭐ 壞掉的不是行事曆功能，是**客戶每天的對話分析整條 pipeline**，
+  //    而錯誤只在 server log 裡（FMEA F-9，P0）。
+  //
+  // R11 的紀律沒有放寬：抽不到給 ""，不換算。已實測 5/5
+  // （scripts/probe-due-nonnullable.ts）＋ L1 回歸 11/11
+  // （scripts/probe-l1-regression.ts，含「既有欄位沒退步」那幾條）。
+  const src = read("../src/conversation-analysis/pipeline/schemas.ts")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.match(src, /due_at:\s*z\.string\(\),/, "schema 少了 due_at");
+  assert.match(src, /due_text:\s*z\.string\(\),/, "schema 少了 due_text");
+  assert.doesNotMatch(src, /due_at:\s*z\.string\(\)\.nullable\(\)/,
+    "due_at 被改成 nullable —— 會讓 factory_report 從 15 變 16、下一個加欄位的人就爆");
+  assert.doesNotMatch(src, /due_text:\s*z\.string\(\)\.nullable\(\)/, "due_text 被改成 nullable");
+
+  // prompt 也要交代 —— schema 有欄位但沒說怎麼填，模型會亂填或全空
+  const prompt = read("../src/conversation-analysis/pipeline/tenant-twh.ts");
+  assert.match(prompt, /due_at/, "system prompt 沒交代 due_at 怎麼填");
+  assert.ok(prompt.includes("絕對不可以自己換算或臆測"),
+    "prompt 少了「不可換算」那條 —— 算錯日期會讓人在錯的日子赴約（FMEA F-1 · P0）");
+});

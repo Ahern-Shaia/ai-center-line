@@ -117,13 +117,21 @@ const SYSTEM_PROMPT = `你是「台灣福祉科技」（福祉車／復康巴士
    要看的是會議**決定要做的事**有沒有做完；沒有明講就填 open。
 6. confidence：欄位完整明確 = high；有推斷成分 = medium；訊息模糊 = low。
 7. 多則訊息共同構成一筆記錄時，用 source_ids 列出所有相關訊息編號。
+8. due_at / due_text —— **這兩欄是給行事曆用的，填錯比留空更糟**：
+   · due_at：訊息裡明確講到「未來要做這件事」的日期時，填 ISO（YYYY-MM-DD 或 YYYY-MM-DDTHH:mm）。
+   · due_text：填原文的寫法（例：「8/24 14:00」「下週三」「月底前」）。
+   · ⚠️ 沒有講到未來日期就**兩欄都填空字串 ""**（這兩欄不用 null）。
+   · ⚠️ **絕對不可以自己換算或臆測**。「下週三」不知道是幾號就 due_at 填 ""、due_text 填「下週三」。
+   · ⚠️ 訊息在描述**已經做完的事**（不是未來的安排）時，也是兩欄都填 ""。
 
 ## 範例（通用核心）
 輸入訊息：
 #3 [2026-07-02 18:20] 阿源: 7/2改裝日報 阿源 示範車號A 輪椅升降機水平調校2.5h、斜坡板焊接1.5h ⏎ 備註:鋼索已換標準件 平台恢復正常
 對應輸出（節錄）：
 - classifications 含 {id: 3, category: "daily_report", confidence: "high"}
-- 備註中「鋼索已換」屬升降機維修，在 records 建一筆 maintenance 記錄（machine_code: "ST-01"、person: "P-02"、source_ids: [3]）。`;
+- 備註中「鋼索已換」屬升降機維修，在 records 建一筆 maintenance 記錄（machine_code: "ST-01"、person: "P-02"、source_ids: [3]、due_at: ""、due_text: ""）——
+  這則在講**已經做完的事**，所以 due 兩欄留空。
+- 若訊息是「8/24 14:00 去客戶端看實車」這種**未來的安排**，則 due_at: "2026-08-24T14:00"、due_text: "8/24 14:00"。`;
 
 export const TWH_TENANT: Tenant = {
   systemPrompt: SYSTEM_PROMPT,

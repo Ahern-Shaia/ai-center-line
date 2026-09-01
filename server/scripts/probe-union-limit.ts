@@ -21,53 +21,26 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
+import { buildAnalysisSchema } from "../src/conversation-analysis/pipeline/schemas.js";
 
 const MODEL = process.env.LLM_DEFAULT_MODEL?.trim() || "claude-opus-4-7";
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const Confidence = z.enum(["high", "medium", "low"]);
-
-/** 現況 base（src/conversation-analysis/pipeline/schemas.ts） */
-const classification = z.object({
-  id: z.number(),
-  category: z.string().min(1).max(100),
-});
-const record = (extra: z.ZodRawShape = {}) =>
-  z.object({
-    category: z.string().min(1).max(100),
-    title: z.string(),
-    detail: z.string(),
-    status: z.enum(["open", "in_progress", "resolved", "info"]).nullable(),
-    person: z.string().nullable(),
-    machine_code: z.string().nullable(),
-    work_order: z.string().nullable(),
-    source_ids: z.array(z.number()),
-    ...extra,
-  });
-
-/** 現況 L2：factory_report（預設模板 · templates.ts） */
-const factoryReport = z.object({
-  date: z.string().nullable(),
-  reporter_name: z.string().nullable(),
-  reporter_code: z.string().nullable(),
-  line: z.string().nullable(),
-  machine_code: z.string().nullable(),
-  work_order: z.string().nullable(),
-  output_qty: z.number().nullable(),
-  defect_qty: z.number().nullable(),
-  work_hours: z.number().nullable(),
-  overtime_hours: z.number().nullable(),
-  issues: z.string().nullable(),
-  source_ids: z.array(z.number()),
-  confidence: Confidence,
-});
-
-const build = (extraRecordFields: z.ZodRawShape = {}) =>
-  z.object({
-    classifications: z.array(classification),
-    records: z.array(record(extraRecordFields)),
-    daily_reports: z.array(factoryReport),
-  });
+/**
+ * ⚠️⚠️ **用真正的 buildAnalysisSchema，不要在這裡手刻一份複本。**
+ *    2026-09-01 我手刻的 service_order 複本量到 12，實際是 15 ——
+ *    因為我猜錯了 items 內層的欄位。**用複本量出來的預算是假的**，
+ *    而這支腳本存在的意義正是「別再靠推算」。
+ *    （同 probe-pdr-source-ids.ts：prompt 直接從 service 原始碼讀。）
+ */
+const build = (extraRecordFields: z.ZodRawShape = {}) => {
+  const base = buildAnalysisSchema("factory_report");
+  if (Object.keys(extraRecordFields).length === 0) return base;
+  // 只在 records 那一層加欄位（模擬「往 L1 加東西」）
+  const shape = (base as unknown as { shape: Record<string, z.ZodTypeAny> }).shape;
+  const rec = (shape.records as unknown as { element: z.ZodObject<z.ZodRawShape> }).element;
+  return z.object({ ...shape, records: z.array(rec.extend(extraRecordFields)) });
+};
 
 /** 照 memory 的算法數（已知這個算法對不上現實，印出來只為了留下對照） */
 function countUnions(schema: z.ZodType): number {
@@ -103,7 +76,7 @@ const main = async () => {
   console.log(`模型：${MODEL}\n`);
 
   // ── ① 對照組 · 現況 schema。這一步沒過就不要往下解讀 ──
-  const ok = await attempt("① 對照組：現況 base + factory_report", build());
+  const ok = await attempt("① 現況（已含 due_at/due_text 不可空）", build());
   if (!ok) {
     console.error(
       "\n⛔ 對照組就失敗了 —— 這代表問題出在環境（key／模型名／SDK），"
@@ -113,22 +86,22 @@ const main = async () => {
   }
 
   // ── ② 實驗組 · M0 要加的兩個欄位 ──
-  await attempt("② 實驗：+ due_at / due_text", build({
+  await attempt("② 若把那兩欄改成「可空」", build({
     due_at: z.string().nullable(),
     due_text: z.string().nullable(),
   }));
 
   // ── ③ 上限數的是 **union 型別**不是欄位數 → 非 nullable 欄位是 0 成本 ──
-  console.log("\n── 找塞得進去的組合（現況 15 · 只剩 1 格）──");
-  await attempt("③ due_at 可空 + due_text 不可空", build({
+  console.log("\n── 現況只剩 1 格 · 以下確認邊界在哪 ──");
+  await attempt("③ 只有 due_at 改可空", build({
     due_at: z.string().nullable(),
     due_text: z.string(),           // 抽不到給 "" · 不佔 union
   }));
-  await attempt("④ 兩個都不可空（都給 \"\"）", build({
+  await attempt("④ 維持現況（兩個都不可空）", build({
     due_at: z.string(),
     due_text: z.string(),
   }));
-  await attempt("⑤ 只加 due_at 可空（不要 due_text）", build({
+  await attempt("⑤ 再多加一個可空欄位", build({
     due_at: z.string().nullable(),
   }));
 };
