@@ -503,7 +503,9 @@ button { cursor:pointer; }
   .login-card { padding:20px 18px; }
 
   /* Rolesmgt · 手機轉單欄 */
-  .rm-layout { grid-template-columns:1fr !important; }
+  /* 手機：改成上下堆疊 —— 基礎規則的固定高度要解掉，
+     否則兩塊會被擠進同一個高度裡（2026-09-01 改基礎規則時連帶要處理）。 */
+  .rm-layout { grid-template-columns:1fr !important; height:auto !important; }
   .rm-sidebar { max-height:200px; overflow-y:auto; }
 
   /* 各種 dialog / confirmDialog · 手機全屏 */
@@ -2417,9 +2419,25 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .lg-gid:hover .lg-gid-cp { text-decoration:underline; }
 .lg-gid-cp { color:var(--brand, #4f46e5); font-family:Inter,sans-serif; }
 .rm-note { padding:10px 12px; margin-bottom:14px; background:var(--surface-2, #F5F6F8); border:1px solid var(--line); border-radius:4px; font-size:12.5px; color:var(--ink-2); }
-.rm-layout { display:grid; grid-template-columns:280px 1fr; gap:16px; min-height:calc(100vh - 260px); }
-@media (max-width:900px) { .rm-layout { grid-template-columns:1fr; } }
-.rm-sidebar { background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:8px; display:flex; flex-direction:column; gap:2px; }
+/* ⚠️⚠️ 2026-09-01 用戶回報「權限管理 · 點擊儲存變更 前端問題」。
+   實測 1568×1418：editor 高 1376，但內容只填到 1209 → **底下 167px 死白**，
+   「儲存變更」浮在半空中，看起來像畫面壞掉。視窗越高空白越大。
+
+   根因：`.rm-perms-scroll` 同時寫了 `flex:1`（撐滿）與 `max-height:60vh`（封頂）
+   —— 兩者互斥。面板被 min-height 撐開，捲動區卻被 60vh 封住，差額就是死白。
+
+   ⭐ 改成給 `.rm-layout` **確定高度**（不是 min-height），
+   flex 才算得出剩餘空間；捲動區拿掉 max-height、改用 flex:1 + min-height:0。
+   `max()` 給一個下限，免得視窗很矮時面板被壓到不能用。
+   ⚠️ `.rm-*` 是**平台頁與租戶頁共用**的 class（aiproot-console/RolesManagement.tsx
+      與 settings/role-permissions/Page.tsx），改這裡兩邊都要驗。*/
+.rm-layout { display:grid; grid-template-columns:280px 1fr; gap:16px;
+  height:max(460px, calc(100vh - 260px)); }
+/* 同 §手機版：單欄堆疊時要解掉基礎規則的固定高度 */
+@media (max-width:900px) { .rm-layout { grid-template-columns:1fr; height:auto; } }
+/* 角色清單自己也要能捲 —— .rm-layout 改成固定高度之後，
+   角色一多就會溢出（自訂角色是客戶自己建的，數量不可預期）。 */
+.rm-sidebar { background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:8px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; min-height:0; }
 .rm-sidebar-hdr { font-size:12px; color:var(--ink-3); padding:8px 10px; }
 .rm-role-item { text-align:left; background:transparent; border:none; padding:10px 12px; border-radius:3px; cursor:pointer; }
 .rm-role-item:hover { background:var(--surface-2, #F5F6F8); }
@@ -2429,11 +2447,13 @@ code { font-family:var(--mono); font-size:12.5px; background:var(--well); paddin
 .rm-role-key { font-size:11px; color:var(--ink-3); font-family:var(--mono); margin-top:2px; }
 .rm-role-perms { font-size:11px; color:var(--ink-3); margin-top:2px; }
 
-.rm-editor { background:var(--surface); border:1px solid var(--line); border-radius:4px; display:flex; flex-direction:column; }
+.rm-editor { background:var(--surface); border:1px solid var(--line); border-radius:4px; display:flex; flex-direction:column; min-height:0; }
 .rm-editor-hdr { padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .rm-editor-title { font-size:16px; margin:0; display:flex; align-items:center; gap:8px; }
 .rm-editor-sub { font-size:12px; color:var(--ink-3); margin-top:4px; }
-.rm-perms-scroll { flex:1; overflow-y:auto; padding:12px 16px; max-height:60vh; }
+/* min-height:0 必要 —— flex 子項預設 min-height:auto，不加就縮不下去，
+   overflow 不會生效（同 .cd-body 那個坑）。 */
+.rm-perms-scroll { flex:1 1 auto; overflow-y:auto; padding:12px 16px; min-height:0; }
 .rm-perm-group { margin-bottom:16px; }
 .rm-perm-group-hdr { font-size:12px; font-weight:600; color:var(--ink-2); background:var(--surface-2, #F5F6F8); padding:6px 10px; border-radius:3px; margin-bottom:6px; text-transform:capitalize; }
 .rm-perm-list { display:flex; flex-direction:column; gap:2px; }

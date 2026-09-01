@@ -95,10 +95,49 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
       clearPermissionCache();
       return;
     }
-    const cached = readCache(identity);
-    setPermissions(cached);
-    if (cached.size === 0) void refresh();     // 沒有可信快取才打 API
+    /**
+     * ⚠️⚠️ 2026-09-01 用戶回報「配置權限沒生效」：
+     *    總經理在「權限管理」把員工加了 4 項權限、存檔成功（角色清單的數字也變了），
+     *    但員工那邊側欄完全沒變 —— **連重新整理都沒用**。
+     *
+     *    原因就是這裡：舊版寫 `if (cached.size === 0) void refresh()`，
+     *    也就是**只有快取空的時候才打 API**。而快取在 localStorage、TTL 5 分鐘，
+     *    重新整理活得好好的 → 最多要等 5 分鐘才會生效。
+     *    伺服器端其實有清快取（tenant-roles.service 存檔後 invalidateAll），
+     *    卡住的是前端。
+     *
+     * ⭐ 快取的用意是「載入時先畫出東西、不要閃爍」，**不是「不要打 API」**。
+     *    改成 stale-while-revalidate：先用快取渲染，然後**一定**重新驗證。
+     */
+    setPermissions(readCache(identity));
+    void refresh();
     return () => { if (retryRef.current) clearTimeout(retryRef.current); };
+  }, [identity, refresh]);
+
+  /**
+   * 分頁重新取得焦點時再驗一次 —— 這才真的兌現「改完立即生效」。
+   *
+   * 典型情境就是用戶回報的那個：左右兩個視窗，一邊改權限、一邊看效果。
+   * 切回去的那一刻就該是新的，不該叫人重新整理。
+   *
+   * ⚠️ 節流 30 秒，避免頻繁切分頁時打爆 API
+   *    （memory: react-context-value-stable-reference 那次 Toast 洗版的教訓）。
+   */
+  const lastFocusRef = useRef(0);
+  useEffect(() => {
+    if (!identity) return;
+    const onFocus = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastFocusRef.current < 30_000) return;
+      lastFocusRef.current = Date.now();
+      void refresh();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, [identity, refresh]);
 
   const value = useMemo<PermCtxValue>(() => ({

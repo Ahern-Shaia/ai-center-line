@@ -116,3 +116,66 @@ test("⭐ 對話框的 scrim 也要閃開系統手勢區", () => {
   assert.match(scrim, /padding-bottom:\s*max\([^)]*env\(safe-area-inset-bottom\)/,
     ".cd-scrim 沒有補 safe-area-inset-bottom");
 });
+
+test("⭐⭐ 權限管理版面：flex:1 不可以跟 max-height 同時存在", () => {
+  // 2026-09-01 用戶回報「權限管理 · 點擊儲存變更 前端問題」。
+  // `.rm-perms-scroll` 同時寫了 flex:1（撐滿）與 max-height:60vh（封頂）——
+  // 兩者互斥，而 `.rm-layout` 只給 min-height，於是：
+  //   1568×1418  面板 1376、內容只填到 1209 → **底下 167px 死白**，
+  //              「儲存變更」浮在半空中
+  //   1280×700   面板被 60vh 撐超過視窗 → **儲存變更整顆在畫面外**（筆電尺寸！）
+  // 修正後三種視窗高度都是死白 1px（border）、按鈕都在畫面內。
+  //
+  // ⚠️ `.rm-*` 是**平台頁與租戶頁共用**的 class，改這裡兩邊都要驗。
+  const css = read("../../web/src/styles.css").replace(/\/\*[\s\S]*?\*\//g, "");
+
+  const scroll = css.slice(css.indexOf(".rm-perms-scroll {"), css.indexOf(".rm-perms-scroll {") + 220);
+  assert.doesNotMatch(scroll, /max-height/,
+    ".rm-perms-scroll 又出現 max-height —— 它有 flex:1，兩者互斥，"
+    + "會造成死白（高視窗）或按鈕跑到畫面外（矮視窗）");
+  assert.match(scroll, /min-height:\s*0/,
+    ".rm-perms-scroll 少了 min-height:0 —— flex 子項縮不下去，overflow 不生效");
+
+  // ⚠️ 要抓**基礎規則**，不是 media query 裡的覆寫。
+  //    第一版用 indexOf(".rm-layout {") 抓到的是手機版那條
+  //    （`.rm-layout { grid-template-columns:1fr !important; }`），
+  //    測試就紅得莫名其妙 —— 而且順帶讓我發現有**兩處** media 覆寫要一起改。
+  const base = css.indexOf(".rm-layout { display:grid");
+  assert.ok(base > 0, "找不到 .rm-layout 的基礎規則");
+  const layout = css.slice(base, base + 220);
+  assert.match(layout, /height:\s*max\(/,
+    ".rm-layout 要給**確定高度**（不是 min-height），flex 才算得出剩餘空間");
+  assert.doesNotMatch(layout, /min-height:\s*calc/,
+    ".rm-layout 用 min-height 的話子項的 flex:1 沒有可分配的高度");
+});
+
+test("⭐⭐ 權限快取必須 stale-while-revalidate —— 不可以「有快取就不打 API」", () => {
+  // 2026-09-01 用戶回報「配置權限沒生效」：
+  // 總經理在權限管理把員工加了 4 項權限、存檔成功（角色清單數字也變了），
+  // 員工那邊側欄完全沒變 —— **連重新整理都沒用**。
+  //
+  // 舊版：`if (cached.size === 0) void refresh()` ← 只有快取空的時候才打 API。
+  // 而快取在 localStorage、TTL 5 分鐘，重新整理活得好好的
+  // → 最多要等 5 分鐘。伺服器端其實有清快取，卡住的是前端。
+  //
+  // 實測（塞一份還沒過期的過時快取後重新整理）：
+  //   修正前  側欄剩 2 項 · API 呼叫 **0 次**
+  //   修正後  側欄回到 8 項 · API 呼叫 2 次
+  //
+  // ⭐ 快取的用意是「載入時先畫出東西、不要閃爍」，不是「不要打 API」。
+  // ⚠️ 先去掉註解再比對 —— 我在註解裡引用了舊寫法當說明，
+  //    直接掃原文會比對到自己的散文（本 session 第二次犯，同 .rm-layout 那支）。
+  const src = read("../../web/src/permission/PermissionContext.tsx")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(src, /if\s*\(\s*cached\.size\s*===\s*0\s*\)\s*void refresh\(\)/,
+    "又變回「有快取就不打 API」—— 改權限後對方要等 TTL 過期才生效，重新整理也沒用");
+  // 換身分／載入時一定要重新驗證
+  const eff = src.slice(src.indexOf("setPermissions(readCache(identity))"), src.indexOf("setPermissions(readCache(identity))") + 200);
+  assert.match(eff, /void refresh\(\);/,
+    "載入時沒有無條件重新驗證");
+  // 分頁取得焦點時也驗一次 —— 這才兌現得了「改完立即生效」那句文案
+  assert.match(src, /visibilitychange/,
+    "沒有在分頁重新取得焦點時重驗 —— 兩個視窗並排改權限的情境不會即時生效");
+  assert.match(src, /30_000|30000/,
+    "focus 重驗沒有節流 —— 頻繁切分頁會打爆 API");
+});
