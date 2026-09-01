@@ -51,6 +51,8 @@ export default {
   "app.name": "aiproot War Room",
   "menu.changeName": "Change display name",
   "menu.changePassword": "Change password",
+  "menu.lineLogin": "Signed in with LINE",
+  "menu.lineUser": "LINE user",
   "menu.switchTenant": "Switch tenant",
   "menu.logout": "Sign out",
   "page.onboarding": "How it works",

@@ -226,7 +226,8 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
   const toast = useToast();
   const [locale, setLocale] = useLocale();
   const tr = useT();
-  const initials = session.email.slice(0, 2).toUpperCase();
+  // LINE 登入沒有 email → 退回顯示名稱取字（原本會拿到假 email 的「LI」）
+  const initials = (session.email || session.displayName || "?").slice(0, 2).toUpperCase();
   const [changePwOpen, setChangePwOpen] = useState(false);
   const [changeNameOpen, setChangeNameOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -364,7 +365,7 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
             <AriaButton className="user-btn">
               <span className="user-avatar">{initials}</span>
               <span className="user-meta">
-                <span className="user-name">{session.displayName || session.email.split("@")[0]}</span>
+                <span className="user-name">{session.displayName || session.email.split("@")[0] || tr("menu.lineUser")}</span>
                 <span className="user-role">{roleLabel(session.role)}</span>
               </span>
             </AriaButton>
@@ -383,8 +384,9 @@ export default function Shell({ session, active, pageTitle, onNav, onLogout, onR
                 }
               }}>
                 <AriaHeader className="user-menu-hdr">
-                  <div className="n">{session.displayName || session.email.split("@")[0]}</div>
-                  <div className="e">{session.email}</div>
+                  <div className="n">{session.displayName || session.email.split("@")[0] || tr("menu.lineUser")}</div>
+                  {/* 沒有 email 就說明登入方式，不要生一個假的出來 */}
+                  <div className="e">{session.email || tr("menu.lineLogin")}</div>
                   <div className="t">{roleLabel(session.role)} · {tenantName}</div>
                 </AriaHeader>
                 <Separator className="user-menu-sep" />

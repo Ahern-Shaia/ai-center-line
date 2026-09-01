@@ -49,6 +49,8 @@ export default {
   "app.name": "aiproot 戰情室",
   "menu.changeName": "變更顯示名稱",
   "menu.changePassword": "變更密碼",
+  "menu.lineLogin": "以 LINE 帳號登入",
+  "menu.lineUser": "LINE 使用者",
   "menu.switchTenant": "切換租戶",
   "menu.logout": "登出",
   "page.onboarding": "運作原理",

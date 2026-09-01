@@ -296,7 +296,11 @@ type LineLoginResp =
 function finishLineLogin(d: { access_token: string; tenant_id: string | null }) {
   setToken(d.access_token);
   // LINE 登入不走 email/密碼 · 記錄 email 用預設佔位
-  localStorage.setItem(EMAIL_KEY, `line-user@${d.tenant_id ?? "aiproot"}`);
+  // ⚠️ LINE 登入的人**沒有 email**，所以這裡不造一個假的。
+  //    舊寫法是 `line-user@${tenant_id}` —— 畫面上長得像 email，
+  //    但 @ 後面那串其實是**租戶 ID**，拿去查 users 一列都查不到。
+  //    一個長得像 A 其實是 B 的東西，只會在排查時把人帶去錯的方向。
+  localStorage.removeItem(EMAIL_KEY);
   localStorage.removeItem(MUST_CHANGE_KEY);
   localStorage.removeItem(EXPIRES_AT_KEY);
 }
@@ -335,7 +339,11 @@ export async function applyLiffToken(accessToken: string, botId?: string): Promi
   //    （同一支手機先前把 demo 站切成英文，aiproot.locale=en 留在 localStorage，
   //     LIFF 同 origin 就吃到了）。工廠員工看不懂的打卡頁＝那個功能等於沒有。
   if (d.locale === "zh-TW" || d.locale === "en") setLocale(d.locale);
-  localStorage.setItem(EMAIL_KEY, `line-user@${d.tenant_id ?? "aiproot"}`);
+  // ⚠️ LINE 登入的人**沒有 email**，所以這裡不造一個假的。
+  //    舊寫法是 `line-user@${tenant_id}` —— 畫面上長得像 email，
+  //    但 @ 後面那串其實是**租戶 ID**，拿去查 users 一列都查不到。
+  //    一個長得像 A 其實是 B 的東西，只會在排查時把人帶去錯的方向。
+  localStorage.removeItem(EMAIL_KEY);
   localStorage.removeItem(MUST_CHANGE_KEY);
   localStorage.removeItem(EXPIRES_AT_KEY);
   return { role: d.role, tenant_id: d.tenant_id };
