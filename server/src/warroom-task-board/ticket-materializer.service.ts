@@ -3,6 +3,7 @@ import { AssigneeResolverService } from "./assignee-resolver.service.js";
 import { sql } from "drizzle-orm";
 import { withTenant } from "../db/client.js";
 import { laneFor, workStatusFor, RECOMPUTABLE_LANES } from "./ticket-lane.js";
+import { parseDueAt } from "./due-at.js";
 
 /**
  * 紀錄類分類 —— 這些是「已經發生的事」，不是「該做的事」（0063）。
@@ -76,6 +77,9 @@ export class TicketMaterializerService {
           work_order: string | null;
           source_ids: number[];
           confidence: string;
+          /** ⚠️ 模型產生的字串，可能是任何東西 —— 一律過 parseDueAt()，不可直接進 SQL */
+          due_at?: string;
+          due_text?: string;
         }> | undefined) ?? [],
       };
     });
@@ -145,6 +149,13 @@ export class TicketMaterializerService {
               .filter((v): v is string => typeof v === "string")
           : null;
 
+        // 預定日期 · 看不懂的一律 null（parseDueAt 的責任，見該檔頂註）
+        //
+        // ⚠️⚠️ **絕對不可以把 rec.due_at 直接丟進 SQL**：那是模型產生的字串，
+        //    一個爛值就會讓**整批材料化交易失敗** —— 那一批連一張卡都進不去。
+        //    壞掉的不會是行事曆，是客戶當天的任務看板。
+        const dueAt = parseDueAt(rec.due_at);
+
         // 冪等 UPSERT · ux_tickets_source_record 撞則 UPDATE
         const res = await tx.execute<{ inserted: boolean }>(sql`
           INSERT INTO tickets (
@@ -152,14 +163,14 @@ export class TicketMaterializerService {
             confirm_status, needs_review, assignee_display_name,
             assignee_user_id, assign_status,
             source_upload_id, source_record_index, message_count,
-            source_message_ids, work_status
+            source_message_ids, work_status, due_at
           ) VALUES (
             ${bundle.tenantId}::uuid, ${bundle.departmentId}::uuid,
             ${category}, ${summary}, ${rec.confidence}, ${rec.status ?? null},
             ${lane}, false, ${assignee},
             ${resolved.userId}::uuid, ${resolved.status},
             ${uploadId}, ${idx}, ${rec.source_ids?.length ?? null},
-            ${textArray(srcMsgIds)}, ${workStatus}
+            ${textArray(srcMsgIds)}, ${workStatus}, ${dueAt}::timestamptz
           )
           ON CONFLICT (source_upload_id, source_record_index)
           WHERE source_upload_id IS NOT NULL AND source_record_index IS NOT NULL
@@ -188,6 +199,15 @@ export class TicketMaterializerService {
             message_count = EXCLUDED.message_count,
             -- 翻不出來時（EXCLUDED 為 null）保留舊值，不要把已經有的溯源洗掉
             source_message_ids = COALESCE(EXCLUDED.source_message_ids, tickets.source_message_ids),
+            -- ⚠️ 這裡**刻意不用 COALESCE**，跟上一行相反 —— 兩種 null 的意思不一樣：
+            --    source_message_ids 是 null 代表「這批的訊息數對不上，翻不出來」＝基礎設施問題，
+            --      舊值仍然有效，不可以洗掉。
+            --    due_at 是 null 代表「模型看完這則訊息，判定它沒有未來日期」＝一個判斷，
+            --      重跑就是要用新的判斷覆蓋舊的。用 COALESCE 的話，一次抽錯的日期會**永遠洗不掉**，
+            --      而錯的日期比沒有日期糟（使用者在錯的日子赴約）。
+            --    ⚠️ 以後如果做了「讓人手改預定日期」的功能，這行必須改成比照 assignee_user_id
+            --      的寫法（人的決定優先），否則重跑會蓋掉人改的日期。
+            due_at = EXCLUDED.due_at,
             updated_at = now()
           RETURNING (xmax = 0) AS inserted
         `);

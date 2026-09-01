@@ -292,3 +292,69 @@ test("⭐ 跨軸約束擋掉「結束了卻沒說為什麼」", async () => {
     );
   } finally { await seeded.cleanup(); }
 });
+
+// ─── due_at（calendar-sync M3）──────────────────────────────────────────
+//
+// ⚠️ 這兩支測的是「模型亂寫會不會弄垮整批」。純函式測試（due-at-parse.test.ts）
+//    驗的是解析對不對，**驗不到它有沒有被接上去** —— 少寫一行 parseDueAt()，
+//    那支照樣全綠，然後爛字串直接進 SQL、整批材料化 rollback。
+
+/** 同 rec() 但帶 due 欄位 */
+const recDue = (title: string, dueAt: string) => ({
+  ...rec(title, "high", "open"), due_at: dueAt, due_text: dueAt,
+});
+
+test("⭐⭐ 抽到的預定日期寫進 tickets.due_at · 且是台北時間不是 UTC", async () => {
+  const seeded = await seedUpload([recDue("北部港區看實車", "2026-09-08T14:00")]);
+  if (!seeded) return;
+  try {
+    await svc.materialize(seeded.uploadId);
+    const r = await asTenant(seeded.tenantId, (tx) => tx.execute<{ d: string | null }>(sql`
+      SELECT due_at AS d FROM tickets WHERE source_upload_id = ${seeded.uploadId}
+    `));
+    const d = r.rows[0]?.d;
+    assert.ok(d, "due_at 沒被寫進去 —— materializer 沒接上 parseDueAt()");
+    // ⚠️ 光比「不是 null」不夠：時區搞錯的話它一樣不是 null，只是差 8 小時。
+    assert.equal(new Date(d!).toISOString(), "2026-09-08T06:00:00.000Z",
+      "台北 14:00 應該存成 UTC 06:00 —— 差 8 小時就是把無時區字串當 UTC 解了（FMEA F-7）");
+  } finally { await seeded.cleanup(); }
+});
+
+test("⭐⭐ 模型亂寫的日期只讓那一筆沒日期，不可以讓整批掛掉", async () => {
+  // due_at 是模型產生的字串。直接丟進 timestamptz 欄位，一個爛值 = 整個交易 rollback，
+  // 那一批連一張卡都進不去 —— 壞掉的不是行事曆，是客戶當天的任務看板。
+  const seeded = await seedUpload([
+    recDue("看不懂的日期", "下週三"),
+    recDue("2月30日", "2026-02-30"),
+    recDue("正常的", "2026-09-08"),
+  ]);
+  if (!seeded) return;
+  try {
+    const res = await svc.materialize(seeded.uploadId);
+    assert.equal(res.inserted, 3, "整批應該都進得去 —— 少一張就代表爛值把交易弄掛了");
+    const r = await asTenant(seeded.tenantId, (tx) => tx.execute<{ n: number }>(sql`
+      SELECT count(*)::int AS n FROM tickets
+       WHERE source_upload_id = ${seeded.uploadId} AND due_at IS NOT NULL
+    `));
+    assert.equal(r.rows[0].n, 1, "只有『正常的』那筆該有日期；看不懂的一律 null，不可以硬湊");
+  } finally { await seeded.cleanup(); }
+});
+
+test("⭐ 重跑時 due_at 用新的判斷覆蓋舊的（不可以用 COALESCE 留著抽錯的日期）", async () => {
+  const seeded = await seedUpload([recDue("先抽到日期", "2026-09-08")]);
+  if (!seeded) return;
+  try {
+    await svc.materialize(seeded.uploadId);
+    // 模擬重跑時模型改判「這則沒有未來日期」
+    await admin((tx) => tx.execute(sql`
+      UPDATE analysis_result SET records = jsonb_set(records, '{0,due_at}', '""')
+       WHERE upload_id = ${seeded.uploadId}
+    `));
+    await svc.materialize(seeded.uploadId);
+    const r = await asTenant(seeded.tenantId, (tx) => tx.execute<{ d: string | null }>(sql`
+      SELECT due_at AS d FROM tickets WHERE source_upload_id = ${seeded.uploadId}
+    `));
+    assert.equal(r.rows[0]?.d, null,
+      "抽錯一次的日期會永遠洗不掉 —— 而錯的日期比沒有日期糟（使用者會在錯的日子赴約）");
+  } finally { await seeded.cleanup(); }
+});

@@ -70,7 +70,14 @@ export interface WarroomTicket {
   stuckDays: number | null;
   /** 卡住的種類 · 決定主管要催派工還是問障礙 */
   stuckKind: "unassigned" | "no_report" | null;
-  /** 逾時幾天 · due_at 是 null 時退回用建立日算（prod 的 due_at 100% 為 null）*/
+  /**
+   * 逾時幾天 · due_at 是 null 時退回用建立日算。
+   *
+   * ⚠️ 2026-09-01 起 `due_at` **開始有值了**（材料化會寫 AI 抽到的預定日期）。
+   *    在那之前它在 prod 是 100% null，所有卡片走的都是「建立日 + 寬限天數」那條；
+   *    之後有預定日期的卡片會改走 due_at 那條，**逾時的數字會跳一次**。
+   *    看到看板逾時數突然變多，先想這件事，不要當成資料壞掉。
+   */
   overdueDays: number | null;
   confirmedAt: string | null;
 }
