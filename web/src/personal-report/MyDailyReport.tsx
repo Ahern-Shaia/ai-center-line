@@ -34,7 +34,9 @@ export default function MyDailyReport() {
   const [assignedTasks, setAssignedTasks] = useState<AssignedTask[]>([]);
   const [plannedToday, setPlannedToday] = useState<PlannedTodayItem[]>([]);
   // 今天去過哪 · 系統本來就知道，只是這一頁看不到（4FR §5）
-  const [todayVisits, setTodayVisits] = useState<Array<{ place: string; at: string }>>([]);
+  const [todayVisits, setTodayVisits] = useState<Array<{
+    punchId: string; place: string; at: string; note: string | null; addedToReport: boolean;
+  }>>([]);
   // AI 幾點自動整理 · 每家自己設（原本前端寫死 17:30，客戶改了時間畫面就在說謊）
   const [aiRunAt, setAiRunAt] = useState<string | null>(null);
   const [userDisplayName, setUserDisplayName] = useState("");
@@ -57,7 +59,8 @@ export default function MyDailyReport() {
       setPendingMessages(res.pendingMessages ?? []);
       setAssignedTasks(res.assignedTasks ?? []);
       setPlannedToday(res.plannedToday ?? []);
-      setTodayVisits(res.todayVisits ?? []);
+      // 已經加進今天日報的不再列（OQ-PNR-4 · 修既有的「同一趟可以加兩次」）
+      setTodayVisits((res.todayVisits ?? []).filter((v) => !v.addedToReport));
       setUserDisplayName(res.userDisplayName ?? "");
       // 已送出後若又重新整理過（ai_generated_at 晚於 sent_at）→ 顯示新的 AI 結果，
       // 否則員工按「重新生成」也看不到送出後新增的訊息（final_items 永遠蓋掉 ai_items）。
@@ -240,14 +243,31 @@ export default function MyDailyReport() {
             <div className="pdr-raw-hdr">
               {tr("pdr.visitsA")}<b>{todayVisits.length}</b>{tr("pdr.visitsB")}
             </div>
-            {todayVisits.map((v, i) => (
-              <div key={`${v.place}-${v.at}-${i}`} className="pdr-raw-item" style={{ alignItems: "center" }}>
-                <div className="pdr-raw-time">{v.at}</div>
-                <div className="pdr-raw-text">{v.place}</div>
-                <button className="btn btn-sm" disabled={!canEdit}
-                  onClick={() => setItems((s) => [...s, {
-                    title: v.place, detail: "", time: v.at, followup: "", source: "attendance",
-                  } as PersonalDailyReportItem])}>{tr("pdr.addToReport")}</button>
+            {todayVisits.map((v) => (
+              <div key={v.punchId} className="pdr-raw-item"
+                   style={{ flexDirection: "column", alignItems: "stretch" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div className="pdr-raw-time" style={{ paddingTop: 0 }}>{v.at}</div>
+                  <div className="pdr-raw-text" style={{ flex: 1 }}>{v.place}</div>
+                  <button className="btn btn-sm" disabled={!canEdit}
+                    onClick={() => {
+                      // ⚠️ detail 帶入打卡當下寫的備註 —— 這一格本來是空字串，
+                      //    員工得自己回想並打字。這整個功能就是為了填它
+                      //    （punch-note-to-report §1.3）。
+                      setItems((s) => [...s, {
+                        title: v.place, detail: v.note ?? "", time: v.at, followup: "",
+                        source: "attendance", plannedKey: `punch:${v.punchId}`,
+                      } as PersonalDailyReportItem]);
+                      // 立刻從上方拿掉，不等重新載入 —— 否則他會以為沒按到而按第二次
+                      setTodayVisits((s) => s.filter((x) => x.punchId !== v.punchId));
+                    }}>{tr("pdr.addToReport")}</button>
+                </div>
+                {/* 備註看得到，他才知道「這句還沒進日報」（F-5）；也讓他先確認內容對不對 */}
+                {v.note && (
+                  <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 4, paddingLeft: 56 }}>
+                    {v.note}
+                  </div>
+                )}
               </div>
             ))}
           </div>

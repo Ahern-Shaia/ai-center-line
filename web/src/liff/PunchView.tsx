@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, attendancePunch, getTrips, type TripRow , getMyMonthAttendance, getPlaceSuggestions, type MyMonthSummary, type PlaceSuggestion } from "../api";
+import { ApiError, attendancePunch, annotatePunch, getTrips, type TripRow , getMyMonthAttendance, getPlaceSuggestions, type MyMonthSummary, type PlaceSuggestion } from "../api";
 import { useToast } from "../Toast";
 import { SAME_LOCATION_LABEL, SAME_LOCATION_NEXT, SAME_LOCATION_REASON, SAME_LOCATION_WHY } from "../shared/mileageCopy";
 import { t } from "../i18n";
@@ -24,6 +24,14 @@ function geoErrMsg(e: unknown): string {
 export default function PunchView() {
   const tr = useT();
   const toast = useToast();
+  /**
+   * 剛打完的那一筆 · 顯示備註框用（punch-note-to-report M3）。
+   * ⚠️ 打卡**已經成功**才會有值 —— 備註是第二個獨立動作，
+   *    寫不寫、寫失敗，都不影響已經成立的打卡（F-1 · P0）。
+   */
+  const [justPunched, setJustPunched] = useState<{ punchId: string; place: string } | null>(null);
+  const [note, setNote] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
   const [busy, setBusy] = useState<"clock_in" | "arrive_site" | null>(null);
   const [customer, setCustomer] = useState("");
   const custRef = useRef<HTMLInputElement>(null);
@@ -63,6 +71,9 @@ export default function PunchView() {
       });
       // 樂觀更新：打完立刻切成「記錄這一站」，不必等 refresh 回來（避免按鈕短暫停在舊狀態）
       setPunchCount((n) => (n ?? 0) + 1);
+      // 備註框：三種打卡都給（OQ-PNR-1）—— 限制型別會在 depart_site 上線那天壞掉
+      setJustPunched({ punchId: res.punchId, place: typed || tr("pv.thisStop") });
+      setNote("");
       if (type === "clock_in") {
         toast.show(tr("pv.started"), "ok");
       } else {
@@ -89,6 +100,22 @@ export default function PunchView() {
   const hasSameLocation = trips.some((t) => t.routeProvider === "same_location");
   const loadingState = punchCount === null;          // 尚未知道今天狀態 → 先不給按鈕，避免閃動誤按
   const notStarted = punchCount === 0;               // 今天還沒任何打卡 → 只給「開始外勤」
+
+  async function saveNote() {
+    if (!justPunched || savingNote) return;
+    setSavingNote(true);
+    try {
+      await annotatePunch(justPunched.punchId, note.trim());
+      toast.show(tr("pv.noteSaved"), "ok");
+      setJustPunched(null);
+    } catch (e) {
+      // ⚠️ 這裡失敗**不影響已經成立的打卡** —— 訊息要講清楚，
+      //    否則使用者會以為打卡也失敗了而重打一次（F-1 · P0）。
+      toast.show(e instanceof ApiError ? e.message : tr("pv.noteFailed"), "danger");
+    } finally {
+      setSavingNote(false);
+    }
+  }
 
   return (
     <div className="liff-wrap">
@@ -152,6 +179,41 @@ export default function PunchView() {
           </button>
         )}
       </div>
+
+      {/*
+        剛打完的那一站 · 寫一句「這趟做了什麼」（punch-note-to-report M3）
+        ⚠️ 自動出現但**不搶焦點**（沒有 autoFocus）—— 只想打卡的人不必多按一次關鍵盤，
+           打卡是一天很多次的高頻動作（OQ-PNR-2）。
+        ⚠️ 不是 modal、不擋、可以直接忽略走人。打卡已經成立了，這只是加值（F-1 · P0）。
+      */}
+      {justPunched && (
+        <div className="liff-group primary" style={{ marginTop: 12 }}>
+          <div className="liff-group-hd">{tr("pv.noteHd", { place: justPunched.place })}</div>
+          <div className="field" style={{ marginBottom: 8 }}>
+            <textarea
+              className="input" rows={2} value={note}
+              placeholder={tr("pv.notePh")}
+              onChange={(e) => setNote(e.target.value)}
+              style={{ resize: "vertical" }}
+            />
+            {/* 200 字是軟限制：超過只提示不擋 —— 在客戶端當場被擋住比字太長糟（OQ-PNR-3） */}
+            {note.length > 200 && (
+              <div className="dm-empty-hint" style={{ marginTop: 4, color: "var(--warn)" }}>
+                {tr("pv.noteTooLong", { n: String(note.length) })}
+              </div>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-primary" style={{ flex: 1 }}
+              disabled={savingNote || !note.trim()}
+              onClick={() => void saveNote()}>
+              {savingNote ? tr("common.saving") : tr("pv.noteSave")}
+            </button>
+            <button className="btn" onClick={() => setJustPunched(null)}>{tr("pv.noteSkip")}</button>
+          </div>
+          <div className="dm-empty-hint" style={{ marginTop: 6 }}>{tr("pv.noteHint")}</div>
+        </div>
+      )}
 
       {/* 你自己的數字 —— 不跟別人比，也不給別人看（FMEA F-6） */}
       {month && month.trips > 0 && (

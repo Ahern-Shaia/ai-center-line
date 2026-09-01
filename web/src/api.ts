@@ -378,6 +378,14 @@ export interface PunchResult {
   suspicious: Record<string, number> | null;
   trip: { distanceM: number | null; routeProvider: string | null } | null;
 }
+/**
+ * 寫入／修改打卡備註（「這趟做了什麼」）· punch-note-to-report M1
+ * ⚠️ 這是**獨立於打卡的第二個請求**。失敗不可以影響已經成立的打卡（F-1 · P0）。
+ */
+export const annotatePunch = (punchId: string, note: string | null) =>
+  req<{ punchId: string; note: string | null }>(`/attendance/punch/${punchId}/note`,
+    { method: "PATCH", body: JSON.stringify({ note }) });
+
 export const attendancePunch = (body: { punchType: "clock_in" | "arrive_site" | "clock_out"; lat?: number; lng?: number; accuracyM?: number; customerName?: string }) =>
   req<PunchResult>("/attendance/punch", { method: "POST", body: JSON.stringify(body) });
 
@@ -817,7 +825,13 @@ export const getMyPersonalReport = (date?: string) => {
     pendingMessageCount: number;
   assignedTasks?: Array<{ ticketId: string; summary: string | null; category: string | null; createdAt: string; canSeeSource?: boolean }>;
   /** 今天打卡去過的地方 · 由本人決定要不要納入日報（4FR §5） */
-  todayVisits?: Array<{ place: string; at: string }>;
+  todayVisits?: Array<{
+    punchId: string; place: string; at: string;
+    /** 打卡當下寫的「這趟做了什麼」· 按「加入日報」時直接變成該項的內容 */
+    note: string | null;
+    /** 已經加進今天日報了 · 前端不再列（避免同一趟被加兩次） */
+    addedToReport: boolean;
+  }>;
   /**
    * 今日預定 · 先前記下、預定在這一天要做的事（calendar-sync M4）。
    * 兩個來源合成一份：群組任務卡的 due_at、以及先前私訊日報裡記下的 dueAt。
