@@ -226,9 +226,22 @@ const main = async () => {
   console.log(`（差額同時含 M2 加欄位與 M3.5 拆分兩者；上面這一行只算拆分那部分）`);
 
   console.log("\n── 換算到台灣福祉現況 ──");
-  const ratio = B.待簽核 ? A.待簽核 / B.待簽核 : 1;
+  // ⚠️⚠️ 有對照組時**必須拿對照組當基準**，不可以拿 prod 現況。
+  //    prod ↔ 新 prompt 的差額裡混著「這支腳本沒注入 knownCategories／主檔」
+  //    造成的偏差（2026-09-01 實測：存查 12→1 用舊 prompt 也一樣會發生）——
+  //    拿它外推會把量測誤差當成功能的影響，數字會膨脹一倍以上。
+  const base = WITH_CONTROL ? C : B;
+  const baseLabel = WITH_CONTROL ? "對照組（舊 prompt · 同腳本）" : "prod 現況（⚠️ 含量測偏差，建議加 --control 重跑）";
+  const ratio = base.待簽核 ? A.待簽核 / base.待簽核 : 1;
+  console.log(`基準：${baseLabel} · 待簽核 ${base.待簽核} → ${A.待簽核}`);
   console.log(`目前 211 張待簽核 · 205 張逾時。`);
-  console.log(`若照**待簽核**這一區的比例：211 → 約 ${Math.round(211 * ratio)} 張`);
+  console.log(`若照**待簽核**這一區的比例（${((ratio - 1) * 100).toFixed(0)}%）：211 → 約 ${Math.round(211 * ratio)} 張`);
+  if (WITH_CONTROL) {
+    console.log(`⚠️ 但拆分多出的 ${splitExtra} 張裡，只有一部分落在待簽核 ——`);
+    console.log("   這支腳本沒注入人名／客戶主檔，模型對不到實體就降 confidence，");
+    console.log("   拆出來的卡因此多落在「待確認」。正式管線有主檔，confidence 會高一些，");
+    console.log("   **待簽核的實際增幅可能比這裡大**。要準的話得用正式管線重量。");
+  }
   console.log(`⚠️ 這是**外推**不是量測：取樣批次不等於全部歷史，而且既有卡片不會被重跑`);
   console.log(`   （舊 records 沒有 due_at，重跑材料化也拆不出來）——`);
   console.log(`   真正會長的是**今後**的新批次。這個數字看的是「每天多幾張」的量級。`);
