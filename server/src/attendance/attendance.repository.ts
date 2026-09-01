@@ -75,6 +75,24 @@ export class AttendanceRepository {
     return { punchId: res.rows[0].punch_id };
   }
 
+  /**
+   * 寫入／修改某次打卡的備註（「這趟做了什麼」）· punch-note-to-report M1
+   *
+   * ⚠️ WHERE 帶 user_id 是**必要的**，不是保險：RLS 只擋跨租戶，
+   *    同租戶的員工之間要靠這一條才擋得住改別人的打卡（F-2 · P0）。
+   *    這是照抄下面 updatePunchLabel 的形狀 —— 同一類操作不要有兩種寫法。
+   * ⚠️ 一樣只動 note，座標／時間／里程是證據，不可改（R11）。
+   */
+  async updatePunchNote(tx: Db, punchId: string, userId: string, note: string | null): Promise<boolean> {
+    const res = await tx.execute<{ punch_id: string }>(sql`
+      UPDATE attendance_punch
+         SET note = ${note}
+       WHERE punch_id = ${punchId}::uuid AND user_id = ${userId}::uuid
+      RETURNING punch_id
+    `);
+    return res.rows.length > 0;
+  }
+
   // 補填/修正地點名稱。只動 customer_name——座標、時間、里程是證據，一律不可改（R11 原始不可變）。
   // WHERE 帶 user_id：員工只能改自己的（RLS 已擋跨租戶，這層再擋跨員工 IDOR）。
   async updatePunchLabel(tx: Db, punchId: string, userId: string, customerName: string | null): Promise<boolean> {

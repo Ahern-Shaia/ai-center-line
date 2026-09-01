@@ -39,6 +39,18 @@ export class AttendanceController {
     });
   }
 
+  // 打卡備註（「這趟做了什麼」）· 員工只能改自己的 · punch-note-to-report M1
+  @Patch("punch/:punchId/note")
+  @AllowAnyUser()
+  async annotate(
+    @CurrentUser() user: JwtUser,
+    @Param("punchId") punchId: string,
+    @Body() body: { note?: string | null },
+  ) {
+    if (!UUID_RE.test(punchId)) throw new BadRequestException(msg("srv.v.punchId"));
+    return this.svc.annotatePunch(user, punchId, typeof body?.note === "string" ? body.note : null);
+  }
+
   // 補填/修正地點名稱（只改標籤，不動座標/時間/里程）· 員工只能改自己的
   @Patch("punch/:punchId/label")
   @AllowAnyUser()

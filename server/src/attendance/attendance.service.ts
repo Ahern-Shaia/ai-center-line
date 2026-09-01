@@ -190,6 +190,24 @@ export class AttendanceService {
     });
   }
 
+  /**
+   * 寫入／修改打卡備註（「這趟做了什麼」）· punch-note-to-report M1
+   *
+   * ⚠️ 這是**獨立於打卡的第二個請求**。合進打卡那支的話，
+   *    備註送失敗會讓打卡一起失敗 —— 而打卡是出勤證據，
+   *    填不出備註就打不了卡，比沒有這個功能糟（F-1 · P0）。
+   * ⚠️ 空字串一律存成 null：null ＝「沒寫」、'' ＝「寫了空的」，
+   *    但使用者按了送出又清空，語意就是「沒寫」。
+   */
+  async annotatePunch(user: JwtUser, punchId: string, note: string | null): Promise<{ punchId: string; note: string | null }> {
+    if (!user.tenant_id) throw new BadRequestException(msg("srv.auth.noTenant"));
+    // 200 字是前端的軟限制（超過只提示不擋），後端這裡截斷當最後一道
+    const text = note?.trim() ? note.trim().slice(0, 200) : null;
+    const ok = await this.repo.updatePunchNote(currentTx(), punchId, user.user_id, text);
+    if (!ok) throw new BadRequestException(msg("srv.att.punchNotFound"));
+    return { punchId, note: text };
+  }
+
   // 補填/修正某次打卡的地點名稱。
   // 為什麼允許事後改：地點名稱是「給人看的標籤」，不是打卡證據——證據是座標、時間、里程，那些一律不可改。
   // 因此這不是「補打卡」（design doc attendance-trip-state-machine §9 明確禁止），不構成造假空間。

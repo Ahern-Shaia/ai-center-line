@@ -210,9 +210,12 @@ export class PersonalDailyReportController {
     // 但系統其實知道他今天去了哪，只是這一頁看不到。
     // 從「要自己想」變成「看一眼、改一下、送出」。
     // ⚠️ 一樣不自動寫進日報，由本人決定要不要納入（同 assignedTasks 的理由）。
-    const visits = await tx.execute<{ place: string; at: string }>(sql_import`
-      SELECT customer_name AS place,
-             to_char(punched_at AT TIME ZONE 'Asia/Taipei', 'HH24:MI') AS at
+    const visits = await tx.execute<{ punch_id: string; place: string; at: string; note: string | null }>(sql_import`
+      SELECT punch_id::text,
+             customer_name AS place,
+             to_char(punched_at AT TIME ZONE 'Asia/Taipei', 'HH24:MI') AS at,
+             -- punch-note-to-report M2 · 打卡當下寫的那句話，按「加入日報」時直接變成該項的內容
+             note
         FROM attendance_punch
        WHERE user_id = ${user.user_id}::uuid
          AND nullif(btrim(customer_name), '') IS NOT NULL
@@ -309,7 +312,16 @@ export class PersonalDailyReportController {
       aiRunAt: await schedulerTimeLabel(tx, user.tenant_id, "pdr"),
       pendingMessageCount,
       pendingMessages,
-      todayVisits: visits.rows.map((v) => ({ place: v.place, at: v.at })),
+      // ⚠️ 多回了 punchId / note / addedToReport（punch-note-to-report M2）。
+      //    部署順序：**先後端後前端** —— 舊前端讀多出來的欄位不會壞（多給不會壞、少給才會）。
+      todayVisits: visits.rows.map((v) => ({
+        punchId: v.punch_id,
+        place: v.place,
+        at: v.at,
+        note: v.note,
+        // 已經加進今天日報的就標起來，前端不再列（OQ-PNR-4 · 順手修既有的「同一趟可加兩次」）
+        addedToReport: alreadyAdded.has(`punch:${v.punch_id}`),
+      })),
       // ⚠️ 預定日剛好是這天的任務卡已經在「今日預定」列過，這裡不再列第二次。
       //    同一件事出現在兩個區塊，使用者得自己判斷是不是同一件 —— 多一次判斷就是多一次出錯。
       assignedTasks: assigned.rows.filter((t) => !plannedToday.some((p) => p.ticketId === t.ticket_id)).map((t) => ({
