@@ -47,7 +47,10 @@ const PersonalReportSchema = z.object({
  * 客戶那天的情境（依他的描述重建 · 假名化）：
  * 4 趟，其中 #2 與 #4 同單位、同維修項目 —— 正是被併掉的那兩趟。
  */
-const MESSAGES = [
+const MESSAGES = process.env.PROBE_CASE === "future" ? [
+  // 2026-09-01 · 驗證要跟客戶講的那句「會放在追蹤事項那一區」是不是真的
+  "16:29 ○○廂型車對開門 (VW#XXXXX)-北部港區看實車 ⏎ 8/24 14:00 王○○、林○○、陳○○ ⏎ 任務：PE (確認料件) 是否 與 ○○ 雙開門 相符合？ 通用設計 可行性？",
+] : [
   "11:24 桃園○○之家升降機電路檢修，手煞車微動開關未釋放導致升降機不過電，收費600元",
   "13:09 ○○福祉車JS 斜坡板更換左側鋼索",
   "13:41 新北○○電車 斜坡板更換右側鋼索，收費1000元",
@@ -85,6 +88,8 @@ const main = async () => {
   for (const [i, it] of items.entries()) {
     const src = it.source_ids ?? [];
     console.log(`${i + 1}. [${it.time ?? "—"}] ${it.title}`);
+    console.log(`   detail  : ${it.detail ?? "(空)"}`);
+    console.log(`   followup: ${it.followup ?? "(空)"}   ← 「追蹤事項」那一區`);
     console.log(`   source_ids=${JSON.stringify(src)}${src.length > 1 ? "  ← 合併了" : ""}`);
   }
 

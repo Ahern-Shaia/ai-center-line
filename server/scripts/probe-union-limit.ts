@@ -83,7 +83,7 @@ async function attempt(label: string, schema: z.ZodType): Promise<boolean> {
       model: MODEL,
       max_tokens: 512,
       system: [{ type: "text", text: "你是抽取助手。照 schema 輸出，抽不到填 null。" }],
-      messages: [{ role: "user", content: "8/24 14:00 冠毅去台北港看實車，確認料件。" }],
+      messages: [{ role: "user", content: "8/24 14:00 王○○去北部港區看實車，確認料件。" }],
       output_config: { format: zodOutputFormat(schema) },
     });
     console.log(res.parsed_output ? "✅ 成功" : "⚠️ 回來了但 parsed_output 是空的");

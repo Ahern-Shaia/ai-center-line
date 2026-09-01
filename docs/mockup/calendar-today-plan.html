@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>今日預定 · UI flow mockup（calendar-sync 階段 A）</title>
+<!-- ⚠️ 直接連正式的樣式表 —— 不另外抄一份，看到的就是實際會長出來的樣子 -->
+<link rel="stylesheet" href="../../web/src/styles.css">
+<style>
+  /* mockup 專用外框（不進正式碼） */
+  body { background:var(--canvas); font-family:var(--sans); }
+  .mk-wrap { max-width:1080px; margin:0 auto; padding:28px 20px 80px; }
+  .mk-h1 { font-size:22px; font-weight:700; color:var(--ink); margin:0 0 6px; }
+  .mk-sub { font-size:13px; color:var(--ink-3); line-height:1.7; margin:0 0 6px; }
+  .mk-basis { font-size:12px; color:var(--ink-3); background:var(--well);
+    border:1px solid var(--line); border-left:3px solid var(--primary);
+    border-radius:4px; padding:10px 14px; line-height:1.9; margin:14px 0 30px; }
+  .mk-basis b { color:var(--ink); }
+  .mk-step { margin:0 0 34px; }
+  .mk-step-h { display:flex; align-items:center; gap:10px; margin:0 0 4px; }
+  .mk-step-n { background:var(--ink); color:#fff; width:24px; height:24px; border-radius:50%;
+    font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .mk-step-t { font-size:15.5px; font-weight:700; color:var(--ink); }
+  .mk-step-when { font-size:12px; color:var(--ink-3); font-family:var(--mono);
+    background:var(--well); padding:2px 8px; border-radius:3px; }
+  .mk-step-note { font-size:12.5px; color:var(--ink-2); line-height:1.8; margin:0 0 12px 34px; }
+  .mk-screen { border:1px solid var(--line); border-radius:8px; background:var(--surface);
+    overflow:hidden; margin-left:34px; box-shadow:0 1px 2px rgba(17,24,39,.04); }
+  .mk-screen-bar { background:var(--well); border-bottom:1px solid var(--line);
+    padding:7px 14px; font-size:11.5px; color:var(--ink-3); font-family:var(--mono); }
+  .mk-screen-body { padding:20px 22px; }
+  .mk-new { position:relative; }
+  /* 實作時＝新增一個 .pdr-item-due，形狀比照既有的 .pdr-item-time，只換成 primary tint */
+  .mk-due { font-size:11.5px; font-family:var(--mono); color:var(--primary-2);
+    background:var(--primary-tint); padding:2px 8px; border-radius:3px; }
+  .mk-new2 { outline:2px dashed var(--primary); outline-offset:3px; border-radius:4px; }
+  .mk-new::after { content:"新增"; position:absolute; top:-9px; right:10px;
+    background:var(--primary); color:#fff; font-size:10.5px; font-weight:700;
+    padding:2px 8px; border-radius:3px; letter-spacing:.04em; }
+  .mk-line { max-width:420px; }
+  .mk-bubble { background:#8DE055; color:#111; border-radius:14px; padding:11px 14px;
+    font-size:13.5px; line-height:1.7; white-space:pre-wrap; margin:0 0 6px auto; max-width:330px; }
+  .mk-bubble-bot { background:var(--surface); border:1px solid var(--line);
+    border-radius:14px; padding:9px 13px; font-size:13.5px; color:var(--ink);
+    display:inline-block; }
+  .mk-arrow { text-align:center; color:var(--ink-3); font-size:20px; margin:-14px 0 14px 34px; }
+  .mk-edge { margin-left:34px; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
+  .mk-edge-card { border:1px solid var(--line); border-radius:6px; background:var(--surface); padding:14px 16px; }
+  .mk-edge-t { font-size:13px; font-weight:700; color:var(--ink); margin:0 0 6px; }
+  .mk-edge-p { font-size:12.5px; color:var(--ink-2); line-height:1.8; margin:0; }
+</style>
+</head>
+<body>
+<div class="mk-wrap">
+
+  <h1 class="mk-h1">「今日預定」· UI flow</h1>
+  <p class="mk-sub">
+    calendar-sync <b>階段 A</b>（v0.3 · 2026-09-01 裁定）——
+    先記下來的未來行程，到了那一天自動出現在日報最上方。不碰 Google 日曆。
+  </p>
+
+  <div class="mk-basis">
+    <b>畫面依據</b>（不是憑印象畫的）<br>
+    · 樣式：直接 <code>&lt;link&gt;</code> 正式的 <code>web/src/styles.css</code>，沒有另外抄一份<br>
+    · 版型：抄 <code>web/src/personal-report/MyDailyReport.tsx</code> 現有的
+      <code>.pane-hdr</code> / <code>.pdr-item</code> / <code>.pdr-foot</code><br>
+    · <b>「今日預定」區直接沿用「指派給我的任務」那一區的形狀</b>
+      （<code>.pdr-raw-list</code> + 每列一顆「加入日報」）—— 同樣的東西不要有兩種長相，
+      而且幾乎不需要新的 CSS<br>
+    · 訊息內容<b>依客戶 2026-08-21 的真實私訊改寫並假名化</b>（車型／車號／人名皆非真實）· 抽取結果已對照 <code>probe-pdr-source-ids.ts</code>
+  </div>
+
+  <!-- ── ① ───────────────────────────────────────────── -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">1</span>
+      <span class="mk-step-t">員工在 LINE 私訊，內容裡寫了未來的日期</span>
+      <span class="mk-step-when">8/21 16:29</span>
+    </div>
+    <p class="mk-step-note">
+      員工照原本的方式傳，不需要學任何格式。<br>
+      ⚠️ <b>回覆多的那一行是「預告」不是「保證」。</b>
+      bot 是在收到訊息的**當下**回的，那時 AI 還沒跑（整理是 17:30／18:00 的批次）——
+      它只能用簡單規則先看一眼有沒有日期。所以措辭是「<b>整理後</b>會排進那天」，
+      不是「已排入」。抓不到日期時就只回「✓ 已記錄」，不多講。
+    </p>
+    <div class="mk-screen" style="max-width:460px">
+      <div class="mk-screen-bar">LINE · 一對一私訊</div>
+      <div class="mk-screen-body mk-line">
+        <div class="mk-bubble">○○廂型車對開門 (VW#XXXXX)-北部港區看實車
+
+8/24 14:00 王○○、林○○、陳○○
+任務：PE (確認料件) 是否 與 ○○ 雙開門 相符合？ 通用設計 可行性？</div>
+        <div class="mk-bubble-bot mk-new2">✓ 已記錄<br>
+          <span style="color:var(--ink-3);font-size:12.5px">看到「8/24」· 整理後會排進那天</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="mk-arrow">↓ AI 讀出「8/24 14:00」，寫進 <code>due_at</code></div>
+
+  <!-- ── ② ───────────────────────────────────────────── -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">2</span>
+      <span class="mk-step-t">8/21 的日報 —— 跟現在一樣，它是當天的一則紀錄</span>
+      <span class="mk-step-when">8/21</span>
+    </div>
+    <p class="mk-step-note">
+      這一段大致<b>不改</b>。日報照「訊息傳送的那一天」歸檔，這則就是 8/21 的紀錄。
+      左邊的時間是傳訊時間 16:29，不是 8/24 的 14:00。<br>
+      新增的只有<b>「已排入 8/24 14:00」那個標記</b> —— 它是 <b>AI 真的抽到日期之後才出現</b>的，
+      是最終的事實來源。第 1 步 bot 那句只是預告；<b>這裡有標記，才代表真的排進去了</b>。
+    </p>
+    <div class="mk-screen">
+      <div class="mk-screen-bar">我的日報 · 2026年8月21日 星期五</div>
+      <div class="mk-screen-body">
+        <div class="pdr-item">
+          <div class="pdr-item-hdr">
+            <span class="pdr-item-idx">1</span>
+            <span class="pdr-item-time">16:29</span>
+            <span class="pdr-item-title">○○廂型車對開門 (VW#XXXXX) 北部港區看實車</span>
+            <span class="mk-due mk-new2">已排入 8/24 14:00</span>
+          </div>
+          <div class="pdr-item-detail">8/24 14:00 王○○、林○○、陳○○ 前往北部港區看實車。任務：PE 確認料件是否與○○雙開門相符合，評估通用設計可行性。</div>
+          <div class="pdr-item-followup"><b>追蹤</b> · PE 確認料件與○○雙開門相符性及通用設計可行性</div>
+          <button class="dl-card-toggle" style="margin-top:6px">由 1 則訊息整理 ▼</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="mk-arrow">↓ 三天後</div>
+
+  <!-- ── ③ ───────────────────────────────────────────── -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">3</span>
+      <span class="mk-step-t">8/24 打開日報 —— 最上方出現「今日預定」</span>
+      <span class="mk-step-when">8/24 · 這是新的</span>
+    </div>
+    <p class="mk-step-note">
+      這一區<b>只在有預定事項時出現</b>，沒有就整塊不顯示（不畫空殼）。<br>
+      ⚠️ 它<b>不會自動寫進日報</b> —— 事情可能沒去成、可能改期。<b>由本人按一下才算數</b>，
+      跟現有的「指派給我的任務」同一個原則。
+    </p>
+    <div class="mk-screen">
+      <div class="mk-screen-bar">我的日報 · 2026年8月24日 星期一</div>
+      <div class="mk-screen-body">
+
+        <div class="pdr-raw-list mk-new" style="border-color:var(--primary); margin-bottom:16px">
+          <div class="pdr-raw-hdr">今日預定 · 有 <b>2</b> 項是先前記下的，還沒加入今天的日報</div>
+          <div class="pdr-raw-item" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="pdr-raw-time" style="padding-top:0">14:00</span>
+              <div class="pdr-raw-text" style="flex:1">○○廂型車對開門 (VW#XXXXX) 北部港區看實車</div>
+              <button class="btn btn-sm">加入日報</button>
+            </div>
+            <div style="font-size:12px;color:var(--ink-3);margin-top:4px;padding-left:56px">
+              8/21 記下 · 王○○、林○○、陳○○
+            </div>
+          </div>
+          <div class="pdr-raw-item" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="pdr-raw-time" style="padding-top:0">—</span>
+              <div class="pdr-raw-text" style="flex:1">送 ○○樣車回原廠</div>
+              <button class="btn btn-sm">加入日報</button>
+            </div>
+            <div style="font-size:12px;color:var(--ink-3);margin-top:4px;padding-left:56px">
+              8/22 記下 · 只寫了日期沒有時間 → 當整天事件
+            </div>
+          </div>
+        </div>
+
+        <div class="dm-empty">
+          今日尚未有記錄
+          <div class="dm-empty-hint">私訊 bot 幾則今日工作 · AI 會自動整理 · 17:30 也會自動觸發</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <div class="mk-arrow">↓ 按「加入日報」</div>
+
+  <!-- ── ④ ───────────────────────────────────────────── -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">4</span>
+      <span class="mk-step-t">變成今天的第 1 項，可以直接編輯內容</span>
+      <span class="mk-step-when">8/24</span>
+    </div>
+    <p class="mk-step-note">
+      加進來的是<b>骨架</b>（時間＋標題），實際做了什麼由本人補 ——
+      系統不會替他寫「已完成」。加過之後那一項就從上方消失，不會重複出現。
+    </p>
+    <div class="mk-screen">
+      <div class="mk-screen-bar">我的日報 · 2026年8月24日 星期一</div>
+      <div class="mk-screen-body">
+        <div class="pdr-item">
+          <div class="pdr-item-hdr">
+            <span class="pdr-item-idx">1</span>
+            <span class="pdr-item-time">14:00</span>
+            <span class="pdr-item-title">○○廂型車對開門 (VW#XXXXX) 北部港區看實車</span>
+            <div class="pdr-item-actions">
+              <button class="btn small">編輯</button>
+              <button class="btn small">刪除</button>
+            </div>
+          </div>
+          <div class="pdr-item-detail" style="color:var(--ink-3)">（補上今天實際的結論⋯）</div>
+        </div>
+        <div class="pdr-foot" style="position:static;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);box-shadow:none">
+          <div style="font-size:12px;color:var(--ink-3)">1 項待送出</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn">儲存草稿</button>
+            <button class="btn btn-primary">送出日報</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 邊界 ─────────────────────────────────────────── -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">＋</span>
+      <span class="mk-step-t">邊界狀態（這些沒想清楚，功能會變成雜訊）</span>
+    </div>
+    <div class="mk-edge">
+      <div class="mk-edge-card">
+        <div class="mk-edge-t">當天沒有預定</div>
+        <p class="mk-edge-p">整區<b>不顯示</b>。不畫「今日無預定」的空殼 —— 那只是佔位子。</p>
+      </div>
+      <div class="mk-edge-card">
+        <div class="mk-edge-t">已經加入過</div>
+        <p class="mk-edge-p">從上方移除，不會重複出現。判斷依據是那一項的來源 ticket。</p>
+      </div>
+      <div class="mk-edge-card">
+        <div class="mk-edge-t">沒去成 / 改期</div>
+        <p class="mk-edge-p">不按就不會進日報。<b>不需要「取消」按鈕</b> —— 多一顆鈕就多一次判斷。</p>
+      </div>
+      <div class="mk-edge-card">
+        <div class="mk-edge-t">AI 抓錯日期</div>
+        <p class="mk-edge-p">R11：抽不到一律 <code>null</code>，<b>不換算「下週三」</b>。寧可不顯示，也不要叫人在錯的日子出現在錯的地方。</p>
+      </div>
+      <div class="mk-edge-card">
+        <div class="mk-edge-t">只有日期沒有時間</div>
+        <p class="mk-edge-p">當整天事件，左邊時間欄顯示「—」。不假裝知道幾點（OQ-CAL-4）。</p>
+      </div>
+      <div class="mk-edge-card" style="border-color:var(--warn)">
+        <div class="mk-edge-t">⚠️ bot 說了，但 AI 沒抽到</div>
+        <p class="mk-edge-p">
+          規則偵測與 AI 抽取<b>本來就可能不一致</b>。所以 bot 的措辭是「整理後會排進那天」，
+          而<b>日報上的「已排入」標記才是事實</b>。<br>
+          反過來（bot 沒說但 AI 抽到了）也可以 —— 標記照樣出現，只是少了預告。
+          <b>兩個方向都不會變成假承諾。</b>
+        </p>
+      </div>
+      <div class="mk-edge-card">
+        <div class="mk-edge-t">主管看得到嗎</div>
+        <p class="mk-edge-p"><b>v1 看不到</b>（OQ-CAL-8）。維持「私訊只產生你自己的日報」——
+          日報送出後主管才看得到內容。</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
