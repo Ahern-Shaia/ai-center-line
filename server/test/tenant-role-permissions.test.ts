@@ -177,3 +177,52 @@ test("沒改過就按還原 · 回 restored=false，不報錯", async () => {
   const r = await asTenant(T, () => svc.resetToDefault({ tenantId: T, roleKey: "employee" }));
   assert.equal(r.restored, false);
 });
+
+test("⭐⭐ **分岔之後**才建立的帳號，也要吃到租戶調整過的權限（2026-09-01 客戶回報）", async () => {
+  // 用戶原話：「我用 Line 綁定 aiproot 的 Line Bot，然後用 Line 登入，
+  //            Aiproot 的管理帳號調整權限，沒有生效。」
+  //
+  // ⚠️⚠️ **本檔既有的測試在這個 bug 存在時全是綠的。**
+  //    它們驗的是「分岔**當下已存在**的成員有沒有被改到 role_id」——
+  //    而 updatePermissions 裡那句 `UPDATE users SET role_id` 只在分岔那一次跑。
+  //    **之後**才建立的帳號 role_id 是 NULL，
+  //    而 getUserPermissions 舊版的 fallback 直接抓 `is_system = true` 的內建角色
+  //    → 租戶的調整被完全忽略。
+  //
+  //    LINE 綁定自動建立的員工帳號**從來不寫 role_id**
+  //    （employee-binding.service 的 INSERT 沒有這一欄），
+  //    所以「先調權限、之後才綁 LINE 的人」100% 踩到。
+  //
+  //    修法是把有效角色的優先序補完整：role_id → **租戶副本** → 內建。
+  //    回溯生效，不用 migration。
+  const LATE = "c0da0000-0000-4000-8000-00000000ca04";
+  const perms = new PermissionService();
+
+  // ① 租戶先調整 employee 的權限（觸發分岔）
+  await asTenant(T, () => svc.updatePermissions({
+    tenantId: T, roleKey: "employee",
+    permissionIds: ["personal-report:mine", "trips:mine", "warroom:view", "warroom-tasks:view"],
+  }));
+
+  // ② **之後**才進來的人（模擬 LINE 綁定自動建帳號：只有 role 字串，沒有 role_id）
+  const c = admin(); await c.connect();
+  await c.query(`DELETE FROM users WHERE user_id=$1`, [LATE]);
+  await c.query(`INSERT INTO users (user_id, tenant_id, role, display_name, email)
+                 VALUES ($1,$2,'employee','後來綁定的','trp4@t.test')`, [LATE, T]);
+  const roleIdIsNull = (await c.query(`SELECT role_id FROM users WHERE user_id=$1`, [LATE])).rows[0].role_id;
+  await c.end();
+  assert.equal(roleIdIsNull, null, "前提沒成立：這個帳號應該要沒有 role_id，不然測不到那條 fallback");
+
+  // ③ 他應該拿到**租戶調整過的 4 項**，不是內建員工的 2 項
+  perms.invalidateAll();
+  const got = await perms.getUserPermissions(LATE);
+  assert.ok(got.has("warroom:view"),
+    `後來綁定的員工沒吃到租戶的調整 —— 只拿到 ${[...got].join(", ") || "(空)"}。`
+    + "這就是客戶說的「調整權限沒有生效」");
+  assert.ok(got.has("warroom-tasks:view"), "少了任務看板");
+  assert.equal(got.size, 4, `應該正好 4 項，實際 ${got.size}`);
+
+  const c2 = admin(); await c2.connect();
+  await c2.query(`DELETE FROM users WHERE user_id=$1`, [LATE]);
+  await c2.end();
+});

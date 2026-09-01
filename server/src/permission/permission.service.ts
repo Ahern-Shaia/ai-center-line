@@ -28,15 +28,39 @@ export class PermissionService {
     const cached = this.cache.get(userId);
     if (cached && cached.expiresAt > Date.now()) return cached.perms;
 
-    // 用 role_id · fallback role 字串 map 到 built-in
+    // 有效角色的優先序：role_id → **該租戶自行調整過的副本** → 內建
     // 走 withAuthLookup 繞 users RLS · 因 PermissionGuard 在 TenantTxInterceptor 之前 · 無 session context
+    //
+    // ⚠️⚠️ 2026-09-01 用戶回報「配置權限沒生效」的**真正根因**就在這裡。
+    //    舊版只有 `COALESCE(u.role_id, 內建角色)` —— 少了中間那層。
+    //
+    //    租戶在「權限管理」改內建角色時，後端會 fork 出一份租戶版
+    //    （tenant-roles.service），並把**當下已存在**的成員 role_id 指過去。
+    //    但那個 UPDATE 只跑那一次 —— **之後才建立的帳號 role_id 是 NULL**，
+    //    於是這裡的 fallback 抓到 `is_system = true` 的內建角色，
+    //    租戶的調整完全被忽略。
+    //
+    //    而 LINE 綁定自動建立的員工帳號**從來不寫 role_id**
+    //    （employee-binding.service 的 INSERT 沒有這一欄）——
+    //    所以「先調權限、之後才綁 LINE 的人」100% 踩到。
+    //
+    //    實測（本機造資料）：租戶設定 6 項，該員工實際只拿到 2 項
+    //    （personal-report:mine / trips:mine ＝內建員工角色）。
+    //
+    // ⭐ 加中間這層之後**回溯生效**，不用 migration、不用叫使用者重新綁定。
+    // ⚠️ 平台帳號的 u.tenant_id 是 NULL → 中間那層永遠查不到 → 照樣落到內建，行為不變。
+    // ⚠️ 這個優先序 tenant-roles.service 的 listRoles（`picked` CTE，
+    //    「有副本就用副本」）本來就是這樣寫的 —— 是這支沒跟上。
     const res = await withAuthLookup((tx) =>
       tx.execute<{ permission_id: string }>(sql`
         SELECT DISTINCT rp.permission_id
         FROM users u
         LEFT JOIN role_permissions rp ON rp.role_id = COALESCE(
           u.role_id,
-          (SELECT r.role_id FROM roles r WHERE r.role_key = u.role AND r.is_system = true LIMIT 1)
+          (SELECT r.role_id FROM roles r
+            WHERE r.role_key = u.role AND r.tenant_id = u.tenant_id LIMIT 1),
+          (SELECT r.role_id FROM roles r
+            WHERE r.role_key = u.role AND r.is_system = true LIMIT 1)
         )
         WHERE u.user_id = ${userId} AND rp.permission_id IS NOT NULL
       `)
