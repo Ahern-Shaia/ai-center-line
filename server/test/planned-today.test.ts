@@ -173,3 +173,31 @@ test("⭐⭐ 加過的不再出現 —— 否則使用者以為系統沒記住�
     await c2.end();
   }
 });
+
+test("⭐⭐ 端到端：存檔時 plannedKey 要真的送到後端並存下來", async () => {
+  if (skip) return;
+  // ⚠️ 這一支測的是**欄位有沒有在層間掉掉**（本專案踩過：畫面可選、存檔成功、
+  //    實際沒換）。上面那支「加過的不再出現」是自己塞 plannedKey 進 DB 驗排除邏輯，
+  //    驗不到「使用者真的按了『加入日報』之後，這個鍵有沒有活著走完存檔那條路」。
+  //    現在沒有全域 ValidationPipe whitelist 所以會活著 —— 但哪天有人加了，
+  //    這個欄位會**靜默消失**，而畫面上一切正常。
+  const jwt = { user_id: EMP, tenant_id: T, role: "employee", department_id: DEPT } as never;
+  await asEmp(async () => {
+    await ctrl.saveMine(jwt, {
+      date: D,
+      items: [{ title: "北部港區看實車", plannedKey: `ticket:${TICK_TODAY}` }],
+      action: "save_draft",
+    });
+  });
+  try {
+    const { plannedToday } = await mine();
+    assert.ok(!plannedToday.some((p) => p.key === `ticket:${TICK_TODAY}`),
+      "plannedKey 沒有活著走完存檔那條路 —— 使用者按過的項目明天還會再冒出來");
+    assert.ok(plannedToday.some((p) => p.key === `ticket:${TICK_ALLDAY}`),
+      "沒加過的也消失了 —— 存檔把別的東西也蓋掉了");
+  } finally {
+    const c = admin(); await c.connect();
+    await c.query(`DELETE FROM personal_daily_report WHERE tenant_id=$1 AND report_date=$2`, [T, D]);
+    await c.end();
+  }
+});
