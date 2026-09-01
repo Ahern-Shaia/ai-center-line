@@ -27,7 +27,7 @@
 --                                 AND mem.user_id = lm.sender_line_id
 --      兩張表一起改寫 bot_id/group_id、而 LINE 的 user id 維持原值，join 就還成立，
 --      重跑分析時人名照樣出得來。若把 user id 改成新 provider 的，反而會對不上
---      （而且我們只知道柏淵、Patrick 兩人的新舊對應，Wang C／Sandy 根本還沒綁）。
+--      （而且我們只知道張○○、林○○ 兩人的新舊對應，Wang C／陳○○ 根本還沒綁）。
 --
 --   ⚠️ 副作用：aiproot 的這個群會同時存在「舊 provider 4 列 + 新 provider 4 列」
 --      共 8 列 line_member，同一批人兩組 ID。功能上沒問題（各自 join 各自的訊息），
@@ -35,7 +35,7 @@
 --
 --   ⚠️ `sender_user_id` 依 display_name 對到 aiproot 的使用者，對不到就設 NULL。
 --      留著台灣福祉的 user_id 會變成 aiproot 資料指向別家租戶的人。
---      目前只有「林曉風 Patrick」對得到；Wang C／洪鈺仙Sandy 尚未在 aiproot 建立。
+--      目前只有「林○○」對得到；Wang C／陳○○ 尚未在 aiproot 建立。
 --
 -- 【刪（DELETE）】台灣福祉那邊的分析產物，全部不搬：
 --   21 tickets · 6 analysis_upload（連帶 result/label）· 6 analysis_batch
@@ -118,7 +118,7 @@ CREATE TEMP TABLE _umap ON COMMIT DROP AS
    WHERE src.tenant_id = '4d97eced-64c5-4a38-952b-dfce9588ab7c'::uuid;
 
 -- 對照表是 0 筆就停下來 —— 那代表 RLS 把 aiproot 的使用者擋掉了（見檔頭 actor_role 說明），
--- 不是「真的沒有同名的人」。至少「林曉風 Patrick」兩邊都有，所以正常情況不可能是 0。
+-- 不是「真的沒有同名的人」。至少「林○○」兩邊都有，所以正常情況不可能是 0。
 DO $$
 DECLARE n int;
 BEGIN

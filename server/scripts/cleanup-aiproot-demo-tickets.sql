@@ -6,10 +6,10 @@
 --   · source_upload_id 全為 NULL（來源分析批次早就被刪了，是孤兒）
 --   · category 還是舊制中文名（研發技術KM / 採購訂單 / 維修工單），
 --     而 aiproot 的 category_registry 是 0 筆 —— 對不上現行分類體系
---   · 其中 4 張的 confirmed_by 指向宗瀚 / 建國，外鍵是 NO ACTION，
+--   · 其中 4 張的 confirmed_by 指向黃○○ / 建國，外鍵是 NO ACTION，
 --     所以**不先刪任務就刪不掉那兩個使用者**
 --
--- 順序：先跑這支 → 再到後台刪 宗瀚 / 建國 / 阿豪
+-- 順序：先跑這支 → 再到後台刪 黃○○ / 建國 / 阿豪
 --       （使用者走後台是為了留 audit log；直接 SQL 會繞過稽核）
 --
 -- ⚠️ 不能用 scripts/prod-query.sh（唯讀）。用 psql 直接跑這個檔。

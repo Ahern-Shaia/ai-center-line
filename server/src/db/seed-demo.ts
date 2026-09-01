@@ -87,13 +87,13 @@ try {
   );
   const jgId = jgRow.rows[0].user_id;
   const zhRow = await c.query<{ user_id: string }>(
-    `INSERT INTO users (tenant_id, role, department_id, email, display_name, password_hash) VALUES ($1,'group_owner',$2,'rd-zonghan@taiwanhomecare.demo','宗瀚',$3) RETURNING user_id`,
+    `INSERT INTO users (tenant_id, role, department_id, email, display_name, password_hash) VALUES ($1,'group_owner',$2,'rd-zonghan@taiwanhomecare.demo','黃○○',$3) RETURNING user_id`,
     [TENANT, deptMap["D6"], hash],
   );
   const zhId = zhRow.rows[0].user_id;
 
   // JSON 中 D4/D6 已預設 confirm_status='已簽核'，但沒填 confirmed_by（因為當時還沒 user_id）。
-  // 這裡補：把已簽核者掛給 建國(D4) / 宗瀚(D6)，並統一時間戳為 09:15 / 09:42（demo 呈現用）。
+  // 這裡補：把已簽核者掛給 建國(D4) / 黃○○(D6)，並統一時間戳為 09:15 / 09:42（demo 呈現用）。
   const preSigned: { deptCode: string; signerId: string; time: string }[] = [
     { deptCode: "D4", signerId: jgId, time: "2026-07-03T09:15:00+08:00" },
     { deptCode: "D6", signerId: zhId, time: "2026-07-03T09:42:00+08:00" },

@@ -144,7 +144,7 @@ export class LineOauthService {
    */
   // LIFF 是從**特定租戶的 bot** 開的（URL 帶 botId）· 用 botId 綁死租戶（A）——
   // 一人綁多個租戶時，才不會像舊版那樣拿「最近綁定」的別家帳號（2026-08-03 實際踩到：
-  // Patrick 的 LINE 綁台灣福祉在先、綁鮮湧在後 → 從台灣福祉 bot 開卻登入成鮮湧林乙坤）。
+  // 林○○ 的 LINE 綁台灣福祉在先、綁鮮湧在後 → 從台灣福祉 bot 開卻登入成鮮湧林乙坤）。
   async handleLiffToken(accessToken: string, botId?: string): Promise<LineLoginResult> {
     // 0060 · 有 botId 就用該 bot 自己的 login_channel_id 驗 token，擋掉跨 provider 的憑證
     const expectedChannelId = botId ? await this.loginChannelIdOf(botId) : null;
@@ -163,7 +163,7 @@ export class LineOauthService {
 
     // 多筆就**不能猜**。舊版這裡退回「最新綁定」，2026-08-04 出事：
     // rich menu 的 URL（見 docs/sop/richmenu-attendance-setup.md）沒帶 botId，
-    // 於是 Patrick 從 aiproot 的選單開「我的日報」，卻被當成鮮湧的林乙坤，
+    // 於是 林○○ 從 aiproot 的選單開「我的日報」，卻被當成鮮湧的林乙坤，
     // 按下「重新生成」把日報寫進了別家公司 —— 全程沒有任何提示。
     // 靜默猜錯比報錯危險得多：使用者不會發現，資料已經進了錯的租戶。
     throw new UnauthorizedException(

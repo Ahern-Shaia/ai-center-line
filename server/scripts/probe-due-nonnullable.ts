@@ -63,7 +63,7 @@ const CASES: Array<{ name: string; msg: string; expectDue: "有" | "空"; why: s
   { name: "模糊時間詞", expectDue: "空", why: "R11：不可換算「下週三」",
     msg: "下週三要再跟客戶確認斜坡板規格" },
   { name: "完全沒有時間資訊", expectDue: "空", why: "最基本的情況",
-    msg: "跟 Sandy 討論備料組物料清單的耗損率計算方式" },
+    msg: "跟 陳○○ 討論備料組物料清單的耗損率計算方式" },
 ];
 
 const main = async () => {

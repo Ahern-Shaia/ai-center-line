@@ -63,7 +63,7 @@ export const MEMBERS: Member[] = [
   { name: "總務-志明", role: "組員", lineHandle: "@zhiming_hr", dept: "D5", joinedAt: "2024-05-20", lastActiveAt: "2026-07-03T17:00:00" },
   // D6 技術研發
   { name: "研發-家豪", role: "群組負責人", lineHandle: "@jiahao_rd", dept: "D6", joinedAt: "2024-02-01", lastActiveAt: "2026-07-04T11:30:00" },
-  { name: "研發-宗瀚", role: "組員", lineHandle: "@zonghan_rd", dept: "D6", joinedAt: "2024-04-15", lastActiveAt: "2026-07-04T09:42:00" },
+  { name: "研發-黃○○", role: "組員", lineHandle: "@zonghan_rd", dept: "D6", joinedAt: "2024-04-15", lastActiveAt: "2026-07-04T09:42:00" },
   { name: "研發-育誠", role: "組員", lineHandle: "@yucheng_rd", dept: "D6", joinedAt: "2024-07-10", lastActiveAt: "2026-07-04T10:15:00" },
   { name: "研發-佩君", role: "組員", lineHandle: "@peijun_rd", dept: "D6", joinedAt: "2024-09-01", lastActiveAt: "2026-07-03T18:22:00" },
 ];

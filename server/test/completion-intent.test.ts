@@ -31,7 +31,7 @@ test("⭐ prod：「已聯絡」→ 完成（短句也算）", () => {
 });
 
 test("⭐ prod：「有幾個半成品的Bom建好了嗎」→ 催問，不是完成", () => {
-  // 洪鈺仙引用自己的訊息追進度。純關鍵字會因為「好了」判成完成 —— 那是把還沒做完的關掉。
+  // 陳○○引用自己的訊息追進度。純關鍵字會因為「好了」判成完成 —— 那是把還沒做完的關掉。
   assert.equal(
     classifyIntent({
       text: "有幾個半成品的Bom建好了嗎",
@@ -44,7 +44,7 @@ test("⭐ prod：「有幾個半成品的Bom建好了嗎」→ 催問，不是�
 test("⭐ prod：「@郁嫺（Ally) 請問改好了嗎?」→ 催問", () => {
   assert.equal(
     classifyIntent({
-      text: "@郁嫺（Ally) 請問改好了嗎?\n另,倉庫層架廠商聽說Sandy有提",
+      text: "@郁嫺（Ally) 請問改好了嗎?\n另,倉庫層架廠商聽說陳○○有提",
       replierLineUserId: SANDY, quotedSenderLineUserId: SANDY,
     }),
     "follow_up",

@@ -333,7 +333,7 @@ export class PersonalDailyReportController {
    *      `app.current_tenant` 空著時 LEFT JOIN 整個被濾掉 → 部門一律顯示「未分派」，
    *      而那跟「真的沒分派」在畫面上長得一模一樣，看不出是 bug。
    *   2. 不指定的話多家租戶的人混在同一張表，同名的人
-   *      （洪鈺仙Sandy 在鮮湧與 aiproot 都有）根本分不出來。
+   *      （陳○○ 在鮮湧與 aiproot 都有）根本分不出來。
    */
   @Get("team")
   @RequirePermission("personal-report:team")

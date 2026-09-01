@@ -1,4 +1,4 @@
-// 一人多租戶 LINE 登入 · 修 2026-08-03 跨租戶身分解析洞（Patrick 的 LINE 綁台灣福祉+鮮湧，
+// 一人多租戶 LINE 登入 · 修 2026-08-03 跨租戶身分解析洞（林○○ 的 LINE 綁台灣福祉+鮮湧，
 // 舊版取「最近綁定」→ 從台灣福祉 bot 開卻登入成鮮湧）。用真 DB 種跨租戶綁定。
 //
 // A：LIFF 用 botId 綁死租戶（確定性）。
@@ -98,7 +98,7 @@ test("⭐⭐ A · botId 不在此人的綁定內 → 401（不放行到沒綁的
 
 // 2026-08-04 逆轉：原本沒帶 botId 會退回「最近綁定」。
 // rich menu 的 URL（docs/sop/richmenu-attendance-setup.md）正是沒帶 botId 的，
-// 於是 Patrick 從 aiproot 選單開「我的日報」被當成鮮湧的林乙坤，
+// 於是 林○○ 從 aiproot 選單開「我的日報」被當成鮮湧的林乙坤，
 // 按「重新生成」把日報寫進了別家公司 —— 全程沒有任何提示。
 test("⭐⭐ A · 沒帶 botId 且綁多個組織 → 401（不可以猜 · 猜錯會寫進別家）", async () => {
   const restore = mockLineFetch();

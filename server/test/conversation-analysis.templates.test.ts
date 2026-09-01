@@ -64,7 +64,7 @@ test("service_order · 一則多客戶 + 多項目，且**每個項目各有狀�
   const ok = buildAnalysisSchema("service_order").safeParse({
     ...L1_FIXTURE,
     service_reports: [{
-      date: "2026-07-24", reporter: "志銓", customer: "嘉義中正高齡", site: "辦公室",
+      date: "2026-07-24", reporter: "李○○", customer: "嘉義中正高齡", site: "辦公室",
       items: [
         { name: "洽談側踏", qty: 1, amount: null,
           vehicle: null, status: "待領料安裝", warranty: null },

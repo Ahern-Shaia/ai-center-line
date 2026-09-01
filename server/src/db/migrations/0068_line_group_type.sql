@@ -44,7 +44,7 @@ COMMIT;
 --   UPDATE line_group SET group_type = 'process'      WHERE display_name = '報工及車輛調度';
 --   UPDATE line_group SET group_type = 'test'
 --    WHERE display_name ILIKE '%測試%' OR display_name ILIKE '%LIFF%'
---       OR display_name LIKE '%, 柏淵';     -- 跟 bot 的一對一聊天
+--       OR display_name LIKE '%, 張○○';     -- 跟 bot 的一對一聊天
 --
 -- 套完檢查：
 --   SELECT group_type, count(*), string_agg(display_name, '、') FROM line_group
