@@ -175,6 +175,11 @@ test("⭐⭐ plannedKey 要送出去，否則加過的明天還會再冒出來",
   const s = code("personal-report/MyDailyReport.tsx");
   assert.match(s, /plannedKey:\s*`punch:\$\{v\.punchId\}`/,
     "沒帶 plannedKey —— 後端無從得知這一趟已經加過了");
+  // ⚠️ 部署空窗期防護：前後端是兩個 Render 服務、同一次 push 各自部署，
+  //    順序控制不了。新前端打到舊後端時 punchId 是 undefined，
+  //    沒有這道就會存成 `punch:undefined`，那筆的去重從此永遠對不上。
+  assert.match(s, /v\.punchId \? \{ plannedKey/,
+    "plannedKey 沒有做 punchId 存在檢查 —— 部署空窗期會存進 punch:undefined");
   assert.match(s, /filter\(\(v\) => !v\.addedToReport\)/,
     "載入時沒濾掉已加入的");
 });
