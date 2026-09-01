@@ -8,6 +8,7 @@ import { defaultAnthropicProvider } from "../conversation-analysis/pipeline/inde
 import type { LLMProvider } from "../llm/provider.interface.js";
 import { PersonalDailyReportRepository, type PersonalDailyReportItem } from "./personal-daily-report.repository.js";
 import { msg } from "../i18n/index.js";
+import { parseDueAt } from "../warroom-task-board/due-at.js";
 
 // 個人日報 pipeline schema · 精簡 · 只要 items array
 const PersonalReportSchema = z.object({
@@ -25,6 +26,17 @@ const PersonalReportSchema = z.object({
      *    但**不要**寫成 `.nullable()`，那會吃掉一格。抽不到就給 `[]`。
      */
     source_ids: z.array(z.number()),
+    /**
+     * 未來要做這件事的日期（給「今日預定」用）。
+     *
+     * ⚠️ **不可空**（抽不到給 `""`）。16 union 上限數的是 JSON Schema 的 anyOf/enum，
+     *    不可空欄位是 0 成本 —— 實測這個 schema 加了兩欄仍是 3/16。
+     * ⚠️ 客戶原本的抱怨（「我 8/21 報 8/24 行程，為何 8/24 查無此行程」）
+     *    是**私訊**這條路，不是群組任務那條。只補 `tickets.due_at` 的話，
+     *    他報的那件事永遠不會出現在「今日預定」——功能會對他無效。
+     */
+    due_at: z.string(),
+    due_text: z.string(),
   })),
 });
 
@@ -46,12 +58,31 @@ const PERSONAL_SYSTEM_PROMPT = `你是專業日報整理助手。
 6. 追蹤事項 (「明日 09:00 跟人資申請 2 名」)填 followup
 7. 保持員工原意 · 不添加主觀評論
 8. 若訊息只是打招呼 / 閒聊 / 系統轉發 · 略過
+9. due_at / due_text —— **這兩欄是給「今日預定」用的，填錯比留空更糟**：
+   · due_at：訊息講到「未來某一天要做這件事」時，填 ISO（YYYY-MM-DD 或 YYYY-MM-DDTHH:mm）。
+   · due_text：填原文的寫法（例：「8/24 14:00」「下週三」）。
+   · ⚠️ 沒有講到未來日期就**兩欄都填空字串 ""**（這兩欄不用 null）。
+   · ⚠️ **不可以臆測**。分界是「算得出唯一答案」還是「要用猜的」：
+     「今天」「明天」「後天」上面已經給了日期，算得出來，**可以**換算；
+     「下週三」「月底前」「下個月」要用猜的，**不可以** —— due_at 填 ""、
+     due_text 保留原文，讓人自己判斷。
+   · ⚠️ 在講**已經做完的事**時，兩欄都填 ""。日報大部分內容都是已完成的事，
+     所以這兩欄多數時候應該是空的 —— 不要為了填而填。
+   · ⚠️⚠️ **一項只能有一個日期。一則訊息排了好幾天的事，就拆成好幾項。**
+     例：「9/2 拖車、9/4 拍照、9/7 交車」→ **拆成 3 項**，
+     每項一個 due_at、title 寫那天要做的那件事、due_text 只寫自己那段。
+     拆出來的每一項都填一樣的 source_ids（都指回同一則訊息）。
+     為什麼：使用者是按「今天」去看有什麼事，一項只放得下一個日期，
+     沒拆的話 9/4、9/7 那幾天他會看到空的，而那些事明明已經抽出來了。
+   · ⚠️ 這一欄跟第 6 條的 followup **不衝突也不重複**：followup 是文字備註，
+     due_at 是讓系統排進那一天。同一項可以兩個都有。
 
 輸出 JSON:
 {
   "items": [
-    { "time": "08:30-10:00", "title": "A 客戶 Q3 交期討論", "detail": "客戶要求提早 15 天...", "followup": "明日 09:00 跟人資申請 2 名檢驗", "source_ids": [1, 2] },
-    { "time": "12:30", "title": "內部品保確認", "detail": "...", "followup": null, "source_ids": [4] }
+    { "time": "08:30-10:00", "title": "A 客戶 Q3 交期討論", "detail": "客戶要求提早 15 天...", "followup": "明日 09:00 跟人資申請 2 名檢驗", "source_ids": [1, 2], "due_at": "", "due_text": "" },
+    { "time": "12:30", "title": "內部品保確認", "detail": "...", "followup": null, "source_ids": [4], "due_at": "", "due_text": "" },
+    { "time": null, "title": "北部港區看實車", "detail": "客戶要看對開門實車", "followup": null, "source_ids": [5], "due_at": "2026-08-24T14:00", "due_text": "8/24 14:00" }
   ]
 }
 `;
@@ -155,6 +186,11 @@ export class PersonalDailyReportService {
               .filter((n) => Number.isInteger(n) && n >= 1 && n <= rows.length)
               .map((n) => rows[n - 1].message_id),
           )],
+          // ⚠️ 模型產生的字串一律過 parseDueAt —— 看不懂就 null，不硬湊。
+          //    這裡不像 tickets 會進 SQL 的 timestamptz 欄位（存 jsonb 不會炸），
+          //    但存進去的爛值一樣會讓「今日預定」出現在錯的日子（F-1）。
+          dueAt: parseDueAt(i.due_at) ?? undefined,
+          dueText: (i.due_text ?? "").trim() || undefined,
         })),
         messageCount: rows.length,
       }));

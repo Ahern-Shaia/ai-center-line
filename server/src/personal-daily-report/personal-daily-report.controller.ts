@@ -221,15 +221,98 @@ export class PersonalDailyReportController {
        LIMIT 20
     `);
 
+    // ── 今日預定（calendar-sync M4）────────────────────────────────
+    //
+    // 兩個來源合成一份。**只做一個來源不行**：
+    //   · tickets.due_at —— 群組對話裡排的事（材料化 M3 寫進去的）
+    //   · 先前日報的項目 —— **私訊**裡自己報的事（M4a 才開始抽 dueAt）
+    // 客戶原本的抱怨（「我 8/21 報 8/24 行程，為何 8/24 查無此行程」）走的是**私訊**那條。
+    // 只做 tickets 那條的話，他報的那件事永遠不會出現 —— 功能對他完全無效（F-8）。
+    //
+    // ⚠️ 不自動寫進日報。事情可能沒去成、可能改期 —— 由本人按一下才算數，
+    //    跟 assignedTasks 同一個原則。
+    const alreadyAdded = new Set(
+      [...(row?.finalItems ?? []), ...(row?.aiItems ?? [])]
+        .map((it) => it.plannedKey).filter((k): k is string => !!k),
+    );
+
+    // (a) 指派給我、預定日剛好是這天的任務卡
+    const plannedTickets = await tx.execute<{
+      ticket_id: string; summary: string; hhmm: string | null;
+    }>(sql_import`
+      SELECT ticket_id::text, summary,
+             -- 只有日期沒時間的（整天事件）顯示「—」不是「00:00」，
+             -- 否則看起來像半夜有事（mockup §3）
+             CASE WHEN (due_at AT TIME ZONE 'Asia/Taipei')::time = '00:00'
+                  THEN NULL
+                  ELSE to_char(due_at AT TIME ZONE 'Asia/Taipei', 'HH24:MI') END AS hhmm
+        FROM tickets
+       WHERE assignee_user_id = ${user.user_id}::uuid
+         AND due_at IS NOT NULL
+         AND (due_at AT TIME ZONE 'Asia/Taipei')::date = ${date}::date
+         AND work_status = 'open'
+         AND confirm_status IN ('待簽核', '已簽核', '逾時警示')
+       ORDER BY due_at
+       LIMIT 20
+    `);
+
+    // (b) 先前日報裡記下、預定日是這天的項目
+    //
+    // ⚠️ `report_date <> date`：同一天日報裡自己的項目不算「預定」——
+    //    它已經在畫面上了，再列一次等於要他把自己加進自己。
+    const plannedFromReports = await tx.execute<{
+      report_id: string; idx: number; title: string; due_text: string | null;
+      report_date: string; hhmm: string | null;
+    }>(sql_import`
+      SELECT r.report_id::text, (it.ord - 1)::int AS idx,
+             it.value->>'title' AS title,
+             it.value->>'dueText' AS due_text,
+             r.report_date::text,
+             CASE WHEN ((it.value->>'dueAt')::timestamptz AT TIME ZONE 'Asia/Taipei')::time = '00:00'
+                  THEN NULL
+                  ELSE to_char((it.value->>'dueAt')::timestamptz AT TIME ZONE 'Asia/Taipei', 'HH24:MI') END AS hhmm
+        FROM personal_daily_report r
+        CROSS JOIN LATERAL jsonb_array_elements(coalesce(r.final_items, r.ai_items, '[]'::jsonb))
+             WITH ORDINALITY AS it(value, ord)
+       WHERE r.user_id = ${user.user_id}::uuid
+         AND r.report_date <> ${date}::date
+         AND nullif(it.value->>'dueAt', '') IS NOT NULL
+         AND ((it.value->>'dueAt')::timestamptz AT TIME ZONE 'Asia/Taipei')::date = ${date}::date
+       ORDER BY r.report_date
+       LIMIT 20
+    `);
+
+    const plannedToday = [
+      ...plannedTickets.rows.map((t) => ({
+        key: `ticket:${t.ticket_id}`,
+        title: t.summary,
+        time: t.hhmm,
+        noteDate: null as string | null,
+        dueText: null as string | null,
+        ticketId: t.ticket_id as string | null,
+      })),
+      ...plannedFromReports.rows.map((r) => ({
+        key: `pdr:${r.report_id}#${r.idx}`,
+        title: r.title,
+        time: r.hhmm,
+        noteDate: r.report_date,      // 「8/21 記下」· 讓人知道這是什麼時候講的
+        dueText: r.due_text,
+        ticketId: null as string | null,
+      })),
+    ].filter((p) => !alreadyAdded.has(p.key));
+
     return {
       report: reportForClient(row),
       requestedDate: date,
+      plannedToday,
       // AI 幾點會整理 · 每家自己設，不可在前端寫死（prod 實例：台灣福祉改成 18:00）
       aiRunAt: await schedulerTimeLabel(tx, user.tenant_id, "pdr"),
       pendingMessageCount,
       pendingMessages,
       todayVisits: visits.rows.map((v) => ({ place: v.place, at: v.at })),
-      assignedTasks: assigned.rows.map((t) => ({
+      // ⚠️ 預定日剛好是這天的任務卡已經在「今日預定」列過，這裡不再列第二次。
+      //    同一件事出現在兩個區塊，使用者得自己判斷是不是同一件 —— 多一次判斷就是多一次出錯。
+      assignedTasks: assigned.rows.filter((t) => !plannedToday.some((p) => p.ticketId === t.ticket_id)).map((t) => ({
         ticketId: t.ticket_id, summary: t.summary, category: t.category, createdAt: t.created_at,
         // 開了幾天 · 讓人一眼看出哪些拖著（我們沒有 due_at，用天數代替）
         openDays: t.open_days,

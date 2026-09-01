@@ -21,6 +21,25 @@ export interface PersonalDailyReportItem {
    * 所以是選填；前端要能接受 undefined。
    */
   sourceMessageIds?: string[];
+  /**
+   * 這一項講的是**未來某一天**要做的事 · ISO 字串（`due-at.ts` 解析過的）。
+   *
+   * 用途：那天打開日報時，它會出現在「今日預定」區，由本人按一下才加進當天日報。
+   * ⚠️ 這裡存的是**預定日**，不是這則日報自己的日期 ——
+   *    8/21 的日報裡可以有一項 dueAt=8/24。
+   * 舊資料沒有（jsonb · 不用 migration），所以選填。
+   */
+  dueAt?: string;
+  /** 原文的寫法（「8/24 14:00」「下週三」）· 給人核對用，不拿來運算 */
+  dueText?: string;
+  /**
+   * 這一項是從「今日預定」加進來的，值是那個預定事項的唯一鍵
+   * （`ticket:<uuid>` 或 `pdr:<reportId>#<idx>`）。
+   *
+   * ⚠️ 沒有這個欄位的話，加進來的項目**明天還會再出現在今日預定裡** ——
+   *    使用者會以為系統沒記住他按過（mockup §4：「加過之後那一項就從上方消失」）。
+   */
+  plannedKey?: string;
 }
 
 export interface PersonalDailyReportRow {
