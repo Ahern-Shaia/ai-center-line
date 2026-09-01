@@ -36,7 +36,12 @@
 import { Pool } from "pg";
 import { analyzeSegment } from "../src/conversation-analysis/pipeline/classify.js";
 import { TWH_TENANT } from "../src/conversation-analysis/pipeline/tenant-twh.js";
-import { createLLMProvider, platformDefaultModel } from "../src/llm/provider.factory.js";
+// ⚠️ 用正式的 defaultAnthropicProvider()，不要自己呼叫 createLLMProvider() ——
+//    第一版我沒帶 config 直接炸（factory 需要 provider/model/apiKey）。
+//    ⚠️ 這是**平台預設**（env LLM_DEFAULT_MODEL）。若某租戶另設了 llm-config，
+//       正式跑的模型會跟這裡不同 —— 量到的比例要照這個前提解讀。
+import { defaultAnthropicProvider } from "../src/conversation-analysis/pipeline/index.js";
+import { platformDefaultModel } from "../src/llm/provider.factory.js";
 import { parseDueAt } from "../src/warroom-task-board/due-at.js";
 import type { ChatMessage } from "../src/conversation-analysis/pipeline/parser.js";
 
@@ -57,6 +62,16 @@ const main = async () => {
   if (!TWH_TENANT.systemPrompt.includes("due_at")) {
     console.error("❌ 正式 system prompt 裡沒有 due_at —— 還沒 M2 或讀錯檔，停止");
     process.exit(2);
+  }
+  // ⚠️⚠️ 沒設就會退回 factory 的 fallback（claude-opus-4-7），
+  //    而 prod 是用 env LLM_DEFAULT_MODEL 指定的模型 ——
+  //    量到的就會是**prod 不會用的模型**的抽取率。不會報錯，數字看起來也很正常。
+  //    要對 prod 做決策，就得用 prod 的模型。
+  if (!process.env.LLM_DEFAULT_MODEL?.trim()) {
+    console.error("❌ 沒設 LLM_DEFAULT_MODEL —— 會退回 fallback，量到的不是 prod 用的模型。");
+    console.error("   先去 Render 的環境變數看 prod 設的是哪一個，然後：");
+    console.error("   LLM_DEFAULT_MODEL='<prod 的值>' DATABASE_URL='...' npx tsx ... ");
+    process.exit(5);
   }
 
   const pool = new Pool({
@@ -83,7 +98,7 @@ const main = async () => {
     process.exit(3);
   }
 
-  const provider = createLLMProvider();
+  const provider = defaultAnthropicProvider();
   console.log(`模型：${platformDefaultModel()} · 取樣 ${rows.length} 批\n`);
 
   let recTotal = 0, withDue = 0, parsedOk = 0, datedMsgs = 0, msgTotal = 0;
