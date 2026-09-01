@@ -147,3 +147,52 @@ test("⭐⭐ 加過的不再列（OQ-PNR-4 · 順手修「同一趟可加兩次�
     await c2.end();
   }
 });
+
+// ─── 前端護欄（讀原始碼 · 不需要瀏覽器）──────────────────────────
+//
+// ⚠️ 這幾條守的是「整個功能的意義」：detail 沒帶 note 的話，
+//    這次做的一切都白費 —— 畫面看起來一模一樣，員工還是得自己打字。
+//    而那是型別檢查與後端測試**都抓不到**的。
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+
+const web = (rel: string) =>
+  readFileSync(join(fileURLToPath(new URL("../../web/src", import.meta.url)), rel), "utf8");
+/** 比對前先剝掉註解 —— 不然會比中自己寫的說明文字（本專案踩過三次） */
+const code = (rel: string) =>
+  web(rel).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+test("⭐⭐ 加入日報時 detail 要帶打卡備註（這一格是整個功能的目的）", () => {
+  const s = code("personal-report/MyDailyReport.tsx");
+  assert.match(s, /detail:\s*v\.note\s*\?\?\s*""/,
+    "detail 沒有帶 v.note —— 那按下去內容還是空的，這個功能等於沒做");
+  assert.doesNotMatch(s, /title:\s*v\.place,\s*detail:\s*"",/,
+    "還留著 detail: \"\" 的舊寫法");
+});
+
+test("⭐⭐ plannedKey 要送出去，否則加過的明天還會再冒出來", () => {
+  const s = code("personal-report/MyDailyReport.tsx");
+  assert.match(s, /plannedKey:\s*`punch:\$\{v\.punchId\}`/,
+    "沒帶 plannedKey —— 後端無從得知這一趟已經加過了");
+  assert.match(s, /filter\(\(v\) => !v\.addedToReport\)/,
+    "載入時沒濾掉已加入的");
+});
+
+test("⭐ 備註框不可以搶焦點（OQ-PNR-2 · 只想打卡的人不必多按一次關鍵盤）", () => {
+  const s = code("liff/PunchView.tsx");
+  assert.match(s, /annotatePunch\(/, "打卡頁沒有接上備註 API");
+  // ⚠️ autoFocus 會把鍵盤拉出來佔半個螢幕。打卡是一天很多次的高頻動作。
+  assert.doesNotMatch(s, /autoFocus/, "備註框加了 autoFocus —— 會搶焦點叫出鍵盤");
+});
+
+test("⭐ i18n 中英都要有（漏翻會直接把 key 印在畫面上）", () => {
+  const keys = ["pv.noteHd", "pv.notePh", "pv.noteSave", "pv.noteSkip",
+                "pv.noteHint", "pv.noteSaved", "pv.noteFailed", "pv.noteTooLong", "pv.thisStop"];
+  for (const lang of ["i18n/zh-TW.ts", "i18n/en.ts"]) {
+    const s = web(lang);
+    for (const k of keys) {
+      assert.ok(s.includes(`"${k}"`), `${lang} 缺 ${k}`);
+    }
+  }
+});
