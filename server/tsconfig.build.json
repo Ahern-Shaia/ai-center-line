@@ -4,5 +4,12 @@
     "noEmit": false,
     "outDir": "dist",
     "rootDir": "src"
-  }
+  },
+  // ⚠️⚠️ **一定要自己寫 include，不可以繼承。**
+  //    2026-09-02：把 test / scripts 加進 tsconfig.json 的 include 做型別檢查，
+  //    這支繼承之後，正式 build 也去編譯 test/ —— 而它們在 rootDir 之外，
+  //    tsc 報 TS6059，**prod build 直接失敗**。
+  //    本機沒發現是因為我只跑了 `npx tsc --noEmit`（吃 tsconfig.json）和 `npm test`，
+  //    **沒跑 `npm run build`** —— 而那才是 Render 執行的指令。
+  "include": ["src"]
 }

@@ -187,23 +187,27 @@ export default function PunchView() {
         ⚠️ 不是 modal、不擋、可以直接忽略走人。打卡已經成立了，這只是加值（F-1 · P0）。
       */}
       {justPunched && (
-        <div className="liff-group primary" style={{ marginTop: 12 }}>
-          <div className="liff-group-hd">{tr("pv.noteHd", { place: justPunched.place })}</div>
-          <div className="field" style={{ marginBottom: 8 }}>
+        // ⚠️ 容器用 .liff-card（block）不是 .liff-group ——
+        //    後者是 `display:flex` 的**單行列**（label ⋯ value 那種）。
+        //    2026-09-02 就是誤用它，四塊內容全變成同一列的 flex 子元素被擠扁，
+        //    「記下來」在手機上排成直的。跟旁邊的地點欄用同一套（.liff-card + .field）。
+        <div className="liff-card" style={{ borderColor: "var(--primary)", marginBottom: 12 }}>
+          <div className="field">
+            <label htmlFor="punch-note">{tr("pv.noteHd", { place: justPunched.place })}</label>
             <textarea
-              className="input" rows={2} value={note}
+              id="punch-note" className="tf" rows={2} value={note}
               placeholder={tr("pv.notePh")}
               onChange={(e) => setNote(e.target.value)}
               style={{ resize: "vertical" }}
             />
-            {/* 200 字是軟限制：超過只提示不擋 —— 在客戶端當場被擋住比字太長糟（OQ-PNR-3） */}
-            {note.length > 200 && (
-              <div className="dm-empty-hint" style={{ marginTop: 4, color: "var(--warn)" }}>
-                {tr("pv.noteTooLong", { n: String(note.length) })}
-              </div>
-            )}
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          {/* 200 字是軟限制：超過只提示不擋 —— 在客戶端當場被擋住比字太長糟（OQ-PNR-3） */}
+          {note.length > 200 && (
+            <div className="liff-note" style={{ marginTop: 6, color: "var(--warn)" }}>
+              {tr("pv.noteTooLong", { n: String(note.length) })}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button className="btn btn-primary" style={{ flex: 1 }}
               disabled={savingNote || !note.trim()}
               onClick={() => void saveNote()}>
@@ -211,7 +215,7 @@ export default function PunchView() {
             </button>
             <button className="btn" onClick={() => setJustPunched(null)}>{tr("pv.noteSkip")}</button>
           </div>
-          <div className="dm-empty-hint" style={{ marginTop: 6 }}>{tr("pv.noteHint")}</div>
+          <div className="liff-note" style={{ marginTop: 8 }}>{tr("pv.noteHint")}</div>
         </div>
       )}
 

@@ -12,7 +12,7 @@
     "migrate": "tsx --env-file-if-exists=.env src/db/migrate.ts",
     "seed:dev": "tsx --env-file-if-exists=.env src/db/seed-dev.ts",
     "seed:demo": "tsx --env-file-if-exists=.env src/db/seed-demo.ts",
-    "test": "node --import tsx --env-file=.env --test test/*.test.ts",
+    "test": "node --import tsx --env-file=.env --test --test-concurrency=4 test/*.test.ts",
     "test:cov": "node --import tsx --env-file=.env --test --experimental-test-coverage test/*.test.ts"
   },
   "dependencies": {
