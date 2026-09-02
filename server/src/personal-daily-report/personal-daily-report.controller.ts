@@ -448,7 +448,9 @@ export class PersonalDailyReportController {
     const tx = currentTx();
     // 設好 current_tenant，departments 才 JOIN 得到（見上方說明）
     await this.repo.setTenantContext(tx, scope);
-    const rows = await this.repo.listByRange(tx, { fromDate: from, toDate: to, limit: 200 });
+    // ⚠️ scope 一定要傳進去。setTenantContext 對 aiproot_admin 沒有作用
+    //    （RLS 的平台逃生門是最上層的 OR），只有 SQL 裡的 WHERE 擋得住。
+    const rows = await this.repo.listByRange(tx, { fromDate: from, toDate: to, limit: 200, tenantId: scope });
     return { reports: rows, from, to };
   }
 

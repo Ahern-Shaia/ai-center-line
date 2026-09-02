@@ -230,12 +230,27 @@ export class PersonalDailyReportRepository {
   }
 
   /**
-   * 主管看部門日報 / tenant_admin 看全 tenant · RLS 已處理
+   * 主管看部門日報 / tenant_admin 看全 tenant。
+   *
+   * ⚠️⚠️ **不可以只靠 RLS。** `personal_daily_report` 的政策長這樣：
+   *      (tenant_id = current_tenant AND (自己 OR 同部門 OR tenant_admin))
+   *      OR (actor_role IN ('aiproot_admin','consultant','system'))
+   *    平台逃生門是**最上層的 OR** —— 對 aiproot_admin 來說整個租戶條件被短路，
+   *    `set_config('app.current_tenant', …)` 設什麼都沒有作用。
+   *    2026-09-02 的症狀：平台後台選了「aiproot」，畫面卻列出所有租戶的人。
+   *    客戶角色沒有這個問題（他們沒有逃生門、而且 resolveTenantId 會擋跨租戶），
+   *    所以這不是資料外洩，是**篩選器在說謊** —— 但一個會說謊的篩選器
+   *    會讓人不再相信這一頁的任何數字。
+   *
+   * ⚠️ 所以 `tenantId` 有值時**一定要明確帶 WHERE**。這是本專案的既有教訓：
+   *    有逃生門（或根本沒 RLS）的表，端點要自己再 scope 一次。
    */
   async listByRange(tx: Db, args: {
     fromDate: string;
     toDate: string;
     limit?: number;
+    /** 限定單一租戶 · undefined ＝ 平台角色刻意要看全部 */
+    tenantId?: string;
   }): Promise<Array<PersonalDailyReportRow & { userDisplayName: string | null; departmentName: string | null }>> {
     const res = await tx.execute<PersonalDailyReportRow & {
       user_display_name: string | null;
@@ -262,6 +277,8 @@ export class PersonalDailyReportRepository {
       JOIN users u ON u.user_id = pdr.user_id
       LEFT JOIN departments d ON d.department_id = u.department_id
       WHERE pdr.report_date BETWEEN ${args.fromDate}::date AND ${args.toDate}::date
+        -- ⚠️ 這一行不是保險，是**唯一**真正生效的租戶限制（見上方說明）
+        AND (${args.tenantId ?? null}::uuid IS NULL OR pdr.tenant_id = ${args.tenantId ?? null}::uuid)
       ORDER BY pdr.report_date DESC, pdr.updated_at DESC
       LIMIT ${args.limit ?? 200}
     `);
