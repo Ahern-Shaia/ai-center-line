@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>任務時間 · UI flow mockup（task-duration-from-punch-pairs）</title>
+<!-- ⚠️ 直接連正式的樣式表 —— 不另外抄一份，看到的就是實際會長出來的樣子 -->
+<link rel="stylesheet" href="../../web/src/styles.css">
+<style>
+  /* mockup 專用外框（不進正式碼） */
+  body { background:var(--canvas); font-family:var(--sans); }
+  .mk-wrap { max-width:1080px; margin:0 auto; padding:28px 20px 80px; }
+  .mk-h1 { font-size:22px; font-weight:700; color:var(--ink); margin:0 0 6px; }
+  .mk-sub { font-size:13px; color:var(--ink-3); line-height:1.7; margin:0 0 6px; }
+  .mk-basis { font-size:12px; color:var(--ink-3); background:var(--well);
+    border:1px solid var(--line); border-left:3px solid var(--primary);
+    border-radius:4px; padding:10px 14px; line-height:1.9; margin:14px 0 30px; }
+  .mk-basis b { color:var(--ink); }
+  .mk-step { margin:0 0 34px; }
+  .mk-step-h { display:flex; align-items:center; gap:10px; margin:0 0 4px; }
+  .mk-step-n { background:var(--ink); color:#fff; width:24px; height:24px; border-radius:50%;
+    font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .mk-step-t { font-size:15.5px; font-weight:700; color:var(--ink); }
+  .mk-step-when { font-size:12px; color:var(--ink-3); font-family:var(--mono);
+    background:var(--well); padding:2px 8px; border-radius:3px; }
+  .mk-step-note { font-size:12.5px; color:var(--ink-2); line-height:1.8; margin:0 0 12px 34px; }
+  .mk-screen { border:1px solid var(--line); border-radius:8px; background:var(--surface);
+    overflow:hidden; margin-left:34px; box-shadow:0 1px 2px rgba(17,24,39,.04); }
+  .mk-screen-bar { background:var(--well); border-bottom:1px solid var(--line);
+    padding:7px 14px; font-size:11.5px; color:var(--ink-3); font-family:var(--mono); }
+  .mk-screen-body { padding:20px 22px; }
+  .mk-new { position:relative; }
+  /* 實作時＝新增一個 .pdr-item-due，形狀比照既有的 .pdr-item-time，只換成 primary tint */
+  .mk-due { font-size:11.5px; font-family:var(--mono); color:var(--primary-2);
+    background:var(--primary-tint); padding:2px 8px; border-radius:3px; }
+  .mk-new2 { outline:2px dashed var(--primary); outline-offset:3px; border-radius:4px; }
+  .mk-new::after { content:"新增"; position:absolute; top:-9px; right:10px;
+    background:var(--primary); color:#fff; font-size:10.5px; font-weight:700;
+    padding:2px 8px; border-radius:3px; letter-spacing:.04em; }
+  .mk-line { max-width:420px; }
+  .mk-bubble { background:#8DE055; color:#111; border-radius:14px; padding:11px 14px;
+    font-size:13.5px; line-height:1.7; white-space:pre-wrap; margin:0 0 6px auto; max-width:330px; }
+  .mk-bubble-bot { background:var(--surface); border:1px solid var(--line);
+    border-radius:14px; padding:9px 13px; font-size:13.5px; color:var(--ink);
+    display:inline-block; }
+  .mk-arrow { text-align:center; color:var(--ink-3); font-size:20px; margin:-14px 0 14px 34px; }
+  .mk-edge { margin-left:34px; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
+  .mk-edge-card { border:1px solid var(--line); border-radius:6px; background:var(--surface); padding:14px 16px; }
+  .mk-edge-t { font-size:13px; font-weight:700; color:var(--ink); margin:0 0 6px; }
+  .mk-edge-p { font-size:12.5px; color:var(--ink-2); line-height:1.8; margin:0; }
+</style></head>
+<body>
+<div class="mk-wrap">
+
+  <h1 class="mk-h1">「任務時間」· UI flow</h1>
+  <p class="mk-sub">
+    抵達／離開配對 → 算出每一趟的任務完成時間。<br>
+    對應 <code>docs/modules/task-duration-from-punch-pairs.md</code>（OQ-TDP-1..8 已全採建議）
+    ＋ <code>attendance-trip-state-machine.md</code>（主設計）。
+  </p>
+
+  <div class="mk-basis">
+    <b>畫面依據</b>（不是憑印象畫的）<br>
+    · 樣式：直接 <code>&lt;link&gt;</code> 正式的 <code>web/src/styles.css</code>，沒有另外抄一份<br>
+    · 打卡頁版型：抄 <code>web/src/liff/PunchView.tsx</code> 現有的
+      <code>.liff-wrap</code> / <code>.liff-h</code> / <code>.liff-sub</code> /
+      <code>.field</code> / <code>.liff-card</code><br>
+    · 逐趟清單：抄 <code>web/src/personal-report/MyTrips.tsx</code> 現有的
+      <code>.trip-row</code> / <code>.trip-idx</code> / <code>.trip-body</code> /
+      <code>.trip-dest</code> / <code>.trip-time</code> / <code>.trip-km</code>
+      —— <b>同樣的東西不要有兩種長相</b>，而且幾乎不需要新的 CSS<br>
+    · <b>主按鈕永遠只有一顆</b>（trip-state-machine §4.2）· 新增的只有次要位階的
+      「狀態不對？」文字連結（OQ-TDP-8）<br>
+    · 人名／地點皆<b>假名化</b>
+  </div>
+
+  <!-- ── ① ───────────────────────────────────────────── -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">1</span>
+      <span class="mk-step-t">出門 —— 畫面上只有一顆按鈕</span>
+      <span class="mk-step-when">08:40</span>
+    </div>
+    <p class="mk-step-note">
+      現況已經是這樣，沒有改動。列出來是為了對照後面幾步的按鈕文案。
+    </p>
+    <div class="mk-screen">
+      <div class="mk-screen-bar">LINE · 外勤打卡</div>
+      <div class="mk-screen-body">
+        <div class="liff-wrap" style="padding:0">
+          <h2 class="liff-h">外勤打卡</h2>
+          <p class="liff-sub">出門時按一下，之後每到一個地方再按一次。</p>
+          <button class="btn btn-primary" style="width:100%;padding:16px;font-size:16px">開始外勤</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="mk-arrow">↓ 到了第一個客戶</div>
+
+  <!-- ── ② ───────────────────────────────────────────── -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">2</span>
+      <span class="mk-step-t">抵達 —— 按鈕變成「我到了」</span>
+      <span class="mk-step-when">09:12</span>
+    </div>
+    <p class="mk-step-note">
+      ⚠️ 這一步<b>不問「這趟做了什麼」</b>（OQ-TDP-4）——
+      他才剛到，事情還沒做，問了也答不出來。
+    </p>
+    <div class="mk-screen">
+      <div class="mk-screen-bar">LINE · 外勤打卡</div>
+      <div class="mk-screen-body">
+        <div class="liff-wrap" style="padding:0">
+          <h2 class="liff-h">外勤打卡</h2>
+          <p class="liff-sub">到達下一個地點時按一下。</p>
+          <div class="field" style="margin-bottom:12px">
+            <label>這一站是哪裡？</label>
+            <input class="tf" value="示範長青園" readonly>
+            <div class="dm-empty-hint" style="margin-top:4px">沒填也可以，之後在「我的行程」補得回來</div>
+          </div>
+          <button class="btn btn-primary" style="width:100%;padding:16px;font-size:16px">我到了</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="mk-arrow">↓ 做完事，要走了</div>
+
+  <!-- ── ③ ───────────────────────────────────────────── -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">3</span>
+      <span class="mk-step-t">離開 —— 按鈕文案帶狀態，旁邊多一個「狀態不對？」</span>
+      <span class="mk-step-when">10:05</span>
+    </div>
+    <p class="mk-step-note">
+      客戶要的是「多一顆按鈕選抵達／離開」，這裡<b>不那樣做</b>（OQ-TDP-1）——
+      兩顆平行按鈕＝每次都要判斷現在該按哪顆，按錯的後果是時間算錯而且沒有任何跡象。<br>
+      改成：<b>主按鈕仍只有一顆、但文案直接寫明現在會發生什麼</b>；
+      另外補一個<b>次要位階</b>的「狀態不對？」當逃生門（OQ-TDP-8）——
+      平常零判斷，狀態推錯時有得救。
+    </p>
+    <div class="mk-screen">
+      <div class="mk-screen-bar">LINE · 外勤打卡</div>
+      <div class="mk-screen-body">
+        <div class="liff-wrap" style="padding:0">
+          <h2 class="liff-h">外勤打卡</h2>
+          <p class="liff-sub">目前在〈示範長青園〉· 已停留 53 分鐘</p>
+          <div class="mk-new">
+            <button class="btn btn-primary" style="width:100%;padding:16px;font-size:16px">
+              離開〈示範長青園〉，前往下一站
+            </button>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+            <button class="dl-card-toggle mk-new2" style="font-size:12.5px">狀態不對？</button>
+            <button class="dl-card-toggle" style="font-size:12.5px">今日行程結束</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="mk-arrow">↓ 按下「離開」</div>
+
+  <!-- ── ④ ───────────────────────────────────────────── -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">4</span>
+      <span class="mk-step-t">離開之後才問「這趟做了什麼」</span>
+      <span class="mk-step-when">10:05</span>
+    </div>
+    <p class="mk-step-note">
+      備註框從「抵達後」移到「離開後」（OQ-TDP-4）——
+      這一刻他才真的知道這趟做了什麼。<b>這一趟的時間也在這裡結算並顯示</b>。<br>
+      ⚠️ 打卡<b>已經成立</b>，備註是第二個獨立請求。不寫、寫失敗，都不影響打卡（F-1 · P0）。
+    </p>
+    <div class="mk-screen">
+      <div class="mk-screen-bar">LINE · 外勤打卡</div>
+      <div class="mk-screen-body">
+        <div class="liff-wrap" style="padding:0">
+          <div class="mk-new">
+            <div class="liff-card" style="border-color:var(--primary)">
+              <div class="liff-groups-hd" style="margin-bottom:10px">
+                ✅ 已離開〈示範長青園〉·
+                <b style="color:var(--ink)">這趟花了 53 分鐘</b>（09:12 → 10:05）
+              </div>
+              <div class="field">
+                <label>這趟做了什麼？</label>
+                <textarea class="tf" rows="2" placeholder="例：完成升降機保養 5 台，另裝左側雪橇板彈簧 1 支"></textarea>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button class="btn btn-primary" style="flex:1">記下來</button>
+                <button class="btn">略過</button>
+              </div>
+              <div class="liff-note" style="margin-top:8px">
+                之後在「我的日報」按一下就能加進去，也還能修改。
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="mk-arrow">↓ 一天跑完，打開「我的行程」</div>
+
+  <!-- ── ⑤ ───────────────────────────────────────────── -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">5</span>
+      <span class="mk-step-t">逐趟任務時間（放在「我的行程」· OQ-TDP-3）</span>
+      <span class="mk-step-when">18:20</span>
+    </div>
+    <p class="mk-step-note">
+      版型沿用現有的「逐段里程」那一區（<code>.trip-row</code> 那組），只是右邊從
+      <b>公里數</b>換成<b>時間</b>。<br>
+      ⚠️ <b>「任務」與「路段」是兩套編號</b>（OQ-TDP-5）：任務＝在客戶端停留、
+      路段＝在路上移動。同一頁上不可以兩套都叫「段」。
+    </p>
+    <div class="mk-screen">
+      <div class="mk-screen-bar">LINE · 我的行程 · 2026/09/03</div>
+      <div class="mk-screen-body">
+        <div class="mk-new">
+          <div class="trip-seg-hd liff-groups-hd">今日任務時間</div>
+          <div class="trip-list">
+            <div class="trip-row">
+              <span class="trip-idx">任務 ①</span>
+              <span class="trip-body">
+                <span class="trip-dest">示範長青園</span>
+                <span class="trip-time">09:12 → 10:05</span>
+              </span>
+              <span class="trip-km">53 分</span>
+            </div>
+            <div class="trip-row">
+              <span class="trip-idx">任務 ②</span>
+              <span class="trip-body">
+                <span class="trip-dest">示範中正高齡</span>
+                <span class="trip-time">10:40 → 11:20</span>
+              </span>
+              <span class="trip-km">40 分</span>
+            </div>
+            <div class="trip-row">
+              <span class="trip-idx">任務 ③</span>
+              <span class="trip-body">
+                <span class="trip-dest">示範客運-楠梓站</span>
+                <span class="trip-time">13:15 → —</span>
+              </span>
+              <span class="trip-km" style="text-align:right">
+                —
+                <span style="display:block;font-size:10.5px;color:var(--warn);font-family:var(--sans)">
+                  離開時間未記錄
+                </span>
+              </span>
+            </div>
+          </div>
+          <div class="trip-tl-foot">
+            今日在客戶端合計 <b>1 小時 33 分</b> · <b>2 趟完整</b>、1 趟缺離開紀錄
+          </div>
+        </div>
+
+        <div class="trip-seg-hd liff-groups-hd" style="margin-top:22px">今日移動紀錄</div>
+        <div class="trip-list">
+          <div class="trip-row">
+            <span class="trip-idx">路段 1</span>
+            <span class="trip-body">
+              <span class="trip-dest">示範長青園</span>
+              <span class="trip-time">08:40 抵達</span>
+            </span>
+            <span class="trip-km">12.4 km</span>
+          </div>
+          <div class="trip-row">
+            <span class="trip-idx">路段 2</span>
+            <span class="trip-body">
+              <span class="trip-dest">示範中正高齡</span>
+              <span class="trip-time">10:40 抵達</span>
+            </span>
+            <span class="trip-km">3.1 km</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 邊界情況 ───────────────────────────────────── -->
+  <h2 class="mk-h1" style="font-size:17px;margin:44px 0 6px">邊界情況 —— 這幾個沒想清楚就不能開工</h2>
+  <p class="mk-sub" style="margin-bottom:18px">
+    前四個是 FMEA 裡的 P0／P1，最後一個是這次新增的 F-8。
+  </p>
+
+  <div class="mk-edge">
+    <div class="mk-edge-card">
+      <p class="mk-edge-t">忘記按「離開」</p>
+      <p class="mk-edge-p">
+        顯示「<b>離開時間未記錄</b>」，<b>絕不推估一個時間</b>。<br>
+        工時是會被拿來計酬與稽核的資料，推估＝造假（F-2 · P0）。
+        合計也要明講「2 趟完整」，否則會被讀成「今天只工作 1.5 小時」。
+      </p>
+    </div>
+    <div class="mk-edge-card mk-new2">
+      <p class="mk-edge-t">連續按兩次「抵達」（F-8 · P0 · 新增）</p>
+      <p class="mk-edge-p">
+        <b>不擋</b>——人在現場被擋住是最糟的。<br>
+        第 1 站標「離開時間未記錄」、不算時長；第 2 站正常開始（OQ-TDP-7 乙案）。<br>
+        ⚠️ 不可以拿第 2 次抵達的時間當第 1 站的離開時間，那是推估。
+      </p>
+    </div>
+    <div class="mk-edge-card">
+      <p class="mk-edge-t">跨日沒離開</p>
+      <p class="mk-edge-p">
+        跨日<b>不配對</b>（日界線切在台北時間 00:00），避免算出「停留 14 小時」（F-7）。
+      </p>
+    </div>
+    <div class="mk-edge-card">
+      <p class="mk-edge-t">主管看不看得到</p>
+      <p class="mk-edge-p">
+        <b>v1 不做</b>（OQ-TDP-6）。停留久＝認真？停留短＝混？
+        <b>兩個推論都可能是錯的</b>（塞車、客戶臨時取消）。
+        用途要先跟客戶對齊，這不是技術問題（F-4）。
+      </p>
+    </div>
+    <div class="mk-edge-card">
+      <p class="mk-edge-t">狀態推錯了</p>
+      <p class="mk-edge-p">
+        「狀態不對？」讓他直接指定現在是抵達還是離開。<br>
+        沒有這個入口，狀態一錯就只能<b>製造一筆假的停留</b>來繞過去。
+      </p>
+    </div>
+    <div class="mk-edge-card">
+      <p class="mk-edge-t">上線後要看的三個數字</p>
+      <p class="mk-edge-p">
+        ①連續兩次抵達沒有離開 ②停留 &lt; 1 分鐘 ③用了「狀態不對？」幾次。<br>
+        <b>這三個明顯 = 單鍵判斷錯了</b>，那時改成兩顆按鈕才有真憑據。
+      </p>
+    </div>
+  </div>
+
+  <p class="mk-sub" style="margin-top:34px;font-size:12px">
+    ⚠️ 本模組<b>完全依賴 attendance-trip-state-machine M1</b>（<code>depart_site</code> ＋ 狀態機）。
+    那個沒做，這裡一步都動不了。
+  </p>
+
+</div>
+</body>
+</html>
