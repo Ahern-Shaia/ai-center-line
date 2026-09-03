@@ -1015,6 +1015,7 @@ export default {
   "pdr.plannedB": " item(s) noted earlier aren't in today's report yet",
   "pdr.plannedNotedOn": "noted",
   "pdr.plannedAllDay": "date only, no time → all-day",
+  "pdr.tasksShowAll": "Showing {shown} of {total} · show all",
   "pdr.addToReport": "Add to report",
   "pdr.tasksA": "",
   "pdr.tasksB": " tasks assigned to you aren't in the report yet",

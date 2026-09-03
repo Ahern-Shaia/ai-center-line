@@ -823,8 +823,12 @@ export interface PlannedTodayItem {
   ticketId: string | null;
 }
 
-export const getMyPersonalReport = (date?: string) => {
-  const q = date ? `?date=${date}` : "";
+export const getMyPersonalReport = (date?: string, allTasks?: boolean) => {
+  const p = new URLSearchParams();
+  if (date) p.set("date", date);
+  // 使用者按了「顯示全部」才拿掉 20 筆上限（見 assignedTaskTotal 的說明）
+  if (allTasks) p.set("allTasks", "1");
+  const q = p.toString() ? `?${p.toString()}` : "";
   return req<{
     report: PersonalDailyReportRow | null;
     requestedDate: string;
@@ -832,6 +836,11 @@ export const getMyPersonalReport = (date?: string) => {
     aiRunAt: string | null;
     pendingMessageCount: number;
   assignedTasks?: Array<{ ticketId: string; summary: string | null; category: string | null; createdAt: string; canSeeSource?: boolean }>;
+  /**
+   * 指派給他的任務**總共**幾筆（不受回傳筆數的上限影響）。
+   * ⚠️ 一定要顯示出來。截斷可以留，但**靜默截斷**會讓使用者以為那些任務不存在。
+   */
+  assignedTaskTotal?: number;
   /** 今天打卡去過的地方 · 由本人決定要不要納入日報（4FR §5） */
   todayVisits?: Array<{
     punchId: string; place: string; at: string;

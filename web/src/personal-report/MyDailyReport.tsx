@@ -33,6 +33,10 @@ export default function MyDailyReport() {
   const [pendingMessages, setPendingMessages] = useState<PendingRawMessage[]>([]);
   const [assignedTasks, setAssignedTasks] = useState<AssignedTask[]>([]);
   const [plannedToday, setPlannedToday] = useState<PlannedTodayItem[]>([]);
+  /** 指派任務的**總數**（不受回傳上限影響）· 用來顯示「共 N 筆」 */
+  const [assignedTotal, setAssignedTotal] = useState(0);
+  /** 使用者按過「顯示全部」→ 之後重新載入都不再截斷 */
+  const [showAllTasks, setShowAllTasks] = useState(false);
   // 今天去過哪 · 系統本來就知道，只是這一頁看不到（4FR §5）
   const [todayVisits, setTodayVisits] = useState<Array<{
     punchId: string; place: string; at: string; note: string | null; addedToReport: boolean;
@@ -52,12 +56,13 @@ export default function MyDailyReport() {
     setLoading(true);
     setEditingIdx(null);
     try {
-      const res = await getMyPersonalReport(date);
+      const res = await getMyPersonalReport(date, showAllTasks);
       setReport(res.report);
       setAiRunAt(res.aiRunAt);
       setPendingMessageCount(res.pendingMessageCount ?? 0);
       setPendingMessages(res.pendingMessages ?? []);
       setAssignedTasks(res.assignedTasks ?? []);
+      setAssignedTotal(res.assignedTaskTotal ?? (res.assignedTasks ?? []).length);
       setPlannedToday(res.plannedToday ?? []);
       // 已經加進今天日報的不再列（OQ-PNR-4 · 修既有的「同一趟可以加兩次」）
       setTodayVisits((res.todayVisits ?? []).filter((v) => !v.addedToReport));
@@ -74,7 +79,10 @@ export default function MyDailyReport() {
     } finally {
       setLoading(false);
     }
-  }, [date, toast]);
+    // ⚠️ showAllTasks 一定要在依賴裡。少了它，按「看全部」只會改 state、
+    //    refresh 不會重跑 → 按鈕沒有任何作用，而畫面上完全看不出來
+    //    （本專案踩過同一個形狀：可選、存檔成功、實際沒換）。
+  }, [date, toast, showAllTasks]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -304,8 +312,17 @@ export default function MyDailyReport() {
             不自動寫進去：AI 歸屬可能錯、日報也可能已確認 —— 本人是最後一道防線。*/}
         {isToday && assignedTasks.length > 0 && (
           <div className="pdr-raw-list" style={{ marginTop: 16, borderColor: "var(--primary)" }}>
-            <div className="pdr-raw-hdr">
-              {tr("pdr.tasksA")}<b>{assignedTasks.length}</b>{tr("pdr.tasksB")}
+            <div className="pdr-raw-hdr" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <span>{tr("pdr.tasksA")}<b>{assignedTotal || assignedTasks.length}</b>{tr("pdr.tasksB")}</span>
+              {/* ⚠️ 截斷可以留（一次列 34 筆也難讀），但**不可以靜默** ——
+                  2026-09-03 補回 275 筆歸屬後，有人的待辦跳到 34 筆而畫面只顯示 20 筆、
+                  沒有任何提示，使用者會以為「補上了」這件事沒發生在他身上。 */}
+              {assignedTotal > assignedTasks.length && (
+                <button className="dl-card-toggle" style={{ flexShrink: 0 }}
+                  onClick={() => setShowAllTasks(true)}>
+                  {tr("pdr.tasksShowAll", { shown: String(assignedTasks.length), total: String(assignedTotal) })}
+                </button>
+              )}
             </div>
             {assignedTasks.map((t) => (
               <AssignedTaskItem

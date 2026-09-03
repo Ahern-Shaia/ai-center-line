@@ -1015,6 +1015,7 @@ export default {
   "pdr.plannedB": " 項是先前記下的，還沒加入今天的日報",
   "pdr.plannedNotedOn": "記下",
   "pdr.plannedAllDay": "只寫了日期沒有時間 → 當整天事件",
+  "pdr.tasksShowAll": "目前顯示 {shown} 筆 · 看全部 {total} 筆",
   "pdr.addToReport": "加入日報",
   "pdr.tasksA": "有 ",
   "pdr.tasksB": " 項指派給你的任務尚未加入日報",
