@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>待確認任務 · UI flow mockup（unconfirmed-backlog）</title>
+<!-- ⚠️ 直接連正式的樣式表 —— 不另外抄一份，看到的就是實際會長出來的樣子 -->
+<link rel="stylesheet" href="../../web/src/styles.css">
+<style>
+  /* mockup 專用外框（不進正式碼） */
+  body { background:var(--canvas); font-family:var(--sans); }
+  .mk-wrap { max-width:1080px; margin:0 auto; padding:28px 20px 80px; }
+  .mk-h1 { font-size:22px; font-weight:700; color:var(--ink); margin:0 0 6px; }
+  .mk-sub { font-size:13px; color:var(--ink-3); line-height:1.7; margin:0 0 6px; }
+  .mk-basis { font-size:12px; color:var(--ink-3); background:var(--well);
+    border:1px solid var(--line); border-left:3px solid var(--primary);
+    border-radius:4px; padding:10px 14px; line-height:1.9; margin:14px 0 30px; }
+  .mk-basis b { color:var(--ink); }
+  .mk-step { margin:0 0 34px; }
+  .mk-step-h { display:flex; align-items:center; gap:10px; margin:0 0 4px; }
+  .mk-step-n { background:var(--ink); color:#fff; width:24px; height:24px; border-radius:50%;
+    font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .mk-step-t { font-size:15.5px; font-weight:700; color:var(--ink); }
+  .mk-step-when { font-size:12px; color:var(--ink-3); font-family:var(--mono);
+    background:var(--well); padding:2px 8px; border-radius:3px; }
+  .mk-step-note { font-size:12.5px; color:var(--ink-2); line-height:1.8; margin:0 0 12px 34px; }
+  .mk-screen { border:1px solid var(--line); border-radius:8px; background:var(--surface);
+    overflow:hidden; margin-left:34px; box-shadow:0 1px 2px rgba(17,24,39,.04); }
+  .mk-screen-bar { background:var(--well); border-bottom:1px solid var(--line);
+    padding:7px 14px; font-size:11.5px; color:var(--ink-3); font-family:var(--mono); }
+  .mk-screen-body { padding:20px 22px; }
+  .mk-new { position:relative; }
+  /* 實作時＝新增一個 .pdr-item-due，形狀比照既有的 .pdr-item-time，只換成 primary tint */
+  .mk-due { font-size:11.5px; font-family:var(--mono); color:var(--primary-2);
+    background:var(--primary-tint); padding:2px 8px; border-radius:3px; }
+  .mk-new2 { outline:2px dashed var(--primary); outline-offset:3px; border-radius:4px; }
+  .mk-new::after { content:"新增"; position:absolute; top:-9px; right:10px;
+    background:var(--primary); color:#fff; font-size:10.5px; font-weight:700;
+    padding:2px 8px; border-radius:3px; letter-spacing:.04em; }
+  .mk-line { max-width:420px; }
+  .mk-bubble { background:#8DE055; color:#111; border-radius:14px; padding:11px 14px;
+    font-size:13.5px; line-height:1.7; white-space:pre-wrap; margin:0 0 6px auto; max-width:330px; }
+  .mk-bubble-bot { background:var(--surface); border:1px solid var(--line);
+    border-radius:14px; padding:9px 13px; font-size:13.5px; color:var(--ink);
+    display:inline-block; }
+  .mk-arrow { text-align:center; color:var(--ink-3); font-size:20px; margin:-14px 0 14px 34px; }
+  .mk-edge { margin-left:34px; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
+  .mk-edge-card { border:1px solid var(--line); border-radius:6px; background:var(--surface); padding:14px 16px; }
+  .mk-edge-t { font-size:13px; font-weight:700; color:var(--ink); margin:0 0 6px; }
+  .mk-edge-p { font-size:12.5px; color:var(--ink-2); line-height:1.8; margin:0; }
+</style></head>
+<body>
+<div class="mk-wrap">
+
+  <h1 class="mk-h1">「未確認的任務」· UI flow</h1>
+  <p class="mk-sub">
+    待確認 329 張、七週只有 6 個決定 —— 其中 <b>162 張已經知道是誰的</b>，但那個人看不到。<br>
+    對應 <code>docs/modules/unconfirmed-backlog.md</code>（OQ-UCB-1..7 已全採建議）。
+  </p>
+
+  <div class="mk-basis">
+    <b>畫面依據</b>（不是憑印象畫的）<br>
+    · 樣式：直接 <code>&lt;link&gt;</code> 正式的 <code>web/src/styles.css</code>，沒有另外抄一份<br>
+    · 版型抄 <code>MyDailyReport.tsx</code> 現有的
+      <code>.pdr-raw-list</code> / <code>.pdr-raw-hdr</code> / <code>.pdr-raw-item</code> /
+      <code>.pdr-raw-text</code> / <code>.dl-card-toggle</code><br>
+    · <b>「未確認」與「已確認」是兩個獨立區塊</b>（配套 C-3）——
+      不混在同一份清單裡，否則已確認的任務也會失去份量<br>
+    · 「顯示 N 筆 · 共 M 筆」是<b>已上線的</b>（2026-09-03 · commit 24116f5），不是這次新增<br>
+    · 人名／案場皆<b>假名化</b>
+  </div>
+
+  <!-- ① 現況 -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">1</span>
+      <span class="mk-step-t">現在：他看不到那 162 張</span>
+      <span class="mk-step-when">今天</span>
+    </div>
+    <p class="mk-step-note">
+      待確認的卡**只在主管的任務看板上**。當事人的日報完全沒有跡象 ——
+      客服在群組派的單，如果 AI 給的是中信心，就停在這裡。
+    </p>
+    <div class="mk-screen">
+      <div class="mk-screen-bar">我的日報 · 2026年9月3日</div>
+      <div class="mk-screen-body">
+        <div class="pdr-raw-list" style="border-color:var(--primary)">
+          <div class="pdr-raw-hdr" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <span>有 <b>22</b> 項指派給你的任務尚未加入日報</span>
+            <button class="dl-card-toggle" style="flex-shrink:0">目前顯示 20 筆 · 看全部 22 筆</button>
+          </div>
+          <div class="pdr-raw-item" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="pdr-raw-text" style="flex:1">中華菱利牽引器馬達故障</div>
+              <button class="btn btn-sm">加入日報</button>
+            </div>
+          </div>
+          <div class="pdr-raw-item" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="pdr-raw-text" style="flex:1">子宮頸抹片車電池更換後跳電</div>
+              <button class="btn btn-sm">加入日報</button>
+            </div>
+          </div>
+        </div>
+        <p class="mk-sub" style="margin:14px 0 0;font-size:12px">
+          ⚠️「桃園示範日照中心升降機保養檢修詢價」<b>不在這裡</b> —— 它停在待確認。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="mk-arrow">↓ 改成</div>
+
+  <!-- ② 改後 -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">2</span>
+      <span class="mk-step-t">多一個獨立區塊：「AI 覺得這可能是你的事」</span>
+    </div>
+    <p class="mk-step-note">
+      <b>兩個區塊分開，不混在一起</b>（C-3）—— 已確認的任務有份量，AI 猜的沒有。<br>
+      ⚠️ 標題**不用「待確認」**（那是內部術語）· 邊框用警示色不是主色，視覺上就分得出來。
+    </p>
+    <div class="mk-screen">
+      <div class="mk-screen-bar">我的日報 · 2026年9月3日</div>
+      <div class="mk-screen-body">
+
+        <div class="pdr-raw-list" style="border-color:var(--primary);margin-bottom:16px">
+          <div class="pdr-raw-hdr">有 <b>22</b> 項指派給你的任務尚未加入日報</div>
+          <div class="pdr-raw-item" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="pdr-raw-text" style="flex:1">中華菱利牽引器馬達故障</div>
+              <button class="btn btn-sm">加入日報</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pdr-raw-list mk-new" style="border-color:var(--warn)">
+          <div class="pdr-raw-hdr">
+            AI 覺得這 <b>3</b> 件可能是你的事 · <b>尚未確認</b>
+          </div>
+          <div class="pdr-raw-item" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="pdr-raw-text" style="flex:1">桃園示範日照中心升降機保養檢修詢價</div>
+              <button class="btn btn-sm">是我的 · 加入日報</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+              <span class="liff-note">8/18 · 來自「業務二部」群組</span>
+              <button class="dl-card-toggle">不是我的</button>
+            </div>
+          </div>
+          <div class="pdr-raw-item" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="pdr-raw-text" style="flex:1">示範客運車輛保養安排</div>
+              <button class="btn btn-sm">是我的 · 加入日報</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+              <span class="liff-note">9/2 · 來自「業務二部」群組</span>
+              <button class="dl-card-toggle">不是我的</button>
+            </div>
+          </div>
+          <div class="pdr-raw-item" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="pdr-raw-text" style="flex:1">牌架框法規一致性確認</div>
+              <button class="btn btn-sm">是我的 · 加入日報</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+              <span class="liff-note">9/3 · 來自「業務二部」群組</span>
+              <button class="dl-card-toggle">不是我的</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <div class="mk-arrow">↓ 按「是我的 · 加入日報」</div>
+
+  <!-- ③ -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">3</span>
+      <span class="mk-step-t">那張卡同時「離開待確認」—— 不只是加進日報</span>
+    </div>
+    <p class="mk-step-note">
+      ⚠️ 這是配套 <b>C-4</b>，最容易被漏掉。<br>
+      使用者按下「是我的」＝<b>他認可了這是自己的事，那就是一個決定</b> ——
+      卡片要轉成正式任務（待簽核），從這一區消失。<br>
+      不做的話：待確認的數字<b>永遠不會下降</b>，功能上線後看起來像沒效。
+    </p>
+    <div class="mk-screen">
+      <div class="mk-screen-bar">我的日報 · 2026年9月3日</div>
+      <div class="mk-screen-body">
+        <div class="pdr-item">
+          <div class="pdr-item-hdr">
+            <span class="pdr-item-idx">1</span>
+            <span class="pdr-item-title">桃園示範日照中心升降機保養檢修詢價</span>
+            <div class="pdr-item-actions">
+              <button class="btn btn-sm">編輯</button>
+              <button class="btn btn-sm">刪除</button>
+            </div>
+          </div>
+          <div class="pdr-item-detail" style="color:var(--ink-3)">（補上今天實際的結論⋯）</div>
+        </div>
+        <div class="pdr-raw-list" style="border-color:var(--warn);margin-top:16px">
+          <div class="pdr-raw-hdr">AI 覺得這 <b>2</b> 件可能是你的事 · 尚未確認</div>
+          <div class="pdr-raw-item"><div class="pdr-raw-text">⋯剩下兩件⋯</div></div>
+        </div>
+        <p class="mk-sub" style="margin:14px 0 0;font-size:12px">
+          ↑ 從 3 件變 2 件 · 那張卡在主管看板上也同步變成「待簽核」
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 邊界 -->
+  <h2 class="mk-h1" style="font-size:17px;margin:44px 0 6px">為什麼這樣設計 —— 四個判斷</h2>
+  <div class="mk-edge">
+    <div class="mk-edge-card">
+      <p class="mk-edge-t">為什麼給當事人，不是催主管</p>
+      <p class="mk-edge-p">
+        七週、329 張、<b>6 個決定</b>。主管會清這個前提實測不成立。<br>
+        而當事人在現場，他對「這件事是不是我的」判斷得比誰都準。
+      </p>
+    </div>
+    <div class="mk-edge-card">
+      <p class="mk-edge-t">為什麼只給「已對到人」的 162 張</p>
+      <p class="mk-edge-p">
+        另外 167 張系統<b>不知道是誰的</b>，給不出去 —— 那些只能主管處理。<br>
+        不是「把中信心全倒給員工」，是<b>已經知道是誰的才給他</b>。
+      </p>
+    </div>
+    <div class="mk-edge-card mk-new2">
+      <p class="mk-edge-t">為什麼一定要分開兩區（C-3）</p>
+      <p class="mk-edge-p">
+        混在一起的話，<b>已確認的任務也會失去份量</b> ——
+        使用者無法分辨哪些是公司決定的、哪些是 AI 猜的。<br>
+        猜錯而他照做了，就是白工（FMEA F-2 · P0）。
+      </p>
+    </div>
+    <div class="mk-edge-card">
+      <p class="mk-edge-t">為什麼要「不是我的」這顆</p>
+      <p class="mk-edge-p">
+        AI 會判錯。沒有這個入口，判錯的卡只能一直躺著，
+        而使用者每天都看到它 —— 幾天之後他會開始略過整個區塊。
+      </p>
+    </div>
+    <div class="mk-edge-card">
+      <p class="mk-edge-t">先放最近 14 天（C-1）</p>
+      <p class="mk-edge-p">
+        162 張一次進去，日報會被淹沒 —— 他找不到今天真正要做的事，<b>比看不到更糟</b>（F-1 · P0）。<br>
+        觀察一週再決定要不要放更舊的。
+      </p>
+    </div>
+    <div class="mk-edge-card">
+      <p class="mk-edge-t">一週後要回檢什麼</p>
+      <p class="mk-edge-p">
+        待確認總數有沒有降、有多少被加進日報。<br>
+        <b>如果沒動，代表問題不在「誰看得到」</b> —— 要回頭找真因，不要再加功能。
+      </p>
+    </div>
+  </div>
+
+  <p class="mk-sub" style="margin-top:34px;font-size:12px">
+    ⚠️ 前置：<b>#58 的截斷修正必須先上線</b>（已於 2026-09-03 部署）——
+    否則放進去的又被 20 筆上限擋住，等於白做。
+  </p>
+
+</div>
+</body>
+</html>
