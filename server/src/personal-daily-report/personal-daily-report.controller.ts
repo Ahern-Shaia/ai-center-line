@@ -33,6 +33,16 @@ const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
  * Aiproot 端：
  *   POST /personal-daily-report/aiproot/run-scheduler → 手動觸發 scheduler
  */
+/**
+ * 日報上「指派給我的任務」預設顯示幾筆。
+ *
+ * ⚠️ 這個上限**本身不是問題，靜默才是**。2026-09-03：一次補回 275 筆歸屬之後，
+ *    有人的待辦跳到 34 筆，畫面只顯示 20 筆而且**沒有任何提示**——
+ *    使用者會以為「補上了」這件事沒發生在他身上。
+ *    所以回傳一定要帶 assignedTaskTotal，前端一定要顯示「共 N 筆」。
+ */
+const ASSIGNED_TASK_LIMIT = 20;
+
 @Controller("personal-daily-report")
 export class PersonalDailyReportController {
   constructor(
@@ -163,7 +173,12 @@ export class PersonalDailyReportController {
 
   @Get("mine")
   @RequirePermission("personal-report:mine")
-  async getMine(@CurrentUser() user: JwtUser, @Query("date") dateStr?: string) {
+  async getMine(
+    @CurrentUser() user: JwtUser,
+    @Query("date") dateStr?: string,
+    /** "1" ＝ 拿掉 20 筆上限（使用者按了「顯示全部」）· 見下方 ASSIGNED_TASK_LIMIT 的說明 */
+    @Query("allTasks") allTasks?: string,
+  ) {
     const date = dateStr ?? getTaipeiDate();
     if (!isValidDate(date)) throw new BadRequestException(msg("srv.v.dateYmd"));
     // currentTx() 已於 interceptor 設 tenant + user context · RLS 會擋別的
@@ -202,7 +217,17 @@ export class PersonalDailyReportController {
         -- 真任務」的那一刻失去了它（doc §1.3b）。
         AND work_status = 'open'
       ORDER BY created_at DESC
-      LIMIT 20
+      LIMIT ${allTasks === "1" ? 500 : ASSIGNED_TASK_LIMIT}
+    `);
+
+    // ⚠️ 總數要另外算 —— 不可以用 assigned.rows.length 代替。
+    //    那個數字被 LIMIT 砍過，拿它當總數就等於「畫面說有 20 筆，實際有 34 筆」，
+    //    而使用者永遠不會知道差在哪（2026-09-03 的起因就是這個靜默截斷）。
+    const assignedTotal = await tx.execute<{ n: number }>(sql_import`
+      SELECT count(*)::int AS n FROM tickets
+       WHERE assignee_user_id = ${user.user_id}::uuid
+         AND confirm_status IN ('待簽核', '已簽核', '逾時警示')
+         AND work_status = 'open'
     `);
     // 今天去過哪 · four-features-reflection.md §5（P5）
     //
@@ -322,6 +347,12 @@ export class PersonalDailyReportController {
         // 已經加進今天日報的就標起來，前端不再列（OQ-PNR-4 · 順手修既有的「同一趟可加兩次」）
         addedToReport: alreadyAdded.has(`punch:${v.punch_id}`),
       })),
+      /**
+       * 指派給他的任務**總共**幾筆（不受上面的 LIMIT 影響）。
+       * 前端要用它顯示「顯示最近 N 筆 · 共 M 筆」——
+       * ⚠️ 截斷本身可以留（一次列 34 筆也難讀），但**不可以靜默**。
+       */
+      assignedTaskTotal: assignedTotal.rows[0]?.n ?? 0,
       // ⚠️ 預定日剛好是這天的任務卡已經在「今日預定」列過，這裡不再列第二次。
       //    同一件事出現在兩個區塊，使用者得自己判斷是不是同一件 —— 多一次判斷就是多一次出錯。
       assignedTasks: assigned.rows.filter((t) => !plannedToday.some((p) => p.ticketId === t.ticket_id)).map((t) => ({

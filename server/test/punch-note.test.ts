@@ -216,3 +216,36 @@ test("⭐ LINE 登入不可以造假 email（@ 後面那串其實是租戶 ID，
     }
   }
 });
+
+// ─── 日報待辦的靜默截斷（#58）────────────────────────────────
+//
+// 2026-09-03：一次補回 275 筆歸屬後，有人的待辦跳到 34 筆，
+// 而畫面只顯示 20 筆、**沒有任何提示** —— 使用者會以為「補上了」沒發生在他身上。
+// 截斷可以留（一次列 34 筆也難讀），但**不可以靜默**。
+
+/** 讀 server 端原始碼（剝註解）· web 那邊用 code()，兩邊解析基準不同不可混用 */
+const srv = (rel: string) =>
+  readFileSync(join(fileURLToPath(new URL("../src", import.meta.url)), rel), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+test("⭐⭐ 總數要另外算，不可以拿被 LIMIT 砍過的筆數當總數", () => {
+  const s = srv("personal-daily-report/personal-daily-report.controller.ts");
+  assert.match(s, /assignedTaskTotal/,
+    "回傳沒有 assignedTaskTotal —— 前端無從得知被截掉幾筆");
+  assert.match(s, /SELECT count\(\*\)::int AS n FROM tickets/,
+    "總數沒有獨立查詢 —— 用 rows.length 的話那個數字本身就被 LIMIT 砍過了");
+});
+
+test("⭐⭐ 前端要顯示總數，而且「看全部」不可以是死按鈕", () => {
+  const s = code("personal-report/MyDailyReport.tsx");
+  assert.match(s, /assignedTotal > assignedTasks\.length/,
+    "沒有判斷「有沒有被截掉」，那個提示永遠不會出現");
+  assert.match(s, /pdr\.tasksShowAll/, "沒有「看全部」的入口");
+  // ⚠️ 這一條最容易漏：state 改了但 refresh 的依賴沒帶它 → 按鈕沒作用，
+  //    而 tsc 全綠、畫面也看不出來（本專案踩過同一個形狀）。
+  assert.match(s, /\[date, toast, showAllTasks\]/,
+    "refresh 的依賴少了 showAllTasks —— 按「看全部」只會改 state，不會重新抓資料");
+  for (const lang of ["i18n/zh-TW.ts", "i18n/en.ts"]) {
+    assert.ok(web(lang).includes('"pdr.tasksShowAll"'), `${lang} 缺 pdr.tasksShowAll`);
+  }
+});
