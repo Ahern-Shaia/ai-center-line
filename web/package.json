@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --port 5173",
-    "i18n:sweep": "node scripts/i18n-sweep.mjs"
+    "i18n:sweep": "node scripts/i18n-sweep.mjs",
+    "test": "tsx --test test/*.test.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
