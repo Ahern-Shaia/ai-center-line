@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Get, NotFoundException, Param, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, ForbiddenException, Get, NotFoundException, Param, Patch, Post, Query } from "@nestjs/common";
 import { friendlyAiError } from "../llm/ai-error-message.js";
 import { schedulerTimeLabel } from "../scheduler-config/scheduler-time.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
@@ -13,6 +13,7 @@ import { PersonalDailyReportRepository, type PersonalDailyReportItem } from "./p
 import { PersonalDailyReportService } from "./personal-daily-report.service.js";
 import { PersonalReportNotifyService } from "./personal-report-notify.service.js";
 import { PersonalReportSchedulerService } from "./personal-report-scheduler.service.js";
+import { WorkStatusService } from "../task-completion/work-status.service.js";
 import { msg } from "../i18n/index.js";
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -51,6 +52,7 @@ export class PersonalDailyReportController {
     private readonly scheduler: PersonalReportSchedulerService,
     private readonly notify: PersonalReportNotifyService,
     private readonly bindingService: EmployeeBindingService,
+    private readonly workStatus: WorkStatusService,
   ) {}
 
   // ==================================================================
@@ -386,6 +388,36 @@ export class PersonalDailyReportController {
   async assignedTaskSource(@CurrentUser() user: JwtUser, @Param("ticketId") ticketId: string) {
     if (!uuidRegex.test(ticketId)) throw new BadRequestException(msg("srv.v.ticketId"));
     return this.svc.assignedTaskSource(user.user_id, user.department_id, ticketId);
+  }
+
+  /**
+   * 結束自己手上的任務 · docs/modules/task-close-by-assignee.md M1
+   *
+   * ⚠️ 權限碼刻意用 `personal-report:mine`，**不是** `warroom-tasks:view`。
+   * 後者是主管看板的碼，給了就等於把整個看板開放給員工（migration 0020 明寫不給）。
+   * 「結束我自己的任務」屬於「我的日報」的範圍，不是看板的範圍。
+   *
+   * ⚠️ 真正擋住越權的是 service 裡那行 `assignee_user_id = actor`（F-2 · P0），
+   * 不是這個裝飾器 —— 權限碼擋的是「哪一類人可以呼叫」，不是「可以動哪一筆」。
+   */
+  @Patch("mine/tasks/:ticketId/close")
+  @RequirePermission("personal-report:mine")
+  async closeMyTask(
+    @CurrentUser() user: JwtUser,
+    @Param("ticketId") ticketId: string,
+    @Body() body: { outcome?: string },
+  ) {
+    if (!uuidRegex.test(ticketId)) throw new BadRequestException(msg("srv.v.ticketId"));
+    if (!body?.outcome) throw new BadRequestException(msg("srv.work.outcomeNotAllowed"));
+    return this.workStatus.closeByAssignee(ticketId, body.outcome, user.user_id);
+  }
+
+  /** 還原自己剛才標錯的（OQ-TCA-4）· 沒有還原就沒有人敢按 */
+  @Patch("mine/tasks/:ticketId/reopen")
+  @RequirePermission("personal-report:mine")
+  async reopenMyTask(@CurrentUser() user: JwtUser, @Param("ticketId") ticketId: string) {
+    if (!uuidRegex.test(ticketId)) throw new BadRequestException(msg("srv.v.ticketId"));
+    return this.workStatus.reopenByAssignee(ticketId, user.user_id);
   }
 
   @Post("mine/save")

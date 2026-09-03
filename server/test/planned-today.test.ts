@@ -25,10 +25,11 @@ const TICK_ALLDAY = "b0da0000-0000-4000-8000-000000000d13";  // 整天事件（0
 const D = "2026-08-24";        // 「今天」
 const D_PREV = "2026-08-21";   // 先前那份日報的日期
 
-// ⚠️ repo 是**第 2 個**參數（svc, repo, scheduler, notify, bindingService）——
+// ⚠️ repo 是**第 2 個**參數（svc, repo, scheduler, notify, bindingService, workStatus）——
 //    位置放錯不會報錯，只會在 getMine 讀 this.repo 時炸得莫名其妙。
 const ctrl = new PersonalDailyReportController(
   {} as never, new PersonalDailyReportRepository(), {} as never, {} as never, {} as never,
+  {} as never,   // workStatus · 這幾個測試不碰結束任務的路徑
 );
 
 const admin = () => new pg.Client({ connectionString: process.env.MIGRATION_DATABASE_URL });

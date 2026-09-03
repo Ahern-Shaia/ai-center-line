@@ -11,7 +11,17 @@ import { sql } from "drizzle-orm";
 import { withTenant, withSystemTx } from "../src/db/client.js";
 import { SignalResolverService } from "../src/task-completion/signal-resolver.service.js";
 
-const svc = new SignalResolverService();
+// ⚠️ 不用 `{} as never`：那樣新加的私訊路徑一跑到就會 TypeError，而且錯在別的斷言之前，
+//    看起來像是本來那件事壞了。用假的 client 才能讓既有測試**順便**涵蓋 OQ-TCA-9。
+const pushed: Array<{ to: string; text: string }> = [];
+const fakeLineApi = {
+  pushMessage: async (_token: string, to: string, messages: Array<{ text?: string }>) => {
+    pushed.push({ to, text: messages[0]?.text ?? "" });
+    return { messageId: "fake" };
+  },
+} as unknown as ConstructorParameters<typeof SignalResolverService>[0];
+
+const svc = new SignalResolverService(fakeLineApi);
 
 // ⚠️ tickets 的 RLS 是 AND-only、**沒有 actor_role 逃生門** ——
 //    withSystemTx（只有 actor_role='system'）讀會回 0 筆、寫會被擋。

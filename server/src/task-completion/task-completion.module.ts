@@ -4,6 +4,10 @@ import { PrivateCompletionService } from "./private-completion.service.js";
 import { TaskConfigModule } from "../task-config/task-config.module.js";
 import { SignalResolverService } from "./signal-resolver.service.js";
 import { WorkStatusService } from "./work-status.service.js";
+// ⚠️ 直接掛 LineApiClient 而不是 import LineIngestModule ——
+//    LineIngestModule 已經 import 本模組（webhook 用 PrivateCompletionService），反向 import 會變循環。
+//    LineApiClient 無建構子依賴、無狀態（純 HTTP client），多一個實例沒有代價。
+import { LineApiClient } from "../line-ingest/line-api.client.js";
 import { CompletionSignalController } from "./completion-signal.controller.js";
 
 /**
@@ -16,7 +20,7 @@ import { CompletionSignalController } from "./completion-signal.controller.js";
 @Module({
   imports: [TaskConfigModule],
   controllers: [CompletionSignalController],
-  providers: [CompletionSignalService, PrivateCompletionService, SignalResolverService, WorkStatusService],
+  providers: [CompletionSignalService, PrivateCompletionService, SignalResolverService, WorkStatusService, LineApiClient],
   exports: [CompletionSignalService, PrivateCompletionService, SignalResolverService, WorkStatusService],
 })
 export class TaskCompletionModule {}

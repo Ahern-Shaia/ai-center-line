@@ -1,6 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { withTenant } from "../db/client.js";
+import { LineApiClient } from "../line-ingest/line-api.client.js";
+
+/** 關掉任務後要私訊通知誰 · 累到交易結束後才送（HTTP 不佔著 DB 連線）*/
+type CloseNotice = { token: string; lineUserId: string; summary: string | null };
 
 /**
  * 完成訊號的對應段（M3b）· docs/modules/task-completion-tracking.md §2.2 / §2.6
@@ -21,6 +25,45 @@ import { withTenant } from "../db/client.js";
 export class SignalResolverService {
   private readonly logger = new Logger(SignalResolverService.name);
 
+  constructor(private readonly lineApi: LineApiClient) {}
+
+  /**
+   * 關掉任務之後**私訊**通知當事人 · docs/modules/task-close-by-assignee.md OQ-TCA-9（F-9 · P0）
+   *
+   * ⚠️ 為什麼需要這個：2026-08-12 裁定「LINE 群組一律不出聲」之後，
+   * 引用回覆**照樣被接住、照樣關掉任務，但當事人收不到任何確認**
+   * （line-webhook.service.ts:250 的註解寫得很清楚，那是刻意的取捨）。
+   * 結果是**成功和失敗長得一模一樣** —— 他不知道有沒有生效，可能重複做，也可能放棄。
+   *
+   * ⭐ 當時的取捨只考慮了「回群組 vs 不回饋」兩個選項，**漏掉第三個**：
+   * 私訊只有他一個人看得到，不違反那條裁定，而且正是他需要的回饋。
+   *
+   * ⚠️ 送不到不可以讓批次失敗 —— 任務已經關了，通知只是把它送達。
+   * 但一定要 log 出來：私訊路徑至今 0 使用量（OQ-TCA-10），
+   * **這裡的成功率就是那題的答案**，吞掉就永遠查不出來。
+   */
+  private async notifyClosed(notices: CloseNotice[]): Promise<void> {
+    let ok = 0, failed = 0;
+    for (const n of notices) {
+      const summary = (n.summary ?? "").trim();
+      const text = summary
+        ? `✓ 已記錄：${summary.length > 60 ? `${summary.slice(0, 60)}…` : summary}\n這件已從你的待辦移除。`
+        : "✓ 已記錄，這件已從你的待辦移除。";
+      try {
+        await this.lineApi.pushMessage(n.token, n.lineUserId, [{ type: "text", text }]);
+        ok++;
+      } catch (err) {
+        failed++;
+        // ⚠️ 最可能的失敗原因是「沒把 bot 加為好友」—— push 到非好友 LINE 會擋。
+        //    這正是 OQ-TCA-10 要查的東西，所以原文照印，不要簡化成「通知失敗」。
+        this.logger.warn(
+          `[close-notify] 私訊送不到 · user=${n.lineUserId.slice(0, 8)}… · ${(err as Error).message}`,
+        );
+      }
+    }
+    if (ok || failed) this.logger.log(`[close-notify] 私訊確認 · 成功 ${ok} · 失敗 ${failed}`);
+  }
+
   /**
    * 回掃某租戶未消化的訊號。
    * @param groupId 限縮到剛跑完的那個群 · 不給則掃該租戶全部
@@ -28,7 +71,9 @@ export class SignalResolverService {
   async resolvePending(tenantId: string, groupId?: string): Promise<{
     closed: number; created: number; noMatch: number; asked: number; ambiguous: number; notAssignee: number;
   }> {
-    return withTenant({ tenantId, role: "tenant_admin", departmentId: null, userId: null }, async (tx) => {
+    // ⚠️ 通知累到交易外才送：HTTP 請求不可以佔著 DB 連線（同 line-webhook 的媒體下載）。
+    const notices: CloseNotice[] = [];
+    const counts = await withTenant({ tenantId, role: "tenant_admin", departmentId: null, userId: null }, async (tx) => {
       const pending = await tx.execute<{
         signal_id: string; quoted_message_id: string; intent: string;
         replier_line_user_id: string; note: string | null; group_id: string;
@@ -120,7 +165,7 @@ export class SignalResolverService {
               continue;
             }
           }
-          await tx.execute(sql`
+          const done = await tx.execute<{ summary: string | null }>(sql`
             UPDATE tickets
                SET work_status = 'closed', work_outcome = '完成', work_closed_at = now(),
                    work_closed_via = 'line_reply',
@@ -128,9 +173,17 @@ export class SignalResolverService {
                    work_closed_message_id = ${sig.quoted_message_id},
                    work_note = ${sig.note}, updated_at = now()
              WHERE ticket_id = ${ticket.ticket_id}::uuid
+            RETURNING summary
           `);
           await this.markResolved(tx, sig.signal_id, ticket.ticket_id, "closed_ticket");
           closed++;
+          // OQ-TCA-9 · 只在「關掉一張他本來看得到的任務」時通知。
+          // created_ticket 那條路（補建後直接標完成）不通知 —— 那張票從來沒出現在他的待辦裡，
+          // 沒有「它消失了嗎」的疑問要回答，硬通知反而是憑空冒出一則訊息。
+          const tok = await this.botToken(tx, sig.group_id);
+          if (tok) {
+            notices.push({ token: tok, lineUserId: sig.replier_line_user_id, summary: done.rows[0]?.summary ?? null });
+          }
           continue;
         }
 
@@ -161,6 +214,30 @@ export class SignalResolverService {
       }
       return { closed, progressLogged, created, noMatch, asked, ambiguous, notAssignee };
     });
+
+    // 交易已經 commit —— 到這裡任務確實關掉了，通知送不到也不影響那個事實（F-9 的緩解不是保證送達）
+    await this.notifyClosed(notices);
+    return counts;
+  }
+
+  /**
+   * 拿該群所屬 bot 的 access token（私訊要用）。
+   *
+   * ⚠️ token 是加密欄位，解密金鑰走 env（R3）。取法照抄 assign-notify.service.ts:186，
+   * 不另外寫一套 —— 兩邊如果解法不同，換金鑰時只會有一邊壞掉。
+   */
+  private async botToken(
+    tx: Parameters<Parameters<typeof withTenant>[1]>[0],
+    groupId: string,
+  ): Promise<string | null> {
+    const key = process.env.LINE_CONFIG_ENC_KEY ?? "test-only-line-enc-key-32chars---";
+    const r = await tx.execute<{ token: string | null }>(sql`
+      SELECT pgp_sym_decrypt(lb.channel_access_token_enc, ${key}) AS token
+        FROM line_group g
+        JOIN line_bot lb ON lb.bot_id = g.bot_id
+       WHERE g.group_id = ${groupId}
+       LIMIT 1`);
+    return r.rows[0]?.token ?? null;
   }
 
   /**
