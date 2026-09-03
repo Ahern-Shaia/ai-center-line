@@ -554,7 +554,14 @@ export class WarroomTasksService {
     const res = await tx.execute<{ ticket_id: string }>(sql`
       UPDATE tickets
          SET confirm_status = ${next},
-             confirmed_by   = ${accept ? null : actorUserId}::uuid,
+             -- ⚠️⚠️ **接受也要寫 confirmed_by**（2026-09-03 修）。
+             --    舊版只在「不用追」時寫，接受時留 null —— 於是「接受」這個決定
+             --    在資料上**完全沒有痕跡**，而「待簽核」在 materializer 的
+             --    RECOMPUTABLE_LANES 裡 → 重跑材料化會把它算回「待確認」。
+             --    實際發生過：2026-09-03 重跑 90 批，抹掉了兩個主管接受過的決定，
+             --    而且是靠 audit_log 反查才找回來的。
+             --    materializer 的 ON CONFLICT 現在會看 confirmed_by 決定要不要重算。
+             confirmed_by   = ${actorUserId}::uuid,
              updated_at     = now()
        WHERE ticket_id = ${ticketId}::uuid
          -- accept 時也允許把先前標「不用追」的改回來 —— 按錯了要救得回來

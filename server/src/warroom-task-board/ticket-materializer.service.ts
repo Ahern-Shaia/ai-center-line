@@ -183,7 +183,13 @@ export class TicketMaterializerService {
             -- 少了這行，主管標「不用追」的事下次分析又冒出來，第二次就沒人要點了（doc F-3）
             -- 用 string_to_array 而非把 JS 陣列丟進 ANY()：Drizzle 會展成 tuple ANY((.,.))，
             --    Postgres 42809。型別檢查看不出來，要 runtime 才炸
-            confirm_status = CASE WHEN tickets.confirm_status
+            -- ⚠️⚠️ 2026-09-03 加 confirmed_by IS NULL 這個條件：光看分區不夠。
+            --    「待確認 → 接受 → 待簽核」之後，那張卡的分區是待簽核，
+            --    而待簽核在可重算清單裡 —— 於是重跑會把人的決定算回待確認。
+            --    實際發生過（重跑 90 批抹掉兩個主管的決定，靠 audit_log 才找回來）。
+            --    現在只要有人動過（confirmed_by 非 null）就一律不重算。
+            confirm_status = CASE WHEN tickets.confirmed_by IS NULL
+                                   AND tickets.confirm_status
                                        = ANY(string_to_array(${RECOMPUTABLE_LANES.join(",")}, ','))
                                   THEN EXCLUDED.confirm_status ELSE tickets.confirm_status END,
             assignee_display_name = EXCLUDED.assignee_display_name,

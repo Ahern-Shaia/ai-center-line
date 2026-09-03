@@ -358,3 +358,54 @@ test("⭐ 重跑時 due_at 用新的判斷覆蓋舊的（不可以用 COALESCE �
       "抽錯一次的日期會永遠洗不掉 —— 而錯的日期比沒有日期糟（使用者會在錯的日子赴約）");
   } finally { await seeded.cleanup(); }
 });
+
+// ─── 人的決定不可以被重跑抹掉（2026-09-03 實際發生過）─────────────
+//
+// 「待確認 → 主管接受 → 待簽核」之後，那張卡的分區是待簽核，
+// 而待簽核在 RECOMPUTABLE_LANES 裡 —— 舊版重跑會把它算回待確認。
+// 2026-09-03 重跑 90 批時抹掉了兩個主管的決定，靠 audit_log 反查才找回來。
+// 根因：accept 時沒寫 confirmed_by，所以「有人動過」這件事在資料上沒有痕跡。
+
+test("⭐⭐ 主管接受過的卡（confirmed_by 非 null）重跑不可以被算回待確認", async () => {
+  // medium + open → 材料化會判進「待確認」
+  const seeded = await seedUpload([rec("中信心的事", "medium", "open")]);
+  if (!seeded) return;
+  try {
+    await svc.materialize(seeded.uploadId);
+    const before = await lanes(seeded.tenantId, seeded.uploadId);
+    assert.equal(before["待確認"], 1, "前提不成立：medium+open 應該落在待確認");
+
+    // 模擬主管按「接受」：分區改待簽核，**並留下 confirmed_by**
+    await asTenant(seeded.tenantId, (tx) => tx.execute(sql`
+      UPDATE tickets
+         SET confirm_status = '待簽核',
+             confirmed_by = (SELECT user_id FROM users
+                              WHERE tenant_id = ${seeded.tenantId}::uuid LIMIT 1)
+       WHERE source_upload_id = ${seeded.uploadId}
+    `));
+
+    await svc.materialize(seeded.uploadId);   // 重跑
+
+    const after = await lanes(seeded.tenantId, seeded.uploadId);
+    assert.equal(after["待簽核"], 1,
+      "主管接受過的決定被重跑抹掉了 —— 這正是 2026-09-03 發生的事");
+    assert.ok(!after["待確認"], "被算回待確認了");
+  } finally { await seeded.cleanup(); }
+});
+
+test("⭐ 對照：沒人動過的卡仍然要能重算（不可以因為上一條而全部凍結）", async () => {
+  const seeded = await seedUpload([rec("高信心待辦", "high", "open")]);
+  if (!seeded) return;
+  try {
+    await svc.materialize(seeded.uploadId);
+    // 人為把它搬到存查（模擬先前判準不同），confirmed_by 維持 null
+    await asTenant(seeded.tenantId, (tx) => tx.execute(sql`
+      UPDATE tickets SET confirm_status = '存查'
+       WHERE source_upload_id = ${seeded.uploadId}
+    `));
+    await svc.materialize(seeded.uploadId);
+    const after = await lanes(seeded.tenantId, seeded.uploadId);
+    assert.equal(after["待簽核"], 1,
+      "沒人動過的卡也不重算了 —— 保護寫太寬，材料化等於失去重算能力");
+  } finally { await seeded.cleanup(); }
+});
