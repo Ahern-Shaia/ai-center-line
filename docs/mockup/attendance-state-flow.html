@@ -48,6 +48,27 @@
   .mk-edge-card { border:1px solid var(--line); border-radius:6px; background:var(--surface); padding:14px 16px; }
   .mk-edge-t { font-size:13px; font-weight:700; color:var(--ink); margin:0 0 6px; }
   .mk-edge-p { font-size:12.5px; color:var(--ink-2); line-height:1.8; margin:0; }
+
+  /* ── 狀態標註（mockup 專用）───────────────────────────────
+     ⚠️ 為什麼每份 mockup 都要有：mockup 會被當規格看，而且會被**很久以後**才打開。
+     沒有狀態的話，讀的人分不出「這是提案」還是「這已經是線上的樣子」——
+     前者照著做是對的，後者照著做等於重寫一次已經存在的東西。 */
+  .mk-status { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    border-radius:6px; padding:10px 14px; margin:0 0 18px; font-size:12.5px; line-height:1.8; }
+  .mk-status b { font-size:13px; }
+  .mk-status.shipped { background:var(--ok-tint); border:1px solid var(--ok); color:var(--ink-2); }
+  .mk-status.shipped b { color:var(--ok); }
+  .mk-status.proposal { background:var(--warn-tint); border:1px solid var(--warn); color:var(--ink-2); }
+  .mk-status.proposal b { color:var(--warn); }
+  .mk-tag { font-size:10.5px; font-weight:700; letter-spacing:.04em; color:#fff;
+    padding:3px 9px; border-radius:3px; flex-shrink:0; }
+  .mk-tag.shipped { background:var(--ok); }
+  .mk-tag.proposal { background:var(--warn); }
+  /* 單一步驟的落地狀態 */
+  .mk-done { font-size:11px; font-weight:700; color:var(--ok); background:var(--ok-tint);
+    border:1px solid var(--ok); border-radius:3px; padding:2px 8px; flex-shrink:0; }
+  .mk-skip { font-size:11px; font-weight:700; color:var(--ink-3); background:var(--well);
+    border:1px solid var(--line); border-radius:3px; padding:2px 8px; flex-shrink:0; }
 </style></head>
 <body>
 <div class="mk-wrap">
@@ -59,6 +80,13 @@
     <code>docs/mockup/task-duration-flow.html</code></b>（開始外勤／我到了／離開〈某站〉），
     這裡<b>不重畫</b>，只補那三個沒有畫面的。
   </p>
+
+  <div class="mk-status proposal">
+    <span class="mk-tag proposal">提案 · 待裁定</span>
+    <span><b>設計提案，尚未實作</b> · doc <code>attendance-trip-state-machine.md</code> v0.3 · 任務 <b>#5</b><br>⛔ 開工前還有一題未裁定：<b>OQ-TSM-13</b>（撤銷誤觸的時限 —— 沒有時限＝任何出勤記錄都可刪）。</span>
+  </div>
+
+
 
   <div class="mk-basis">
     <b>為什麼這三個要單獨畫</b><br>

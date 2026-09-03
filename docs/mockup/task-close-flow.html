@@ -55,6 +55,27 @@
   .mk-note-warn { font-size:12.5px; line-height:1.8; margin:10px 0 0 34px; padding:10px 14px;
     background:var(--danger-tint); border-left:3px solid var(--danger); border-radius:4px; color:var(--ink-2); }
   .mk-note-warn b { color:var(--danger); }
+
+  /* ── 狀態標註（mockup 專用）───────────────────────────────
+     ⚠️ 為什麼每份 mockup 都要有：mockup 會被當規格看，而且會被**很久以後**才打開。
+     沒有狀態的話，讀的人分不出「這是提案」還是「這已經是線上的樣子」——
+     前者照著做是對的，後者照著做等於重寫一次已經存在的東西。 */
+  .mk-status { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    border-radius:6px; padding:10px 14px; margin:0 0 18px; font-size:12.5px; line-height:1.8; }
+  .mk-status b { font-size:13px; }
+  .mk-status.shipped { background:var(--ok-tint); border:1px solid var(--ok); color:var(--ink-2); }
+  .mk-status.shipped b { color:var(--ok); }
+  .mk-status.proposal { background:var(--warn-tint); border:1px solid var(--warn); color:var(--ink-2); }
+  .mk-status.proposal b { color:var(--warn); }
+  .mk-tag { font-size:10.5px; font-weight:700; letter-spacing:.04em; color:#fff;
+    padding:3px 9px; border-radius:3px; flex-shrink:0; }
+  .mk-tag.shipped { background:var(--ok); }
+  .mk-tag.proposal { background:var(--warn); }
+  /* 單一步驟的落地狀態 */
+  .mk-done { font-size:11px; font-weight:700; color:var(--ok); background:var(--ok-tint);
+    border:1px solid var(--ok); border-radius:3px; padding:2px 8px; flex-shrink:0; }
+  .mk-skip { font-size:11px; font-weight:700; color:var(--ink-3); background:var(--well);
+    border:1px solid var(--line); border-radius:3px; padding:2px 8px; flex-shrink:0; }
 </style></head>
 <body>
 <div class="mk-wrap">
@@ -64,6 +85,13 @@
     客戶原話：「我的日報有看到任務了，請問要<b>怎麼刪掉已經完成或是不需要前往</b>的任務」<br>
     對應 <code>docs/modules/task-close-by-assignee.md</code> <b>v0.6</b>（OQ 已全數裁定 · 可開工）。
   </p>
+
+  <div class="mk-status shipped">
+    <span class="mk-tag shipped">已上線</span>
+    <span><b>已實作並上線</b> · 2026-09-03 · commit <code>27cc0f1</code> · doc <code>task-close-by-assignee.md</code> v0.7（M1–M4 完成 · 3 個 P0 皆已緩解）<br>⚠️ 這一份**已經是線上的樣子**，不是提案。要改功能請先改 doc，不要直接照這張圖重做。</span>
+  </div>
+
+
 
   <div class="mk-basis">
     <b>畫面依據</b>（都是抄現況，不是想像的）：<br>
@@ -80,7 +108,7 @@
   <!-- ═══════════ 1 · 現況 ═══════════ -->
   <div class="mk-step">
     <div class="mk-step-h"><div class="mk-step-n">1</div><div class="mk-step-t">現況 —— 看得到，但沒有任何出口</div>
-      <span class="mk-step-when">今天 · 我的日報</span></div>
+      <span class="mk-step-when">改版前</span><span class="mk-skip">已被取代</span></div>
     <p class="mk-step-note">
       補回 275 筆歸屬後他終於看得到了。但整列只有一顆「加入日報」——
       <b>做完的、已經不用做的，都沒有辦法讓它離開這張清單。</b>
@@ -129,7 +157,7 @@
   <!-- ═══════════ 2 · 改後的列 ═══════════ -->
   <div class="mk-step">
     <div class="mk-step-h"><div class="mk-step-n">2</div><div class="mk-step-t">改後 —— 兩顆外露、一顆收起來</div>
-      <span class="mk-step-when">M2</span></div>
+      <span class="mk-step-when">M2</span><span class="mk-done">✓ 已上線</span></div>
     <p class="mk-step-note">
       <b>「加入日報」不動</b>（那是這一區既有的目的，不可以默默換掉）。<br>
       新增「已完成」外露 —— 歷史 34 筆結案 100% 是完成，最高頻。<br>
@@ -186,7 +214,7 @@
   <!-- ═══════════ 3 · 不用做了的確認 ═══════════ -->
   <div class="mk-step">
     <div class="mk-step-h"><div class="mk-step-n">3</div><div class="mk-step-t">「不用做了」要一句確認 —— 因為它取消的是公司交辦的事</div>
-      <span class="mk-step-when">M2 · doc §3.3</span></div>
+      <span class="mk-step-when">M2</span><span class="mk-done">✓ 已上線</span></div>
     <p class="mk-step-note">
       文案要說清楚<b>兩件事</b>：這件事不會消失、主管看得到。<br>
       不講的話，他要嘛不敢按，要嘛按了以為神不知鬼不覺 —— 兩種都不好。
@@ -217,7 +245,7 @@
   <!-- ═══════════ 4 · 還原 ═══════════ -->
   <div class="mk-step">
     <div class="mk-step-h"><div class="mk-step-n">4</div><div class="mk-step-t">標完之後 —— 列消失，但留一個還原</div>
-      <span class="mk-step-when">M2 · OQ-TCA-4</span></div>
+      <span class="mk-step-when">M2</span><span class="mk-done">✓ 已上線</span></div>
     <p class="mk-step-note">
       <b>沒有還原就沒有人敢按。</b>這是 <code>task-completion-tracking</code> F-4 早就寫過的理由，
       而後端的 <code>work-reopen</code> 端點<b>已經存在</b>，只是員工現在碰不到它。
@@ -242,7 +270,7 @@
   <!-- ═══════════ 5 · 主管端 ═══════════ -->
   <div class="mk-step">
     <div class="mk-step-h"><div class="mk-step-n">5</div><div class="mk-step-t">主管端 —— 「員工自行取消」必須看得出來</div>
-      <span class="mk-step-when">M3 · F-1 配套②</span></div>
+      <span class="mk-step-when">M3</span><span class="mk-done">✓ 已上線</span></div>
     <p class="mk-step-note">
       這是讓員工可以自己取消的<b>前提條件</b>，不是附加功能。<br>
       沒有這一塊，F-1（工作靜默消失、沒有人知道）就沒有被緩解 —— <b>P0 未緩解不得上 prod</b>。
@@ -277,7 +305,7 @@
   <!-- ═══════════ 6 · OQ-TCA-9 ═══════════ -->
   <div class="mk-step">
     <div class="mk-step-h"><div class="mk-step-n">6</div><div class="mk-step-t">⭐ 最便宜的一條：讓現在「靜默成功」的那條路開口說話</div>
-      <span class="mk-step-when">OQ-TCA-9 · F-9（P0）</span></div>
+      <span class="mk-step-when">OQ-TCA-9</span><span class="mk-done">✓ 已上線</span></div>
     <p class="mk-step-note">
       實測：至今 34 筆結案<b>全部</b>是群組引用回覆關掉的（21 筆關既有任務 ＋ 13 筆系統補建），
       最後一次就是今天。<br>
@@ -320,7 +348,7 @@
   <div class="mk-step">
     <div class="mk-step-h"><div class="mk-step-n">7</div>
       <div class="mk-step-t">⭐ 刻意不做：LINE 裡<b>不</b>接「不用做了」</div>
-      <span class="mk-step-when">OQ-TCA-11 · ❌ 已裁定不做</span></div>
+      <span class="mk-step-when">OQ-TCA-11</span><span class="mk-skip">刻意不做</span></div>
     <p class="mk-step-note">
       畫到這裡本來要在 LINE 也接一句「不用處理了」。<b>量完之後收回。</b>
       近六週全部訊號用取消類關鍵字粗篩只中 3 筆 —— 而且 <b>2 真 1 假</b>：
