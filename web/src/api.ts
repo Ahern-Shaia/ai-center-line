@@ -655,6 +655,8 @@ export interface WarroomKanbanTicket {
   workClosedVia: "line_reply" | "web" | "system" | null;
   /** 有值代表是別人代結的 · UI 要明示（doc F-5） */
   workClosedByName: string | null;
+  /** 是不是當責人自己標記的（後端比對 work_closed_by 與 assignee，前端不要自己猜）*/
+  workClosedBySelf: boolean;
   workLastReportAt: string | null;
   workLastReportNote: string | null;
   /** 四軸投影後的對外單一狀態 · 由後端算，前端不要自己拼（措辭鐵則在後端） */

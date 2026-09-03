@@ -155,14 +155,22 @@ function CloseDialog({
  */
 function ClosedLine({ ticket }: { ticket: WarroomKanbanTicket }) {
   const tr = useT();
-  const proxied = ticket.workClosedVia === "web" && ticket.workClosedByName;
+  // ⚠️⚠️ 判斷順序要先看 workClosedBySelf，再看 via。
+  //    2026-09-03 起員工可以在日報上自己結束任務，那條路寫的 via 也是 'web' ——
+  //    跟主管代結案一模一樣。只看 via 的話會顯示「由 ○○ 代為結束」而那個 ○○ 就是本人，
+  //    主管會以為有人越俎代庖（task-close-by-assignee F-1）。
+  const proxied = ticket.workClosedVia === "web" && !ticket.workClosedBySelf && ticket.workClosedByName;
+  const what = tr(`outcome.${ticket.workOutcome}`);
   return (
     <span className={`wt-box-state ${proxied ? "warn" : "ok"}`}>
       {proxied
-        ? tr("wt.closedByOther", { name: ticket.workClosedByName ?? "—", what: tr(`outcome.${ticket.workOutcome}`) })
+        ? tr("wt.closedByOther", { name: ticket.workClosedByName ?? "—", what })
         : ticket.workClosedVia === "line_reply"
-          ? tr("wt.closedSelf", { what: tr(`outcome.${ticket.workOutcome}`) })
-          : ticket.displayState}
+          ? tr("wt.closedSelf", { what })
+          // 本人在日報上按的 —— 跟 LINE 回報都是「本人」，但來源不同，講清楚比較好追
+          : ticket.workClosedBySelf
+            ? tr("wt.closedSelfWeb", { what })
+            : ticket.displayState}
     </span>
   );
 }

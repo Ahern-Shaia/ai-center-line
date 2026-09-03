@@ -174,6 +174,7 @@ export default {
   "wt.note": "Add a note (optional)",
   "wt.onBehalf": "This will be recorded as closed by you on behalf of {name}.",
   "wt.closedByOther": "Closed by {name} on their behalf ({what})",
+  "wt.closedSelfWeb": "Marked “{what}” by the owner in their report",
   "wt.closedSelf": "Reported via LINE: \u201c{what}\u201d",
   "wt.reopened": "Reopened as not yet confirmed done",
   "wt.reopenFailed": "Could not reopen",

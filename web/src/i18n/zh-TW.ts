@@ -172,6 +172,7 @@ export default {
   "wt.note": "補一句話（選填）",
   "wt.onBehalf": "會記錄為由您代 {name} 結束。",
   "wt.closedByOther": "由 {name} 代為結束（{what}）",
+  "wt.closedSelfWeb": "本人在日報上標記「{what}」",
   "wt.closedSelf": "本人於 LINE 回報「{what}」",
   "wt.reopened": "已還原成尚未確認完成",
   "wt.reopenFailed": "還原失敗",
