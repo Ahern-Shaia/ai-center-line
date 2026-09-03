@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>結束自己的任務 · UI flow mockup（task-close-by-assignee）</title>
+<!-- ⚠️ 直接連正式的樣式表 —— 不另外抄一份，看到的就是實際會長出來的樣子 -->
+<link rel="stylesheet" href="../../web/src/styles.css">
+<style>
+  /* mockup 專用外框（不進正式碼） */
+  body { background:var(--canvas); font-family:var(--sans); }
+  .mk-wrap { max-width:1080px; margin:0 auto; padding:28px 20px 80px; }
+  .mk-h1 { font-size:22px; font-weight:700; color:var(--ink); margin:0 0 6px; }
+  .mk-sub { font-size:13px; color:var(--ink-3); line-height:1.7; margin:0 0 6px; }
+  .mk-basis { font-size:12px; color:var(--ink-3); background:var(--well);
+    border:1px solid var(--line); border-left:3px solid var(--primary);
+    border-radius:4px; padding:10px 14px; line-height:1.9; margin:14px 0 30px; }
+  .mk-basis b { color:var(--ink); }
+  .mk-step { margin:0 0 34px; }
+  .mk-step-h { display:flex; align-items:center; gap:10px; margin:0 0 4px; flex-wrap:wrap; }
+  .mk-step-n { background:var(--ink); color:#fff; width:24px; height:24px; border-radius:50%;
+    font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .mk-step-t { font-size:15.5px; font-weight:700; color:var(--ink); }
+  .mk-step-when { font-size:12px; color:var(--ink-3); font-family:var(--mono);
+    background:var(--well); padding:2px 8px; border-radius:3px; }
+  .mk-step-note { font-size:12.5px; color:var(--ink-2); line-height:1.8; margin:0 0 12px 34px; }
+  .mk-screen { border:1px solid var(--line); border-radius:8px; background:var(--surface);
+    overflow:hidden; margin-left:34px; box-shadow:0 1px 2px rgba(17,24,39,.04); }
+  .mk-screen-bar { background:var(--well); border-bottom:1px solid var(--line);
+    padding:7px 14px; font-size:11.5px; color:var(--ink-3); font-family:var(--mono); }
+  .mk-screen-body { padding:20px 22px; }
+  .mk-new { position:relative; }
+  .mk-new::after { content:"新增"; position:absolute; top:-9px; right:10px;
+    background:var(--primary); color:#fff; font-size:10.5px; font-weight:700;
+    padding:2px 8px; border-radius:3px; letter-spacing:.04em; }
+  .mk-bad { position:relative; }
+  .mk-bad::after { content:"問題在這"; position:absolute; top:-9px; right:10px;
+    background:var(--danger); color:#fff; font-size:10.5px; font-weight:700;
+    padding:2px 8px; border-radius:3px; letter-spacing:.04em; }
+  .mk-arrow { text-align:center; color:var(--ink-3); font-size:20px; margin:-14px 0 14px 34px; }
+  .mk-edge { margin-left:34px; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
+  .mk-edge-card { border:1px solid var(--line); border-radius:6px; background:var(--surface); padding:14px 16px; }
+  .mk-edge-t { font-size:13px; font-weight:700; color:var(--ink); margin:0 0 6px; }
+  .mk-edge-p { font-size:12.5px; color:var(--ink-2); line-height:1.8; margin:0; }
+  /* 列上的動作區 —— 實作時就是這個形狀 */
+  .mk-act { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  /* 選單改成靜態展開，好在 mockup 裡看得到（正式碼是 position:fixed 的 .nc-menu） */
+  .mk-menu-static { position:static; width:150px; margin:6px 0 0 auto; }
+  .mk-line { max-width:400px; margin-left:34px; }
+  .mk-bubble-bot { background:var(--surface); border:1px solid var(--line);
+    border-radius:14px; padding:10px 13px; font-size:13.5px; color:var(--ink);
+    display:inline-block; line-height:1.75; white-space:pre-wrap; }
+  .mk-bubble { background:#8DE055; color:#111; border-radius:14px; padding:11px 14px;
+    font-size:13.5px; line-height:1.7; white-space:pre-wrap; margin:0 0 8px auto; max-width:300px; }
+  .mk-note-warn { font-size:12.5px; line-height:1.8; margin:10px 0 0 34px; padding:10px 14px;
+    background:var(--danger-tint); border-left:3px solid var(--danger); border-radius:4px; color:var(--ink-2); }
+  .mk-note-warn b { color:var(--danger); }
+</style></head>
+<body>
+<div class="mk-wrap">
+
+  <h1 class="mk-h1">「結束自己的任務」· UI flow</h1>
+  <p class="mk-sub">
+    客戶原話：「我的日報有看到任務了，請問要<b>怎麼刪掉已經完成或是不需要前往</b>的任務」<br>
+    對應 <code>docs/modules/task-close-by-assignee.md</code>（OQ-TCA-1..9 已全採建議）。
+  </p>
+
+  <div class="mk-basis">
+    <b>畫面依據</b>（都是抄現況，不是想像的）：<br>
+    · 清單容器 <code>.pdr-raw-list</code> / 標題 <code>.pdr-raw-hdr</code> / 每列 <code>.pdr-raw-item</code>
+      —— <code>web/src/personal-report/MyDailyReport.tsx:313-339</code><br>
+    · 列內既有的「加入日報」<code>&lt;button class="btn btn-sm"&gt;</code>、「查看原文」<code>.dl-card-toggle</code>
+      —— 同檔 <code>:671-689</code>（<code>AssignedTaskItem</code>）<br>
+    · ⋯ 選單沿用專案既有 pattern <code>.nc-kebab</code> + <code>.nc-menu</code>
+      —— <code>web/src/notify-config/Page.tsx:219-236</code>（<b>不自己發明</b>）<br>
+    · 文案「有 N 項指派給你的任務尚未加入日報」—— <code>i18n/zh-TW.ts</code> <code>pdr.tasksA/B</code><br>
+    · 主管端分類欄位 <code>work_outcome</code> / <code>work_closed_by</code> —— 皆為<b>既有欄位，不需 migration</b>
+  </div>
+
+  <!-- ═══════════ 1 · 現況 ═══════════ -->
+  <div class="mk-step">
+    <div class="mk-step-h"><div class="mk-step-n">1</div><div class="mk-step-t">現況 —— 看得到，但沒有任何出口</div>
+      <span class="mk-step-when">今天 · 我的日報</span></div>
+    <p class="mk-step-note">
+      補回 275 筆歸屬後他終於看得到了。但整列只有一顆「加入日報」——
+      <b>做完的、不用去的，都沒有辦法讓它離開這張清單。</b>
+    </p>
+    <div class="mk-screen mk-bad">
+      <div class="mk-screen-bar">我的日報 · 2026-09-03</div>
+      <div class="mk-screen-body">
+        <div class="pdr-raw-list" style="border-color:var(--primary)">
+          <div class="pdr-raw-hdr" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <span>有 <b>22</b> 項指派給你的任務尚未加入日報</span>
+            <button class="dl-card-toggle" style="flex-shrink:0">目前顯示 20 筆 · 看全部 22 筆</button>
+          </div>
+          <div class="pdr-raw-item" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="pdr-raw-text" style="flex:1">客訴保固中車輛收費爭議，需回覆客戶處理方式</div>
+              <button class="btn btn-sm">加入日報</button>
+            </div>
+            <button class="dl-card-toggle" style="align-self:flex-start;margin-top:6px">查看原文 ▼</button>
+          </div>
+          <div class="pdr-raw-item" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="pdr-raw-text" style="flex:1">車輛尾門飾板瑕疵複檢（已於 8/5 完成）</div>
+              <button class="btn btn-sm">加入日報</button>
+            </div>
+            <button class="dl-card-toggle" style="align-self:flex-start;margin-top:6px">查看原文 ▼</button>
+          </div>
+          <div class="pdr-raw-item" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="pdr-raw-text" style="flex:1">中巴診療車領牌進度追蹤（客戶已自行取消訂單）</div>
+              <button class="btn btn-sm">加入日報</button>
+            </div>
+            <button class="dl-card-toggle" style="align-self:flex-start;margin-top:6px">查看原文 ▼</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mk-note-warn">
+      <b>兩筆已經不該在這裡了</b>：第 2 筆 8/5 就做完、第 3 筆客戶取消。
+      它們會一直待著，而且會把第 1 筆<b>真正要做的事</b>淹掉 ——
+      這比看不到更糟（doc F-1 的反面）。
+    </div>
+  </div>
+
+  <div class="mk-arrow">↓</div>
+
+  <!-- ═══════════ 2 · 改後的列 ═══════════ -->
+  <div class="mk-step">
+    <div class="mk-step-h"><div class="mk-step-n">2</div><div class="mk-step-t">改後 —— 兩顆外露、一顆收起來</div>
+      <span class="mk-step-when">M2</span></div>
+    <p class="mk-step-note">
+      <b>「加入日報」不動</b>（那是這一區既有的目的，不可以默默換掉）。<br>
+      新增「已完成」外露 —— 歷史 34 筆結案 100% 是完成，最高頻。<br>
+      「不用去了」收進 ⋯ —— 歷史 <b>0 筆</b>，稀少且不可逆感強，不該與主動作等權。
+    </p>
+    <div class="mk-screen mk-new">
+      <div class="mk-screen-bar">我的日報 · 2026-09-03</div>
+      <div class="mk-screen-body">
+        <div class="pdr-raw-list" style="border-color:var(--primary)">
+          <div class="pdr-raw-hdr" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <span>有 <b>22</b> 項指派給你的任務尚未加入日報</span>
+            <button class="dl-card-toggle" style="flex-shrink:0">目前顯示 20 筆 · 看全部 22 筆</button>
+          </div>
+          <div class="pdr-raw-item" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="pdr-raw-text" style="flex:1">客訴保固中車輛收費爭議，需回覆客戶處理方式</div>
+              <div class="mk-act">
+                <button class="btn btn-sm">加入日報</button>
+                <button class="btn btn-sm btn-primary">已完成</button>
+                <button class="nc-kebab" aria-label="更多操作">⋯</button>
+              </div>
+            </div>
+            <button class="dl-card-toggle" style="align-self:flex-start;margin-top:6px">查看原文 ▼</button>
+          </div>
+          <div class="pdr-raw-item" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="pdr-raw-text" style="flex:1">中巴診療車領牌進度追蹤（客戶已自行取消訂單）</div>
+              <div class="mk-act">
+                <button class="btn btn-sm">加入日報</button>
+                <button class="btn btn-sm btn-primary">已完成</button>
+                <button class="nc-kebab" aria-label="更多操作" style="border-color:var(--primary);color:var(--primary-2)">⋯</button>
+              </div>
+            </div>
+            <div class="nc-menu mk-menu-static">
+              <button>不用去了</button>
+              <div class="nc-menu-sep"></div>
+              <button>查看原文</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="mk-step-note" style="margin-top:12px">
+      ⚠️ <b>「已完成」刻意不加二次確認。</b>它有還原（步驟 4），
+      而加確認會讓清 22 筆從 22 次點擊變成 44 次。<br>
+      需要確認的只有「不用去了」—— 那是取消一件公司交辦的事（步驟 3）。
+    </p>
+  </div>
+
+  <div class="mk-arrow">↓</div>
+
+  <!-- ═══════════ 3 · 不用去了的確認 ═══════════ -->
+  <div class="mk-step">
+    <div class="mk-step-h"><div class="mk-step-n">3</div><div class="mk-step-t">「不用去了」要一句確認 —— 因為它取消的是公司交辦的事</div>
+      <span class="mk-step-when">M2 · doc §3.3</span></div>
+    <p class="mk-step-note">
+      文案要說清楚<b>兩件事</b>：這件事不會消失、主管看得到。<br>
+      不講的話，他要嘛不敢按，要嘛按了以為神不知鬼不覺 —— 兩種都不好。
+    </p>
+    <div class="mk-screen" style="max-width:460px">
+      <div class="mk-screen-bar">確認對話框</div>
+      <div class="mk-screen-body">
+        <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:8px">標為「不用去了」？</div>
+        <div style="font-size:13px;color:var(--ink-2);line-height:1.85;margin-bottom:6px">
+          中巴診療車領牌進度追蹤
+        </div>
+        <div style="font-size:12.5px;color:var(--ink-3);line-height:1.85;
+                    background:var(--well);border-radius:4px;padding:10px 12px;margin-bottom:16px">
+          這件事會從你的清單移除，但<b style="color:var(--ink-2)">不會被刪除</b> ——
+          主管在任務看板上仍然看得到，並且會顯示是你標記的。<br>
+          標錯了可以還原。
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-sm">取消</button>
+          <button class="btn btn-sm btn-primary">確定，不用去了</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mk-arrow">↓</div>
+
+  <!-- ═══════════ 4 · 還原 ═══════════ -->
+  <div class="mk-step">
+    <div class="mk-step-h"><div class="mk-step-n">4</div><div class="mk-step-t">標完之後 —— 列消失，但留一個還原</div>
+      <span class="mk-step-when">M2 · OQ-TCA-4</span></div>
+    <p class="mk-step-note">
+      <b>沒有還原就沒有人敢按。</b>這是 <code>task-completion-tracking</code> F-4 早就寫過的理由，
+      而後端的 <code>work-reopen</code> 端點<b>已經存在</b>，只是員工現在碰不到它。
+    </p>
+    <div class="mk-screen mk-new" style="max-width:520px">
+      <div class="mk-screen-bar">我的日報 · 操作後</div>
+      <div class="mk-screen-body">
+        <div class="pdr-raw-hdr" style="border:0;margin:0 0 10px;padding:0">
+          有 <b>21</b> 項指派給你的任務尚未加入日報
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-2);
+                    background:var(--well);border:1px solid var(--line);border-radius:6px;padding:10px 14px">
+          <span style="flex:1">已標記「中巴診療車領牌進度追蹤」為不用去了</span>
+          <button class="dl-card-toggle" style="margin:0;flex-shrink:0;color:var(--primary)">還原</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mk-arrow">↓</div>
+
+  <!-- ═══════════ 5 · 主管端 ═══════════ -->
+  <div class="mk-step">
+    <div class="mk-step-h"><div class="mk-step-n">5</div><div class="mk-step-t">主管端 —— 「員工自行取消」必須看得出來</div>
+      <span class="mk-step-when">M3 · F-1 配套②</span></div>
+    <p class="mk-step-note">
+      這是讓員工可以自己取消的<b>前提條件</b>，不是附加功能。<br>
+      沒有這一塊，F-1（工作靜默消失、沒有人知道）就沒有被緩解 —— <b>P0 未緩解不得上 prod</b>。
+    </p>
+    <div class="mk-screen" style="max-width:640px">
+      <div class="mk-screen-bar">任務看板 · 已結束</div>
+      <div class="mk-screen-body">
+        <div class="pdr-raw-list">
+          <div class="pdr-raw-hdr">本週結束的任務 · 12 件</div>
+          <div class="pdr-raw-item" style="align-items:center">
+            <div class="pdr-raw-text">車輛尾門飾板瑕疵複檢</div>
+            <span class="nc-pill on" style="flex-shrink:0">完成</span>
+          </div>
+          <div class="pdr-raw-item" style="align-items:center">
+            <div class="pdr-raw-text">
+              中巴診療車領牌進度追蹤
+              <div style="font-size:11.5px;color:var(--ink-3);margin-top:3px">由 王○○ 標記為不用去了 · 09/03</div>
+            </div>
+            <span class="nc-pill off" style="flex-shrink:0">不用做了</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="mk-step-note" style="margin-top:12px">
+      ⚠️ 完成率的分母<b>本來就排除「不用做了」</b>（<code>ticket-lane.ts:100</code>）——
+      這不用另外做，但要確認它真的生效，否則取消一堆會被算成做完一堆。
+    </p>
+  </div>
+
+  <div class="mk-arrow">↓</div>
+
+  <!-- ═══════════ 6 · OQ-TCA-9 ═══════════ -->
+  <div class="mk-step">
+    <div class="mk-step-h"><div class="mk-step-n">6</div><div class="mk-step-t">⭐ 最便宜的一條：讓現在「靜默成功」的那條路開口說話</div>
+      <span class="mk-step-when">OQ-TCA-9 · F-9（P0）</span></div>
+    <p class="mk-step-note">
+      實測：至今 34 筆結案<b>全部</b>是群組引用回覆關掉的，最後一次就是今天。<br>
+      2026-08-12 關掉的只有「回話」，<b>收訊完全沒關</b> ——
+      所以現在是「照樣運作，只是不吭聲」。<b>成功和失敗長得一模一樣。</b>
+    </p>
+    <div class="mk-edge">
+      <div class="mk-edge-card">
+        <div class="mk-edge-t" style="color:var(--danger)">現在（群組裡）</div>
+        <div class="mk-line" style="margin:0">
+          <div class="mk-bubble">好了</div>
+          <div style="font-size:12px;color:var(--ink-3);text-align:center;padding:14px 0">（沒有任何回應）</div>
+        </div>
+        <p class="mk-edge-p">他不知道成功了。可能重複做，也可能放棄。</p>
+      </div>
+      <div class="mk-edge-card">
+        <div class="mk-edge-t" style="color:var(--primary-2)">改後（私訊給他一個人）</div>
+        <div class="mk-line" style="margin:0 0 8px">
+          <div class="mk-bubble">好了</div>
+          <div class="mk-bubble-bot">✓ 已記錄：車輛尾門飾板瑕疵複檢
+這件已從你的待辦移除。</div>
+        </div>
+        <p class="mk-edge-p">
+          <b>不回群組</b>，所以不違反「群組一律不出聲」的裁定 ——
+          當初的取捨漏掉了這個選項。
+        </p>
+      </div>
+    </div>
+    <p class="mk-step-note" style="margin-top:14px">
+      ⚠️ 這一條<b>不需要任何新畫面</b>，可能比本文其他所有功能加起來都有效。
+      建議 M1 就做，不要排在後面。
+    </p>
+  </div>
+
+  <!-- ═══════════ 邊界情況 ═══════════ -->
+  <div class="mk-step" style="margin-top:44px">
+    <div class="mk-step-h"><div class="mk-step-n">!</div><div class="mk-step-t">畫的時候浮出來的三件事</div></div>
+    <div class="mk-edge">
+      <div class="mk-edge-card">
+        <div class="mk-edge-t">存量 128 筆不會自己消失</div>
+        <p class="mk-edge-p">
+          功能上線也要人一筆一筆按。<b>過渡期請客服／主管代標</b> ——
+          權限今天就有（<code>warroom-tasks:view</code>），只是上線至今沒人用過（web = 0）。
+        </p>
+      </div>
+      <div class="mk-edge-card">
+        <div class="mk-edge-t">清完舊卡會讓完成率暴衝</div>
+        <p class="mk-edge-p">
+          34 → 150+。主管第一次看到會來問。<b>用 <code>work_closed_at</code> 與
+          <code>created_at</code> 的落差標「補登」</b>，看板可篩掉（OQ-TCA-6）。
+        </p>
+      </div>
+      <div class="mk-edge-card">
+        <div class="mk-edge-t">「不用去了」佔比是驗收指標</div>
+        <p class="mk-edge-p">
+          歷史是 0，所以我們<b>不知道</b>真實比例。上線兩週後若 &gt;40%，
+          代表是為了清畫面在按（F-4），要回頭看流入端，<b>不要再加功能</b>。
+        </p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
