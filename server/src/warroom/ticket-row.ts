@@ -36,6 +36,7 @@ export interface TicketRow extends Record<string, unknown> {
   work_outcome: string | null;
   work_closed_via: string | null;
   work_closed_by_name: string | null;
+  work_closed_by: string | null;
   work_last_report_at: string | null;
   work_last_report_note: string | null;
   work_asked_at: string | null;
@@ -62,6 +63,8 @@ export const TICKET_SELECT: SQL = sql`
          t.confirmed_at::text,
          t.work_status, t.work_outcome, t.work_closed_via,
          wu.display_name AS work_closed_by_name,
+         -- 拿 id 是為了跟 assignee 比對「是不是本人自己標的」（見下方 workClosedBySelf）
+         t.work_closed_by::text AS work_closed_by,
          t.work_last_report_at::text, t.work_last_report_note,
          t.work_asked_at::text
     FROM tickets t
@@ -128,6 +131,16 @@ export function makeTicketMapper(graceDays: number, now: number) {
     workOutcome: r.work_outcome,
     workClosedVia: r.work_closed_via,
     workClosedByName: r.work_closed_by_name,
+    /**
+     * 是不是**當責人自己**標記結束的（task-close-by-assignee M3 · F-1 的配套）。
+     *
+     * ⚠️ 為什麼要導出這一欄而不是看 `workClosedVia`：
+     * 2026-09-03 起員工可以在日報上自己結束任務，那條路徑寫的也是 `via='web'` ——
+     * 跟主管代結案**一模一樣**。只看 via 的話，主管會在看板上看到
+     * 「由 ○○ 代為結束」，而那個 ○○ 其實就是當責人本人。
+     * 這正是 F-1 要防的誤解，所以在這裡比對，不在畫面上猜。
+     */
+    workClosedBySelf: !!r.work_closed_by && r.work_closed_by === r.assignee_user_id,
     workLastReportAt: r.work_last_report_at,
     workLastReportNote: r.work_last_report_note,
     stuckDays: isStuck(r) ? daysSince(r.created_at) : null,
