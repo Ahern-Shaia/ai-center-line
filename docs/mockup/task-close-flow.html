@@ -62,7 +62,7 @@
   <h1 class="mk-h1">「結束自己的任務」· UI flow</h1>
   <p class="mk-sub">
     客戶原話：「我的日報有看到任務了，請問要<b>怎麼刪掉已經完成或是不需要前往</b>的任務」<br>
-    對應 <code>docs/modules/task-close-by-assignee.md</code>（OQ-TCA-1..9 已全採建議）。
+    對應 <code>docs/modules/task-close-by-assignee.md</code> <b>v0.6</b>（OQ 已全數裁定 · 可開工）。
   </p>
 
   <div class="mk-basis">
@@ -133,7 +133,9 @@
     <p class="mk-step-note">
       <b>「加入日報」不動</b>（那是這一區既有的目的，不可以默默換掉）。<br>
       新增「已完成」外露 —— 歷史 34 筆結案 100% 是完成，最高頻。<br>
-      「不用做了」收進 ⋯ —— 歷史 <b>0 筆</b>，稀少且不可逆感強，不該與主動作等權。
+      「不用做了」收進 ⋯ —— ⚠️ 歷史是 <b>0 筆，但那不代表它稀少</b>：
+      在今天之前**根本沒有任何地方可以表達它**（網頁員工到不了、LINE 分類器不認得）。
+      收進 ⋯ 的理由是它<b>不可逆感強</b>、需要二次確認，不是因為少。
     </p>
     <div class="mk-screen mk-new">
       <div class="mk-screen-bar">我的日報 · 2026-09-03</div>
@@ -277,7 +279,10 @@
     <div class="mk-step-h"><div class="mk-step-n">6</div><div class="mk-step-t">⭐ 最便宜的一條：讓現在「靜默成功」的那條路開口說話</div>
       <span class="mk-step-when">OQ-TCA-9 · F-9（P0）</span></div>
     <p class="mk-step-note">
-      實測：至今 34 筆結案<b>全部</b>是群組引用回覆關掉的，最後一次就是今天。<br>
+      實測：至今 34 筆結案<b>全部</b>是群組引用回覆關掉的（21 筆關既有任務 ＋ 13 筆系統補建），
+      最後一次就是今天。<br>
+      ⚠️ 但<b>真正關掉一張既有任務，最後一次是 08-27</b> —— 已經停擺一週，
+      而 <code>progress_logged</code> 353 筆天天都有。習慣是活的，只是沒有回音。<br>
       2026-08-12 關掉的只有「回話」，<b>收訊完全沒關</b> ——
       所以現在是「照樣運作，只是不吭聲」。<b>成功和失敗長得一模一樣。</b>
     </p>
@@ -309,6 +314,47 @@
     </p>
   </div>
 
+  <div class="mk-arrow">↓</div>
+
+  <!-- ═══════════ 7 · 刻意不做的事 ═══════════ -->
+  <div class="mk-step">
+    <div class="mk-step-h"><div class="mk-step-n">7</div>
+      <div class="mk-step-t">⭐ 刻意不做：LINE 裡<b>不</b>接「不用做了」</div>
+      <span class="mk-step-when">OQ-TCA-11 · ❌ 已裁定不做</span></div>
+    <p class="mk-step-note">
+      畫到這裡本來要在 LINE 也接一句「不用處理了」。<b>量完之後收回。</b>
+      近六週全部訊號用取消類關鍵字粗篩只中 3 筆 —— 而且 <b>2 真 1 假</b>：
+    </p>
+    <div class="mk-screen" style="max-width:620px">
+      <div class="mk-screen-bar">pending_completion_signal · 取消類粗篩</div>
+      <div class="mk-screen-body">
+        <div class="pdr-raw-list">
+          <div class="pdr-raw-item" style="align-items:center">
+            <div class="pdr-raw-text">「差旅費計算和申請不是一直都是業務<b>自己處理</b>的嗎?」</div>
+            <span class="nc-pill off" style="flex-shrink:0">誤抓 · 是提問</span>
+          </div>
+          <div class="pdr-raw-item" style="align-items:center">
+            <div class="pdr-raw-text">「客戶有找到了，<b>不用處理</b>」</div>
+            <span class="nc-pill on" style="flex-shrink:0">真的</span>
+          </div>
+          <div class="pdr-raw-item" style="align-items:center">
+            <div class="pdr-raw-text">「保險桿中間離地太低，<b>乾脆取消</b>」</div>
+            <span class="nc-pill on" style="flex-shrink:0">真的</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mk-note-warn" style="background:var(--well);border-left-color:var(--primary);color:var(--ink-2)">
+      <b style="color:var(--ink)">為什麼 LINE 接得到完成，卻接不到取消 —— 這不是漏接：</b><br><br>
+      <b style="color:var(--primary-2)">完成是「當下講出來」的事；取消是「回頭看清單才發現」的事。</b><br><br>
+      做完一件事，那一刻自然會在群裡說一聲 —— 所以 LINE 接得到（34 筆）。<br>
+      但「這件不用做了」通常不是某個時刻的宣告，而是他<b>打開清單、看到那 22 筆、
+      才意識到「這個早就不用了」</b>。那個念頭<b>從來不會在 LINE 裡發生</b>。<br><br>
+      客戶也正是<b>看著日報</b>問的，不是在做完某件事的當下問的。
+      所以「不用做了」就該在步驟 2 那個 ⋯ 選單裡，不在這裡。
+    </div>
+  </div>
+
   <!-- ═══════════ 邊界情況 ═══════════ -->
   <div class="mk-step" style="margin-top:44px">
     <div class="mk-step-h"><div class="mk-step-n">!</div><div class="mk-step-t">畫的時候浮出來的三件事</div></div>
@@ -330,7 +376,8 @@
       <div class="mk-edge-card">
         <div class="mk-edge-t">「不用做了」佔比是驗收指標</div>
         <p class="mk-edge-p">
-          歷史是 0，所以我們<b>不知道</b>真實比例。上線兩週後若 &gt;40%，
+          歷史是 0 是因為<b>沒有出口</b>，不是因為稀少 —— 所以我們<b>不知道</b>真實比例。
+          上線兩週後若 &gt;40%，
           代表是為了清畫面在按（F-4），要回頭看流入端，<b>不要再加功能</b>。
         </p>
       </div>
