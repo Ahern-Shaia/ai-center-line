@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>打卡狀態機 · 補畫三個畫面（attendance-trip-state-machine）</title>
+<!-- ⚠️ 直接連正式的樣式表 —— 不另外抄一份，看到的就是實際會長出來的樣子 -->
+<link rel="stylesheet" href="../../web/src/styles.css">
+<style>
+  /* mockup 專用外框（不進正式碼） */
+  body { background:var(--canvas); font-family:var(--sans); }
+  .mk-wrap { max-width:1080px; margin:0 auto; padding:28px 20px 80px; }
+  .mk-h1 { font-size:22px; font-weight:700; color:var(--ink); margin:0 0 6px; }
+  .mk-sub { font-size:13px; color:var(--ink-3); line-height:1.7; margin:0 0 6px; }
+  .mk-basis { font-size:12px; color:var(--ink-3); background:var(--well);
+    border:1px solid var(--line); border-left:3px solid var(--primary);
+    border-radius:4px; padding:10px 14px; line-height:1.9; margin:14px 0 30px; }
+  .mk-basis b { color:var(--ink); }
+  .mk-step { margin:0 0 34px; }
+  .mk-step-h { display:flex; align-items:center; gap:10px; margin:0 0 4px; }
+  .mk-step-n { background:var(--ink); color:#fff; width:24px; height:24px; border-radius:50%;
+    font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .mk-step-t { font-size:15.5px; font-weight:700; color:var(--ink); }
+  .mk-step-when { font-size:12px; color:var(--ink-3); font-family:var(--mono);
+    background:var(--well); padding:2px 8px; border-radius:3px; }
+  .mk-step-note { font-size:12.5px; color:var(--ink-2); line-height:1.8; margin:0 0 12px 34px; }
+  .mk-screen { border:1px solid var(--line); border-radius:8px; background:var(--surface);
+    overflow:hidden; margin-left:34px; box-shadow:0 1px 2px rgba(17,24,39,.04); }
+  .mk-screen-bar { background:var(--well); border-bottom:1px solid var(--line);
+    padding:7px 14px; font-size:11.5px; color:var(--ink-3); font-family:var(--mono); }
+  .mk-screen-body { padding:20px 22px; }
+  .mk-new { position:relative; }
+  /* 實作時＝新增一個 .pdr-item-due，形狀比照既有的 .pdr-item-time，只換成 primary tint */
+  .mk-due { font-size:11.5px; font-family:var(--mono); color:var(--primary-2);
+    background:var(--primary-tint); padding:2px 8px; border-radius:3px; }
+  .mk-new2 { outline:2px dashed var(--primary); outline-offset:3px; border-radius:4px; }
+  .mk-new::after { content:"新增"; position:absolute; top:-9px; right:10px;
+    background:var(--primary); color:#fff; font-size:10.5px; font-weight:700;
+    padding:2px 8px; border-radius:3px; letter-spacing:.04em; }
+  .mk-line { max-width:420px; }
+  .mk-bubble { background:#8DE055; color:#111; border-radius:14px; padding:11px 14px;
+    font-size:13.5px; line-height:1.7; white-space:pre-wrap; margin:0 0 6px auto; max-width:330px; }
+  .mk-bubble-bot { background:var(--surface); border:1px solid var(--line);
+    border-radius:14px; padding:9px 13px; font-size:13.5px; color:var(--ink);
+    display:inline-block; }
+  .mk-arrow { text-align:center; color:var(--ink-3); font-size:20px; margin:-14px 0 14px 34px; }
+  .mk-edge { margin-left:34px; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
+  .mk-edge-card { border:1px solid var(--line); border-radius:6px; background:var(--surface); padding:14px 16px; }
+  .mk-edge-t { font-size:13px; font-weight:700; color:var(--ink); margin:0 0 6px; }
+  .mk-edge-p { font-size:12.5px; color:var(--ink-2); line-height:1.8; margin:0; }
+</style></head>
+<body>
+<div class="mk-wrap">
+
+  <h1 class="mk-h1">打卡狀態機 · 補畫三個畫面</h1>
+  <p class="mk-sub">
+    對應 <code>docs/modules/attendance-trip-state-machine.md</code>（M0 v0.2 · 可開工）。<br>
+    ⚠️ <b>四態中的前三態已畫在
+    <code>docs/mockup/task-duration-flow.html</code></b>（開始外勤／我到了／離開〈某站〉），
+    這裡<b>不重畫</b>，只補那三個沒有畫面的。
+  </p>
+
+  <div class="mk-basis">
+    <b>為什麼這三個要單獨畫</b><br>
+    它們<b>不是視覺問題，是行為問題</b> —— 只用文字描述，實作時很容易做成另一個意思：<br>
+    · <b>ended</b>：結束之後還能不能繼續？畫面要讓人知道（doc §4.2）<br>
+    · <b>「狀態不對？」</b>：這是<b>唯一的逃生門</b>。只畫一顆按鈕不夠，展開方式決定使用者能不能自救<br>
+    · <b>位置感知自動切換</b>：<b>系統替使用者改了狀態</b>。沒畫清楚就實作，很容易做成「靜默切換」——
+      那是最糟的（doc §5.1）<br>
+    <br>
+    <b>畫面依據</b>：直接 <code>&lt;link&gt;</code> 正式的 <code>web/src/styles.css</code>；
+    版型抄 <code>PunchView.tsx</code> 的 <code>.liff-wrap</code> / <code>.liff-h</code> /
+    <code>.liff-sub</code> / <code>.liff-card</code> / <code>.field</code>。人名地點皆假名化。
+  </div>
+
+  <!-- ── A · ended ─────────────────────────────── -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">A</span>
+      <span class="mk-step-t">ended —— 今日行程結束之後</span>
+      <span class="mk-step-when">18:20</span>
+    </div>
+    <p class="mk-step-note">
+      <b>不顯示主按鈕</b>，改顯示今日總結（doc §4.2）。<br>
+      「繼續外勤」放<b>次要位階</b> —— 收班之後又要出門是少數情況，
+      但它必須存在，否則按錯「結束」的人今天就再也打不了卡。
+    </p>
+    <div class="mk-screen">
+      <div class="mk-screen-bar">LINE · 外勤打卡</div>
+      <div class="mk-screen-body">
+        <div class="liff-wrap" style="padding:0">
+          <h2 class="liff-h">外勤打卡</h2>
+          <p class="liff-sub">今日行程已結束。</p>
+          <div class="my-month">
+            <div class="my-month-hd">今天</div>
+            <div class="my-month-row">
+              <div class="my-month-cell"><b>4</b><span>站</span></div>
+              <div class="my-month-cell"><b>38.2</b><span>公里</span></div>
+              <div class="my-month-cell"><b>3小時12分</b><span>在客戶端</span></div>
+            </div>
+            <div class="my-month-top">08:40 出發 · 18:05 結束</div>
+          </div>
+          <button class="dl-card-toggle" style="margin-top:4px">繼續外勤</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── B · 狀態不對？ ─────────────────────────── -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">B</span>
+      <span class="mk-step-t">「狀態不對？」點下去 —— 唯一的逃生門</span>
+    </div>
+    <p class="mk-step-note">
+      系統以為他在站上（<code>at_site</code>），但他其實已經在路上了 ——
+      誤觸、或自動切換猜錯。<br>
+      ⚠️ <b>不做成「兩顆平行按鈕」</b>（那會讓每次打卡都要判斷）。
+      這裡是<b>次要位階、點開才出現</b>，平常零判斷、出錯有得救。<br>
+      ⚠️ 選項要<b>用他的話講</b>，不是「切換為 moving」這種內部術語。
+    </p>
+    <div class="mk-screen">
+      <div class="mk-screen-bar">LINE · 外勤打卡 · 點了「狀態不對？」</div>
+      <div class="mk-screen-body">
+        <div class="liff-wrap" style="padding:0">
+          <div class="liff-card mk-new" style="border-color:var(--warn)">
+            <div class="liff-groups-hd" style="margin-bottom:10px">
+              系統目前認為你<b>在〈示範長青園〉</b>（14:32 抵達）
+            </div>
+            <button class="btn" style="width:100%;margin-bottom:8px;text-align:left">
+              我已經離開了，只是忘了按
+              <span class="liff-note" style="display:block">
+                → 補一筆離開紀錄，這一趟照常計算時間
+              </span>
+            </button>
+            <button class="btn" style="width:100%;margin-bottom:8px;text-align:left">
+              我根本沒到這一站，是按錯的
+              <span class="liff-note" style="display:block">
+                → 刪掉這筆抵達紀錄，回到「在路上」
+              </span>
+            </button>
+            <button class="dl-card-toggle" style="width:100%">取消</button>
+          </div>
+          <p class="liff-note" style="margin-top:10px">
+            ⚠️ 座標與時間是出勤證據，一律不可修改 —— 這裡只補或撤銷「抵達／離開」這個事件。
+          </p>
+        </div>
+      </div>
+    </div>
+    <p class="mk-step-note" style="margin-top:10px">
+      ⚠️ 第二個選項（<b>按錯了</b>）會<b>刪掉一筆打卡</b>，屬於改動出勤紀錄 ——
+      doc §9「補打卡政策」說補打不可偽造。這裡的界線是：
+      <b>撤銷自己 N 分鐘內的誤觸可以，補一筆過去的不行</b>（時限見 OQ）。
+    </p>
+  </section>
+
+  <!-- ── C · 位置感知 ──────────────────────────── -->
+  <section class="mk-step">
+    <div class="mk-step-h">
+      <span class="mk-step-n">C</span>
+      <span class="mk-step-t">位置感知自動切換 —— 系統替你改了狀態，但要說出來</span>
+    </div>
+    <p class="mk-step-note">
+      <code>at_site</code> 時前端比對目前位置與該站座標（doc §5.1）。<br>
+      <b>doc 最重要的一句是「按下去就是對的」</b> ——
+      使用者永遠不需要意識到自己漏了一步，主按鈕永遠是當下正確的動作。<br>
+      ⚠️ 但<b>不可以靜默</b>：系統換了狀態卻不說，使用者會覺得「我沒按它怎麼變了」。
+    </p>
+
+    <div class="mk-edge" style="margin-left:34px">
+      <div class="mk-edge-card">
+        <p class="mk-edge-t">距離 &lt; 200 m · 還在站上</p>
+        <div class="mk-screen" style="margin-left:0">
+          <div class="mk-screen-body" style="padding:14px 16px">
+            <p class="liff-sub" style="margin-bottom:10px">
+              目前在〈示範長青園〉· 已停留 32 分鐘
+            </p>
+            <button class="btn btn-primary" style="width:100%;padding:14px">
+              離開〈示範長青園〉，前往下一站
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-edge-card mk-new2">
+        <p class="mk-edge-t">距離 ≥ 200 m · 已經走了</p>
+        <div class="mk-screen" style="margin-left:0">
+          <div class="mk-screen-body" style="padding:14px 16px">
+            <p class="liff-sub" style="margin-bottom:10px">
+              偵測到你已離開〈示範長青園〉<br>
+              <span class="liff-note">這一段會標記為「未記錄離開時間」</span>
+            </p>
+            <button class="btn btn-primary" style="width:100%;padding:14px">
+              我到了（新的一站）
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="mk-step-note" style="margin-top:12px">
+      ⚠️ 右邊那個情況<b>不彈窗、不紅字、不擋流程</b>（doc §5.3「教育而不責備」）——
+      提示寫在按鈕上方，他看到就知道，看不到也不影響操作。<br>
+      之後在「我的行程」那一段附一句：
+      「<b>下次離開時按一下「出發」，就能分開算「停留」和「路上」的時間。</b>」
+    </p>
+  </section>
+
+  <!-- 判準 -->
+  <h2 class="mk-h1" style="font-size:17px;margin:44px 0 6px">三個判準（實作時最容易走偏的地方）</h2>
+  <div class="mk-edge">
+    <div class="mk-edge-card">
+      <p class="mk-edge-t">「按下去就是對的」</p>
+      <p class="mk-edge-p">
+        主按鈕永遠是當下正確的動作。使用者<b>不需要知道自己現在是什麼狀態</b>，
+        更不需要知道「moving」「at_site」這些詞。
+      </p>
+    </div>
+    <div class="mk-edge-card">
+      <p class="mk-edge-t">系統改狀態必須說出來</p>
+      <p class="mk-edge-p">
+        位置感知切換是<b>系統替使用者做決定</b>。做成靜默的話，
+        他會覺得畫面自己在變 —— 那比多按一次還糟。
+      </p>
+    </div>
+    <div class="mk-edge-card">
+      <p class="mk-edge-t">逃生門要能真的救</p>
+      <p class="mk-edge-p">
+        「狀態不對？」只放一顆按鈕、點了跳一個「已回報」是<b>假的逃生門</b>。
+        它必須真的改得動狀態，否則使用者只能<b>製造一筆假的停留</b>來繞。
+      </p>
+    </div>
+  </div>
+
+  <p class="mk-sub" style="margin-top:34px;font-size:12px">
+    ⚠️ 這三個畫面裡有一個<b>還沒裁定的東西</b>：B 的第二個選項會刪掉一筆打卡，
+    需要決定<b>時限</b>（幾分鐘內的誤觸可撤銷）。開工前要補一題 OQ。
+  </p>
+
+</div>
+</body>
+</html>
