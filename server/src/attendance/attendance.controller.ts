@@ -5,7 +5,9 @@ import { AttendanceService } from "./attendance.service.js";
 import { AllowAnyUser } from "../auth/allow-any-user.decorator.js";
 import { msg } from "../i18n/index.js";
 
-const PUNCH_TYPES = ["clock_in", "arrive_site", "clock_out"] as const;
+// ⚠️ 從狀態機拿，不要在這裡另抄一份 —— 兩份清單遲早會漂移，
+//    而漂移的症狀是「某個動作 400，但畫面上明明有那顆按鈕」。
+import { PUNCH_TYPES, type PunchType } from "./trip-state.js";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // 外勤打卡 · JWT 認證（LIFF 先 applyLiffToken 換 JWT）· 用 CurrentUser 的 user_id/tenant_id
@@ -13,6 +15,13 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 @Controller("attendance")
 export class AttendanceController {
   constructor(private readonly svc: AttendanceService) {}
+
+  /** 現在該顯示哪顆按鈕 · 前端不要自己推（§7.1）*/
+  @Get("state")
+  @AllowAnyUser()
+  async state(@CurrentUser() user: JwtUser) {
+    return this.svc.getState(user);
+  }
 
   @Post("punch")
   @AllowAnyUser()
@@ -30,7 +39,7 @@ export class AttendanceController {
       throw new BadRequestException(msg("srv.v.coordRange"));
     }
     return this.svc.punch(user, {
-      punchType: body.punchType as (typeof PUNCH_TYPES)[number],
+      punchType: body.punchType as PunchType,
       lat,
       lng,
       accuracyM: typeof body.accuracyM === "number" ? body.accuracyM : null,

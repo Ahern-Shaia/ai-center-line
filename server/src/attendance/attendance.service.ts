@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { resolveState, isAllowed, primaryAction, allowedActions, type PunchType, type TripState } from "./trip-state.js";
 import { sql } from "drizzle-orm";
 import { currentTx, withSystemTx } from "../db/client.js";
 import type { JwtUser } from "../auth/jwt-user.js";
@@ -9,7 +10,7 @@ import { buildRoutingProvider, getRoutingProvider, haversineMeters, type LatLng,
 import { msg } from "../i18n/index.js";
 
 export interface PunchInput {
-  punchType: "clock_in" | "arrive_site" | "clock_out";
+  punchType: PunchType;
   lat: number | null;
   lng: number | null;
   accuracyM: number | null;
@@ -20,6 +21,7 @@ export interface PunchInput {
 const PUNCH_TYPE_LABEL: Record<string, string> = {
   clock_in: "出發打卡",
   arrive_site: "到點打卡",
+  depart_site: "離站打卡",
   clock_out: "下班打卡",
 };
 
@@ -28,6 +30,14 @@ const PUNCH_TYPE_LABEL: Record<string, string> = {
 // 這種段落不該去問路由服務——Google/ORS 找不到「同一點到同一點」的路線，
 // 會被誤判成「算不出來」而永遠留 null、卡在待補算清單。
 const SAME_LOCATION_THRESHOLD_M = 20;
+
+/** 狀態的中文說法 · 錯誤訊息用（使用者看得懂的字，不是 not_started） */
+const STATE_LABEL: Record<string, string> = {
+  not_started: "今天還沒開始外勤",
+  moving: "在前往下一站的路上",
+  at_site: "在某一站上",
+  ended: "今日行程已結束",
+};
 
 const SPEED_LIMIT_KMH = 150;   // 直線速度上限（保守）· 超過視為不合理（瞬移/偽造）
 const ACCURACY_LIMIT_M = 100;  // GPS 精度上限 · 超過標低信心
@@ -42,7 +52,15 @@ export function computeSuspicious(
   if (curr.accuracyM != null && curr.accuracyM > ACCURACY_LIMIT_M) {
     flags.low_accuracy_m = Math.round(curr.accuracyM);
   }
-  if (prev?.lat != null && prev.lng != null && curr.lat != null && curr.lng != null) {
+  // ⚠️ 速度只在「純移動」的段落上判（0074 · doc §6.2）。
+  //
+  //    舊口徑是「相鄰任兩筆」，在只有 clock_in/arrive_site 時剛好都是移動段。
+  //    加入 depart_site 之後，arrive_site → depart_site 那一段是**停留**：
+  //    人待在原地，位移接近 0、時間卻很長 —— 拿去算速度沒有意義。
+  //    更糟的是反過來：停留 2 分鐘就離站（很常見）＋ GPS 飄個幾十公尺，
+  //    會算出一個很大的 km/h 而被標成「瞬移」，把乾淨的打卡誣告成造假。
+  const isMovementLeg = prev != null && prev.punchType !== "arrive_site";
+  if (isMovementLeg && prev?.lat != null && prev.lng != null && curr.lat != null && curr.lng != null) {
     const straight = haversineMeters({ lat: prev.lat, lng: prev.lng }, { lat: curr.lat, lng: curr.lng });
     const hours = (nowMs - prev.punchedAtMs) / 3_600_000;
     if (hours > 0) {
@@ -74,6 +92,38 @@ export class AttendanceService {
     return getRoutingProvider();
   }
 
+  /**
+   * 現在該顯示什麼 · docs/modules/attendance-trip-state-machine.md §7.1
+   *
+   * ⚠️ 前端**不要**再用 `punches.length` 自己推狀態（現行 PunchView 的做法）。
+   * 那在只有兩個型別時剛好對，加了 depart_site 之後會推錯，
+   * 而且錯法是安靜的：按鈕顯示成別的動作，人照按。
+   * 狀態只有一個來源，就是這裡。
+   */
+  async getState(user: JwtUser): Promise<{
+    state: TripState;
+    primaryAction: PunchType | null;
+    allowedActions: PunchType[];
+    lastPunch: { punchId: string; punchType: PunchType; at: string; lat: number | null; lng: number | null } | null;
+  }> {
+    const tx = currentTx();
+    const prev = await this.repo.getLatestPunchToday(tx, user.user_id);
+    const state = resolveState(prev?.punchType ?? null);
+    return {
+      state,
+      primaryAction: primaryAction(state),
+      allowedActions: allowedActions(state),
+      lastPunch: prev && {
+        punchId: prev.punchId,
+        punchType: prev.punchType,
+        at: new Date(prev.punchedAtMs).toISOString(),
+        // 位置感知自動切換要用（§8）—— 前端比對現在位置與上一次打卡的距離
+        lat: prev.lat,
+        lng: prev.lng,
+      },
+    };
+  }
+
   async punch(user: JwtUser, input: PunchInput): Promise<{
     punchId: string;
     suspicious: Record<string, number> | null;
@@ -83,6 +133,23 @@ export class AttendanceService {
     const tx = currentTx();
 
     const prev = await this.repo.getLatestPunchToday(tx, user.user_id);
+
+    // ⚠️⚠️ 狀態驗證（0074 · doc §7.2）。前端是單鍵、照理送不出不合法的動作，
+    //    但**不可以只靠前端**：舊版 App 沒更新、重送、手動打 API 都會繞過它。
+    //    擋不住的後果是配對錯亂（兩次 arrive 沒有 depart），
+    //    而那個錯**沒有任何跡象** —— 時長算出來是錯的，沒有人會發現。
+    const state = resolveState(prev?.punchType ?? null);
+    if (!isAllowed(state, input.punchType)) {
+      // 訊息要講「現在該做什麼」，不是只說「不允許」——
+      // 他看到的畫面和後端認定的狀態不一致時，這句話是他唯一的線索。
+      throw new BadRequestException(
+        msg("srv.att.stateMismatch", {
+          now: STATE_LABEL[state],
+          expect: PUNCH_TYPE_LABEL[primaryAction(state) ?? ""] ?? "重新整理頁面",
+        }),
+      );
+    }
+
     const suspicious = computeSuspicious(prev, input, Date.now());
 
     const { punchId } = await this.repo.insertPunch(tx, {

@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { PunchType } from "./trip-state.js";
 import { sql } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 
@@ -7,6 +8,8 @@ export interface PunchLite {
   lat: number | null;
   lng: number | null;
   punchedAtMs: number;
+  /** 狀態機用（0074）· 決定現在該顯示哪顆按鈕、哪些動作允許 */
+  punchType: PunchType;
 }
 
 export interface TripDetail {
@@ -40,8 +43,10 @@ export interface PunchDetail {
 export class AttendanceRepository {
   // 同一員工「當日、此刻之前」最近一筆打卡（算里程與速度的前一點）
   async getLatestPunchToday(tx: Db, userId: string): Promise<PunchLite | null> {
-    const res = await tx.execute<{ punch_id: string; lat: number | null; lng: number | null; punched_at: string }>(sql`
-      SELECT punch_id, lat::float8 AS lat, lng::float8 AS lng, punched_at::text AS punched_at
+    const res = await tx.execute<{
+      punch_id: string; lat: number | null; lng: number | null; punched_at: string; punch_type: PunchType;
+    }>(sql`
+      SELECT punch_id, punch_type, lat::float8 AS lat, lng::float8 AS lng, punched_at::text AS punched_at
       FROM attendance_punch
       WHERE user_id = ${userId}::uuid
         AND (punched_at AT TIME ZONE 'Asia/Taipei')::date = (now() AT TIME ZONE 'Asia/Taipei')::date
@@ -50,13 +55,13 @@ export class AttendanceRepository {
     `);
     const r = res.rows[0];
     if (!r) return null;
-    return { punchId: r.punch_id, lat: r.lat, lng: r.lng, punchedAtMs: Date.parse(r.punched_at) };
+    return { punchId: r.punch_id, punchType: r.punch_type, lat: r.lat, lng: r.lng, punchedAtMs: Date.parse(r.punched_at) };
   }
 
   async insertPunch(tx: Db, p: {
     tenantId: string;
     userId: string;
-    punchType: "clock_in" | "arrive_site" | "clock_out";
+    punchType: PunchType;
     lat: number | null;
     lng: number | null;
     accuracyM: number | null;

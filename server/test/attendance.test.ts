@@ -30,7 +30,7 @@ test("真實移動（台北車站→松山機場）→ 遠大於門檻，應走�
 });
 
 test("反作弊 · 精度佳 + 合理速度 → 無旗標", () => {
-  const prev = { punchId: "p", lat: 25.03, lng: 121.56, punchedAtMs: now - 30 * 60_000 }; // 30 分前
+  const prev = { punchId: "p", punchType: "clock_in" as const, lat: 25.03, lng: 121.56, punchedAtMs: now - 30 * 60_000 }; // 30 分前 · 移動段
   // 台北市內移動約 3km · 30 分 → 6 km/h
   const flags = computeSuspicious(prev, { lat: 25.05, lng: 121.57, accuracyM: 15 }, now);
   assert.equal(flags, null);
@@ -42,7 +42,7 @@ test("反作弊 · GPS 精度過大 → low_accuracy_m", () => {
 });
 
 test("反作弊 · 不合理速度（台北→台中 10 分鐘）→ impossible_speed_kmh", () => {
-  const prev = { punchId: "p", lat: 25.03, lng: 121.56, punchedAtMs: now - 10 * 60_000 }; // 10 分前
+  const prev = { punchId: "p", punchType: "depart_site" as const, lat: 25.03, lng: 121.56, punchedAtMs: now - 10 * 60_000 }; // 10 分前 · 移動段
   const flags = computeSuspicious(prev, { lat: 24.14, lng: 120.68, accuracyM: 12 }, now);
   assert.ok(flags && flags.impossible_speed_kmh > 150, `flags=${JSON.stringify(flags)}`);
 });
@@ -50,4 +50,31 @@ test("反作弊 · 不合理速度（台北→台中 10 分鐘）→ impossible_
 test("反作弊 · 無前一點 → 只檢查精度（此處精度佳）→ null", () => {
   const flags = computeSuspicious(null, { lat: 25.03, lng: 121.56, accuracyM: 10 }, now);
   assert.equal(flags, null);
+});
+
+// ── 0074 · 速度判定改口徑（doc §6.2）──────────────────────────
+// 舊口徑「相鄰任兩筆」在只有 clock_in/arrive_site 時剛好都是移動段；
+// 加了 depart_site 之後 arrive→depart 是**停留**，拿去算速度會誣告乾淨的打卡。
+
+test("⭐⭐ 停留段（arrive_site → depart_site）不判速度", () => {
+  // 在同一個地方待 2 分鐘就離站（很常見）＋ GPS 飄 300 公尺
+  // → 舊口徑會算出 9 km/h... 拉近一點：飄 800m / 2 分 = 24 km/h，還不夠。
+  //   直接用會超標的組合：位移 8km / 2 分 = 240 km/h。
+  //   重點是**同樣的數字**在停留段要放行、在移動段要標記。
+  const stay = { punchId: "p", punchType: "arrive_site" as const, lat: 25.03, lng: 121.56, punchedAtMs: now - 2 * 60_000 };
+  const flags = computeSuspicious(stay, { lat: 25.10, lng: 121.56, accuracyM: 12 }, now);
+  assert.equal(flags, null, "停留段被判成瞬移 —— 會把正常打卡誣告成造假");
+});
+
+test("⭐⭐ 對照組：同樣的位移與時間，在移動段仍要標記", () => {
+  // ⚠️ 沒有這個對照組的話，上面那條「回 null」也可能是因為函式整個壞掉
+  const move = { punchId: "p", punchType: "depart_site" as const, lat: 25.03, lng: 121.56, punchedAtMs: now - 2 * 60_000 };
+  const flags = computeSuspicious(move, { lat: 25.10, lng: 121.56, accuracyM: 12 }, now);
+  assert.ok(flags?.impossible_speed_kmh, "移動段的瞬移應該要被標記");
+});
+
+test("⭐ 精度旗標不受段落型別影響（它跟移動無關）", () => {
+  const stay = { punchId: "p", punchType: "arrive_site" as const, lat: 25.03, lng: 121.56, punchedAtMs: now - 2 * 60_000 };
+  const flags = computeSuspicious(stay, { lat: 25.031, lng: 121.561, accuracyM: 350 }, now);
+  assert.deepEqual(flags, { low_accuracy_m: 350 });
 });

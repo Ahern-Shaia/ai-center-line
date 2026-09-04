@@ -12,6 +12,7 @@ export default {
   "srv.auth.lockedNow": "帳號連續錯誤 {n} 次已鎖定 · 請 {min} 分鐘後再試",
   "srv.auth.noBearer": "缺少 Bearer token",
   "srv.auth.noTenant": "此帳號未歸屬租戶",
+  "srv.att.stateMismatch": "目前狀態是「{now}」，這個動作不適用。請重新整理後改按「{expect}」。",
   "srv.auth.noTenantPunch": "此帳號無所屬租戶 · 無法打卡",
   "srv.auth.noUser": "使用者不存在",
   "srv.auth.noUserOrPw": "使用者不存在或未設密碼",

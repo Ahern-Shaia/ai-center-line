@@ -11,6 +11,7 @@ export default {
   "srv.auth.lockedNow": "Locked after {n} consecutive failed attempts — try again in {min} minutes",
   "srv.auth.noBearer": "Missing Bearer token",
   "srv.auth.noTenant": "This account is not assigned to a tenant",
+  "srv.att.stateMismatch": "Your current state is “{now}”, so this action does not apply. Refresh and use “{expect}” instead.",
   "srv.auth.noTenantPunch": "This account is not assigned to a tenant — punching in is unavailable",
   "srv.auth.noUser": "User does not exist",
   "srv.auth.noUserOrPw": "User does not exist, or has no password set",
