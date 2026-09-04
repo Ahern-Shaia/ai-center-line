@@ -49,8 +49,6 @@ const PATH_LABEL: [string, string][] = [
   ["GET /media/…/content", "srv.audit.act.get-media-content"],
   ["GET /media", "srv.audit.act.get-media"],
   ["GET /me/permissions", "srv.audit.act.get-me-permissions"],
-  ["PATCH /personal-daily-report/mine/tasks/…/close", "srv.audit.act.patch-pdr-task-close"],
-  ["PATCH /personal-daily-report/mine/tasks/…/reopen", "srv.audit.act.patch-pdr-task-reopen"],
   ["POST /personal-daily-report", "srv.audit.act.post-personal-daily-report"],
   ["GET /personal-daily-report", "srv.audit.act.get-personal-daily-report"],
   ["POST /attendance", "srv.audit.act.post-attendance"],

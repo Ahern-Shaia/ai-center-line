@@ -31,7 +31,6 @@ const admin = () => new pg.Client({ connectionString: process.env.MIGRATION_DATA
 const att = new AttendanceService(new AttendanceRepository(), {} as never, {} as never);
 const pdr = new PersonalDailyReportController(
   {} as never, new PersonalDailyReportRepository(), {} as never, {} as never, {} as never,
-  {} as never,   // workStatus · 這幾個測試不碰結束任務的路徑
 );
 
 const jwt = (userId: string) =>

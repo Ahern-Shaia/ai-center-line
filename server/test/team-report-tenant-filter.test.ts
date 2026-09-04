@@ -34,7 +34,6 @@ const D = "2026-08-20";
 const admin = () => new pg.Client({ connectionString: process.env.MIGRATION_DATABASE_URL });
 const ctrl = new PersonalDailyReportController(
   {} as never, new PersonalDailyReportRepository(), {} as never, {} as never, {} as never,
-  {} as never,   // workStatus · 這幾個測試不碰結束任務的路徑
 );
 
 /** 以平台管理員身分（跨租戶角色）跑 */

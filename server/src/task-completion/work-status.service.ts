@@ -6,13 +6,6 @@ import { msg } from "../i18n/index.js";
 
 const OUTCOMES: readonly WorkOutcome[] = ["完成", "不用做了", "轉他人", "做不到"];
 
-/**
- * 當責人自己能用的結果 —— 只有兩個（docs/modules/task-close-by-assignee.md OQ-TCA-8）。
- *
- * 「轉他人」要指定對象、「做不到」要填卡在哪，兩者都是另一段流程；
- * 塞進日報那一列會讓它從「清掉手上的東西」變成「填表」。
- */
-const ASSIGNEE_OUTCOMES: readonly WorkOutcome[] = ["完成", "不用做了"];
 
 /**
  * 網頁端的補登與還原（M5）· docs/modules/task-completion-tracking.md §7
@@ -78,76 +71,6 @@ export class WorkStatusService {
     `);
     if (r.rows.length === 0) throw new NotFoundException(msg("srv.work.notClosed"));
     this.logger.log(`work reopen · ticket=${ticketId} by=${actorUserId}`);
-    return { ticketId, workStatus: "open" };
-  }
-
-  /**
-   * 當責人自己結束手上的任務 · docs/modules/task-close-by-assignee.md M1
-   *
-   * 跟 `close()` 的差別只有兩點，但兩點都是安全性質的：
-   *   ① outcome 只收「完成／不用做了」（OQ-TCA-8）
-   *   ② **只能結束自己的**（F-2 · P0）
-   *
-   * ⚠️⚠️ 為什麼不共用 `close()` 再加個 if：
-   * `close()` 是**主管代結案**的路徑，它刻意允許結束別人的票（doc 開頭那段註解）。
-   * 把「是不是本人」做成參數，總有一天會有人傳錯而且不會有任何跡象。
-   * 兩條路的授權模型不同，就分兩支。
-   */
-  async closeByAssignee(ticketId: string, outcome: string, actorUserId: string) {
-    if (!ASSIGNEE_OUTCOMES.includes(outcome as WorkOutcome)) {
-      throw new BadRequestException(msg("srv.work.outcomeNotAllowed"));
-    }
-    const tx = currentTx();
-    const r = await tx.execute<{ ticket_id: string }>(sql`
-      UPDATE tickets
-         SET work_status = 'closed',
-             work_outcome = ${outcome},
-             work_closed_at = now(),
-             work_closed_by = ${actorUserId}::uuid,
-             work_closed_via = 'web',
-             updated_at = now()
-       WHERE ticket_id = ${ticketId}::uuid
-         AND work_status = 'open'
-         -- ⚠️⚠️ F-2（P0）· 這一行是唯一擋住「改掉網址裡的 ticketId 去關別人任務」的東西。
-         --    RLS 只擋跨租戶，**擋不住同租戶跨人**。
-         --    private-completion.service.ts:191 已經踩過一模一樣的形狀（postback 的 data 由 client 送回來）。
-         AND assignee_user_id = ${actorUserId}::uuid
-      RETURNING ticket_id::text
-    `);
-    // ⚠️ 「不是你的」和「已經結束了」**故意回同一句**。
-    //    分開講就成了存在性探測器：換 ticketId 試，訊息不同就知道那張票存不存在、是不是別人的。
-    //    同一個理由寫在 private-completion.service.ts:197。
-    if (r.rows.length === 0) throw new NotFoundException(msg("srv.work.notYoursOrClosed"));
-    this.logger.log(`work close(self) · ticket=${ticketId} outcome=${outcome} by=${actorUserId}`);
-    return { ticketId, workStatus: "closed", workOutcome: outcome };
-  }
-
-  /**
-   * 當責人還原自己剛才標錯的（OQ-TCA-4）。
-   *
-   * ⚠️ 條件比 `reopen()` 嚴：除了要是自己的票，**還要是自己關的**。
-   * 主管代為結案的不讓員工翻掉 —— 那是主管的決定，要改請找主管。
-   */
-  async reopenByAssignee(ticketId: string, actorUserId: string) {
-    const tx = currentTx();
-    const r = await tx.execute<{ ticket_id: string }>(sql`
-      UPDATE tickets
-         SET work_status = 'open',
-             work_outcome = NULL,
-             work_closed_at = NULL,
-             work_closed_by = NULL,
-             work_closed_via = NULL,
-             work_closed_line_user_id = NULL,
-             work_closed_message_id = NULL,
-             updated_at = now()
-       WHERE ticket_id = ${ticketId}::uuid
-         AND work_status = 'closed'
-         AND assignee_user_id = ${actorUserId}::uuid
-         AND work_closed_by = ${actorUserId}::uuid
-      RETURNING ticket_id::text
-    `);
-    if (r.rows.length === 0) throw new NotFoundException(msg("srv.work.notYoursToReopen"));
-    this.logger.log(`work reopen(self) · ticket=${ticketId} by=${actorUserId}`);
     return { ticketId, workStatus: "open" };
   }
 
