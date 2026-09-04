@@ -394,7 +394,23 @@ export const annotatePunch = (punchId: string, note: string | null) =>
   req<{ punchId: string; note: string | null }>(`/attendance/punch/${punchId}/note`,
     { method: "PATCH", body: JSON.stringify({ note }) });
 
-export const attendancePunch = (body: { punchType: "clock_in" | "arrive_site" | "clock_out"; lat?: number; lng?: number; accuracyM?: number; customerName?: string }) =>
+export type PunchType = "clock_in" | "arrive_site" | "depart_site" | "clock_out";
+export type TripState = "not_started" | "moving" | "at_site" | "ended";
+
+/**
+ * 現在該顯示哪顆按鈕 · 後端是**唯一**來源。
+ * ⚠️ 不要再用 `punches.length` 自己推 —— 加了 depart_site 之後會推錯，
+ * 而且錯法是安靜的：按鈕顯示成別的動作，人照按。
+ */
+export const getAttendanceState = () =>
+  req<{
+    state: TripState;
+    primaryAction: PunchType | null;
+    allowedActions: PunchType[];
+    lastPunch: { punchId: string; punchType: PunchType; at: string; lat: number | null; lng: number | null } | null;
+  }>("/attendance/state");
+
+export const attendancePunch = (body: { punchType: PunchType; lat?: number; lng?: number; accuracyM?: number; customerName?: string }) =>
   req<PunchResult>("/attendance/punch", { method: "POST", body: JSON.stringify(body) });
 
 export interface TripRow {

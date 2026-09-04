@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, attendancePunch, annotatePunch, getTrips, type TripRow , getMyMonthAttendance, getPlaceSuggestions, type MyMonthSummary, type PlaceSuggestion } from "../api";
+import { ApiError, attendancePunch, annotatePunch, getTrips, type TripRow , getMyMonthAttendance,
+  getAttendanceState, getPlaceSuggestions, type MyMonthSummary, type PlaceSuggestion,
+  type PunchType } from "../api";
+
+/** GET /attendance/state 的回傳 · 狀態的唯一來源 */
+type AttendanceState = Awaited<ReturnType<typeof getAttendanceState>>;
 import { useToast } from "../Toast";
 import { SAME_LOCATION_LABEL, SAME_LOCATION_NEXT, SAME_LOCATION_REASON, SAME_LOCATION_WHY } from "../shared/mileageCopy";
 import { t } from "../i18n";
@@ -21,6 +26,14 @@ function geoErrMsg(e: unknown): string {
   return e instanceof Error ? e.message : t("pv.geoFailed");
 }
 
+/** 主按鈕的文案 · 帶狀態（客戶要「多一顆按鈕」，我們給的是「文案講清楚現在是什麼」）*/
+const PRIMARY_LABEL: Record<string, string> = {
+  not_started: "pv.startTrip",
+  moving: "pv.stateMoving",
+  at_site: "pv.stateAtSite",
+  ended: "pv.resumeDay",
+};
+
 export default function PunchView() {
   const tr = useT();
   const toast = useToast();
@@ -32,7 +45,12 @@ export default function PunchView() {
   const [justPunched, setJustPunched] = useState<{ punchId: string; place: string } | null>(null);
   const [note, setNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
-  const [busy, setBusy] = useState<"clock_in" | "arrive_site" | null>(null);
+  const [busy, setBusy] = useState<PunchType | null>(null);
+  // ⚠️ 狀態由後端給（GET /attendance/state），**不要**再用 punches.length 推 ——
+  //    加了 depart_site 之後那個推法會錯，而且錯法是安靜的：
+  //    按鈕顯示成別的動作，人照按，資料就歪了（doc §7.1）。
+  const [trip, setTrip] = useState<AttendanceState | null>(null);
+  const [showFix, setShowFix] = useState(false);
   const [customer, setCustomer] = useState("");
   const custRef = useRef<HTMLInputElement>(null);
   const [trips, setTrips] = useState<TripRow[]>([]);
@@ -49,11 +67,14 @@ export default function PunchView() {
       setTrips(res.trips);
       setPunchCount(res.punches.length);
     } catch { /* 靜默 · 非核心 */ }
+    // ⚠️ 這個**不可以**靜默失敗：拿不到狀態就不知道該顯示哪顆按鈕，
+    //    寧可讓按鈕停在載入中，也不要顯示一顆可能是錯的動作。
+    try { setTrip(await getAttendanceState()); } catch { setTrip(null); }
     try { setMonth(await getMyMonthAttendance()); } catch { /* 靜默 · 非核心 */ }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
 
-  async function punch(type: "clock_in" | "arrive_site") {
+  async function punch(type: PunchType) {
     if (busy) return;
     setBusy(type);
     // 以 input 的 DOM 實際值為準，不只信 React state：
@@ -76,6 +97,10 @@ export default function PunchView() {
       setNote("");
       if (type === "clock_in") {
         toast.show(tr("pv.started"), "ok");
+      } else if (type === "depart_site") {
+        toast.show(tr("pv.departed"), "ok");
+      } else if (type === "clock_out") {
+        toast.show(tr("pv.dayEnded"), "ok");
       } else {
         // 原地打卡若照報「本段 0.0 km」，使用者會讀成「沒記錄到」→ 直接說明是沒移動
         const km = res.trip?.distanceM != null ? (res.trip.distanceM / 1000).toFixed(1) : null;
@@ -98,8 +123,19 @@ export default function PunchView() {
   const totalKm = trips.reduce((s, t) => s + (t.distanceM ?? t.straightDistanceM ?? 0), 0) / 1000;
   // 只要有任一段是原地就說明（不必全部都是）——使用者看到其中一段 0 就會開始懷疑
   const hasSameLocation = trips.some((t) => t.routeProvider === "same_location");
-  const loadingState = punchCount === null;          // 尚未知道今天狀態 → 先不給按鈕，避免閃動誤按
-  const notStarted = punchCount === 0;               // 今天還沒任何打卡 → 只給「開始外勤」
+  // ⚠️ 一律從後端狀態導出，不要再看 punchCount ——
+  //    兩個來源會漂移，而漂移的症狀是「畫面說 A、後端擋成 B」。
+  const notStarted = trip?.state === "not_started";
+  // 地點欄只有在「下一步是抵達」時才有意義（出發／離站都不需要填地點）
+  const askPlace = trip?.primaryAction === "arrive_site";
+  // 上一次打卡的地點與停留時間（at_site 時顯示 · §4.2）
+  // ⚠️ 用 destination（那一段的目的地名稱）。
+  //    TripRow.departedAt / arrivedAt 是**移動**的起訖（A→B 在路上多久），
+  //    不是停留的起訖 —— 同名異義，拿錯會算出完全不同的東西（doc §5-bis.1）。
+  const lastPlace = trips.length ? (trips[trips.length - 1].destination ?? null) : null;
+  const stayedMin = trip?.state === "at_site" && trip.lastPunch
+    ? Math.max(0, Math.round((Date.now() - Date.parse(trip.lastPunch.at)) / 60_000))
+    : null;
 
   async function saveNote() {
     if (!justPunched || savingNote) return;
@@ -128,8 +164,8 @@ export default function PunchView() {
           : tr("pv.introOngoing")}
       </p>
 
-      {/* 地點欄只在「記錄這一站」階段才有意義（開始外勤不需填地點）*/}
-      {!notStarted && (
+      {/* 地點欄只在「下一步是抵達」時才有意義 —— 出發與離站都不需要填地點 */}
+      {askPlace && (
         <div className="field" style={{ marginBottom: 12 }}>
           <label htmlFor="punch-cust">{tr("pv.whereLabel")}</label>
           <input
@@ -164,19 +200,70 @@ export default function PunchView() {
         </div>
       )}
 
+      {/* 主按鈕永遠只有一顆（doc §4.2）——
+          畫面依狀態決定它是什麼，使用者不必判斷「現在該按哪一個」。
+          ⚠️ 這不是省事，是刻意的：多一次點擊可以，多一次選擇不行。 */}
       <div style={{ marginBottom: 20 }}>
-        {loadingState ? (
+        {!trip ? (
           <button className="btn" style={{ width: "100%", padding: 16, fontSize: 16 }} disabled>{tr("common.loading")}</button>
-        ) : notStarted ? (
-          <button className="btn btn-primary" style={{ width: "100%", padding: 16, fontSize: 16 }}
-            onClick={() => void punch("clock_in")} disabled={busy !== null}>
-            {busy === "clock_in" ? tr("pv.locating") : tr("pv.startTrip")}
-          </button>
+        ) : trip.state === "ended" ? (
+          <>
+            <div className="liff-card" style={{ marginBottom: 10, textAlign: "center" }}>
+              <b>{tr("pv.endedHd")}</b>
+              <div className="dm-empty-hint" style={{ marginTop: 4 }}>
+                {tr("pv.stops", { n: String(trips.length) })} · {totalKm.toFixed(1)} km
+              </div>
+            </div>
+            {/* 下午又被叫出去是常態 —— 沒這條路他只能等明天，或去補一筆假的 */}
+            <button className="btn" style={{ width: "100%", padding: 12 }}
+              onClick={() => void punch("clock_in")} disabled={busy !== null}>
+              {busy ? tr("pv.locating") : tr("pv.resumeDay")}
+            </button>
+          </>
         ) : (
-          <button className="btn btn-primary" style={{ width: "100%", padding: 16, fontSize: 16 }}
-            onClick={() => void punch("arrive_site")} disabled={busy !== null}>
-            {busy === "arrive_site" ? tr("pv.locating") : tr("pv.logStop")}
-          </button>
+          <>
+            {trip.state === "at_site" && trip.lastPunch && (
+              <div className="dm-empty-hint" style={{ marginBottom: 8, textAlign: "center" }}>
+                {tr("pv.atSiteNow")}{lastPlace ? `〈${lastPlace}〉` : ""}
+                {stayedMin != null && ` · ${tr("pv.stayedFor", { min: String(stayedMin) })}`}
+              </div>
+            )}
+            <button className="btn btn-primary" style={{ width: "100%", padding: 16, fontSize: 16 }}
+              onClick={() => trip.primaryAction && void punch(trip.primaryAction)}
+              disabled={busy !== null || !trip.primaryAction}>
+              {busy ? tr("pv.locating") : tr(PRIMARY_LABEL[trip.state])}
+            </button>
+            {/* 「今日行程結束」永遠是次要位階 —— 逃生門不是常用鍵，
+                但任何狀態都摸得到（正是業務說的「除非你按今天行程已結束」）*/}
+            {trip.allowedActions.includes("clock_out") && (
+              <button className="dl-card-toggle" style={{ display: "block", margin: "10px auto 0" }}
+                onClick={() => void punch("clock_out")} disabled={busy !== null}>
+                {tr("pv.endDay")}
+              </button>
+            )}
+            {/* 單鍵的代價是「狀態錯了沒得救」（§5-bis.2.3）。
+                ⚠️ 這裡只放**非破壞性**的那一個：補記錄離開。
+                   「我根本沒到這一站，是按錯的」會刪掉打卡記錄 ——
+                   出勤是計酬與稽核用的資料，沒有時限的刪除等於證據力歸零，
+                   那題是 OQ-TSM-13，未裁定前不做。 */}
+            {trip.state === "at_site" && (
+              <div style={{ marginTop: 10, textAlign: "center" }}>
+                <button className="dl-card-toggle" onClick={() => setShowFix((v) => !v)}>
+                  {tr("pv.stateWrong")}
+                </button>
+                {showFix && (
+                  <div className="liff-card" style={{ marginTop: 8, textAlign: "left" }}>
+                    <div className="dm-empty-hint" style={{ marginBottom: 8 }}>{tr("pv.stateWrongBody")}</div>
+                    <button className="btn" style={{ width: "100%" }}
+                      onClick={() => { setShowFix(false); void punch("depart_site"); }}
+                      disabled={busy !== null}>
+                      {tr("pv.markDeparted")}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
