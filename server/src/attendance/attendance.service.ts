@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { resolveState, isAllowed, primaryAction, allowedActions, type PunchType, type TripState } from "./trip-state.js";
+import { pairStays, summarizeStays } from "./task-duration.js";
 import { sql } from "drizzle-orm";
 import { currentTx, withSystemTx } from "../db/client.js";
 import type { JwtUser } from "../auth/jwt-user.js";
@@ -397,7 +398,19 @@ export class AttendanceService {
       this.repo.listTripsByDate(tx, user.user_id, dateStr),
       this.repo.listPunchesByDate(tx, user.user_id, dateStr),
     ]);
-    return { trips, punches };
+
+    // 任務時間（M4 · §5-bis）—— 客戶要的「抵達與離開配對＝這次任務完成時間」。
+    // ⚠️ 用已經撈回來的 punches 算，不另外查一次 DB：
+    //    同一份資料查兩次，兩次之間打了新卡就會對不起來（畫面自相矛盾）。
+    // ⚠️ listPunchesByDate 已經 ORDER BY punched_at ASC —— pairStays 依賴這個前提。
+    const stays = pairStays(punches.map((p) => ({
+      punchId: p.punchId,
+      punchType: p.punchType as PunchType,
+      atMs: Date.parse(p.punchedAt),
+      customerName: p.customerName,
+    })));
+
+    return { trips, punches, stays, staySummary: summarizeStays(stays) };
   }
 
   // 地圖圖磚設定（前端 Leaflet 用 · tile key 屬 client-side）· 平台全域設定走 withSystemTx
