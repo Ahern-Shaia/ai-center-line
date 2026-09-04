@@ -900,26 +900,6 @@ export const savePersonalReport = (args: { date?: string; items: PersonalDailyRe
     body: JSON.stringify(args),
   });
 
-/**
- * 結束自己手上的任務 · docs/modules/task-close-by-assignee.md
- *
- * ⚠️ outcome 是 **DB 值**（work_outcome），不是顯示字串。
- * 顯示一律走 i18n key `outcome.*` —— 不要在畫面上另外寫一份中文，
- * 否則同一個值會有兩種叫法（2026-09-03 就是這樣被擋下來的）。
- */
-export const closeMyTask = (ticketId: string, outcome: "完成" | "不用做了") =>
-  req<{ ticketId: string; workStatus: string; workOutcome: string }>(
-    `/personal-daily-report/mine/tasks/${ticketId}/close`,
-    { method: "PATCH", body: JSON.stringify({ outcome }) },
-  );
-
-/** 還原自己剛才標錯的 · 沒有還原就沒人敢按（OQ-TCA-4）*/
-export const reopenMyTask = (ticketId: string) =>
-  req<{ ticketId: string; workStatus: string }>(
-    `/personal-daily-report/mine/tasks/${ticketId}/reopen`,
-    { method: "PATCH" },
-  );
-
 export const regeneratePersonalReport = (date?: string) =>
   req<{ reportId: string | null; status: string; itemCount: number; errorMessage?: string }>("/personal-daily-report/mine/regenerate", {
     method: "POST",

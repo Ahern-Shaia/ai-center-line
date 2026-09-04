@@ -5,8 +5,6 @@ import {
   ApiError,
   getMyPersonalReport,
   getAssignedTaskSource,
-  closeMyTask,
-  reopenMyTask,
   regeneratePersonalReport,
   savePersonalReport,
   type PendingRawMessage,
@@ -34,8 +32,6 @@ export default function MyDailyReport() {
   const [pendingMessageCount, setPendingMessageCount] = useState(0);
   const [pendingMessages, setPendingMessages] = useState<PendingRawMessage[]>([]);
   const [assignedTasks, setAssignedTasks] = useState<AssignedTask[]>([]);
-  // 剛結束的那一筆 · 用來顯示「還原」（OQ-TCA-4）
-  const [justClosed, setJustClosed] = useState<{ task: AssignedTask; outcome: "完成" | "不用做了" } | null>(null);
   const [plannedToday, setPlannedToday] = useState<PlannedTodayItem[]>([]);
   /** 指派任務的**總數**（不受回傳上限影響）· 用來顯示「共 N 筆」 */
   const [assignedTotal, setAssignedTotal] = useState(0);
@@ -337,49 +333,8 @@ export default function MyDailyReport() {
                   title: t.summary ?? "", detail: "", time: "",
                   followup: "", source: "assigned_task", ticketId: t.ticketId,
                 } as PersonalDailyReportItem])}
-                onClosed={(task, outcome) => {
-                  // 樂觀移除：後端已經回 200 了，再等一次 reload 只會讓畫面卡一下。
-                  // 總數也要跟著減 —— 不減的話標題會說「有 22 項」但只列 21 列。
-                  setAssignedTasks((s) => s.filter((x) => x.ticketId !== task.ticketId));
-                  setAssignedTotal((n) => Math.max(0, n - 1));
-                  setJustClosed({ task, outcome });
-                }}
               />
             ))}
-          </div>
-        )}
-
-        {/* 還原 · OQ-TCA-4：沒有還原就沒有人敢按。
-            ⚠️ 不做自動消失的 toast —— 那是「限時反悔」，而他很可能連按好幾筆才發現標錯，
-            所以留在畫面上直到他做下一個動作。*/}
-        {isToday && justClosed && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: 10, marginTop: 8,
-            fontSize: 12.5, color: "var(--ink-2)", background: "var(--well)",
-            border: "1px solid var(--line)", borderRadius: 6, padding: "10px 14px",
-          }}>
-            <span style={{ flex: 1 }}>
-              {tr(justClosed.outcome === "完成" ? "pdr.taskClosedDone" : "pdr.taskClosedCancel")}
-              {justClosed.task.summary ?? tr("pdr.noSummary")}
-            </span>
-            <button
-              className="dl-card-toggle"
-              style={{ margin: 0, flexShrink: 0, color: "var(--primary)" }}
-              onClick={() => {
-                const { task } = justClosed;
-                void (async () => {
-                  try {
-                    await reopenMyTask(task.ticketId);
-                    setAssignedTasks((s) => [task, ...s]);
-                    setAssignedTotal((n) => n + 1);
-                    setJustClosed(null);
-                    toast.show(tr("pdr.taskUndone"), "ok");
-                  } catch (err) {
-                    toast.show(err instanceof ApiError ? err.message : tr("common.actionFailed"), "danger");
-                  }
-                })();
-              }}
-            >{tr("common.undo")}</button>
           </div>
         )}
 
@@ -685,41 +640,18 @@ function formatTimeHM(iso: string): string {
   return new Date(iso).toLocaleTimeString(bcp47(), { hour12: false, hour: "2-digit", minute: "2-digit" });
 }
 
-// 指派任務一列 · 可加入日報 / 結束 + （部門制 gate 通過時）展開對照原始對話
+// 指派任務一列 · 可加入日報 + （部門制 gate 通過時）展開對照原始對話
 // F-3：只有 canSeeSource（任務屬本人部門）才給展開；跨部門後端會 403、前端也不顯示按鈕。
-//
-// ⚠️ 動作的位階是裁定過的（task-close-by-assignee §3.2）：
-//   加入日報（既有 · 不可默默換掉）｜已完成（外露 · 歷史結案 100% 是它）｜不用做了（收 ⋯）
-// 「已完成」刻意**不加二次確認** —— 它有還原，而加確認會讓清 22 筆變成 44 次點擊。
-// 需要確認的只有「不用做了」：它取消的是一件公司交辦的事。
-function AssignedTaskItem({ task, canEdit, onAdd, onClosed }: {
+function AssignedTaskItem({ task, canEdit, onAdd }: {
   task: AssignedTask;
   canEdit: boolean;
   onAdd: () => void;
-  onClosed: (t: AssignedTask, outcome: "完成" | "不用做了") => void;
 }) {
   const tr = useT();
   const [open, setOpen] = useState(false);
   const [source, setSource] = useState<TicketSource | null>(null);
   const [loading, setLoading] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState(false);
-  const [busy, setBusy] = useState(false);
   const toast = useToast();
-
-  async function close(outcome: "完成" | "不用做了") {
-    setBusy(true);
-    try {
-      await closeMyTask(task.ticketId, outcome);
-      onClosed(task, outcome);
-    } catch (err) {
-      toast.show(err instanceof ApiError ? err.message : tr("common.actionFailed"), "danger");
-    } finally {
-      setBusy(false);
-      setConfirmCancel(false);
-      setMenuOpen(false);
-    }
-  }
 
   async function toggle() {
     if (open) { setOpen(false); return; }
@@ -740,44 +672,8 @@ function AssignedTaskItem({ task, canEdit, onAdd, onClosed }: {
     <div className="pdr-raw-item" style={{ flexDirection: "column", alignItems: "stretch" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <div className="pdr-raw-text" style={{ flex: 1 }}>{task.summary ?? tr("pdr.noSummary")}</div>
-        {/* ⚠️ 沿用 notify-config 既有的 ⋯ pattern（.nc-act / .nc-kebab / .nc-menu），不自己發明一套 */}
-        <div className="nc-act" style={{ flexShrink: 0 }}>
-          <button className="btn btn-sm" disabled={!canEdit || busy} onClick={onAdd}>{tr("pdr.addToReport")}</button>
-          <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => void close("完成")}>
-            {tr("pdr.taskDone")}
-          </button>
-          <button className="nc-kebab" aria-label={tr("pdr.taskMore")} disabled={busy}
-            onClick={() => setMenuOpen((v) => !v)}>⋯</button>
-          {menuOpen && (
-            <>
-              <button className="nc-menu-veil" aria-label={tr("common.close")} onClick={() => setMenuOpen(false)} />
-              {/* 這一列的選單只有一項，用絕對定位貼在 ⋯ 下方即可（不像通知規則那頁要算上下開） */}
-              <div className="nc-menu" style={{ position: "absolute", right: 0, marginTop: 4 }}>
-                <button className="danger" onClick={() => { setMenuOpen(false); setConfirmCancel(true); }}>
-                  {tr("outcome.不用做了")}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        <button className="btn btn-sm" disabled={!canEdit} onClick={onAdd}>{tr("pdr.addToReport")}</button>
       </div>
-      {/* 取消的是一件公司交辦的事 —— 文案要講清楚「不會消失、主管看得到」，
-          否則他要嘛不敢按，要嘛按了以為神不知鬼不覺。兩種都不好。 */}
-      <ConfirmDialog
-        open={confirmCancel}
-        onClose={() => !busy && setConfirmCancel(false)}
-        onConfirm={() => void close("不用做了")}
-        busy={busy}
-        tone="danger"
-        title={tr("pdr.taskCancelTitle")}
-        confirmLabel={tr("pdr.taskCancelConfirm")}
-        body={
-          <>
-            {task.summary ?? tr("pdr.noSummary")}<br /><br />
-            {tr("pdr.taskCancelBody1")}<b>{tr("pdr.taskCancelBody2")}</b>{tr("pdr.taskCancelBody3")}
-          </>
-        }
-      />
       {task.canSeeSource && (
         <button className="dl-card-toggle" style={{ alignSelf: "flex-start", marginTop: 6 }} onClick={() => void toggle()}>
           {tr(open ? "kb.hideSource" : "pdr.showSource")}
