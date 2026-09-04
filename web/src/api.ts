@@ -441,7 +441,22 @@ export const relabelPunch = (punchId: string, customerName: string | null) =>
   });
 // date 選填（YYYY-MM-DD，台北日）· 省略＝當日 · 回行程 + 打卡序列
 export const getTrips = (date?: string) =>
-  req<{ trips: TripRow[]; punches: PunchRow[] }>(`/attendance/trips${date ? `?date=${encodeURIComponent(date)}` : ""}`);
+  req<{
+    trips: TripRow[];
+    punches: PunchRow[];
+    /**
+     * 逐趟任務時間（抵達↔離開配對）· docs/modules/attendance-trip-state-machine.md §5-bis
+     * ⚠️ `minutes` 為 null ＝ **未記錄離開**，不是 0 分鐘。顯示時不可以 `?? 0`。
+     */
+    stays: Array<{
+      seq: number; place: string | null;
+      arrivePunchId: string; arriveAtMs: number;
+      departPunchId: string | null; departAtMs: number | null;
+      minutes: number | null;
+    }>;
+    /** ⚠️ `incomplete` 一定要顯示 —— 只給合計會被當成全部 */
+    staySummary: { totalMinutes: number; completed: number; incomplete: number };
+  }>(`/attendance/trips${date ? `?date=${encodeURIComponent(date)}` : ""}`);
 // 地圖圖磚設定（前端 Leaflet 用 · tileApiKey 為 client-side key · osm 為 null）
 export const getMapTileConfig = () =>
   req<{ tileProvider: string; tileApiKey: string | null }>("/attendance/map-tile-config");

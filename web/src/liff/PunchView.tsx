@@ -5,6 +5,7 @@ import { ApiError, attendancePunch, annotatePunch, getTrips, type TripRow , getM
 
 /** GET /attendance/state 的回傳 · 狀態的唯一來源 */
 type AttendanceState = Awaited<ReturnType<typeof getAttendanceState>>;
+type TripsResponse = Awaited<ReturnType<typeof getTrips>>;
 import { useToast } from "../Toast";
 import { SAME_LOCATION_LABEL, SAME_LOCATION_NEXT, SAME_LOCATION_REASON, SAME_LOCATION_WHY } from "../shared/mileageCopy";
 import { t } from "../i18n";
@@ -54,6 +55,9 @@ export default function PunchView() {
   const [customer, setCustomer] = useState("");
   const custRef = useRef<HTMLInputElement>(null);
   const [trips, setTrips] = useState<TripRow[]>([]);
+  // 逐趟任務時間（停留）· 跟 trips（移動）是相反的區間，別混用
+  const [stays, setStays] = useState<TripsResponse["stays"]>([]);
+  const [staySummary, setStaySummary] = useState<TripsResponse["staySummary"] | null>(null);
   const [punchCount, setPunchCount] = useState<number | null>(null);   // null = 尚未載入
   // 同仁自己的本月數字 · 里程本來就在算，只是從來沒給他看過（4FR §7 價值對等）
   const [month, setMonth] = useState<MyMonthSummary | null>(null);
@@ -65,6 +69,8 @@ export default function PunchView() {
     try {
       const res = await getTrips();
       setTrips(res.trips);
+      setStays(res.stays ?? []);
+      setStaySummary(res.staySummary ?? null);
       setPunchCount(res.punches.length);
     } catch { /* 靜默 · 非核心 */ }
     // ⚠️ 這個**不可以**靜默失敗：拿不到狀態就不知道該顯示哪顆按鈕，
@@ -319,6 +325,47 @@ export default function PunchView() {
             <div className="my-month-top">{tr("pv.topPlace", { place: month.topPlace, n: month.topPlaceCount })}</div>
           )}
         </div>
+      )}
+
+      {/* 任務時間 · 客戶要的「抵達與離開配對＝這次任務完成時間」（§5-bis）
+          ⚠️ 跟下面的里程分開列：里程是**移動**、任務時間是**停留**，
+             兩者是相反的區間。放在同一張表裡一定會有人讀錯。 */}
+      {stays.length > 0 && (
+        <>
+          <div className="liff-groups-hd">{tr("pv.taskTime")}</div>
+          {stays.map((st) => (
+            <div key={st.arrivePunchId} className="liff-group">
+              <span>
+                {tr("mt.segN", { n: st.seq })}
+                {st.place && <span className="liff-note"> · {st.place}</span>}
+              </span>
+              {/* ⚠️ minutes === null 是「未記錄離開」，**不可以顯示 0 分鐘** ——
+                  0 是一個看起來很正常、沒有人會去查的數字（F-12 · P0）。*/}
+              <span className={st.minutes == null ? "liff-note" : "liff-pct"}>
+                {st.minutes != null
+                  ? tr("pv.stayMin", { min: String(st.minutes) })
+                  : st.seq === stays.length && trip?.state === "at_site"
+                    ? tr("pv.stillHere")
+                    : tr("pv.noDepart")}
+              </span>
+            </div>
+          ))}
+          {staySummary && staySummary.completed > 0 && (
+            <div className="liff-group primary" style={{ marginTop: 2 }}>
+              <span>{tr("pv.taskTotal", {
+                h: String(Math.floor(staySummary.totalMinutes / 60)),
+                m: String(staySummary.totalMinutes % 60),
+                n: String(staySummary.completed),
+              })}</span>
+            </div>
+          )}
+          {/* 只給合計而不說有幾趟沒算到，那個數字會被當成全部 */}
+          {staySummary && staySummary.incomplete > 0 && (
+            <div className="liff-explain">
+              {tr("pv.taskIncomplete", { n: String(staySummary.incomplete) })}
+            </div>
+          )}
+        </>
       )}
 
       <div className="liff-groups-hd">{tr("pv.todayLog")}</div>
