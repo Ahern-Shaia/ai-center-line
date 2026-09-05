@@ -1,4 +1,5 @@
 import { Injectable, Logger, Optional } from "@nestjs/common";
+import { parseLineExport } from "./pipeline/parser.js";
 import { eq, sql } from "drizzle-orm";
 import { currentTx, type Db } from "../db/client.js";
 import { analysisUpload, analysisResult } from "../db/schema.js";
@@ -138,6 +139,9 @@ export class AnalyzeService {
   async runJob(uploadId: number): Promise<void> {
     const { db } = await import("../db/client.js");
     await db.update(analysisUpload).set({ status: "running" }).where(eq(analysisUpload.id, uploadId));
+    // 失敗時要寫進 usage_stats 的診斷資訊 · 宣告在 try 外，跑到哪就記到哪。
+    // ⚠️ catch 裡不做任何可能失敗的事 —— 那會把真正的錯誤訊息蓋掉。
+    const diag: Record<string, unknown> = {};
     try {
       // 手動上傳走 request tx（呼叫端在 controller 內，無法等 commit 後才排程），
       // 這裡可能比 commit 早一步讀 → 短暫重試等它可見，真的不存在才失敗。
@@ -160,6 +164,29 @@ export class AnalyzeService {
       if (!row) throw new Error(`upload ${uploadId} 不存在`);
 
       const provider = await this.resolveProvider(row.tenantId);
+      // 記下「當時用的是什麼」· 失敗時原樣寫進 usage_stats
+      diag.provider = provider.name;
+      diag.model = provider.model;
+      diag.rawContentChars = row.rawContent?.length ?? null;
+
+      // ⚠️⚠️ 訊息數要在**跑 AI 之前**就先寫進去。
+      //
+      // 原本只在成功時寫，所以 2026-09-05 排查那 8 筆失敗批次時，
+      // `message_count` 和 `usage_stats` 全是 NULL —— 完全沒有線索，
+      // 只能靠人從畫面上把數字唸出來。
+      // **失敗時比成功時更需要這些數字，而我們偏偏只在成功時存。**
+      //
+      // 解析很便宜（純字串處理、不打 API），失敗了也不影響主流程。
+      try {
+        const preview = parseLineExport(row.rawContent);
+        await db.update(analysisUpload)
+          .set({ messageCount: preview.messages.length })
+          .where(eq(analysisUpload.id, uploadId));
+      } catch (parseErr) {
+        // 解析失敗本身就是有用的資訊，但不能因此讓分析不跑
+        this.logger.warn(`upload ${uploadId} 預先解析訊息數失敗：${String((parseErr as Error).message ?? parseErr)}`);
+      }
+
       const result = await runPipeline(row.rawContent, row.tenantSlug, provider, row.tenantId ?? undefined);
 
       // AAL · L2 區塊依模板存到對應欄位；general 兩邊都空。
@@ -207,7 +234,7 @@ export class AnalyzeService {
       // 0036 · M3b · 任務剛建好，回頭把等著的完成訊號對上（doc §2.6）
       // ⚠️ 一定要在 materialize 之後 —— 訊號要對的就是這一輪才產生的任務。
       if (this.signalResolver) {
-        try {
+    try {
           const up = await db
             .select({ tenantId: analysisUpload.tenantId, groupId: analysisUpload.groupId })
             .from(analysisUpload).where(eq(analysisUpload.id, uploadId)).limit(1);
@@ -228,9 +255,13 @@ export class AnalyzeService {
     } catch (e) {
       const errorMessage = String((e as Error).message ?? e);
       this.logger.error(`upload ${uploadId} failed: ${errorMessage}`);
+      // ⚠️ 失敗也要留下「當時用的是什麼」——
+      //    provider / model / 原始內容長度。下次排查才不必從畫面上唸數字。
+      //    ⚠️ 這裡不能再打 API 或做複雜的事：我們正在 catch 裡，
+      //       這段自己炸掉會把真正的錯誤訊息蓋掉。
       await db
         .update(analysisUpload)
-        .set({ status: "failed", errorMessage })
+        .set({ status: "failed", errorMessage, usageStats: { failed: true, ...diag } })
         .where(eq(analysisUpload.id, uploadId));
       await this.markBatchAnalysisFailed(uploadId, errorMessage);
     }
